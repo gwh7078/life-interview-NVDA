@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>人生采访局 · 手机端线框演示</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="prototype-shell">
+      <header class="prototype-header">
+        <div>
+          <p class="prototype-kicker">人生采访局 · mobile wireframe</p>
+          <h1>手机端产品原型</h1>
+          <p class="prototype-subtitle">用一条最小闭环，演示“先通话建档 → 阶段时间流 → 故事状态 → 持续访谈”。</p>
+        </div>
+        <nav class="prototype-nav" aria-label="原型页面跳转">
+          <button type="button" data-jump="onboarding">首次对话</button>
+          <button type="button" data-jump="home">人生首页</button>
+          <button type="button" data-jump="stage">阶段详情</button>
+          <button type="button" data-jump="story">故事详情</button>
+          <button type="button" data-jump="call-setup">准备通话</button>
+          <button type="button" data-jump="call">通话中</button>
+          <button type="button" data-jump="result">访谈结果</button>
+        </nav>
+      </header>
+
+      <section class="prototype-stage" aria-label="手机端原型预览">
+        <div class="phone-frame">
+          <div class="device-status" aria-hidden="true">
+            <span>9:41</span>
+            <span class="device-status-icons">▮▮▮  Wi‑Fi  ▰</span>
+          </div>
+          <div id="app" class="app-root"></div>
+        </div>
+
+        <aside class="prototype-notes">
+          <p class="notes-kicker">本轮演示重点</p>
+          <h2>先确认产品骨架，再讨论视觉风格。</h2>
+          <ol>
+            <li>首次进入不是表单，而是一场连续语音访谈，边聊边完成核心信息清单。</li>
+            <li>首页用时间流卡片呈现人生阶段，每个阶段都能直接发起通话。</li>
+            <li>故事详情把 Story State、定性完整度和下一步问题放在一起。</li>
+            <li>访谈是连续通话，不是录一条语音消息再提交。</li>
+          </ol>
+          <div class="notes-divider"></div>
+          <p class="notes-footnote">演示数据是静态的；按钮只用于走通页面和状态变化，不连接真实麦克风或 AI。</p>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
