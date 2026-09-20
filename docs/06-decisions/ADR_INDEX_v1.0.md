@@ -101,3 +101,17 @@ Old Agent Memory + Current Transcript -> Updated Memory
 ## ADR-022 — Retry 由 AgentTaskExecutor 单点管理
 
 **Accepted.** 避免 Backend、OpenClaw、Model 多层重试相乘。初始最多 3 个 attempt，根据错误类型选择 Runtime Retry、Validation Repair 或 Format Repair。
+
+
+## ADR-023 — 固定 Context 使用 Runtime stdin 预注入
+
+**Accepted.** 固定 Task Context 由 Backend 预取后，Runtime 通过 OpenClaw `--message-file -` / stdin 在 Agent reasoning 前注入。
+
+这不是 Agent Tool Call，不计入 `tool_call_count`，也不要求 Agent 主动执行 `get_task_context`。
+
+原因：
+
+- 符合 ADR-016“固定 Context 由 Backend 预取”；
+- 避免把正常任务人为变成 1 次额外 Tool Round Trip；
+- 大 Transcript 不进入 CLI 参数和 process listing；
+- 保留 OpenClaw Tool Loop 给真正运行时才发现的增量信息需求。

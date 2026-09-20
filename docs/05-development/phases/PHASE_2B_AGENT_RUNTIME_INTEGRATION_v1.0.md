@@ -63,21 +63,31 @@ agent/skills/
 
 ### 2B-3 — Structured Context Transport
 
-大 Transcript payload 不直接塞入命令行参数。
+**已实现并冻结。**
 
-需要一个：
+固定 Context 仍由 Backend ContextBuilder 预取并放入 `AgentTaskRequest.payload`。
 
-- owner/run scoped；
-- read-only；
+Runtime 不让 Agent 再调用 Context Tool，而是在 Agent 开始 reasoning 前构造完整 Task Prompt，并通过：
+
+```text
+OpenClaw --message-file -
+        ^
+        |
+      stdin
+```
+
+把固定 Context 注入当前 Agent Run。
+
+因此：
+
+- Transcript / payload 不进入 CLI 参数；
 - 不暴露在 process listing；
-- 可在 NemoClaw/OpenShell sandbox 内访问；
-- 不改变 Contract v1.0
+- 不需要 `get_task_context` Agent Tool；
+- 不计入 `tool_call_count`；
+- 正常 Task 可以保持 `1 Agent Run / 0 Dynamic Tool Call`；
+- OpenClaw 的正常 Tool Loop 能力仍保留给 Future 动态 Tool。
 
-的 Transport。
-
-注意：
-
-> 这个 Transport 是固定 Context 的传输机制，不属于 Agent 自主 Tool Calling。
+当前实现对单次 stdin Prompt 设置 4 MiB 上限，与 OpenClaw message-file 边界一致。
 
 ### 2B-4 — NemoClaw/OpenClaw Executor
 
@@ -101,6 +111,19 @@ Backend ContextBuilder
 ### 2B-5 — Retry / Repair / Tracing
 
 统一由 AgentTaskExecutor 管理。
+
+当前已实现：
+
+- Task Executor 与单次 Attempt Runner 分层；
+- Runtime Retry；
+- Final Result 缺失 / JSON 解析失败 / Output Schema 失败后的 Format Repair attempt；
+- maxAttempts 由 TaskDefinition.executionPolicy 控制，当前默认最多 3 次；
+- tracing 记录 attempt / repair / tool call / format repair / skill / provider / model / context / schema / input-output hash。
+
+尚未完成：
+
+- Backend Business Validator Feedback → Validation Repair 的正式闭环；
+- provider / model API 层的强制 JSON / JSON Schema 参数级 Format Repair。
 
 至少区分：
 
@@ -186,12 +209,12 @@ Phase 2B 新增正式路径，不改写历史 Smoke 证据。
 
 - [x] NemoClawAgentTaskAdapter verified
 - [x] 4 formal Skill families committed
-- [ ] structured context transport frozen and tested
-- [ ] NemoClaw/OpenClaw task executor implemented
+- [x] structured context transport frozen and tested
+- [x] NemoClaw/OpenClaw task executor implemented
 - [ ] all four Task families return schema-valid results through real Agent runtime
 - [ ] retry/repair policy implemented
 - [ ] format-repair 强制 JSON 兜底实现并测试
-- [ ] tracing records task/skill/model/runtime/attempt/tool metadata
+- [x] tracing records task/skill/model/runtime/attempt/tool metadata
 - [ ] Agent E2E report written
-- [ ] normal task path demonstrates one Agent Run without unnecessary Tool Call
-- [ ] no Realtime / Retriever scope creep
+- [x] normal task runtime path is covered by deterministic test as zero dynamic Tool Call
+- [x] no Realtime / Retriever scope creep
