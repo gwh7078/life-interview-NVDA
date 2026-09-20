@@ -322,7 +322,7 @@ Slow System 未来可以检索 2001 前后北京、青年、初入职场相关�
 
 ## 14. 当前版本边界
 
-当前 Fast Realtime 保持现有实现；Slow System、Realtime Retriever、Memory Search、Agentic Retrieval 均不开发。
+当前 Fast Realtime 保持现有实现；Slow System、Realtime Retriever、Memory Search、时代背景检索、Agentic Retrieval 均不开发。
 
 当前只保证未来能够：
 
