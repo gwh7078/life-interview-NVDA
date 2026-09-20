@@ -168,6 +168,8 @@ Story Summary / Selected Document
 Background Context
 ```
 
+Future Retriever 只允许成为 **Derived Evidence Index**，不能改变这一事实优先级。
+
 ## 8. Contributor 隔离
 
 Contributor Summary 属于外部证据来源，不自动修改主人公 Story Summary、Agent Memory、Completion，也不自动进入 Story Generation。
@@ -219,7 +221,42 @@ Reasoning 可以重试；Domain Apply 必须通过 attempt ownership、resource 
 - NeMo Retriever 产品链路；
 - Memory Search。
 
-未来 Realtime 采用 Fast / Slow 双系统；Retriever 作为 Slow System 可选工具。
+Future Realtime 采用 Fast / Slow 双系统。
+
+Future Retrieval 冻结为：
+
+```text
+L0 Current Session Context
+ -> 当前对话
+
+L1 Story Agent Memory
+ -> 默认长期工作记忆
+
+L2 Classic Retrieval
+ -> 低延迟历史 Evidence Recall
+ -> Realtime Slow System 可用
+
+L3 Agentic Retrieval
+ -> 多步 / 多查询 / 跨 Session / Story Deep Evidence Search
+ -> 仅非实时 Agent Tool
+```
+
+硬边界：
+
+- Realtime 默认只允许 Story Agent Memory + Classic Retrieval；
+- Agentic Retrieval 不进入当前语音轮次依赖链；
+- Agentic Retrieval Future 作为 `memory.deep_search` 一类 Agent Tool 暴露；
+- Classic Retrieval Future 作为 `memory.search` 一类低延迟 Tool 暴露；
+- 两种 Retrieval 共用同一 Derived Index；
+- SQLite / Transcript 永远是 Source of Truth；
+- Retrieved Evidence 仍必须经过 Agent Proposal → Validator → Domain Apply；
+- 当前 Contract v1.0 不因 Future Retriever 改动输入字段；
+- 若未来某个 Task 获准调用 Deep Search，应通过版本化 Tool Policy / TaskDefinition 开启，不静默改变已有 Task 证据边界。
+
+详细设计：
+
+- `docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`
+- `docs/08-future/retriever/RETRIEVER_DEFERRED_PLAN_v1.0.md`
 
 ## 13. 冻结项
 
