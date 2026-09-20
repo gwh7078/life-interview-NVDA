@@ -1,10 +1,16 @@
-# DGX Spark Hackathon Scoring Alignment v1.0
+# DGX Spark Hackathon Scoring Alignment v1.1
 
 > Status: Working competition map
 >
 > Source requirement: `资料库/DGX_Spark_Hackathon_比赛要求.md`
 
 本文件不是新的比赛规则，而是把仓库已有工作与评分项对应起来，方便后续开发和最终提交时检查证据缺口。
+
+必须区分：
+
+- **Implemented / Validated**：已有真实代码、测试或 Smoke；
+- **Current Development**：当前正在接入；
+- **Planned / Future**：已经冻结架构，但不能写成已完成。
 
 ## 1. 项目实用性、行业落地价值与技术创新性 — 25%
 
@@ -23,12 +29,31 @@
 
 > 不把“更多 Agent / 更多 Tool Call”当成智能程度，而是把自主性放在真正需要语义判断和动态补信息的地方。
 
+Future Retrieval 进一步形成：
+
+```text
+Story Agent Memory
+ -> 默认工作记忆
+
+Classic Retrieval
+ -> 低延迟普通历史 Recall
+ -> Realtime Slow Agent 可用
+
+Agentic Retrieval
+ -> 多步 / 多查询 Deep Evidence Search
+ -> Post-session / Offline Agent
+```
+
+这体现的是 **latency-aware / complexity-aware Retrieval Routing**，而不是所有任务统一走最重检索。
+
 主要证据：
 
 - `docs/product/life-interview-product-tech-data-v1.5.3.md`
 - `docs/02-architecture/ARCHITECTURE_v2.3_agent-execution-efficiency.md`
 - `docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`
 - `docs/06-decisions/ADR_INDEX_v1.0.md`
+- `docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`
+- `docs/08-future/retriever/RETRIEVER_DEFERRED_PLAN_v1.0.md`
 
 ## 2. 智能体与模型优化技术深度 — 25%
 
@@ -52,24 +77,28 @@
 - Model Router；
 - Agent Eval；
 - Schema success / first-pass success / evidence accuracy / latency / tool-call-rate benchmark；
-- Future 条件式 Memory Search；
+- Future Classic Memory Search；
+- Future Agentic Deep Search；
 - Future Realtime Slow Agent；
 - 如确有价值，再展示目标不同的多 Agent 协作，而不是为了数量拆 Agent。
 
-比赛展示可以强调：
+推荐技术路径：
 
 ```text
 正常任务
 → 1 Agent Run
 → 0 Tool Call
 
-遇到运行时历史疑点
-→ 同一个 Agent 自主决定 Tool Call
-→ 获得最小额外 Context
-→ 继续完成
+普通历史疑点
+→ memory_search
+→ Classic Retrieval
+
+复杂跨历史问题
+→ memory_deep_search
+→ Agentic Retrieval
 ```
 
-这比固定每轮检索或多 Agent 转发更能体现“有边界的自主决策”。
+Agentic Retrieval 必须以真实 Tool 调用、证据质量和 Benchmark 作为加分证据，不能只写在架构图。
 
 ## 3. 项目完整性 — 20%
 
@@ -91,6 +120,10 @@
 
 当前缺口主要是正式 Agent Runtime E2E 与稳定性收敛。
 
+Retriever 不应为了比赛加分破坏已有产品完整性，因此：
+
+> **先完成核心 Agent Runtime，再增加条件式 Retrieval。**
+
 ## 4. 平台适配性 — 15%
 
 当前：
@@ -103,9 +136,33 @@
 - DGX Spark 本地推理；
 - NVIDIA 模型或 NVIDIA 推理能力；
 - StepFun 模型正式接入与评测；
-- NeMo Retriever 后续条件式集成；
+- NeMo Retriever Classic Retrieval；
+- NeMo Retriever Agentic Retrieval；
 - 本地 Agent 部署说明；
 - 性能与资源 Benchmark。
+
+推荐最终 DGX Spark 证据：
+
+```text
+Realtime
+ -> Classic NeMo Retrieval
+
+Offline / Post-session Deep Evidence Agent
+ -> Agentic NeMo Retrieval
+
+Both
+ -> same local Derived Transcript Index
+ -> DGX Spark local compute
+```
+
+需要分别记录：
+
+- Classic Retrieval P50 / P95；
+- Agentic Retrieval P50 / P95；
+- evidence quality；
+- Agentic 相比 Classic 的质量提升；
+- GPU / unified memory 占用；
+- Realtime + Retrieval 并发资源竞争。
 
 未实现内容必须明确标记 Planned / Future。
 
@@ -119,8 +176,11 @@
 4. Story Generation；
 5. Agent Runtime / Skill / Model tracing；
 6. 一次正常“1 Run 0 Tool”的高效路径；
-7. 如 Memory Search 已实现，再展示一次“发现疑点 → 自主 Search → 继续”的复杂路径；
-8. DGX Spark 本地运行证据。
+7. 若 Classic Retrieval 已实现：展示“发现历史疑点 → memory_search → 继续”；
+8. 若 Agentic Retrieval 已实现：展示一个明显需要跨 Session / Story 的 Deep Search；
+9. DGX Spark 本地运行证据。
+
+不建议在 Demo 中让 Agentic Retrieval 阻塞实时语音。
 
 ## 6. 赛事征文 — 5%
 
@@ -131,6 +191,8 @@
 - Phase 1 Smoke；
 - Contract-First 调整原因；
 - 从“多 Agent”收敛到“低轮次有边界自主性”的设计过程；
+- 为什么 Realtime 不采用 Agentic Retrieval；
+- Classic / Agentic Retrieval latency / quality tradeoff；
 - Mac → DGX Spark；
 - 模型 Benchmark。
 
@@ -147,6 +209,8 @@
 - [ ] Retry / Repair / Format Repair 测试
 - [ ] DGX Spark 本地运行步骤可复现
 - [ ] Agent Eval / Benchmark 有报告
+- [ ] Classic Retrieval 如宣称已实现，必须有真实代码 / 测试 / latency 证据
+- [ ] Agentic Retrieval 如宣称已实现，必须有真实 Tool 调用 / quality / latency 证据
 - [ ] Demo 视频链接
 - [ ] 技术文章链接
 - [ ] 团队资料
