@@ -31,7 +31,8 @@
 
 - Architecture v2.2 Contract-First
 - Agent Task Contract v1.0
-- Phase 2A Contract Scaffold
+- Phase 2A Contract Scaffold — **Completed**
+- Next: Phase 2B Agent Runtime Integration
 
 ### Validated Historical Work
 
