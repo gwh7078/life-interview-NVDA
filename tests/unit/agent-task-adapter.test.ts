@@ -21,7 +21,7 @@ class FakeExecutor implements AgentTaskExecutor {
   }
 }
 
-test('NemoClawAgentTaskAdapter routes Completion through the frozen Skill and model profile', async () => {
+test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model profile and execution policy', async () => {
   const executor = new FakeExecutor({
     output: { status: 'interviewing', gaps: [] },
     runtime: {
@@ -54,9 +54,18 @@ test('NemoClawAgentTaskAdapter routes Completion through the frozen Skill and mo
   const result = await adapter.run(request);
   assert.equal(executor.requests.length, 1);
   assert.equal(executor.requests[0]?.skill, 'story-completion');
+  assert.equal(executor.requests[0]?.skillVersion, 'v1');
   assert.equal(executor.requests[0]?.modelProfile, 'reasoning-fast');
+  assert.equal(executor.requests[0]?.contextVersion, 'v1');
+  assert.equal(executor.requests[0]?.executionPolicy.maxAttempts, 3);
+  assert.deepEqual(executor.requests[0]?.executionPolicy.dynamicTools, []);
   assert.equal(executor.requests[0]?.payload, request.payload);
+  assert.deepEqual(executor.requests[0]?.validateOutput({ status: 'interviewing', gaps: [] }), {
+    status: 'interviewing',
+    gaps: [],
+  });
   assert.equal(result.runtime.skill, 'story-completion');
+  assert.equal(result.runtime.skillVersion, 'v1');
   assert.equal(result.runtime.provider, 'stepfun');
   assert.equal(result.runtime.model, 'test-model');
 });
@@ -91,6 +100,7 @@ test('NemoClawAgentTaskAdapter routes contributor through interview-closeout wit
   const result = await adapter.run(request);
   assert.equal(executor.requests[0]?.skill, 'interview-closeout');
   assert.equal(executor.requests[0]?.modelProfile, 'reasoning');
+  assert.deepEqual(executor.requests[0]?.executionPolicy.dynamicTools, []);
   assert.equal('current_story' in (executor.requests[0]?.payload as Record<string, unknown>), false);
   assert.deepEqual(result.output, { summary: '第三者的独立回忆。' });
 });

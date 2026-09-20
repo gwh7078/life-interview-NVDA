@@ -3,6 +3,7 @@ export type AgentTaskContractErrorCode =
   | 'AGENT_TASK_INPUT_INVALID'
   | 'AGENT_TASK_OUTPUT_INVALID'
   | 'AGENT_TASK_RUNTIME_INVALID'
+  | 'AGENT_RUNTIME_CONFIG_INVALID'
   | 'AGENT_RUNTIME_NOT_IMPLEMENTED';
 
 export class AgentTaskContractError extends Error {

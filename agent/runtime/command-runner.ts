@@ -6,7 +6,7 @@ export interface CommandRunResult {
 }
 
 export interface CommandRunner {
-  run(command: string, args: string[], timeoutMs: number): Promise<CommandRunResult>;
+  run(command: string, args: string[], timeoutMs: number, stdin?: string): Promise<CommandRunResult>;
 }
 
 export class CommandExecutionError extends Error {
@@ -21,9 +21,9 @@ export class CommandExecutionError extends Error {
 }
 
 export class ExecFileCommandRunner implements CommandRunner {
-  run(command: string, args: string[], timeoutMs: number): Promise<CommandRunResult> {
+  run(command: string, args: string[], timeoutMs: number, stdin?: string): Promise<CommandRunResult> {
     return new Promise((resolve, reject) => {
-      execFile(command, args, {
+      const child = execFile(command, args, {
         timeout: timeoutMs,
         maxBuffer: 1024 * 1024,
         encoding: 'utf8',
@@ -39,6 +39,8 @@ export class ExecFileCommandRunner implements CommandRunner {
         }
         resolve({ stdout, stderr });
       });
+
+      if (stdin !== undefined) child.stdin?.end(stdin, 'utf8');
     });
   }
 }

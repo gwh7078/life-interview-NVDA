@@ -6,13 +6,42 @@ import type { AgentRunRequest } from '../runtime/types.js';
 
 export interface AgentRunCreateInput extends AgentRunRequest {
   runtime: string;
+  mode?: string | null;
+  skill?: string | null;
+  skillVersion?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  contextVersion?: string | null;
+  schemaVersion?: string | null;
+  inputHash?: string | null;
+}
+
+export interface AgentRunAttemptMetrics {
+  attemptCount: number;
+  repairCount: number;
+  toolCallCount: number;
+  formatRepairUsed: boolean;
+  provider?: string | null;
+  model?: string | null;
+}
+
+export interface AgentRunSuccessMetadata {
+  outputHash?: string | null;
+  provider?: string | null;
   model?: string | null;
 }
 
 export interface AgentRunStore {
   create(input: AgentRunCreateInput): void;
   markRunning(userId: string, runId: string): void;
-  markSucceeded(userId: string, runId: string, latencyMs: number, result: unknown): void;
+  recordAttempt?(userId: string, runId: string, metrics: AgentRunAttemptMetrics): void;
+  markSucceeded(
+    userId: string,
+    runId: string,
+    latencyMs: number,
+    result: unknown,
+    metadata?: AgentRunSuccessMetadata,
+  ): void;
   markFailed(userId: string, runId: string, latencyMs: number, errorCode: string): void;
 }
 
@@ -31,7 +60,14 @@ export class AgentRunRepository implements AgentRunStore {
         resourceType: input.resourceType,
         resourceId: input.resourceId,
         runtime: input.runtime,
+        mode: input.mode ?? null,
+        skill: input.skill ?? null,
+        skillVersion: input.skillVersion ?? null,
+        provider: input.provider ?? null,
         model: input.model ?? null,
+        contextVersion: input.contextVersion ?? null,
+        schemaVersion: input.schemaVersion ?? null,
+        inputHash: input.inputHash ?? null,
         status: 'queued',
         createdAt: now,
         updatedAt: now,
@@ -64,12 +100,32 @@ export class AgentRunRepository implements AgentRunStore {
     this.transition(userId, runId, 'running', { startedAt: nowUtcIso(), errorCode: null });
   }
 
-  markSucceeded(userId: string, runId: string, latencyMs: number, result: unknown): void {
+  recordAttempt(userId: string, runId: string, metrics: AgentRunAttemptMetrics): void {
+    this.transition(userId, runId, 'running', {
+      attemptCount: metrics.attemptCount,
+      repairCount: metrics.repairCount,
+      toolCallCount: metrics.toolCallCount,
+      formatRepairUsed: metrics.formatRepairUsed,
+      ...(metrics.provider !== undefined ? { provider: metrics.provider } : {}),
+      ...(metrics.model !== undefined ? { model: metrics.model } : {}),
+    });
+  }
+
+  markSucceeded(
+    userId: string,
+    runId: string,
+    latencyMs: number,
+    result: unknown,
+    metadata: AgentRunSuccessMetadata = {},
+  ): void {
     this.transition(userId, runId, 'succeeded', {
       completedAt: nowUtcIso(),
       latencyMs,
       errorCode: null,
       resultJson: JSON.stringify(result),
+      ...(metadata.outputHash !== undefined ? { outputHash: metadata.outputHash } : {}),
+      ...(metadata.provider !== undefined ? { provider: metadata.provider } : {}),
+      ...(metadata.model !== undefined ? { model: metadata.model } : {}),
     });
   }
 

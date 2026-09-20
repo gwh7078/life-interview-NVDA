@@ -47,6 +47,23 @@ Agent 不应再为了读取同一批固定数据调用通用数据库 Tool。
 
 Tool 的职责是运行时增量信息，而不是固定 Context 搬运。
 
+### 3.1 当前固定 Context Transport
+
+Phase 2B 当前使用 Runtime pre-injection：
+
+```text
+Backend ContextBuilder
+ -> AgentTaskRequest.payload
+ -> AgentTaskExecutor
+ -> stdin
+ -> OpenClaw --message-file -
+ -> Agent
+```
+
+这一步发生在 Agent reasoning 之前，不属于 Tool Calling，也不进入 `tool_call_count`。
+
+因此禁止把固定 Context 再包装成 `get_task_context` Agent Tool。
+
 ## 4. Skill 与 Agent
 
 同一职责内的专业方法优先做 Skill。

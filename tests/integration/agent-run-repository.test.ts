@@ -26,15 +26,42 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
     repo.create({
       runId: 'run-a', userId: 'user-a', agentType: 'story-context-inspector',
       taskType: 'inspect-story-context', resourceType: 'story', resourceId: 'story-a',
-      runtime: 'nemoclaw-openclaw', model: 'hosted-test',
+      runtime: 'nemoclaw-openclaw', mode: 'story_continue',
+      skill: 'interview-closeout', skillVersion: 'v1',
+      provider: 'stepfun', model: 'hosted-test',
+      contextVersion: 'v1', schemaVersion: 'v1', inputHash: 'input-hash',
     });
     assert.equal(repo.findByIdForUser('user-a', 'run-a')?.status, 'queued');
     repo.markRunning('user-a', 'run-a');
     assert.equal(repo.findByIdForUser('user-a', 'run-a')?.status, 'running');
-    repo.markSucceeded('user-a', 'run-a', 123, { title: 'A', gap_count: 1 });
+    repo.recordAttempt('user-a', 'run-a', {
+      attemptCount: 2,
+      repairCount: 1,
+      toolCallCount: 0,
+      formatRepairUsed: true,
+      provider: 'stepfun',
+      model: 'hosted-test',
+    });
+    repo.markSucceeded('user-a', 'run-a', 123, { title: 'A', gap_count: 1 }, {
+      outputHash: 'output-hash',
+      provider: 'stepfun',
+      model: 'hosted-test',
+    });
     const saved = repo.findByIdForUser('user-a', 'run-a');
     assert.equal(saved?.status, 'succeeded');
     assert.equal(saved?.latencyMs, 123);
+    assert.equal(saved?.mode, 'story_continue');
+    assert.equal(saved?.skill, 'interview-closeout');
+    assert.equal(saved?.skillVersion, 'v1');
+    assert.equal(saved?.provider, 'stepfun');
+    assert.equal(saved?.contextVersion, 'v1');
+    assert.equal(saved?.schemaVersion, 'v1');
+    assert.equal(saved?.attemptCount, 2);
+    assert.equal(saved?.repairCount, 1);
+    assert.equal(saved?.toolCallCount, 0);
+    assert.equal(saved?.formatRepairUsed, true);
+    assert.equal(saved?.inputHash, 'input-hash');
+    assert.equal(saved?.outputHash, 'output-hash');
     assert.deepEqual(JSON.parse(saved?.resultJson ?? '{}'), { title: 'A', gap_count: 1 });
   } finally {
     rmSync(dir, { recursive: true, force: true });

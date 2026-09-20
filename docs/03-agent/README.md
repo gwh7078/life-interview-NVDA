@@ -97,11 +97,24 @@ Backend ContextBuilder
  -> AgentTaskPort
  -> NemoClawAgentTaskAdapter
  -> AgentTaskExecutor
+ -> Attempt Runner
  -> NemoClaw / OpenShell
  -> OpenClaw
  -> Skill
  -> Model
 ```
+
+固定 Context 的当前传输方式：
+
+```text
+AgentTaskRequest.payload
+ -> Runtime builds Task Prompt
+ -> stdin
+ -> OpenClaw --message-file -
+ -> Agent reasoning
+```
+
+这是 Runtime pre-injection，不是 Agent Tool Call。正常 Task 不需要 `get_task_context`。
 
 `NemoClawAgentTaskAdapter` 负责 Contract 校验和确定性 Task → Skill / Model Profile 路由。
 
