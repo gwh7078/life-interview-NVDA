@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { AgentRunStore } from '../tracing/agent-run-repository.js';
 import type {
   AgentTaskExecutionRequest,
@@ -188,6 +189,10 @@ function taskLabel(request: AgentTaskExecutionRequest): string {
   return request.mode ? `${request.taskType}:${request.mode}` : request.taskType;
 }
 
+function hashJson(value: unknown): string {
+  return createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
+}
+
 export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
   constructor(
     private readonly attempts: AgentTaskAttemptRunner,
@@ -204,21 +209,46 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
       resourceType: request.resource.type,
       resourceId: request.resource.id,
       runtime: 'nemoclaw-openclaw',
+      mode: request.mode ?? null,
+      skill: request.skill,
+      skillVersion: request.skillVersion,
       model: null,
+      contextVersion: request.contextVersion,
+      schemaVersion: request.schemaVersion,
+      inputHash: hashJson(request.payload),
     });
     this.runs?.markRunning(request.ownerId, request.runId);
 
     let mode: AgentAttemptMode = 'normal';
     let repairFeedback: string | undefined;
     let lastError: unknown;
+    let repairCount = 0;
+    let toolCallCount = 0;
+    let formatRepairUsed = false;
 
     for (let attemptNumber = 1; attemptNumber <= request.executionPolicy.maxAttempts; attemptNumber += 1) {
+      this.runs?.recordAttempt?.(request.ownerId, request.runId, {
+        attemptCount: attemptNumber,
+        repairCount,
+        toolCallCount,
+        formatRepairUsed,
+      });
       try {
         const attempt = await this.attempts.run({
           task: request,
           attemptNumber,
           mode,
           ...(repairFeedback ? { repairFeedback } : {}),
+        });
+
+        toolCallCount += attempt.toolCallCount;
+        this.runs?.recordAttempt?.(request.ownerId, request.runId, {
+          attemptCount: attemptNumber,
+          repairCount,
+          toolCallCount,
+          formatRepairUsed,
+          provider: attempt.runtime.provider ?? null,
+          model: attempt.runtime.model ?? null,
         });
 
         let output: unknown;
@@ -234,7 +264,11 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
           );
         }
 
-        this.runs?.markSucceeded(request.ownerId, request.runId, Date.now() - started, output);
+        this.runs?.markSucceeded(request.ownerId, request.runId, Date.now() - started, output, {
+          outputHash: hashJson(output),
+          provider: attempt.runtime.provider ?? null,
+          model: attempt.runtime.model ?? null,
+        });
         return {
           output,
           runtime: {
@@ -250,6 +284,8 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
           && request.executionPolicy.allowFormatRepair
           && canRetry) {
           mode = 'format_repair';
+          repairCount += 1;
+          formatRepairUsed = true;
           repairFeedback = `${error.code}: ${error.message}\nCandidate:\n${error.candidate}`;
           continue;
         }
