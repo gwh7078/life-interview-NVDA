@@ -163,14 +163,20 @@ Retriever 不应为了比赛加分破坏已有产品完整性，因此：
 推荐最终 DGX Spark 证据：
 
 ```text
-Realtime
- -> Classic NeMo Retrieval
+Realtime Future
+ -> 个人历史 Classic NeMo Retrieval
+ -> 时代背景 Classic NeMo Retrieval
 
 Offline / Post-session Deep Evidence Agent
- -> Agentic NeMo Retrieval
+ -> 个人历史 Agentic NeMo Retrieval
 
-Both
+个人历史 Classic + Agentic
  -> same local Derived Transcript Index
+
+时代背景
+ -> separate read-only Era Context Index
+
+All Future Retrieval
  -> DGX Spark local compute
 ```
 
