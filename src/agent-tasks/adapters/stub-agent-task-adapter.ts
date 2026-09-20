@@ -1,4 +1,3 @@
-import type { z } from 'zod';
 import {
   type AgentTaskRequestUnion,
   type AgentTaskResultUnion,
@@ -93,7 +92,7 @@ export class StubAgentTaskAdapter implements AgentTaskPort {
   async run(request: AgentTaskRequestUnion): Promise<AgentTaskResultUnion> {
     const definition = getAgentTaskDefinition(request.taskType, request.mode);
     definition.inputSchema.parse(request.payload);
-    const output = definition.outputSchema.parse(stubOutput(request)) as z.output<typeof definition.outputSchema>;
+    const output = definition.outputSchema.parse(stubOutput(request));
 
     return {
       runId: request.runId,

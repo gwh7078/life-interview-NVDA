@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type { ZodType } from 'zod';
 import {
   contributorCloseoutTaskOutputSchema,
   interviewCloseoutModes,
@@ -24,8 +24,8 @@ export interface AgentTaskDefinition {
   mode?: InterviewCloseoutMode;
   skill: string;
   modelProfile: AgentModelProfile;
-  inputSchema: z.ZodType;
-  outputSchema: z.ZodType;
+  inputSchema: ZodType;
+  outputSchema: ZodType;
   contextVersion: 'v1';
   schemaVersion: 'v1';
 }
