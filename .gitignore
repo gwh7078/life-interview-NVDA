@@ -1,1 +1,59 @@
+node_modules/
+**/node_modules/
+dist/
+**/dist
+
+# Local credentials/config; only the safe template is tracked.
+.env
+.env.*
+!.env.example
+
+# Local data and generated artifacts
+data/
+openclaw-plugin/data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.wav
+*.aiff
+runtime/
+runtime/diagnostics/
+*.log
+logs/
+uploads/
+**/uploads/
+
+# macOS metadata
 .DS_Store
+Thumbs.db
+
+# Local key material and OAuth credentials
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+credentials*.json
+client_secret*.json
+oauth*.json
+token*.json
+service-account*.json
+
+# Local Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/

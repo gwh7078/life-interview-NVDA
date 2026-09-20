@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8f6f1">
+    <title>人生采访局 · 人生档案</title>
+    <link rel="stylesheet" href="/ui.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/client.js"></script>
+  </head>
+  <body>
+    <main class="page-shell app-shell">
+      <header class="site-header">
+        <a class="brand" href="/my-life" aria-label="回到我的人生">
+          <span class="brand-mark" aria-hidden="true">人</span>
+          <span class="brand-copy">
+            <span class="eyebrow">LIFE INTERVIEW</span>
+            <span class="brand-name">人生采访局</span>
+          </span>
+        </a>
+        <nav class="site-nav" aria-label="页面导航">
+          <a class="button button-quiet" href="/my-life">我的人生</a>
+          <button id="logout-button" class="button button-quiet" type="button" hidden>退出登录</button>
+        </nav>
+      </header>
+
+      <section class="auth-card panel" id="auth-card" aria-labelledby="auth-heading">
+        <div class="auth-intro">
+          <p class="section-label">进入你的档案</p>
+          <h1 id="auth-heading">把人生，慢慢讲给一个认真听的人。</h1>
+          <p class="auth-copy" id="auth-copy">输入中国大陆 11 位手机号即可登录；第一次来，我们会从一段轻松的聊天开始。</p>
+        </div>
+        <div class="auth-form">
+          <label class="field-label" for="phone-input">手机号</label>
+          <input id="phone-input" class="text-field" type="tel" autocomplete="tel" inputmode="tel" placeholder="13800138000" maxlength="24">
+          <button id="request-code-button" class="button button-primary auth-request-button" type="button">进入我的人生</button>
+          <div id="verification-controls" class="debug-only auth-verification" hidden>
+            <label class="field-label" for="code-input">验证码</label>
+            <input id="code-input" class="text-field" type="text" autocomplete="one-time-code" inputmode="numeric" maxlength="8" placeholder="输入短信验证码">
+            <button id="verify-button" class="button button-secondary" type="button">验证并登录</button>
+          </div>
+          <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
+          <div id="development-login" class="debug-only development-login" hidden>
+            <span>开发入口</span>
+            <button id="legacy-login-button" class="button button-secondary" type="button">使用开发档案</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="interview-card panel" id="interview-card" aria-labelledby="story-heading" hidden>
+        <div class="card-topline">
+          <div>
+            <p class="section-label" id="interview-kicker">本次采访</p>
+            <h2 id="story-heading">先从一段故事开始</h2>
+          </div>
+          <div class="status-pill" id="status-pill" data-state="idle" role="status" aria-live="polite">
+            <span class="status-dot"></span>
+            <span id="status-text">准备开始</span>
+          </div>
+        </div>
+
+        <div class="onboarding-welcome" id="onboarding-welcome" hidden>
+          <p class="section-label" id="onboarding-mode-label">首次建档</p>
+          <h3 id="onboarding-title">先聊聊你的人生</h3>
+          <p id="onboarding-copy" class="onboarding-copy">我们会先一起建立你的人生地图：从成长背景聊到现在的生活，再留下几条以后可以继续展开的线索。</p>
+          <ul class="onboarding-topics">
+            <li>你从哪里开始，怎样长大</li>
+            <li>人生中几段重要的变化与经历</li>
+            <li>现在的状态，以及以后想细聊的故事</li>
+          </ul>
+          <p class="onboarding-reassurance" id="onboarding-reassurance">不需要一次把每个故事讲得很详细，准备好后再开始就好。</p>
+        </div>
+
+        <div id="precall-panel" class="precall-panel" hidden>
+          <div class="precall-lede">
+            <p class="section-label" id="precall-label">继续一段故事</p>
+            <h3 id="precall-story-title">这次想聊聊什么？</h3>
+            <p id="precall-stage" class="precall-context"></p>
+            <div class="precall-last-copy">
+              <p id="precall-last" class="precall-last text-disclosure-content"></p>
+              <button class="text-disclosure" id="precall-last-toggle" type="button" hidden aria-controls="precall-last" aria-expanded="false">展开全文</button>
+            </div>
+          </div>
+          <div class="precall-prompt-block">
+            <p class="field-label">可以从这里开始</p>
+            <p id="precall-topic" class="precall-topic"></p>
+            <ul id="precall-prompts" class="precall-prompts"></ul>
+          </div>
+        </div>
+
+        <div id="story-interview-controls" class="debug-only interview-debug-controls">
+          <label class="field-label" for="provider-select">实时语音 Provider</label>
+          <select id="provider-select" class="text-field debug-only">
+            <option value="doubao" selected>豆包火山引擎 · Seeduplex 1.0 全双工</option>
+          </select>
+          <label class="field-label" for="interview-mode">采访目标</label>
+          <select id="interview-mode" class="text-field">
+            <option value="continue">继续已有 Story</option>
+            <option value="create">采访并新建 Story</option>
+          </select>
+          <div id="existing-story-controls">
+            <label class="field-label" for="story-select">故事</label>
+            <select id="story-select" class="text-field" disabled><option>正在读取已有故事…</option></select>
+            <p class="story-meta" id="story-meta">采访结束后会整理摘要并保留完整 Transcript。</p>
+          </div>
+          <div id="new-story-controls" hidden>
+            <label class="field-label" for="stage-select">目标人生阶段</label>
+            <select id="stage-select" class="text-field" disabled><option>正在读取人生阶段…</option></select>
+            <label class="field-label" for="story-title-input">故事标题（可选）</label>
+            <input id="story-title-input" class="text-field" type="text" maxlength="80" placeholder="留空则由整理结果拟定">
+            <p class="story-meta">采访结束并整理成功后，Story 会保存到所选人生阶段。</p>
+          </div>
+        </div>
+
+        <div class="interview-toolbar">
+          <div class="duration-block">
+            <span class="duration-label">采访时长</span>
+            <strong id="duration">00:00</strong>
+          </div>
+          <div class="toolbar-actions">
+            <button id="start-button" class="button button-primary start-button" type="button" disabled>
+              <span class="button-icon button-icon-phone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M7.6 3.8 10 3l2 4.8-2.1 1.4a14.5 14.5 0 0 0 4.9 4.9l1.4-2.1L21 14l-.8 2.4c-.4 1.2-1.5 2-2.8 2C10.6 18.4 5.6 13.4 5.6 6.6c0-1.3.8-2.4 2-2.8Z"/></svg>
+              </span>
+              <span id="start-button-label">开始聊天</span>
+            </button>
+            <button id="end-button" class="button button-danger end-button" type="button" disabled hidden>
+              <span class="button-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m7 7 10 10M17 7 7 17"/></svg></span>
+              <span>结束采访</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="privacy-note debug-only" id="privacy-note">开始后会通过麦克风与选定的云端实时语音 Provider 对话；仅最终字幕写入 Transcript，不保存音频文件。</p>
+      </section>
+
+      <section class="conversation-card call-frame" id="conversation-card" aria-labelledby="conversation-heading" hidden>
+        <div class="call-header">
+          <div class="call-presence" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="call-heading-copy">
+            <p class="section-label">人生采访局</p>
+            <h2 id="conversation-heading">正在和你聊天</h2>
+            <p id="call-story-title" class="call-story-title"></p>
+            <p id="call-context-copy" class="call-context-copy"></p>
+          </div>
+          <span class="status-pill status-pill-call" id="call-status" data-state="idle" role="status" aria-live="polite">准备开始</span>
+        </div>
+
+        <div id="conversation" class="conversation" aria-live="polite" aria-relevant="additions text">
+          <div class="empty-state" id="empty-state">
+            <div class="empty-glyph" aria-hidden="true">“</div>
+            <p id="empty-state-title">准备好后，开始这次聊天。</p>
+            <span>你可以自然讲述，也可以随时打断采访官。</span>
+          </div>
+          <div class="live-line" id="live-line" hidden>
+            <span class="live-indicator"></span>
+            <span id="live-speaker">正在听</span>
+            <span id="live-text"></span>
+          </div>
+        </div>
+
+        <div class="call-footer">
+          <span id="call-timer" class="call-timer">00:00</span>
+          <div id="call-controls" class="call-controls" aria-label="通话控制" hidden>
+            <button id="mute-button" class="call-control" type="button" aria-pressed="false" title="静音">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 5.4 1.8M7 10v1a5 5 0 0 0 8.6 3.5M12 19v2m-4 0h8M5 10a7 7 0 0 0 14 0M5 5l14 14"/></svg>
+              <span>静音</span>
+            </button>
+            <button id="speaker-button" class="call-control" type="button" aria-pressed="true" title="扬声器">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M4 10v4h4l5 4V6l-5 4H4Zm12.5-2.5a6 6 0 0 1 0 9m2.2-11.2a9 9 0 0 1 0 13.4"/></svg>
+              <span>扬声器</span>
+            </button>
+            <button id="call-end-button" class="call-control call-control-hangup" type="button" title="结束采访">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M5.5 9.7a11 11 0 0 1 13 0l-1.6 3a1.5 1.5 0 0 1-1.8.7l-2.2-.8a1.5 1.5 0 0 1-1-1.4V11a11 11 0 0 0-3.8 0v.2a1.5 1.5 0 0 1-1 1.4l-2.2.8a1.5 1.5 0 0 1-1.8-.7l-1.6-3Z"/></svg>
+              <span>结束</span>
+            </button>
+          </div>
+          <span class="call-timer call-timer-spacer" aria-hidden="true"></span>
+        </div>
+        <div id="external-closeout-retry" class="story-meta" hidden>
+          <p id="external-closeout-retry-message">原始访谈记录已保存，但连续采访记忆整理失败。</p>
+          <button id="external-closeout-retry-button" class="button button-secondary" type="button">重新整理</button>
+        </div>
+      </section>
+
+      <footer class="page-footer debug-only">
+        <span>本地页面 → 本机服务 → 所选实时语音 Provider</span>
+        <span id="connection-note">正在检查服务…</span>
+      </footer>
+    </main>
+  </body>
+</html>

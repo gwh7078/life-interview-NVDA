@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8f6f1">
+    <title>故事详情 · 人生采访局</title>
+    <link rel="stylesheet" href="/story.css">
+    <script type="module" src="/story.js"></script>
+  </head>
+  <body>
+    <main class="story-shell">
+      <header class="site-header">
+        <a class="brand-mark" href="/my-life" aria-label="返回我的人生">人</a>
+        <div class="brand-copy">
+          <strong>人生采访局</strong>
+          <span>把人生讲出来，慢慢写下来</span>
+        </div>
+        <div class="profile-wrap" hidden>
+          <button id="profile-entry" class="profile-entry" type="button" aria-label="个人资料入口" aria-expanded="false" aria-controls="profile-popover">
+            <span class="profile-avatar" id="profile-avatar" aria-hidden="true">人</span>
+            <span class="profile-name" id="profile-name">我的档案</span>
+            <span aria-hidden="true">⌄</span>
+          </button>
+          <div class="profile-popover" id="profile-popover" hidden>
+            <strong id="profile-popover-name">我的档案</strong>
+            <p>个人资料详情暂未开放</p>
+            <a href="/interview">返回采访</a>
+          </div>
+        </div>
+      </header>
+
+      <section class="login-notice" id="login-notice" hidden aria-labelledby="login-title">
+        <div class="empty-emblem" aria-hidden="true">人</div>
+        <h2 id="login-title">登录后查看你的故事</h2>
+        <p>登录后可以查看和整理人生中的故事。</p>
+        <a class="button button-primary" id="login-link" href="/interview">前往登录</a>
+      </section>
+
+      <p class="page-notice" id="page-notice" role="alert" hidden></p>
+      <div class="page-retry" id="page-retry" hidden>
+        <button class="button button-secondary" type="button" id="retry-button">重新加载</button>
+      </div>
+      <p class="loading-state" id="loading-state" role="status">正在读取故事…</p>
+
+      <section class="story-content" id="story-content" hidden aria-labelledby="story-title-heading">
+        <a class="back-link" id="back-to-life" href="/">← 我的人生</a>
+
+        <header class="story-title-block">
+          <div class="story-title-copy">
+            <h1 id="story-title-heading">故事详情</h1>
+            <p class="story-meta-line">
+              <span id="story-stage">人生阶段</span>
+              <span aria-hidden="true"> · </span>
+              <span id="story-updated-at">更新时间暂不可用</span>
+            </p>
+          </div>
+          <button class="edit-story-button" id="edit-story-button" type="button" aria-haspopup="dialog">编辑</button>
+        </header>
+
+        <section class="story-progress" id="story-progress" aria-labelledby="progress-heading">
+          <div class="progress-topline">
+            <span id="progress-heading">故事进度</span>
+            <strong id="story-status" role="status" aria-live="polite"></strong>
+          </div>
+          <div class="progress-track" id="progress-track" role="img" aria-label="故事进度">
+            <span class="progress-segment" data-progress-step="pending"></span>
+            <span class="progress-segment" data-progress-step="interviewing"></span>
+            <span class="progress-segment" data-progress-step="complete"></span>
+          </div>
+          <div class="progress-labels" aria-hidden="true">
+            <span>资料较少</span>
+            <span>正在完善</span>
+            <span>已可成稿</span>
+          </div>
+        </section>
+
+        <div class="story-content-flow">
+          <section class="story-summary-section" aria-labelledby="summary-heading">
+            <h2 id="summary-heading">这个故事</h2>
+            <div class="story-summary-copy">
+              <p class="story-summary text-disclosure-content" id="story-summary"></p>
+              <button class="text-disclosure" id="story-summary-toggle" type="button" hidden aria-controls="story-summary" aria-expanded="false">展开全文</button>
+            </div>
+          </section>
+
+          <section class="story-gaps-section" aria-labelledby="gaps-heading">
+            <div class="section-heading-row">
+              <h2 id="gaps-heading">下次可以聊</h2>
+              <span class="section-note">最多三条线索</span>
+            </div>
+            <p class="gaps-intro" id="gaps-intro"></p>
+            <div class="gap-copy-list" id="gap-list" aria-label="访谈线索"></div>
+          </section>
+        </div>
+
+        <section class="story-actions" aria-labelledby="story-actions-heading">
+          <h2 class="visually-hidden" id="story-actions-heading">故事操作</h2>
+          <a class="button button-primary continue-link" id="continue-link" href="#">
+            <span class="button-symbol" aria-hidden="true">☎</span> 继续聊
+          </a>
+          <button class="button button-disabled polish-link" id="polish-link" type="button" disabled>润色成稿</button>
+          <button class="button button-secondary" id="share-story-button" type="button">分享给亲友</button>
+        </section>
+      </section>
+
+      <footer class="page-footer"><a href="/my-life">返回我的人生</a></footer>
+    </main>
+
+    <div class="story-share-layer" id="story-share-layer" hidden>
+      <button class="story-share-backdrop" id="story-share-backdrop" type="button" aria-label="关闭分享"></button>
+      <aside class="story-share-dialog" id="story-share-dialog" role="dialog" aria-modal="true" aria-labelledby="story-share-title" tabindex="-1">
+        <header class="drawer-header">
+          <div>
+            <p class="eyebrow">SHARE STORY</p>
+            <h2 id="story-share-title">邀请亲友补充</h2>
+          </div>
+          <button class="icon-button" id="story-share-close" type="button" aria-label="关闭">×</button>
+        </header>
+        <p class="share-help">分享链接有效 7 天。同一个链接始终视为同一个人，后续再次进入时采访官会接着之前的内容继续。</p>
+        <label class="field-label" for="story-share-relationship">他 / 她与你的关系</label>
+        <select class="text-field" id="story-share-relationship">
+          <option value="wife">妻子</option>
+          <option value="husband">丈夫</option>
+          <option value="daughter">女儿</option>
+          <option value="son">儿子</option>
+          <option value="father">父亲</option>
+          <option value="mother">母亲</option>
+          <option value="sibling">兄弟姐妹</option>
+          <option value="friend">朋友</option>
+          <option value="classmate">同学</option>
+          <option value="colleague">同事</option>
+          <option value="other">其他</option>
+        </select>
+        <button class="button button-primary share-generate-button" id="story-share-generate" type="button">生成 7 天分享链接</button>
+        <p class="field-feedback" id="story-share-feedback" role="status" aria-live="polite" hidden></p>
+        <div class="share-result" id="story-share-result" hidden>
+          <label class="field-label" for="story-share-url">分享链接</label>
+          <div class="share-url-row">
+            <input class="text-field" id="story-share-url" type="text" readonly>
+            <button class="button button-secondary" id="story-share-copy" type="button">复制</button>
+          </div>
+          <p class="share-expiry" id="story-share-expiry"></p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="story-edit-layer" id="story-edit-layer" hidden>
+      <button class="story-edit-backdrop" id="story-edit-backdrop" type="button" aria-label="关闭故事编辑"></button>
+      <aside class="story-edit-drawer" id="story-edit-drawer" role="dialog" aria-modal="true" aria-labelledby="story-edit-title" tabindex="-1">
+        <header class="drawer-header">
+          <div>
+            <p class="eyebrow">EDIT STORY</p>
+            <h2 id="story-edit-title">编辑故事</h2>
+          </div>
+          <button class="icon-button" id="story-edit-close" type="button" aria-label="关闭">×</button>
+        </header>
+
+        <form class="story-edit-form" id="title-form" novalidate>
+          <label class="field-label" for="story-title-input">故事标题</label>
+          <div class="title-edit-row">
+            <input class="text-field title-field" id="story-title-input" name="title" type="text" maxlength="200" autocomplete="off" aria-describedby="title-feedback">
+            <button class="button button-secondary" id="save-title-button" type="submit">保存</button>
+          </div>
+          <p class="field-feedback" id="title-feedback" role="status" aria-live="polite" hidden></p>
+
+          <label class="field-label stage-field-label" for="stage-select">所属人生阶段</label>
+          <select class="text-field" id="stage-select" aria-describedby="stage-feedback"></select>
+          <p class="field-feedback" id="stage-feedback" role="status" aria-live="polite" hidden></p>
+          <p class="edit-help">选择其他阶段后会立即移动这个故事。</p>
+        </form>
+
+        <div class="drawer-actions">
+          <button class="button button-secondary" id="story-edit-cancel" type="button">完成</button>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>

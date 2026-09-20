@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f8f6f1">
+    <title>制作我的人生书 · 人生采访局</title>
+    <link rel="stylesheet" href="/ui.css">
+    <link rel="stylesheet" href="/book.css">
+    <script type="module" src="/book.js"></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="site-header">
+        <a class="brand book-brand" href="/my-life" aria-label="返回我的人生">
+          <span class="brand-mark" aria-hidden="true">人</span>
+          <span class="header-copy">
+            <span class="eyebrow">BOOK ASSEMBLY</span>
+            <h1>制作我的人生书</h1>
+          </span>
+        </a>
+        <nav class="header-links" aria-label="页面导航">
+          <a class="button button-quiet" href="/my-life">我的人生</a>
+        </nav>
+      </header>
+
+      <p class="page-notice" id="book-notice" role="alert" hidden></p>
+      <section class="book-loading" id="book-loading" role="status">正在准备你的故事…</section>
+      <section class="book-empty panel" id="book-empty" hidden aria-labelledby="book-empty-title">
+        <div class="empty-emblem" aria-hidden="true">书</div>
+        <h2 id="book-empty-title">还没有可以成书的故事</h2>
+        <p>先完成一篇 Story 成稿，它就可以成为人生书的一章。</p>
+        <a class="button button-primary" href="/my-life">返回我的人生</a>
+      </section>
+
+      <section class="book-flow" id="book-flow" hidden>
+        <nav class="stepper" aria-label="成书步骤">
+          <button type="button" class="stepper-item" data-step-target="information"><span>1</span><strong>书籍信息</strong></button>
+          <span aria-hidden="true">→</span>
+          <button type="button" class="stepper-item" data-step-target="arrangement"><span>2</span><strong>内容编排</strong></button>
+          <span aria-hidden="true">→</span>
+          <button type="button" class="stepper-item" data-step-target="delivery"><span>3</span><strong>成书与交付</strong></button>
+        </nav>
+
+        <section class="step-panel" id="step-information" data-step-panel="information" aria-labelledby="information-title">
+          <p class="section-kicker">STEP 1 · BOOK DETAILS</p>
+          <h2 id="information-title">先为这本书写下名字</h2>
+          <p class="step-intro">这是一本关于你的人生书。书名、作者和封面都可以之后再调整。</p>
+          <div class="form-card panel">
+            <label class="field-label" for="book-title">书名</label>
+            <input class="text-field" id="book-title" type="text" maxlength="200" placeholder="例如：周明的人生片段">
+            <label class="field-label" for="book-author">作者</label>
+            <input class="text-field" id="book-author" type="text" maxlength="200" placeholder="写下你的名字">
+          </div>
+          <div class="cover-section">
+            <div class="section-heading"><h3>简单封面</h3><span>选择一种气质</span></div>
+            <div class="cover-options" id="cover-options">
+              <button type="button" class="cover-option cover-paper" data-cover-style="paper" aria-label="纸张封面"><span>纸张</span></button>
+              <button type="button" class="cover-option cover-sage" data-cover-style="sage" aria-label="鼠尾草绿封面"><span>松绿</span></button>
+              <button type="button" class="cover-option cover-rose" data-cover-style="rose" aria-label="玫瑰棕封面"><span>暖棕</span></button>
+            </div>
+          </div>
+          <div class="step-actions">
+            <a class="button button-secondary" href="/my-life">稍后再做</a>
+            <button class="button button-primary" type="button" data-action="to-arrangement">下一步：内容编排</button>
+          </div>
+        </section>
+
+        <section class="step-panel" id="step-arrangement" data-step-panel="arrangement" aria-labelledby="arrangement-title" hidden>
+          <p class="section-kicker">STEP 2 · ARRANGEMENT</p>
+          <h2 id="arrangement-title">决定哪些故事成为章节</h2>
+          <p class="step-intro">按人生阶段排列。你可以暂时不收录某一章，也可以改选历史版本。</p>
+          <div class="arrangement-list" id="arrangement-list"></div>
+          <div class="step-actions arrangement-actions">
+            <button class="button button-secondary" type="button" data-action="to-information">上一步</button>
+            <button class="button button-quiet" type="button" data-action="open-preview">预览成书</button>
+            <button class="button button-primary" type="button" data-action="to-delivery">下一步：成书与交付</button>
+          </div>
+        </section>
+
+        <section class="step-panel" id="step-delivery" data-step-panel="delivery" aria-labelledby="delivery-title" hidden>
+          <p class="section-kicker">STEP 3 · DELIVERY</p>
+          <h2 id="delivery-title">这本书已经准备好了</h2>
+          <div class="book-summary-card panel">
+            <p class="summary-label">BOOK SUMMARY</p>
+            <strong id="delivery-title-copy">我的人生书</strong>
+            <span id="delivery-author-copy">作者</span>
+            <span id="delivery-count-copy">已收录 0 个故事</span>
+          </div>
+          <button class="preview-link button button-quiet" type="button" data-action="open-preview">预览整本书 <span aria-hidden="true">→</span></button>
+          <div class="delivery-options">
+            <article class="delivery-card delivery-real panel">
+              <div><span class="delivery-kicker">E-BOOK · PDF</span><h3>导出电子书</h3><p>生成完整 PDF 人生书，正文来自你选择的成稿版本。</p></div>
+              <button class="button button-primary" type="button" data-action="export-pdf">导出 PDF</button>
+            </article>
+            <article class="delivery-card panel">
+              <div><span class="delivery-kicker">DEMO SERVICE</span><h3>打印纸质书</h3><p>专业排版、印刷装订、邮寄到家。</p></div>
+              <button class="button button-secondary" type="button" data-demo="print">申请体验</button>
+            </article>
+            <article class="delivery-card panel">
+              <div><span class="delivery-kicker">DEMO SERVICE</span><h3>出版社出版服务</h3><p>编辑审校、出版对接、正式出版。</p></div>
+              <button class="button button-secondary" type="button" data-demo="publisher">申请出版服务</button>
+            </article>
+          </div>
+          <div class="step-actions"><button class="button button-secondary" type="button" data-action="to-arrangement">上一步</button></div>
+        </section>
+      </section>
+    </main>
+
+    <div class="preview-layer" id="preview-layer" hidden>
+      <div class="preview-backdrop" data-action="close-preview"></div>
+      <section class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+        <header class="preview-header"><div><p class="section-kicker">BOOK PREVIEW</p><h2 id="preview-title">整本书预览</h2></div><button class="icon-button" type="button" data-action="close-preview" aria-label="关闭预览">×</button></header>
+        <div class="preview-content" id="preview-content"></div>
+      </section>
+    </div>
+
+    <dialog class="demo-dialog" id="demo-dialog">
+      <div class="demo-dialog-copy"><p class="section-kicker">DEMO SERVICE</p><h2 id="demo-dialog-title">服务展示</h2><p id="demo-dialog-message">这项服务将在比赛 Demo 中展示，暂不创建真实订单。</p></div>
+      <button class="button button-primary" type="button" data-action="close-demo">知道了</button>
+    </dialog>
+  </body>
+</html>

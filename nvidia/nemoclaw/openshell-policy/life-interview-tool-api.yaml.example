@@ -1,0 +1,17 @@
+preset:
+  name: life-interview-tool-api
+  description: "Read-only Life Interview Agent Tool API on the developer host"
+
+network_policies:
+  life_interview_tool_api:
+    name: life_interview_tool_api
+    endpoints:
+      - host: 10.0.0.5
+        port: 4175
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/health" }
+          - allow: { method: POST, path: "/internal/agent-tools/get_story_context" }
+    binaries:
+      - { path: /usr/bin/curl }

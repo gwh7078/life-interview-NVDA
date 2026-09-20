@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8f6f1">
+    <title>人生采访局 · 你的人生地图</title>
+    <link rel="stylesheet" href="/ui.css">
+    <link rel="stylesheet" href="/onboarding.css">
+    <script type="module" src="/onboarding-result.js"></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="/my-life" aria-label="回到我的人生">
+          <span class="brand-mark" aria-hidden="true">人</span>
+          <span class="brand-copy"><span class="eyebrow">LIFE INTERVIEW</span><span class="brand-name">人生采访局</span></span>
+        </a>
+      </header>
+
+      <section class="status-card" role="status" aria-live="polite" aria-atomic="true" aria-labelledby="status-title">
+        <div class="status-indicator" id="status-indicator" data-state="loading" aria-hidden="true"></div>
+        <div class="status-copy">
+          <p class="section-label">你的新档案</p>
+          <h2 id="status-title">正在载入你的人生地图…</h2>
+          <p id="status-description">这是刚才聊天整理出的第一版人生地图。之后可以随时回来继续补充。</p>
+        </div>
+      </section>
+
+      <div id="page-error" class="notice notice-error" role="alert" hidden></div>
+
+      <div id="result-content" hidden>
+        <section class="panel result-profile" aria-labelledby="profile-name">
+          <p class="section-label">人物档案</p>
+          <h2 id="profile-name"></h2>
+          <div id="current-status-block" hidden>
+            <p class="profile-field-label">目前</p>
+            <p id="current-status" class="current-status"></p>
+          </div>
+          <div id="profile-summary-block" hidden>
+            <p class="profile-field-label">人生概况</p>
+            <p id="profile-summary" class="profile-summary"></p>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="life-stages-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">人生脉络</p>
+              <h2 id="life-stages-title">主要人生阶段</h2>
+            </div>
+          </div>
+          <div id="life-stages-list" class="stage-list"></div>
+        </section>
+      </div>
+
+      <footer class="page-footer">
+        <button id="finish-button" class="button button-primary" type="button">进入我的人生</button>
+      </footer>
+    </main>
+  </body>
+</html>
