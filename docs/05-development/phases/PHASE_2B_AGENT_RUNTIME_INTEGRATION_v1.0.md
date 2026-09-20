@@ -136,13 +136,31 @@ Tracing 增加：
 
 当前 Phase 2B 核心 4 Task 不依赖 Memory Search。
 
-未来 Tool 接入原则已经冻结：
+Future Tool 接入原则已经冻结：
 
 - 只用于运行时额外信息；
 - 不按数据库表拆 CRUD；
 - 优先任务级、问题级能力；
 - scoped token + owner/resource/run scope；
-- Agent 不直接访问 SQLite。
+- Agent 不直接访问 SQLite；
+- 正常任务 0 Tool Call；
+- 普通历史疑点优先使用 `memory_search` / Classic Retrieval；
+- 真正复杂跨历史问题才升级 `memory_deep_search` / Agentic Retrieval；
+- Realtime Slow Agent 只允许 Classic Retrieval，不允许 Agentic Retrieval 阻塞语音。
+
+Future：
+
+```text
+memory_search
+ -> Classic Retrieval
+ -> low-latency recall
+
+memory_deep_search
+ -> Agentic Retrieval
+ -> post-session / offline deep evidence search
+```
+
+当前只保留 Runtime 对 Tool Loop 的兼容性，不在 Phase 2B 核心路径实现这两个 Tool。
 
 ## 4. Explicitly out of scope
 
@@ -151,7 +169,8 @@ Tracing 增加：
 - Realtime Agentization；
 - Realtime Slow System；
 - NeMo Retriever 正式产品集成；
-- Memory Search 正式产品调用；
+- Classic Memory Search 正式产品调用；
+- Agentic Retrieval 正式产品调用；
 - 外部世界事实核查；
 - public API redesign。
 
