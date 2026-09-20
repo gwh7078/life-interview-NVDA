@@ -228,8 +228,11 @@ test('completion, generation and contributor mappers expose only task-approved c
     profile: { name: '张三', profileSummary: '工程师。' },
     lifeStage: { title: '学生时期', startDate: '2005', endDate: '2008' },
     transcript: [{
+      sessionId: 'session-secret',
+      messageId: 'message-secret',
       role: 'user',
       text: '我第一次登台时非常紧张。',
+      timestamp,
     }],
     transcriptSessionIds: ['session-secret'],
     story: { title: '第一次登台', summary: '一次学生时期的演出。' },
@@ -245,6 +248,7 @@ test('completion, generation and contributor mappers expose only task-approved c
     text: '我第一次登台时非常紧张。',
   }]);
   assert.equal(JSON.stringify(generation.request.payload).includes('session-secret'), false);
+  assert.equal(JSON.stringify(generation.request.payload).includes('message-secret'), false);
 
   const contributor = mapContributorCloseoutContextToTask({
     userId: 'owner-1',
