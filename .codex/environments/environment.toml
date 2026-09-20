@@ -1,0 +1,15 @@
+version = 1
+name = "人生采访局 NVIDIA 本地开发"
+
+[setup]
+script = "bash scripts/codex-worktree-setup.sh"
+
+[[actions]]
+name = "检查 AI 环境"
+icon = "test"
+command = "bash scripts/check-ai-env.sh"
+
+[[actions]]
+name = "查看 NemoClaw 状态"
+icon = "run"
+command = "nemoclaw my-assistant status"
