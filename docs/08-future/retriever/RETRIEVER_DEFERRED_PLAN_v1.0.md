@@ -1,4 +1,4 @@
-# NeMo Retriever Deferred Integration Plan v1.1
+# NeMo Retriever Deferred Integration Plan v1.2
 
 > Status: **Future / Deferred**
 >
@@ -17,7 +17,8 @@ NeMo Retriever 适合后续承担长期检索能力，但当前优先级低于�
 - 当前不为了 Retriever 修改 Task Contract；
 - 已有部署 / Smoke 资料继续保留；
 - Future 必须区分 **Classic Retrieval** 与 **Agentic Retrieval**；
-- 两种 Retrieval 共用同一份可重建的 Transcript Derived Index。
+- 个人历史 Classic Retrieval 与 Agentic Retrieval 共用同一份可重建的 Transcript Derived Index；
+- Future 时代背景检索使用独立的只读公共背景索引，不与用户私有 Transcript Index 混存。
 
 ## 2. 数据职责
 
@@ -247,7 +248,53 @@ L3 Agentic Retrieval
 
 > 默认先用 Agent Memory；出现普通疑点再 Classic Search；只有复杂问题才 Agentic Search。
 
-## 8. Realtime 硬边界
+## 8. Future 双检索源：个人历史 + 时代背景
+
+Future Realtime Slow System 不只有一个“Memory Search”。
+
+建议维护两个逻辑隔离的检索源：
+
+```text
+A. 个人历史证据索引
+- 来源：用户 Transcript
+- owner scoped
+- 从 SQLite 派生
+- 丢失后可重建
+
+B. 时代背景索引
+- 来源：预先整理的公共年代资料
+- read-only
+- 不包含用户私有数据
+- 按年份 / 地域 / 类别 / 人生阶段等检索
+```
+
+Future Tool 可以分别设计为：
+
+```text
+memory_search
+ -> 个人历史 Classic Retrieval
+
+era_context_search
+ -> 时代背景 Classic Retrieval
+```
+
+两者目标也不同：
+
+```text
+memory_search
+ -> 回忆“用户以前说过什么”
+
+era_context_search
+ -> 找到“用户当时所处时代有什么可能唤起记忆的话题”
+```
+
+时代背景检索返回的是采访线索，不是用户 Evidence，因此不得直接进入用户事实链路。
+
+详细设计：
+
+- `ERA_CONTEXT_LIBRARY_v1.0.md`
+
+## 13. Realtime 硬边界
 
 Future Realtime：
 
@@ -320,18 +367,20 @@ DGX Spark
 2. RetrieverAdapter；
 3. Transcript async indexing；
 4. scoped Evidence Search Contract；
-5. `memory_search` / Classic Retrieval；
+5. `memory_search` / 个人历史 Classic Retrieval；
 6. Interview Closeout 条件式 Classic Search 试验；
-7. Realtime Slow Agent + Classic Retrieval；
-8. Classic recall quality / latency / unnecessary-search benchmark；
-9. `memory_deep_search` / Agentic Retrieval；
-10. Offline Agent Deep Search integration；
-11. Agentic recall quality / latency / resource benchmark；
-12. 根据真实效果决定是否扩大使用范围。
+7. Realtime Slow Agent + 个人历史 Classic Retrieval；
+8. 时代背景最小数据集与独立只读 Index；
+9. `era_context_search` / 时代背景 Classic Retrieval；
+10. Classic recall / era hint quality / latency / unnecessary-search benchmark；
+11. `memory_deep_search` / Agentic Retrieval；
+12. Offline Agent Deep Search integration；
+13. Agentic recall quality / latency / resource benchmark；
+14. 根据真实效果决定是否扩大使用范围。
 
 ## 12. 当前冻结结论
 
-> **Realtime = Story Agent Memory + Classic Retrieval。**
+> **Future Realtime = Story Agent Memory + 条件式个人历史 Classic Retrieval + 条件式时代背景 Classic Retrieval。**
 >
 > **Post-session / Offline Deep Evidence Task = Agentic Retrieval。**
 >
