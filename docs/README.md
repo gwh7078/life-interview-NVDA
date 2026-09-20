@@ -1,0 +1,73 @@
+# 文档中心
+
+本目录是 life-interview-NVDA 的正式文档入口。
+
+## 文档治理原则
+
+本项目刻意保留技术演进过程：
+
+1. 不删除旧版本；
+2. 新方案新建版本文档；
+3. README 只指向当前推荐版本；
+4. 部署、测试、Benchmark 和失败报告长期保留；
+5. 已实现与 Planned / Future 必须清楚区分。
+
+## 评委推荐阅读路径
+
+1. [比赛评分对照](00-competition/SCORING_ALIGNMENT_v1.0.md)
+2. [产品基线](product/life-interview-product-tech-data-v1.5.3.md)
+3. [架构演进](02-architecture/ARCHITECTURE_EVOLUTION_v1.0.md)
+4. [当前主架构 v2.2](02-architecture/ARCHITECTURE_v2.2_task-contract-first.md)
+5. [Agent Task Contract](03-agent/contracts/AGENT_TASK_CONTRACTS_v1.0.md)
+6. [当前 Phase 2A 开发计划](05-development/phases/PHASE_2A_CONTRACT_FIRST_SCAFFOLD_v1.0.md)
+7. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
+8. [NVIDIA Integration](04-nvidia/README.md)
+9. [工程报告入口](07-reports/README.md)
+10. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
+
+## 当前状态
+
+### Current
+
+- Architecture v2.2 Contract-First
+- Agent Task Contract v1.0
+- Phase 2A Contract Scaffold
+
+### Validated Historical Work
+
+- Web 产品完整基线
+- Phase 1 NemoClaw / OpenClaw 真实 Smoke
+- Scoped Tool API
+- Agent Runtime 与 SQLite 隔离
+
+### Future / Deferred
+
+- Realtime Slow System
+- NeMo Retriever 产品集成
+- DGX Spark 最终本地推理与 Benchmark
+
+## 目录
+
+```text
+docs/
+├── 00-competition/    评分与提交要求对照
+├── 02-architecture/   当前架构与演进历史
+├── 03-agent/          Agent Contract / Skills / Eval
+├── 04-nvidia/         NVIDIA Runtime / DGX Spark / Retriever
+├── 05-development/    分阶段开发计划
+├── 06-decisions/      ADR
+├── 07-reports/        测试 / 部署 / Benchmark
+├── 08-future/         已冻结但延期的未来架构
+├── nvidia-agent-native/  Phase 0/1 历史资料
+└── product/           Web 产品与验收基线
+```
+
+## 历史资料
+
+原有 [`nvidia-agent-native/`](nvidia-agent-native/) 原样保留，包括 BASELINE、API / Schema Inventory、Repository Layout、Feature Matrix、Regression Matrix、Phase 1 Smoke 与 Implementation Report。
+
+产品基线继续保留在 [`product/`](product/)。
+
+比赛原始要求、DGX Spark 技术资料与来源清单位于仓库根目录 [`../资料库/`](../资料库/)。
+
+文档版本化的目的不是堆数量，而是让每一次技术判断、验证、失败与收敛都可以追溯。
