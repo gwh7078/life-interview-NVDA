@@ -1,4 +1,4 @@
-# DGX Spark Hackathon Scoring Alignment v1.2
+# DGX Spark Hackathon Scoring Alignment v1.3
 
 > Status: Working competition map
 >
@@ -56,7 +56,7 @@ Agentic Retrieval
 
 时代背景
  -> 独立只读公共年代库
- -> 找与年份 / 地点 / 年龄 / Life Stage / Story 相关的话题
+ -> 先按年份范围过滤，再根据当前对话语义寻找相关时代话题
 ```
 
 时代背景只负责唤起记忆和寻找采访话题，绝不自动成为用户事实。
@@ -202,7 +202,7 @@ All Future Retrieval
 5. Agent Runtime / Skill / Model tracing；
 6. 一次正常“1 Run 0 Tool”的高效路径；
 7. 若个人历史 Classic Retrieval 已实现：展示“发现历史疑点 → memory_search → 继续”；
-8. 若时代背景检索已实现：展示“识别年份 / 地点 / Life Stage → 找到时代话题 → 自然唤起新回忆”，并明确该背景不自动写入用户事实；
+8. 若时代背景检索已实现：展示“识别年份范围 → 年份过滤 + 语义检索 → 找到时代话题 → 自然唤起新回忆”，并明确该背景不自动写入用户事实；
 9. 若 Agentic Retrieval 已实现：展示一个明显需要跨 Session / Story 的 Deep Search；
 10. DGX Spark 本地运行证据。
 
