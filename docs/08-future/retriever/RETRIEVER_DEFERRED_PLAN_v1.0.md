@@ -1,4 +1,4 @@
-# NeMo Retriever Deferred Integration Plan v1.2
+# NeMo Retriever Deferred Integration Plan v1.3
 
 > Status: **Future / Deferred**
 >
@@ -265,7 +265,7 @@ B. 时代背景索引
 - 来源：预先整理的公共年代资料
 - read-only
 - 不包含用户私有数据
-- 按年份 / 地域 / 类别 / 人生阶段等检索
+- 第一版只按年份范围过滤，再对标题 + 摘要做语义检索
 ```
 
 Future Tool 可以分别设计为：
@@ -389,4 +389,4 @@ DGX Spark
 >
 > **用户个人历史：SQLite / Transcript 永远是 Source of Truth，个人历史 Retriever 只是可重建的派生证据索引。**
 >
-> **时代背景索引是独立只读公共资料库，只能提供采访话题提示，不属于用户事实证据。**
+> **时代背景索引是独立只读公共资料库。第一版不做地域维度，只保留开始年份、结束年份、类别、标题和两句摘要；先按年份范围过滤，再做语义检索。检索结果只能提供采访话题提示，不属于用户事实证据。**
