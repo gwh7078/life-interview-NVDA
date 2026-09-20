@@ -1,8 +1,10 @@
-# NeMo Retriever Deferred Integration Plan v1.0
+# NeMo Retriever Deferred Integration Plan v1.1
 
 > Status: **Future / Deferred**
 >
 > 当前 Phase 2B 不做正式产品集成。
+>
+> 本版冻结 Classic Retrieval 与 Agentic Retrieval 的职责边界。
 
 ## 1. 当前决定
 
@@ -13,7 +15,9 @@ NeMo Retriever 适合后续承担长期检索能力，但当前优先级低于�
 - 当前 Product Workflow 不依赖 Retriever；
 - 当前 Realtime 主链路不依赖 Retriever；
 - 当前不为了 Retriever 修改 Task Contract；
-- 已有部署 / Smoke 资料继续保留。
+- 已有部署 / Smoke 资料继续保留；
+- Future 必须区分 **Classic Retrieval** 与 **Agentic Retrieval**；
+- 两种 Retrieval 共用同一份可重建的 Transcript Derived Index。
 
 ## 2. 数据职责
 
@@ -26,6 +30,10 @@ NeMo Retriever 适合后续承担长期检索能力，但当前优先级低于�
 未来是 Derived Search Index，保存可重建的 Transcript chunks、embedding、metadata 与 searchable representation。
 
 Retriever 丢失时必须能够从 SQLite 重建。
+
+原则：
+
+> Retrieval 结果是 Evidence Candidate，不是新的事实来源。
 
 ## 3. 写入原则
 
@@ -49,9 +57,97 @@ indexed
 failed
 ```
 
-## 4. 读取原则：条件式，而不是固定式
+索引至少携带：
 
-Retriever / Memory Search 未来不作为每次 Closeout 的固定前处理。
+- owner / profile scope；
+- story_id；
+- session_id；
+- source message reference；
+- speaker；
+- source_type；
+- searchable text。
+
+## 4. 两级 Retrieval
+
+### 4.1 Classic Retrieval
+
+定位：
+
+> **低延迟、单次或有限步骤的历史 Recall。**
+
+典型：
+
+```text
+Query
+ -> dense / hybrid retrieval
+ -> rerank
+ -> Top-K evidence
+```
+
+主要用于：
+
+- Realtime Slow System 的按需 Recall；
+- 旧人物、旧事件、时间点快速查找；
+- 普通 Story 历史证据查询；
+- 需要低延迟返回的 Agent Tool。
+
+Future Tool 名：
+
+```text
+memory_search
+```
+
+原则：
+
+- 条件触发，不是每轮固定 Search；
+- 返回小 Top-K；
+- 带 session / message source metadata；
+- 不返回整个人生历史；
+- Realtime 中必须旁路执行，不阻塞当前语音轮次。
+
+### 4.2 Agentic Retrieval
+
+定位：
+
+> **高延迟预算下的复杂、多跳、跨 Session / Story 深度证据搜索。**
+
+典型：
+
+```text
+Question
+ -> Agent reasoning
+ -> multiple retrieval sub-queries
+ -> evidence fusion
+ -> evidence selection
+ -> final evidence set
+```
+
+主要用于 Future 非实时 Agent：
+
+- Interview Closeout 的复杂历史冲突核查；
+- 跨多个 Session / Story 的 Deep Recall；
+- 人物 / 时间线多处证据搜集；
+- 独立 Deep Evidence / Conflict Analysis；
+- Story Generation 在证据规模很大时的辅助检索。
+
+Future Tool 名：
+
+```text
+memory_deep_search
+```
+
+默认不用于：
+
+- Realtime Voice 当前轮回答；
+- 每轮语音固定检索；
+- Agent Memory 已足够回答的问题；
+- 低延迟 Completion 主路径。
+
+原则：
+
+> **Agentic Retrieval 是 Post-session / Offline Deep Search Tool，不是 Realtime 默认 Retriever。**
+
+## 5. 条件式调用，而不是固定前处理
 
 标准模式：
 
@@ -59,14 +155,20 @@ Retriever / Memory Search 未来不作为每次 Closeout 的固定前处理。
 Backend 预取固定 Context
 ↓
 Agent 判断
-├─ 信息足够 → 直接完成
-└─ 当前任务出现历史疑点
+├─ 信息足够
+│  → 直接完成
+│
+├─ 普通历史疑点
+│  → memory_search
+│  → Classic Retrieval
+│  → 少量高相关历史证据
+│
+└─ 复杂跨历史问题
+   → memory_deep_search
+   → Agentic Retrieval
+   → 多步证据搜索
    ↓
-   memory_search
-   ↓
-   少量高相关历史证据
-   ↓
-   同一个 Agent Run 继续判断
+同一个 Agent Run 继续判断
 ```
 
 典型触发：
@@ -75,37 +177,111 @@ Agent 判断
 - 人物身份无法判断；
 - 当前陈述与长期记忆冲突；
 - 疑似新 Story 与已有 Story 重复；
-- 时间 / 地点 / 人物关系异常。
+- 时间 / 地点 / 人物关系异常；
+- 一个问题明显需要跨多个 Story / Session 才能回答。
 
-## 5. Tool Contract 原则
+目标：
 
-未来正式访问应经过 Backend / scoped tool / RetrieverAdapter。
+> **正常任务 1 Run 0 Tool；普通复杂任务少量 Classic Search；真正复杂历史问题才升级 Agentic Search。**
+
+## 6. Tool Contract 原则
+
+正式访问必须经过 Backend / scoped tool / RetrieverAdapter。
 
 浏览器和小程序不直接连接 Retriever。
 
-`memory_search` 应：
+两类 Tool 都必须：
 
 - owner scoped；
 - resource scoped；
 - run scoped；
 - 短期 token；
 - audit log；
-- 返回小 Top-K；
-- 带 session/message source metadata；
-- 不返回整个人生历史。
+- 返回 Evidence，不直接写业务数据库。
 
-## 6. 与 Agent Memory 的关系
+建议统一 Evidence Contract：
 
-二者不互相替代：
+```json
+{
+  "matches": [
+    {
+      "text": "...",
+      "story_id": "...",
+      "session_id": "...",
+      "message_ids": ["..."],
+      "score": 0.82
+    }
+  ]
+}
+```
 
-- **Agent Memory**：压缩后的长期工作记忆，默认快速进入采访 / Completion 上下文；
-- **Retriever**：只有需要细节时，从原始历史证据按需 Recall。
+Agent 最终仍遵循：
+
+```text
+Retrieved Evidence
+ -> Agent Proposal
+ -> Schema / Evidence Validation
+ -> Domain Apply
+ -> SQLite
+```
+
+## 7. 与 Agent Memory 的关系
+
+三层长期读取不互相替代：
+
+```text
+L1 Story Agent Memory
+ -> 默认长期工作记忆
+ -> 最快
+
+L2 Classic Retrieval
+ -> 快速回到历史 Transcript Evidence
+ -> 普通 Recall
+
+L3 Agentic Retrieval
+ -> 多查询 / 多跳 / 跨 Story Deep Evidence Search
+ -> 非实时任务
+```
 
 原则：
 
-> 默认先用 Agent Memory，出现疑点再检索原始历史。
+> 默认先用 Agent Memory；出现普通疑点再 Classic Search；只有复杂问题才 Agentic Search。
 
-## 7. 证据优先级
+## 8. Realtime 硬边界
+
+Future Realtime：
+
+```text
+FAST Voice System
+      |
+      +--> Transcript Events
+                |
+                v
+         Realtime Slow Agent
+                |
+                +--> Story Agent Memory
+                |
+                +--> Classic Retrieval
+                |
+                v
+          Context Hint / Patch
+                |
+          Safe Turn Boundary
+                |
+                v
+          FAST Voice System
+```
+
+Agentic Retrieval 不进入默认实时链路。
+
+原因：
+
+- 多轮 reasoning + retrieval 延迟不可稳定控制；
+- 与 barge-in / interrupt 的实时语音体验不匹配；
+- 会增加 DGX Spark 上模型与 Retriever 的资源竞争；
+- Realtime 目标是“及时找到足够好的证据”，不是“搜索尽可能完整”。
+
+## 9. 证据优先级
 
 当前 Transcript 是当前直接证据。
 
@@ -115,13 +291,48 @@ Retriever 找到的历史 Transcript 是补充证据。
 
 > 当前明确纠正优先于旧历史陈述。
 
-## 8. Future Integration Order
+## 10. DGX Spark Future Deployment
+
+目标形态：
+
+```text
+DGX Spark
+├── Agent Runtime
+├── Local Model Runtime
+├── NeMo Retriever
+│   ├── Classic Retrieval
+│   └── Agentic Retrieval
+├── Embedding / Reranker
+└── SQLite / App Services
+```
+
+资源策略：
+
+- Classic Retrieval 可作为常驻低延迟能力；
+- Agentic Retrieval 按需触发；
+- Realtime 活跃时不默认并行启动重型 Deep Search；
+- Agentic Retrieval 的 Agent Model、并发数、P50 / P95 latency 必须在真实 Spark 上 Benchmark 后冻结；
+- 未实测前，不承诺具体吞吐或延迟。
+
+## 11. Future Integration Order
 
 1. 稳定 Retriever 服务；
 2. RetrieverAdapter；
 3. Transcript async indexing；
-4. scoped `memory_search` contract；
-5. Interview Closeout 条件式调用试验；
-6. Realtime Slow Agent integration；
-7. recall quality / latency / unnecessary-search benchmark；
-8. 根据真实效果决定是否扩大使用范围。
+4. scoped Evidence Search Contract；
+5. `memory_search` / Classic Retrieval；
+6. Interview Closeout 条件式 Classic Search 试验；
+7. Realtime Slow Agent + Classic Retrieval；
+8. Classic recall quality / latency / unnecessary-search benchmark；
+9. `memory_deep_search` / Agentic Retrieval；
+10. Offline Agent Deep Search integration；
+11. Agentic recall quality / latency / resource benchmark；
+12. 根据真实效果决定是否扩大使用范围。
+
+## 12. 当前冻结结论
+
+> **Realtime = Story Agent Memory + Classic Retrieval。**
+>
+> **Post-session / Offline Deep Evidence Task = Agentic Retrieval。**
+>
+> **SQLite / Transcript 永远是 Source of Truth；Retriever 永远是 Derived Evidence Index。**
