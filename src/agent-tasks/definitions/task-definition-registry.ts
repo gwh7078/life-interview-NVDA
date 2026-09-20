@@ -12,7 +12,7 @@ import {
   type InterviewCloseoutMode,
 } from '../contracts/index.js';
 import {
-  interviewCloseoutTaskInputSchema,
+  interviewCloseoutInputSchemas,
   interviewCloseoutOutputSchemas,
 } from '../contracts/interview-closeout.js';
 import { AgentTaskContractError } from '../errors.js';
@@ -45,7 +45,7 @@ const definitions: AgentTaskDefinition[] = [
     mode,
     skill: 'interview-closeout',
     modelProfile: 'reasoning',
-    inputSchema: interviewCloseoutTaskInputSchema,
+    inputSchema: interviewCloseoutInputSchemas[mode],
     outputSchema: mode === 'contributor'
       ? contributorCloseoutTaskOutputSchema
       : interviewCloseoutOutputSchemas[mode],

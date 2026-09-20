@@ -1,4 +1,6 @@
 import {
+  agentTaskRequestEnvelopeSchema,
+  agentTaskResultEnvelopeSchema,
   type AgentTaskRequestUnion,
   type AgentTaskResultUnion,
   type ContributorCloseoutTaskInput,
@@ -90,11 +92,12 @@ function stubOutput(request: AgentTaskRequestUnion): unknown {
 
 export class StubAgentTaskAdapter implements AgentTaskPort {
   async run(request: AgentTaskRequestUnion): Promise<AgentTaskResultUnion> {
+    agentTaskRequestEnvelopeSchema.parse(request);
     const definition = getAgentTaskDefinition(request.taskType, request.mode);
     definition.inputSchema.parse(request.payload);
     const output = definition.outputSchema.parse(stubOutput(request));
 
-    return {
+    const result = {
       runId: request.runId,
       taskType: request.taskType,
       ...(request.mode ? { mode: request.mode } : {}),
@@ -106,5 +109,7 @@ export class StubAgentTaskAdapter implements AgentTaskPort {
         skillVersion: definition.contextVersion,
       },
     } as AgentTaskResultUnion;
+    agentTaskResultEnvelopeSchema.parse(result);
+    return result;
   }
 }

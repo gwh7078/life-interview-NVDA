@@ -41,6 +41,25 @@ export const agentTaskRuntimeMetadataSchema = z.object({
 
 export type AgentTaskRuntimeMetadata = z.infer<typeof agentTaskRuntimeMetadataSchema>;
 
+export const agentTaskRequestEnvelopeSchema = z.object({
+  runId: z.string().trim().min(1).max(200),
+  taskType: z.enum(agentTaskTypes),
+  mode: z.string().trim().min(1).max(80).optional(),
+  ownerId: z.string().trim().min(1).max(200),
+  resource: agentTaskResourceSchema,
+  schemaVersion: z.string().trim().min(1).max(40),
+  payload: z.unknown(),
+}).strict();
+
+export const agentTaskResultEnvelopeSchema = z.object({
+  runId: z.string().trim().min(1).max(200),
+  taskType: z.enum(agentTaskTypes),
+  mode: z.string().trim().min(1).max(80).optional(),
+  schemaVersion: z.string().trim().min(1).max(40),
+  output: z.unknown(),
+  runtime: agentTaskRuntimeMetadataSchema,
+}).strict();
+
 export interface AgentTaskRequest<TPayload> {
   runId: string;
   taskType: AgentTaskType;

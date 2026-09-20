@@ -9,7 +9,7 @@ import {
   taskTranscriptMessageSchema,
 } from './common.js';
 
-const storyCreateInputSchema = z.object({
+export const storyCreateCloseoutTaskInputSchema = z.object({
   mode: z.literal('story_create'),
   target_stage: taskLifeStageSchema,
   target_story_title: z.string().trim().min(1).max(80).optional(),
@@ -17,7 +17,7 @@ const storyCreateInputSchema = z.object({
   transcript: z.array(taskTranscriptMessageSchema).min(1),
 }).strict();
 
-const storyContinueInputSchema = z.object({
+export const storyContinueCloseoutTaskInputSchema = z.object({
   mode: z.literal('story_continue'),
   current_story: z.object({
     title: z.string().trim().min(1).max(160),
@@ -31,7 +31,7 @@ const storyContinueInputSchema = z.object({
   transcript: z.array(taskTranscriptMessageSchema).min(1),
 }).strict();
 
-const contributorInputSchema = z.object({
+export const contributorCloseoutTaskInputSchema = z.object({
   mode: z.literal('contributor'),
   relationship: z.string().trim().min(1).max(120),
   previous_contributor_summary: z.string().max(400).nullable(),
@@ -39,10 +39,16 @@ const contributorInputSchema = z.object({
 }).strict();
 
 export const interviewCloseoutTaskInputSchema = z.discriminatedUnion('mode', [
-  storyCreateInputSchema,
-  storyContinueInputSchema,
-  contributorInputSchema,
+  storyCreateCloseoutTaskInputSchema,
+  storyContinueCloseoutTaskInputSchema,
+  contributorCloseoutTaskInputSchema,
 ]);
+
+export const interviewCloseoutInputSchemas = {
+  story_create: storyCreateCloseoutTaskInputSchema,
+  story_continue: storyContinueCloseoutTaskInputSchema,
+  contributor: contributorCloseoutTaskInputSchema,
+} as const;
 
 export const contributorCloseoutTaskOutputSchema = z.object({
   summary: z.string().trim().min(1).max(400),
@@ -54,9 +60,9 @@ export const interviewCloseoutOutputSchemas = {
   contributor: contributorCloseoutTaskOutputSchema,
 } as const;
 
-export type StoryCreateCloseoutTaskInput = z.infer<typeof storyCreateInputSchema>;
-export type StoryContinueCloseoutTaskInput = z.infer<typeof storyContinueInputSchema>;
-export type ContributorCloseoutTaskInput = z.infer<typeof contributorInputSchema>;
+export type StoryCreateCloseoutTaskInput = z.infer<typeof storyCreateCloseoutTaskInputSchema>;
+export type StoryContinueCloseoutTaskInput = z.infer<typeof storyContinueCloseoutTaskInputSchema>;
+export type ContributorCloseoutTaskInput = z.infer<typeof contributorCloseoutTaskInputSchema>;
 export type InterviewCloseoutTaskInput = z.infer<typeof interviewCloseoutTaskInputSchema>;
 
 export type StoryCreateCloseoutTaskOutput = z.infer<typeof storyCreationCloseoutOutputSchema>;

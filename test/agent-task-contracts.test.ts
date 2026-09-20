@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   StubAgentTaskAdapter,
   agentTaskDefinitions,
+  agentTaskRequestEnvelopeSchema,
   contributorCloseoutTaskOutputSchema,
   createAgentTaskPort,
   getAgentTaskDefinition,
@@ -76,7 +77,39 @@ test('contract schemas keep contributor and completion output boundaries strict'
   }));
 });
 
-test('interview.closeout input is discriminated and rejects cross-mode fields', () => {
+test('request envelope and interview mode schemas are strict at runtime', () => {
+  agentTaskRequestEnvelopeSchema.parse({
+    runId: 'run-envelope',
+    taskType: 'story.completion',
+    ownerId: 'owner-1',
+    resource: { type: 'story', id: 'story-1' },
+    schemaVersion: 'v1',
+    payload: {},
+  });
+  assert.throws(() => agentTaskRequestEnvelopeSchema.parse({
+    runId: 'run-envelope',
+    taskType: 'story.completion',
+    ownerId: 'owner-1',
+    resource: { type: 'story', id: 'story-1' },
+    schemaVersion: 'v1',
+    payload: {},
+    unexpected: true,
+  }));
+
+  const createDefinition = getAgentTaskDefinition('interview.closeout', 'story_create');
+  assert.throws(() => createDefinition.inputSchema.parse({
+    mode: 'contributor',
+    relationship: '女儿',
+    previous_contributor_summary: null,
+    transcript: [{
+      message_id: 'm1',
+      role: 'user',
+      text: '内容',
+      timestamp,
+    }],
+  }));
+
+  
   interviewCloseoutTaskInputSchema.parse({
     mode: 'contributor',
     relationship: '女儿',
