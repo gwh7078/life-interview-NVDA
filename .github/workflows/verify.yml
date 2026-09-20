@@ -6,6 +6,7 @@ on:
       - main
       - 'codex/**'
       - 'feature/story-agent-memory'
+      - 'nvidia/**'
   pull_request:
     branches:
       - main

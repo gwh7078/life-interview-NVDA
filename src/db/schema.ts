@@ -21,6 +21,8 @@ export const accountStatuses = ['active', 'disabled', 'legacy'] as const;
 export const bookCoverStyles = ['paper', 'sage', 'rose'] as const;
 export const storyShareStatuses = ['active', 'revoked'] as const;
 export const interviewSourceTypes = ['subject', 'external_contributor'] as const;
+export const agentRunStatuses = ['queued', 'running', 'succeeded', 'failed'] as const;
+export type AgentRunStatus = (typeof agentRunStatuses)[number];
 
 export const accounts = sqliteTable(
   'accounts',
@@ -192,6 +194,36 @@ export const interviewSessions = sqliteTable(
   ],
 );
 
+
+export const agentRuns = sqliteTable(
+  'agent_runs',
+  {
+    runId: text('run_id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.userId, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    agentType: text('agent_type').notNull(),
+    taskType: text('task_type').notNull(),
+    resourceType: text('resource_type').notNull(),
+    resourceId: text('resource_id').notNull(),
+    runtime: text('runtime').notNull().default('nemoclaw-openclaw'),
+    model: text('model'),
+    status: text('status', { enum: agentRunStatuses }).notNull().default('queued'),
+    startedAt: text('started_at'),
+    completedAt: text('completed_at'),
+    latencyMs: integer('latency_ms'),
+    errorCode: text('error_code'),
+    resultJson: text('result_json'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('agent_runs_user_id_idx').on(table.userId),
+    index('agent_runs_user_status_idx').on(table.userId, table.status),
+    index('agent_runs_resource_idx').on(table.userId, table.resourceType, table.resourceId),
+  ],
+);
+
 export const memoirDocuments = sqliteTable(
   'memoir_documents',
   {
@@ -268,6 +300,7 @@ export const schema = {
   stories,
   interviewSessions,
   storyShareLinks,
+  agentRuns,
   memoirDocuments,
   memoirBooks,
   memoirBookItems,
@@ -285,6 +318,8 @@ export type InterviewSession = typeof interviewSessions.$inferSelect;
 export type NewInterviewSession = typeof interviewSessions.$inferInsert;
 export type StoryShareLink = typeof storyShareLinks.$inferSelect;
 export type NewStoryShareLink = typeof storyShareLinks.$inferInsert;
+export type AgentRun = typeof agentRuns.$inferSelect;
+export type NewAgentRun = typeof agentRuns.$inferInsert;
 export type MemoirDocument = typeof memoirDocuments.$inferSelect;
 export type NewMemoirDocument = typeof memoirDocuments.$inferInsert;
 export type MemoirBook = typeof memoirBooks.$inferSelect;
