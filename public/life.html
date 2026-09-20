@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8f6f1">
+    <title>我的人生 · 人生采访局</title>
+    <link rel="stylesheet" href="/life.css">
+    <script type="module" src="/life.js"></script>
+  </head>
+  <body>
+    <main class="life-shell">
+      <header class="life-header">
+        <a class="brand-mark" href="/my-life" aria-label="我的人生">人</a>
+        <div class="brand-copy">
+          <strong>人生采访局</strong>
+          <span>把人生讲出来，慢慢写下来</span>
+        </div>
+        <div class="profile-wrap" hidden>
+          <button id="profile-entry" class="profile-entry" type="button" aria-label="个人资料入口" aria-expanded="false" aria-controls="profile-popover">
+            <span class="profile-avatar" id="profile-avatar" aria-hidden="true">人</span>
+            <span class="profile-name" id="profile-name">我的档案</span>
+            <span class="profile-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="profile-popover" id="profile-popover" hidden>
+            <strong id="profile-popover-name">我的档案</strong>
+            <p id="profile-popover-phone">手机号：未绑定</p>
+            <a href="/interview">返回采访</a>
+          </div>
+        </div>
+      </header>
+
+      <p class="page-notice" id="page-notice" role="alert" hidden></p>
+      <section class="login-notice" id="login-notice" hidden aria-labelledby="login-title">
+        <div class="empty-emblem" aria-hidden="true">人</div>
+        <h2 id="login-title">登录后查看你的人生</h2>
+        <p>登录后可以整理人生阶段，并查看每段经历里的故事。</p>
+        <a class="button button-primary" href="/interview?return_to=%2F">前往登录</a>
+      </section>
+
+      <section id="life-content" hidden aria-label="人生时间线">
+        <section class="life-hero" aria-labelledby="life-title">
+          <p class="life-eyebrow">MY LIFE</p>
+          <h1 id="life-title">我的人生</h1>
+          <p>这些经历不是一次写完的。每一次访谈，都会让某一段人生变得更清楚一些。</p>
+          <a class="button button-secondary" href="/book">制作我的人生书</a>
+        </section>
+
+        <p class="loading-state" id="loading-state" role="status">正在整理你的人生时间线…</p>
+        <section class="empty-state" id="empty-state" hidden aria-labelledby="empty-title">
+          <div class="empty-emblem" aria-hidden="true">人</div>
+          <h2 id="empty-title">还没有人生阶段</h2>
+          <p>从一段人生经历开始，为你的故事找到时间和位置。</p>
+        </section>
+        <div class="timeline-list" id="timeline-list" aria-live="polite"></div>
+
+        <div class="timeline-bottom-action">
+          <span class="timeline-end-mark" aria-hidden="true"></span>
+          <button class="add-stage-button" type="button" data-action="create-stage" disabled>
+            <span aria-hidden="true">＋</span> 新增人生阶段
+          </button>
+        </div>
+
+        <template id="story-card-template" hidden>
+          <a class="story-card" href="#">
+            <span class="story-card-copy">
+              <span class="story-card-title"></span>
+              <span class="story-card-summary"></span>
+            </span>
+            <span class="story-card-meta">
+              <span class="story-status"></span>
+              <span class="story-card-arrow" aria-hidden="true">›</span>
+            </span>
+          </a>
+        </template>
+      </section>
+
+      <div class="page-retry" id="page-retry" hidden>
+        <button class="button button-secondary" type="button" id="retry-button">重新加载</button>
+      </div>
+    </main>
+
+    <div class="drawer-layer" id="drawer-layer" hidden>
+      <button class="drawer-backdrop" id="drawer-backdrop" type="button" aria-label="关闭人生阶段编辑"></button>
+      <aside class="life-drawer" id="life-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabindex="-1">
+        <header class="drawer-header">
+          <div>
+            <p class="eyebrow">LIFE STAGE</p>
+            <h2 id="drawer-title">新增人生阶段</h2>
+          </div>
+          <button class="icon-button" id="drawer-close" type="button" aria-label="关闭">×</button>
+        </header>
+
+        <form id="stage-form" novalidate>
+          <div class="form-fields">
+            <label class="field-label" for="stage-title">人生阶段名称 <span aria-hidden="true">*</span></label>
+            <input class="text-field" id="stage-title" name="title" type="text" autocomplete="off" aria-describedby="form-feedback">
+
+            <label class="field-label" for="stage-start-year">开始年份</label>
+            <input class="text-field year-field" id="stage-start-year" name="start_year" type="text" inputmode="numeric" autocomplete="off" aria-describedby="form-feedback" placeholder="例如 2010">
+
+            <label class="field-label" for="stage-end-year">结束年份</label>
+            <input class="text-field year-field" id="stage-end-year" name="end_year" type="text" inputmode="numeric" autocomplete="off" aria-describedby="form-feedback" placeholder="例如 2015">
+            <label class="current-year-option" for="stage-end-now">
+              <input id="stage-end-now" name="end_now" type="checkbox">
+              <span class="custom-check" aria-hidden="true"></span>
+              <span>至今</span>
+            </label>
+            <p class="form-feedback" id="form-feedback" role="alert" hidden></p>
+          </div>
+
+          <section class="delete-area" id="delete-area" hidden>
+            <div class="drawer-divider"></div>
+            <button class="delete-stage-button" id="delete-stage" type="button">删除人生阶段</button>
+            <div class="delete-confirmation" id="delete-confirmation" hidden>
+              <p id="delete-confirmation-copy">确定要删除这个人生阶段吗？此操作无法撤销。</p>
+              <div class="delete-confirmation-actions">
+                <button class="button button-secondary" id="cancel-delete" type="button">取消</button>
+                <button class="button button-danger" id="confirm-delete" type="button">确认删除</button>
+              </div>
+            </div>
+            <p class="delete-feedback" id="delete-feedback" role="alert" hidden></p>
+          </section>
+
+          <div class="drawer-actions">
+            <button class="button button-secondary" id="drawer-cancel" type="button">取消</button>
+            <button class="button button-primary" id="save-stage" type="submit">确认</button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  </body>
+</html>
