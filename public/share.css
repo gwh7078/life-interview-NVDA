@@ -1,0 +1,45 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #2f2b27;
+  background: #f7f4ee;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: #f7f4ee; }
+.share-shell { width: min(720px, 100%); margin: 0 auto; padding: 28px 18px 48px; }
+.share-card {
+  background: #fffdf8;
+  border: 1px solid rgba(58, 50, 43, .11);
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 16px 42px rgba(63, 53, 44, .08);
+}
+.eyebrow { margin: 0 0 14px; font-size: 13px; letter-spacing: .08em; color: #8a7560; }
+.invite-copy, .muted, .continuity-note, .expires-copy { color: #746b63; line-height: 1.7; }
+.title-row { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; margin: 20px 0 24px; }
+h1 { margin: 0; font-size: clamp(28px, 8vw, 42px); line-height: 1.2; letter-spacing: -.02em; }
+.status-chip { flex: none; padding: 6px 10px; border-radius: 999px; background: #f0ebe2; color: #78624e; font-size: 12px; }
+.story-section { padding: 20px 0; border-top: 1px solid rgba(58, 50, 43, .09); }
+.story-section h2 { margin: 0 0 12px; font-size: 15px; color: #6f5d4c; }
+.story-summary { margin: 0; line-height: 1.9; white-space: pre-wrap; }
+.gap-list { margin: 0; padding-left: 1.4em; line-height: 1.8; }
+.gap-list li + li { margin-top: 8px; }
+.continuity-note { padding: 14px 16px; background: #f5f0e8; border-radius: 14px; font-size: 14px; }
+.completed-note { margin-bottom: 18px; padding: 14px 16px; border-radius: 14px; background: #eef4ed; line-height: 1.6; }
+.primary-action {
+  display: block;
+  margin-top: 24px;
+  padding: 15px 18px;
+  border-radius: 16px;
+  background: #312d28;
+  color: white;
+  text-decoration: none;
+  text-align: center;
+  font-weight: 600;
+}
+.expires-copy { margin: 14px 0 0; text-align: center; font-size: 12px; }
+@media (max-width: 480px) {
+  .share-shell { padding: 14px 12px 32px; }
+  .share-card { padding: 22px 18px; border-radius: 20px; }
+  .title-row { display: block; }
+  .status-chip { display: inline-block; margin-top: 12px; }
+}

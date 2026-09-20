@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f4ee">
+  <title>补充这段人生故事</title>
+  <link rel="stylesheet" href="/share.css">
+</head>
+<body>
+  <main class="share-shell">
+    <section id="loading" class="share-card">
+      <p class="eyebrow">人生采访局</p>
+      <h1>正在打开故事…</h1>
+    </section>
+
+    <section id="error" class="share-card" hidden>
+      <p class="eyebrow">人生采访局</p>
+      <h1>这个分享链接已不可用</h1>
+      <p id="error-message" class="muted">链接可能已经过期或被撤销。</p>
+    </section>
+
+    <section id="content" class="share-card" hidden>
+      <div id="processing-note" class="completed-note" hidden>
+        通话已经结束，内容已保存，正在整理你的补充…
+      </div>
+      <div id="completed-note" class="completed-note" hidden>
+        你的补充已经保存。再次进入时，采访官会接着之前聊过的内容继续。
+      </div>
+      <div id="failed-note" class="completed-note" hidden>
+        原始访谈内容已经保存，但整理失败。你可以直接重新整理，不需要重新讲一遍。
+        <button id="share-retry-closeout" class="primary-action" type="button">重新整理</button>
+      </div>
+      <p class="eyebrow">人生采访局 · 亲友补充采访</p>
+      <p id="invite-copy" class="invite-copy"></p>
+      <div class="title-row">
+        <h1 id="story-title"></h1>
+        <span id="story-status" class="status-chip"></span>
+      </div>
+
+      <section class="story-section">
+        <h2>目前整理出的内容</h2>
+        <p id="story-summary" class="story-summary"></p>
+      </section>
+
+      <section id="gaps-section" class="story-section">
+        <h2>还想了解</h2>
+        <ul id="story-gaps" class="gap-list"></ul>
+      </section>
+
+      <p id="continuity-note" class="continuity-note" hidden>
+        你之前已经通过这个链接聊过。再次通话时，采访官会基于上次的内容继续。
+      </p>
+
+      <a id="interview-link" class="primary-action" href="#">和 AI 聊聊这段故事</a>
+      <p id="expires-copy" class="expires-copy"></p>
+    </section>
+  </main>
+  <script type="module" src="/share.js"></script>
+</body>
+</html>
