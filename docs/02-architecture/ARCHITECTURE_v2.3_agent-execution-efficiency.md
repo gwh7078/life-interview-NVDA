@@ -96,6 +96,18 @@ Tool 用于 Agent 运行时才发现的外部信息需求。
 
 Tool 不应按数据库表拆成大量 CRUD，也不应为了“展示 Tool Calling”被固定调用。
 
+Future 历史检索 Tool 分两级：
+
+```text
+memory_search
+ -> Classic Retrieval
+ -> 低延迟普通 Recall
+
+memory_deep_search
+ -> Agentic Retrieval
+ -> 高延迟复杂 Deep Evidence Search
+```
+
 ## 4. 固定 Context 在 Agent 启动前由 Backend 预取
 
 例如 `interview.closeout / story_continue` 固定需要：
@@ -165,13 +177,23 @@ Backend 继续负责：
 - 时间线、地点、人物关系出现明显异常；
 - Agent 判断如果不补历史证据，继续生成 Proposal 风险过高。
 
-未来最重要的 Tool 是：
+优先级：
 
 ```text
-memory_search
+Agent Memory 足够
+→ 0 Tool
+
+普通历史疑点
+→ memory_search
+→ Classic Retrieval
+
+Classic Retrieval 仍不足
+且任务允许高延迟
+→ memory_deep_search
+→ Agentic Retrieval
 ```
 
-但它当前仍是 Deferred，不进入本阶段产品依赖。
+两类 Search 当前仍是 Deferred，不进入 Phase 2B 核心产品依赖。
 
 ## 7. Memory Search 必须条件触发
 
@@ -189,25 +211,30 @@ memory_search
 标准 Context
 ↓
 Agent 判断
-├─ 信息足够 → 直接输出
-└─ 信息不足且符合触发条件
-   ↓
-   Memory Search
-   ↓
-   少量高相关历史证据
-   ↓
-   同一个 Agent Run 继续判断
-   ↓
-   输出
+├─ 信息足够
+│  → 直接输出
+│
+├─ 普通疑点
+│  → Classic Search
+│  → 少量高相关历史证据
+│
+└─ 复杂跨历史疑点
+   → Agentic Deep Search
+   → 多步证据搜索
+↓
+同一个 Agent Run 继续判断
+↓
+输出
 ```
 
 目标：
 
 - 正常任务：1 次 Agent Run，0 次 Tool Call；
-- 复杂任务：1 次 Agent Run + 少量必要 Tool Call；
+- 普通复杂任务：1 次 Agent Run + 少量 Classic Search；
+- 极少数深层任务：1 次 Agent Run + 必要 Agentic Search；
 - 不启动不必要的新 Agent。
 
-## 8. Memory Search 返回必须最小化
+## 8. Retrieval 返回必须最小化且可回溯
 
 Search 只解决当前疑点，不负责重新加载全部历史。
 
@@ -218,6 +245,7 @@ Search 只解决当前疑点，不负责重新加载全部历史。
   "matches": [
     {
       "text": "...",
+      "story_id": "...",
       "session_id": "...",
       "message_ids": ["..."],
       "score": 0.82
@@ -232,13 +260,15 @@ Search 只解决当前疑点，不负责重新加载全部历史。
 
 > 当前明确纠正 > 旧历史陈述。
 
+无论 Classic 还是 Agentic Retrieval，都不能直接写 Story / Memory；仍需进入 Agent Proposal 和 Backend Evidence Validation。
+
 ## 9. Skill 优先于新 Agent
 
 ### Story Discovery
 
 默认由 Interview Closeout Agent 在当前 Context 内判断。
 
-只有现有 Context 不足时，未来才允许调用 Memory Search。
+只有现有 Context 不足时，未来才允许调用 Retrieval Tool。
 
 ### Memory Reconcile
 
@@ -321,6 +351,8 @@ Task 级 Retry 只由一个统一 `AgentTaskExecutor` 管理，避免 Backend ×
 - validation repair；
 - format repair。
 
+Agentic Retrieval 已经完成且证据仍有效时，Format Repair 不应默认重新执行昂贵 Deep Search。
+
 最终一致性仍遵循：
 
 > **At-least-once reasoning + Exactly-once domain apply**
@@ -339,16 +371,47 @@ Parallel Interview Slow Agent
 
 Slow Agent 旁路消费 Transcript，条件式执行：
 
-- Memory Search；
+- Story Agent Memory recall；
+- `memory_search` / Classic Retrieval；
 - 人物关系识别；
 - 时间冲突；
 - 新 Story 线索；
 - 深挖方向；
 - 偏航检测。
 
+硬边界：
+
+> **Realtime Slow Agent 不调用 Agentic Retrieval。**
+
 Slow Agent 只输出短 Context Hint，在安全轮次边界注入 Fast System，不阻塞当前语音轮次。
 
-## 14. 事实核查边界
+## 14. Retrieval Depth Routing
+
+Future Retrieval 形成三层长期读取：
+
+```text
+L1 Story Agent Memory
+ -> 默认工作记忆
+
+L2 Classic Retrieval
+ -> memory_search
+ -> 低延迟普通 Evidence Recall
+ -> Realtime Slow Agent 可用
+
+L3 Agentic Retrieval
+ -> memory_deep_search
+ -> 多查询 / 多跳 / 跨 Session / Story
+ -> 仅 Post-session / Offline Deep Evidence Task
+```
+
+两种 Retrieval：
+
+- 共用同一 Derived Transcript Index；
+- 不改变 SQLite / Transcript 的 Source of Truth 地位；
+- 不修改 Task Contract v1.0 的固定输入字段；
+- Future 通过版本化 Tool Policy / TaskDefinition 决定某 Task 是否允许 Deep Search。
+
+## 15. 事实核查边界
 
 当前不开发复杂的“外部世界事实核查”。
 
@@ -364,7 +427,7 @@ Transcript
 
 外部历史事实核查涉及 Claim、Evidence、Verification、用户确认与 UI，属于更后续版本。
 
-## 15. v2.3 最终原则
+## 16. v2.3 最终原则
 
 ```text
 固定路由 → Backend
@@ -372,6 +435,8 @@ Transcript
 语义判断 → Agent
 专项方法 → Skill
 动态额外信息 → Tool
+普通历史检索 → Classic Retrieval
+复杂深层检索 → Agentic Retrieval
 最终 Proposal → Backend Validate / Apply
 ```
 
@@ -379,4 +444,6 @@ Transcript
 
 > **减少 Agent Round Trip，而不是增加 Agent 数量。**
 
-> **正常任务 1 次 Agent Run；复杂任务仍尽量在同一个 Agent Run 内完成 Tool Loop。**
+> **正常任务 1 次 Agent Run；复杂任务仍尽量在同一个 Agent Run 内完成必要 Tool Loop。**
+
+> **Realtime 追求及时；Agentic Deep Search 追求完整，两者不混用延迟预算。**
