@@ -82,8 +82,11 @@ export class NemoClawOpenClawGateway implements AgentGateway {
         'LIFE_INTERVIEW_RUN_ID=' + request.runId,
         'openclaw',
         'agent',
+        '--local',
         '--agent',
         'main',
+        '--session-key',
+        'agent:main:phase1-smoke:' + request.runId,
         '-m',
         prompt,
       ];
