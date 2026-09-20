@@ -1,4 +1,4 @@
-# DGX Spark Hackathon Scoring Alignment v1.1
+# DGX Spark Hackathon Scoring Alignment v1.2
 
 > Status: Working competition map
 >
@@ -23,7 +23,8 @@
 - Agent Reasoning 与 Backend Execution 分权；
 - Contract-First Agentization；
 - Architecture v2.3 低轮次 Agent 执行策略；
-- Future Realtime Fast / Slow 双系统。
+- Future Realtime Fast / Slow 双系统；
+- Future “个人历史 + 时代背景”双来源检索：既记得用户说过什么，也理解用户生活在什么时代。
 
 差异化重点：
 
@@ -46,6 +47,22 @@ Agentic Retrieval
 
 这体现的是 **latency-aware / complexity-aware Retrieval Routing**，而不是所有任务统一走最重检索。
 
+另一个 Future 创新方向是“时代背景检索”：
+
+```text
+用户个人历史
+ -> Transcript Derived Index
+ -> 回忆用户过去说过什么
+
+时代背景
+ -> 独立只读公共年代库
+ -> 找与年份 / 地点 / 年龄 / Life Stage / Story 相关的话题
+```
+
+时代背景只负责唤起记忆和寻找采访话题，绝不自动成为用户事实。
+
+**注意：上述 Slow System、Realtime Retrieval 与时代背景库当前均为 Planned / Future，不属于已实现能力。**
+
 主要证据：
 
 - `docs/product/life-interview-product-tech-data-v1.5.3.md`
@@ -54,6 +71,7 @@ Agentic Retrieval
 - `docs/06-decisions/ADR_INDEX_v1.0.md`
 - `docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`
 - `docs/08-future/retriever/RETRIEVER_DEFERRED_PLAN_v1.0.md`
+- `docs/08-future/retriever/ERA_CONTEXT_LIBRARY_v1.0.md`
 
 ## 2. 智能体与模型优化技术深度 — 25%
 
@@ -80,6 +98,7 @@ Agentic Retrieval
 - Future Classic Memory Search；
 - Future Agentic Deep Search；
 - Future Realtime Slow Agent；
+- Future 时代背景事件库与 `era_context_search`；
 - 如确有价值，再展示目标不同的多 Agent 协作，而不是为了数量拆 Agent。
 
 推荐技术路径：
@@ -176,9 +195,10 @@ Both
 4. Story Generation；
 5. Agent Runtime / Skill / Model tracing；
 6. 一次正常“1 Run 0 Tool”的高效路径；
-7. 若 Classic Retrieval 已实现：展示“发现历史疑点 → memory_search → 继续”；
-8. 若 Agentic Retrieval 已实现：展示一个明显需要跨 Session / Story 的 Deep Search；
-9. DGX Spark 本地运行证据。
+7. 若个人历史 Classic Retrieval 已实现：展示“发现历史疑点 → memory_search → 继续”；
+8. 若时代背景检索已实现：展示“识别年份 / 地点 / Life Stage → 找到时代话题 → 自然唤起新回忆”，并明确该背景不自动写入用户事实；
+9. 若 Agentic Retrieval 已实现：展示一个明显需要跨 Session / Story 的 Deep Search；
+10. DGX Spark 本地运行证据。
 
 不建议在 Demo 中让 Agentic Retrieval 阻塞实时语音。
 
@@ -210,6 +230,7 @@ Both
 - [ ] DGX Spark 本地运行步骤可复现
 - [ ] Agent Eval / Benchmark 有报告
 - [ ] Classic Retrieval 如宣称已实现，必须有真实代码 / 测试 / latency 证据
+- [ ] 时代背景检索如宣称已实现，必须有真实数据集 / Index / Tool 调用 / 事实隔离测试 / latency 证据
 - [ ] Agentic Retrieval 如宣称已实现，必须有真实 Tool 调用 / quality / latency 证据
 - [ ] Demo 视频链接
 - [ ] 技术文章链接
