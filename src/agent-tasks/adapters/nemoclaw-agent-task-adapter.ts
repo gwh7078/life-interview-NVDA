@@ -15,8 +15,6 @@ function formatValidationError(error: unknown): Record<string, unknown> {
   return Array.isArray(candidate.issues) ? { issues: candidate.issues } : {};
 }
 
-// Product-side Phase 2B adapter. Contract/route validation lives here;
-// structured payload transport into NemoClaw/OpenClaw belongs to the injected executor.
 export class NemoClawAgentTaskAdapter implements AgentTaskPort {
   constructor(private readonly executor: AgentTaskExecutor) {}
 
@@ -53,9 +51,13 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
       ...(request.mode ? { mode: request.mode } : {}),
       resource: request.resource,
       schemaVersion: request.schemaVersion,
+      contextVersion: definition.contextVersion,
       skill: definition.skill,
+      skillVersion: definition.skillVersion,
       modelProfile: definition.modelProfile,
+      executionPolicy: definition.executionPolicy,
       payload: request.payload,
+      validateOutput: (output) => definition.outputSchema.parse(output),
     });
 
     let output: unknown;
@@ -82,6 +84,7 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
       runtime: {
         ...executed.runtime,
         skill: definition.skill,
+        skillVersion: definition.skillVersion,
       },
     } as AgentTaskResultUnion;
 

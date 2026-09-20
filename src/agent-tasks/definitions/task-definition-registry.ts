@@ -19,31 +19,64 @@ import { AgentTaskContractError } from '../errors.js';
 
 export type AgentModelProfile = 'reasoning' | 'reasoning-fast' | 'writing';
 
+export interface AgentTaskExecutionPolicy {
+  maxAttempts: number;
+  timeoutMs: number;
+  dynamicTools: readonly string[];
+  allowFormatRepair: boolean;
+}
+
 export interface AgentTaskDefinition {
   taskType: AgentTaskType;
   mode?: InterviewCloseoutMode;
   skill: string;
+  skillVersion: 'v1';
   modelProfile: AgentModelProfile;
   inputSchema: ZodType;
   outputSchema: ZodType;
   contextVersion: 'v1';
   schemaVersion: 'v1';
+  executionPolicy: AgentTaskExecutionPolicy;
 }
+
+const standardReasoningPolicy: AgentTaskExecutionPolicy = Object.freeze({
+  maxAttempts: 3,
+  timeoutMs: 180_000,
+  dynamicTools: Object.freeze([]),
+  allowFormatRepair: true,
+});
+
+const completionPolicy: AgentTaskExecutionPolicy = Object.freeze({
+  maxAttempts: 3,
+  timeoutMs: 120_000,
+  dynamicTools: Object.freeze([]),
+  allowFormatRepair: true,
+});
+
+const generationPolicy: AgentTaskExecutionPolicy = Object.freeze({
+  maxAttempts: 3,
+  timeoutMs: 300_000,
+  dynamicTools: Object.freeze([]),
+  allowFormatRepair: true,
+});
 
 const definitions: AgentTaskDefinition[] = [
   {
     taskType: 'onboarding.closeout',
     skill: 'onboarding-closeout',
+    skillVersion: 'v1',
     modelProfile: 'reasoning',
     inputSchema: onboardingCloseoutTaskInputSchema,
     outputSchema: onboardingCloseoutTaskOutputSchema,
     contextVersion: 'v1',
     schemaVersion: 'v1',
+    executionPolicy: standardReasoningPolicy,
   },
   ...interviewCloseoutModes.map((mode): AgentTaskDefinition => ({
     taskType: 'interview.closeout',
     mode,
     skill: 'interview-closeout',
+    skillVersion: 'v1',
     modelProfile: 'reasoning',
     inputSchema: interviewCloseoutInputSchemas[mode],
     outputSchema: mode === 'contributor'
@@ -51,24 +84,29 @@ const definitions: AgentTaskDefinition[] = [
       : interviewCloseoutOutputSchemas[mode],
     contextVersion: 'v1',
     schemaVersion: 'v1',
+    executionPolicy: standardReasoningPolicy,
   })),
   {
     taskType: 'story.completion',
     skill: 'story-completion',
+    skillVersion: 'v1',
     modelProfile: 'reasoning-fast',
     inputSchema: storyCompletionTaskInputSchema,
     outputSchema: storyCompletionTaskOutputSchema,
     contextVersion: 'v1',
     schemaVersion: 'v1',
+    executionPolicy: completionPolicy,
   },
   {
     taskType: 'story.generation',
     skill: 'story-generation',
+    skillVersion: 'v1',
     modelProfile: 'writing',
     inputSchema: storyGenerationTaskInputSchema,
     outputSchema: storyGenerationTaskOutputSchema,
     contextVersion: 'v1',
     schemaVersion: 'v1',
+    executionPolicy: generationPolicy,
   },
 ];
 
