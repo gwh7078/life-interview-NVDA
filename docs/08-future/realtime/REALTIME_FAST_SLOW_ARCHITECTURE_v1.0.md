@@ -1,4 +1,4 @@
-# Realtime Fast / Slow Dual-System Architecture v1.2
+# Realtime Fast / Slow Dual-System Architecture v1.3
 
 > Status: **Future / Deferred**
 >
@@ -89,7 +89,7 @@ Slow Agent 不是每轮固定执行 Retriever。
 - 是否值得进一步深挖；
 - 是否需要个人历史召回；
 - 是否需要个人历史事实检索；
-- 当前时间 / 地点 / 年龄 / 人生阶段是否值得触发时代背景检索。
+- 当前对话中出现的年份 / 时间范围是否值得触发时代背景检索。
 
 只有符合条件时才调用 Tool。
 
@@ -106,7 +106,7 @@ Future Realtime 低延迟检索统一采用 Classic Retrieval，但逻辑上分�
 
 时代背景索引
  -> era_context_search
- -> 年份 / 地域 / 年龄 / 人生阶段 / Story 主题
+ -> 年份范围过滤 + 当前话题语义检索
 
 两者
  -> Classic Retrieval
@@ -279,7 +279,7 @@ CLOSEOUT AGENT
 
 ```text
 用户提到：
-年份 / 地点 / 年龄 / Life Stage / Story 主题
+年份 / 时间范围
         |
         v
 时代背景 Classic Retrieval
@@ -302,15 +302,18 @@ Fast Realtime System
 
 例如用户说：
 
-> “我 2001 年大学毕业，后来去了北京。”
+> “我大概 2000 年左右刚参加工作。”
 
-Slow System 未来可以检索 2001 前后北京、青年、初入职场相关时代背景，并形成：
+Slow System 未来可以先筛选 1998～2002 年的时代背景，再根据当前对话语义找到少量相关候选。
 
-> “如果自然，可以问他是否记得当时北京申奥成功后的城市氛围。”
+时代背景库本身不保存建议问题；慢系统结合完整上下文决定是否使用，以及应该形成什么话题提示。
 
 硬边界：
 
 - 时代背景只用于唤起记忆和寻找话题；
+- 第一版时代库暂不使用地域字段；
+- 第一版先按年份范围过滤，再做语义检索；
+- 时代库不预存建议问题，问题建议由 Slow Agent 动态生成；
 - 时代背景不是用户个人事实；
 - 用户未确认前不得进入 Story Summary / Agent Memory / Completion / Generation；
 - 不允许为了使用检索结果而强行打断高信息密度个人叙述；
