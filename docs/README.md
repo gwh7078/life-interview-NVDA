@@ -17,22 +17,25 @@
 1. [比赛评分对照](00-competition/SCORING_ALIGNMENT_v1.0.md)
 2. [产品基线](product/life-interview-product-tech-data-v1.5.3.md)
 3. [架构演进](02-architecture/ARCHITECTURE_EVOLUTION_v1.0.md)
-4. [当前主架构 v2.2](02-architecture/ARCHITECTURE_v2.2_task-contract-first.md)
+4. [当前主架构 v2.3](02-architecture/ARCHITECTURE_v2.3_agent-execution-efficiency.md)
 5. [Agent Task Contract](03-agent/contracts/AGENT_TASK_CONTRACTS_v1.0.md)
-6. [当前 Phase 2A 开发计划](05-development/phases/PHASE_2A_CONTRACT_FIRST_SCAFFOLD_v1.0.md)
-7. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
-8. [NVIDIA Integration](04-nvidia/README.md)
-9. [工程报告入口](07-reports/README.md)
-10. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
+6. [Agent 执行策略](03-agent/AGENT_EXECUTION_POLICY_v1.0.md)
+7. [当前 Phase 2B 开发计划](05-development/phases/PHASE_2B_AGENT_RUNTIME_INTEGRATION_v1.0.md)
+8. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
+9. [NVIDIA Integration](04-nvidia/README.md)
+10. [工程报告入口](07-reports/README.md)
+11. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
 
 ## 当前状态
 
 ### Current
 
-- Architecture v2.2 Contract-First
-- Agent Task Contract v1.0
-- Phase 2A Contract Scaffold — **Completed**
-- Next: Phase 2B Agent Runtime Integration
+- Architecture v2.3 — 低轮次 Agent 执行策略
+- Agent Task Contract v1.0 — Frozen
+- Agent Execution Policy v1.0
+- Phase 2A Contract Scaffold — Completed
+- Phase 2B Agent Runtime Integration — In Progress
+- 4 个正式 Skill family — 已提交
 
 ### Validated Historical Work
 
@@ -40,12 +43,41 @@
 - Phase 1 NemoClaw / OpenClaw 真实 Smoke
 - Scoped Tool API
 - Agent Runtime 与 SQLite 隔离
+- Architecture v2.2 Contract-First
 
 ### Future / Deferred
 
 - Realtime Slow System
+- 条件式 Memory Search
 - NeMo Retriever 产品集成
 - DGX Spark 最终本地推理与 Benchmark
+- 外部世界事实核查
+
+## 当前 Agent 执行原则
+
+```text
+固定业务路由
+→ Backend 决定
+
+固定任务上下文
+→ Backend 预取
+
+非确定性理解 / 判断 / 写作
+→ Agent
+
+同一职责内的专项方法
+→ Skill
+
+运行中才发现的额外信息需求
+→ Tool
+
+最终 Proposal
+→ Backend Validate / Apply
+```
+
+目标不是“最多 Agent / 最多 Tool Call”，而是：
+
+> **最少调用次数下实现真正必要的 Agent 自主性。**
 
 ## 目录
 
@@ -53,7 +85,7 @@
 docs/
 ├── 00-competition/    评分与提交要求对照
 ├── 02-architecture/   当前架构与演进历史
-├── 03-agent/          Agent Contract / Skills / Eval
+├── 03-agent/          Agent Contract / Execution Policy / Skills / Eval
 ├── 04-nvidia/         NVIDIA Runtime / DGX Spark / Retriever
 ├── 05-development/    分阶段开发计划
 ├── 06-decisions/      ADR
@@ -65,10 +97,10 @@ docs/
 
 ## 历史资料
 
-原有 [`nvidia-agent-native/`](nvidia-agent-native/) 原样保留，包括 BASELINE、API / Schema Inventory、Repository Layout、Feature Matrix、Regression Matrix、Phase 1 Smoke 与 Implementation Report。
+原有 `nvidia-agent-native/` 原样保留，包括 BASELINE、API / Schema Inventory、Repository Layout、Feature Matrix、Regression Matrix、Phase 1 Smoke 与 Implementation Report。
 
-产品基线继续保留在 [`product/`](product/)。
+产品基线继续保留在 `product/`。
 
-比赛原始要求、DGX Spark 技术资料与来源清单位于仓库根目录 [`../资料库/`](../资料库/)。
+比赛原始要求、DGX Spark 技术资料与来源清单位于仓库根目录 `../资料库/`。
 
 文档版本化的目的不是堆数量，而是让每一次技术判断、验证、失败与收敛都可以追溯。

@@ -18,11 +18,11 @@ Reasoning Authority 与 Execution Authority 分离。
 
 ## ADR-003 — Contract-First 替代同步开发
 
-**Accepted.** 同时变化 Product、Runtime、Skill、Model、NVIDIA 环境会让故障定位变困难，因此调整为 Phase 2A Backend Contract + Stub，Phase 2B Agent Runtime 适配。
+**Accepted.** Phase 2A 冻结 Backend Contract，Phase 2B 让 Agent Runtime 适配。
 
 ## ADR-004 — Phase 2A 不重新接 Legacy Model 完整闭环
 
-**Accepted.** 已有 Web 产品已经完成完整功能验证。Phase 2A 只证明接口设计正确。
+**Accepted.** Phase 2A 只证明接口设计正确。
 
 ## ADR-005 — Closeout 统一为 interview.closeout
 
@@ -48,7 +48,7 @@ Old Agent Memory + Current Transcript -> Updated Memory
 
 ## ADR-009 — Realtime 当前不 Agent 化
 
-**Accepted.** Realtime 主链路继续追求低延迟。未来采用 Fast System + Parallel Slow System。
+**Accepted.** Realtime 主链路继续追求低延迟。未来采用 Fast System + Parallel Slow Agent。
 
 ## ADR-010 — NeMo Retriever 产品集成延期
 
@@ -68,4 +68,36 @@ Old Agent Memory + Current Transcript -> Updated Memory
 
 ## ADR-014 — At-least-once Reasoning + Exactly-once Apply
 
-**Accepted.** Agent Reasoning 可以重试，但 Domain Apply 必须通过 attempt ownership、resource version、idempotency 与 transaction 防止重复提交。
+**Accepted.** Reasoning 可以重试；Apply 必须通过 attempt ownership、resource version、idempotency 与 transaction 防止重复提交。
+
+## ADR-015 — 不增加无业务意义的总控 Agent
+
+**Accepted.** 已知的 Task 路由继续由 Backend / TaskDefinitionRegistry 决定，不额外花一次模型调用判断固定流程。
+
+## ADR-016 — 固定 Context 由 Backend 预取
+
+**Accepted.** Agent 启动前已经确定需要的数据由 ContextBuilder 一次准备。Tool 不承担固定上下文搬运。
+
+## ADR-017 — Skill 优先于新 Agent
+
+**Accepted.** Story Discovery、Memory Reconcile 等同一职责内的专项判断优先做辅助 Skill。只有角色目标、上下文、模型或评测体系明显不同才拆 Agent。
+
+## ADR-018 — Tool 只用于运行时增量信息
+
+**Accepted.** Tool 用于 Agent 推理过程中才发现的额外信息需求。未来 Memory Search 必须条件触发，不作为每次 Closeout 的固定步骤。
+
+## ADR-019 — Agent 不调用固定 Submit Tool
+
+**Accepted.** Agent 直接返回 Proposal；Backend 自动 Validate / Apply，减少一次无意义 Agent ↔ Tool 往返。
+
+## ADR-020 — Agent Loop 与 Final Schema 分离
+
+**Accepted.** 中间执行允许 Tool Calling；任务完成后最终结果才必须满足业务 Schema 和 `LIFE_INTERVIEW_RESULT` 协议。
+
+## ADR-021 — 强制 JSON 只用于格式失败修复
+
+**Accepted.** 第一轮正常 Agent Run 保留完整 Tool Calling。纯格式错误时才通过模型/API 参数强制 JSON / JSON Schema。Runtime 错误、业务校验错误、信息不足分别采用对应的 Retry / Repair。
+
+## ADR-022 — Retry 由 AgentTaskExecutor 单点管理
+
+**Accepted.** 避免 Backend、OpenClaw、Model 多层重试相乘。初始最多 3 个 attempt，根据错误类型选择 Runtime Retry、Validation Repair 或 Format Repair。
