@@ -1,6 +1,6 @@
 # Phase 2A — Contract-First Scaffold v1.0
 
-> Status: **Current Development Phase**
+> Status: **Completed**
 >
 > Goal: 做好 Agent 外部接口，不要求真实 Agent / Model 闭环。
 
@@ -124,18 +124,18 @@ Backend parser
 
 ## 8. Definition of Done
 
-- [ ] 4 个 Task Contract 完成
-- [ ] interview.closeout 三种 mode 完成
-- [ ] Input / Output Schema 冻结
-- [ ] AgentTaskPort 完成
-- [ ] TaskDefinitionRegistry 完成
-- [ ] Context → Request mapping 完成
-- [ ] Stub Adapter 完成
-- [ ] Contract Tests 通过
-- [ ] Interface Tests 通过
-- [ ] Public API 无破坏性变化
-- [ ] Realtime 未修改
-- [ ] Retriever 未接入
+- [x] 4 个 Task Contract 完成
+- [x] interview.closeout 三种 mode 完成
+- [x] Input / Output Schema 冻结
+- [x] AgentTaskPort 完成
+- [x] TaskDefinitionRegistry 完成
+- [x] Context → Request mapping 完成
+- [x] Stub Adapter 完成
+- [x] Contract Tests 通过
+- [x] Interface Tests 通过
+- [x] Public API 无破坏性变化
+- [x] Realtime 未修改
+- [x] Retriever 未接入
 
 满足后：
 
@@ -152,3 +152,7 @@ Backend parser
 - 不把 Realtime 放进 OpenClaw 主链路；
 - 不顺手开发 Retriever；
 - Contract 变更必须版本化。
+
+## 10. Completion Record
+
+Phase 2A completed on 2026-09-20. GitHub Actions `Verify` run `35508199338` passed typecheck and full deterministic verification. See `docs/07-reports/testing/PHASE2A_CONTRACT_TEST_REPORT_v1.0.md`.
