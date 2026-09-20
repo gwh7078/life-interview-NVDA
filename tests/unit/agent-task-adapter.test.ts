@@ -1,0 +1,130 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import {
+  NemoClawAgentTaskAdapter,
+  type AgentTaskExecutionRequest,
+  type AgentTaskExecutionResult,
+  type AgentTaskExecutor,
+  type ContributorCloseoutTaskRequest,
+  type StoryCompletionTaskRequest,
+} from '../../src/agent-tasks/index.js';
+import { AgentTaskContractError } from '../../src/agent-tasks/errors.js';
+
+class FakeExecutor implements AgentTaskExecutor {
+  requests: AgentTaskExecutionRequest[] = [];
+
+  constructor(private readonly result: AgentTaskExecutionResult) {}
+
+  async execute(request: AgentTaskExecutionRequest): Promise<AgentTaskExecutionResult> {
+    this.requests.push(request);
+    return this.result;
+  }
+}
+
+test('NemoClawAgentTaskAdapter routes Completion through the frozen Skill and model profile', async () => {
+  const executor = new FakeExecutor({
+    output: { status: 'interviewing', gaps: [] },
+    runtime: {
+      runtime: 'nemoclaw-openclaw',
+      skill: 'model-claimed-wrong-skill',
+      provider: 'stepfun',
+      model: 'test-model',
+      latencyMs: 42,
+    },
+  });
+  const adapter = new NemoClawAgentTaskAdapter(executor);
+
+  const request: StoryCompletionTaskRequest = {
+    runId: 'run-completion',
+    taskType: 'story.completion',
+    ownerId: 'owner-1',
+    resource: { type: 'story', id: 'story-1', version: 'v-1' },
+    schemaVersion: 'v1',
+    payload: {
+      title: '第一次登台',
+      agent_memory: '已经知道人物、地点和主要经过。',
+      stage_title: '学生时期',
+      current_status: 'interviewing',
+      previous_gaps: [],
+      blocked_directions: [],
+      session_count: 2,
+    },
+  };
+
+  const result = await adapter.run(request);
+  assert.equal(executor.requests.length, 1);
+  assert.equal(executor.requests[0]?.skill, 'story-completion');
+  assert.equal(executor.requests[0]?.modelProfile, 'reasoning-fast');
+  assert.equal(executor.requests[0]?.payload, request.payload);
+  assert.equal(result.runtime.skill, 'story-completion');
+  assert.equal(result.runtime.provider, 'stepfun');
+  assert.equal(result.runtime.model, 'test-model');
+});
+
+test('NemoClawAgentTaskAdapter routes contributor through interview-closeout without Story context', async () => {
+  const executor = new FakeExecutor({
+    output: { summary: '第三者的独立回忆。' },
+    runtime: { runtime: 'nemoclaw-openclaw' },
+  });
+  const adapter = new NemoClawAgentTaskAdapter(executor);
+
+  const request: ContributorCloseoutTaskRequest = {
+    runId: 'run-contributor',
+    taskType: 'interview.closeout',
+    mode: 'contributor',
+    ownerId: 'owner-1',
+    resource: { type: 'interview_session', id: 'session-1' },
+    schemaVersion: 'v1',
+    payload: {
+      mode: 'contributor',
+      relationship: '女儿',
+      previous_contributor_summary: null,
+      transcript: [{
+        message_id: 'm1',
+        role: 'user',
+        text: '我记得那天他很早就出门了。',
+        timestamp: '2026-09-20T10:00:00Z',
+      }],
+    },
+  };
+
+  const result = await adapter.run(request);
+  assert.equal(executor.requests[0]?.skill, 'interview-closeout');
+  assert.equal(executor.requests[0]?.modelProfile, 'reasoning');
+  assert.equal('current_story' in (executor.requests[0]?.payload as Record<string, unknown>), false);
+  assert.deepEqual(result.output, { summary: '第三者的独立回忆。' });
+});
+
+test('NemoClawAgentTaskAdapter rejects invalid executor output before returning to the backend', async () => {
+  const executor = new FakeExecutor({
+    output: {
+      status: 'interviewing',
+      gaps: ['问题一？', '问题二？', '问题三？', '问题四？'],
+    },
+    runtime: { runtime: 'nemoclaw-openclaw' },
+  });
+  const adapter = new NemoClawAgentTaskAdapter(executor);
+
+  const request: StoryCompletionTaskRequest = {
+    runId: 'run-invalid',
+    taskType: 'story.completion',
+    ownerId: 'owner-1',
+    resource: { type: 'story', id: 'story-1' },
+    schemaVersion: 'v1',
+    payload: {
+      title: '第一次登台',
+      agent_memory: '工作记忆。',
+      stage_title: '学生时期',
+      current_status: 'interviewing',
+      previous_gaps: [],
+      blocked_directions: [],
+    },
+  };
+
+  await assert.rejects(
+    () => adapter.run(request),
+    (error: unknown) => error instanceof AgentTaskContractError
+      && error.code === 'AGENT_TASK_OUTPUT_INVALID',
+  );
+  assert.equal(executor.requests.length, 1);
+});
