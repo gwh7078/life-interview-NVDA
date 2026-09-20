@@ -52,7 +52,7 @@ Skills inherit frozen evidence and context boundaries from Contract v1.0.
 
 Large Transcript payloads must not be blindly serialized into command-line arguments.
 
-The next runtime step must choose a transport that:
+The implemented transport satisfies these requirements:
 
 - preserves Contract v1.0 unchanged;
 - is owner/run scoped;
@@ -117,7 +117,7 @@ The existing `story-context-inspector` Phase 1 smoke Skill and `NemoClawOpenClaw
 - [x] NemoClawAgentTaskAdapter verified
 - [x] 4 formal Skill families committed
 - [x] structured context transport frozen and tested
-- [ ] NemoClaw/OpenClaw task executor implemented
+- [x] NemoClaw/OpenClaw task executor implemented
 - [ ] all four Task families return schema-valid results through real Agent runtime
 - [ ] retry/repair policy implemented
 - [ ] tracing records task/skill/model/runtime metadata
