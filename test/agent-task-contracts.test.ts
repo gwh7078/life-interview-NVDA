@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  NemoClawAgentTaskAdapter,
   StubAgentTaskAdapter,
   agentTaskDefinitions,
   agentTaskRequestEnvelopeSchema,
@@ -398,15 +399,27 @@ test('StubAgentTaskAdapter returns schema-valid results for all four task famili
     .outputSchema.parse(generationResult.output);
 });
 
-test('AI_TASK_RUNTIME is stub-only in Phase 2A', () => {
+test('AI_TASK_RUNTIME supports explicit stub and agent composition', () => {
   assert.equal(resolveAgentTaskRuntime({ AI_TASK_RUNTIME: 'stub' } as NodeJS.ProcessEnv), 'stub');
   assert.ok(createAgentTaskPort({ AI_TASK_RUNTIME: 'stub' } as NodeJS.ProcessEnv) instanceof StubAgentTaskAdapter);
 
   assert.throws(
     () => createAgentTaskPort({ AI_TASK_RUNTIME: 'agent' } as NodeJS.ProcessEnv),
     (error: unknown) => error instanceof AgentTaskContractError
-      && error.code === 'AGENT_RUNTIME_NOT_IMPLEMENTED',
+      && error.code === 'AGENT_RUNTIME_CONFIG_INVALID',
   );
+
+  const agent = createAgentTaskPort({
+    AI_TASK_RUNTIME: 'agent',
+    NEMOCLAW_SANDBOX: 'life-interview-agent',
+    AGENT_PROVIDER: 'stepfun',
+    AGENT_MODEL_REASONING: 'reasoning-model',
+    AGENT_MODEL_REASONING_FAST: 'fast-model',
+    AGENT_MODEL_WRITING: 'writing-model',
+    DATABASE_PATH: ':memory:',
+  } as NodeJS.ProcessEnv);
+  assert.ok(agent instanceof NemoClawAgentTaskAdapter);
+
   assert.throws(
     () => resolveAgentTaskRuntime({ AI_TASK_RUNTIME: 'legacy' } as NodeJS.ProcessEnv),
     (error: unknown) => error instanceof AgentTaskContractError
