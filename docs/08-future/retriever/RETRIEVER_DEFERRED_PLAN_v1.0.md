@@ -294,7 +294,7 @@ era_context_search
 
 - `ERA_CONTEXT_LIBRARY_v1.0.md`
 
-## 13. Realtime 硬边界
+## 9. Realtime 硬边界
 
 Future Realtime：
 
@@ -328,7 +328,7 @@ Agentic Retrieval 不进入默认实时链路。
 - 会增加 DGX Spark 上模型与 Retriever 的资源竞争；
 - Realtime 目标是“及时找到足够好的证据”，不是“搜索尽可能完整”。
 
-## 9. 证据优先级
+## 10. 证据优先级
 
 当前 Transcript 是当前直接证据。
 
@@ -338,7 +338,7 @@ Retriever 找到的历史 Transcript 是补充证据。
 
 > 当前明确纠正优先于旧历史陈述。
 
-## 10. DGX Spark Future Deployment
+## 11. DGX Spark Future Deployment
 
 目标形态：
 
@@ -347,8 +347,11 @@ DGX Spark
 ├── Agent Runtime
 ├── Local Model Runtime
 ├── NeMo Retriever
-│   ├── Classic Retrieval
-│   └── Agentic Retrieval
+│   ├── 个人历史证据索引
+│   │   ├── Classic Retrieval
+│   │   └── Agentic Retrieval
+│   └── 时代背景只读索引
+│       └── Classic Retrieval
 ├── Embedding / Reranker
 └── SQLite / App Services
 ```
@@ -361,7 +364,7 @@ DGX Spark
 - Agentic Retrieval 的 Agent Model、并发数、P50 / P95 latency 必须在真实 Spark 上 Benchmark 后冻结；
 - 未实测前，不承诺具体吞吐或延迟。
 
-## 11. Future Integration Order
+## 12. Future Integration Order
 
 1. 稳定 Retriever 服务；
 2. RetrieverAdapter；
@@ -378,10 +381,12 @@ DGX Spark
 13. Agentic recall quality / latency / resource benchmark；
 14. 根据真实效果决定是否扩大使用范围。
 
-## 12. 当前冻结结论
+## 13. 当前冻结结论
 
 > **Future Realtime = Story Agent Memory + 条件式个人历史 Classic Retrieval + 条件式时代背景 Classic Retrieval。**
 >
 > **Post-session / Offline Deep Evidence Task = Agentic Retrieval。**
 >
-> **SQLite / Transcript 永远是 Source of Truth；Retriever 永远是 Derived Evidence Index。**
+> **用户个人历史：SQLite / Transcript 永远是 Source of Truth，个人历史 Retriever 只是可重建的派生证据索引。**
+>
+> **时代背景索引是独立只读公共资料库，只能提供采访话题提示，不属于用户事实证据。**
