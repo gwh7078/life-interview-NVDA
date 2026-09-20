@@ -24,20 +24,23 @@ Node AgentGateway
 
 ## 当前开发
 
-Phase 2A 不继续扩张 NVIDIA Runtime。
+Phase 2A 已冻结 Backend / Agent Contract。
 
-当前只冻结 Backend / Agent Contract。
-
-## Phase 2B
-
-将正式实现：
+Phase 2B 正式实现：
 
 - NemoClawAgentTaskAdapter；
-- 4 类 Agent Task / Skills；
+- 4 类正式 Agent Task / Skill family；
 - Model Router；
 - Runtime Error Contract；
 - Tracing；
 - Agent Eval。
+
+当前主仓库已经存在：
+
+- onboarding-closeout；
+- interview-closeout；
+- story-completion；
+- story-generation。
 
 ## DGX Spark
 
@@ -50,13 +53,76 @@ Phase 2A 不继续扩张 NVIDIA Runtime。
 - 记录 schema success / repair rate；
 - 形成可复现部署说明。
 
+Future Retriever 也应在真实 DGX Spark 上单独记录：
+
+- Classic Retrieval P50 / P95；
+- Agentic Retrieval P50 / P95；
+- recall / evidence quality；
+- GPU / unified memory 占用；
+- Realtime 与 Deep Search 并发时的资源竞争。
+
+未完成实测前，不承诺具体吞吐或延迟。
+
 ## NeMo Retriever
 
-当前延期，不进入 Phase 2A / 2B 第一阶段核心链路。
+当前延期，不进入 Phase 2A / Phase 2B 第一阶段核心链路。
 
-Future 设计见：
+Future 设计明确区分两档：
+
+### Classic Retrieval
+
+```text
+dense / hybrid retrieval
+ -> rerank
+ -> Top-K evidence
+```
+
+用途：
+
+- Realtime Slow System；
+- 普通历史 Recall；
+- 低延迟 Evidence Search。
+
+原则：
+
+> **Realtime 只使用 Classic Retrieval，不同步等待 Agentic Retrieval。**
+
+### Agentic Retrieval
+
+```text
+agent reasoning
+ -> multiple retrieval sub-queries
+ -> evidence fusion
+ -> final evidence selection
+```
+
+用途：
+
+- Post-session / Offline Agent；
+- 复杂历史冲突核查；
+- 跨多个 Session / Story 的 Deep Recall；
+- Future Deep Evidence / Generation 辅助搜索。
+
+原则：
+
+> **Agentic Retrieval 作为 Agent Tool 使用，不作为 Realtime Voice 默认检索路径。**
+
+Future Tool 形态：
+
+```text
+memory.search
+ -> Classic Retrieval
+
+memory.deep_search
+ -> Agentic Retrieval
+```
+
+两者共用同一个可重建 Transcript Derived Index；SQLite / Transcript 继续是 Source of Truth。
+
+详细设计见：
 
 - `../08-future/retriever/RETRIEVER_DEFERRED_PLAN_v1.0.md`
+- `../08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`
 
 ## 文档真实性原则
 
@@ -67,4 +133,4 @@ Future 设计见：
 - **Current Development**
 - **Planned / Future**
 
-不能把仅有架构设计但尚未完成的 NVIDIA / DGX Spark 能力写成已落地。
+不能把仅有架构设计但尚未完成的 NVIDIA / DGX Spark / Retriever 能力写成已落地。
