@@ -65,4 +65,22 @@ Node AgentGateway
 → agent_runs.status = succeeded
 ```
 
+## 6. Sandbox data boundary
+
+Do **not** onboard this sandbox with a host mount that exposes this repository, `data/`, or `memoir.db` inside the sandbox. The Agent must obtain product data only through the scoped Tool API.
+
+The smoke Skill itself contains no database path and requires only the Tool API URL/token injected for one process invocation.
+
+## 7. Recovery after Mac restart
+
+1. Start Docker Desktop, or run `colima start`.
+2. Run `docker info`.
+3. Run `nemoclaw "$NEMOCLAW_SANDBOX" status`.
+4. If onboarding was interrupted, use `nemoclaw onboard --resume`; otherwise follow the recovery command reported by `status`.
+5. Run `nemoclaw inference get`.
+6. Run `nemoclaw "$NEMOCLAW_SANDBOX" skill list` and reinstall the smoke Skill only if it is absent.
+7. Run `nemoclaw "$NEMOCLAW_SANDBOX" policy list` and confirm the reviewed Tool API preset is present.
+8. Start `npm run agent:tool-server`.
+9. Run `npm run agent:smoke`.
+
 The real hosted-model smoke is intentionally outside deterministic CI.
