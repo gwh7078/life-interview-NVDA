@@ -1,10 +1,10 @@
-# Realtime Fast / Slow Dual-System Architecture v1.1
+# Realtime Fast / Slow Dual-System Architecture v1.2
 
 > Status: **Future / Deferred**
 >
 > 当前版本不开发，只冻结演进方向。
 >
-> 本版明确：Realtime Slow Agent 只使用 Story Agent Memory + Classic Retrieval；Agentic Retrieval 不进入默认实时链路。
+> 本版明确：Realtime Slow Agent 仍是 **Future / Deferred**。未来可在不阻塞语音的前提下使用 Story Agent Memory + Classic Retrieval，并把检索分为个人历史召回、个人历史事实检索与时代背景检索；Agentic Retrieval 不进入默认实时链路。
 
 ## 1. 问题
 
@@ -43,7 +43,9 @@ Interview Slow Agent
         |
         ├─ 判断是否需要历史信息
         ├─ 判断人物 / 时间 / Story 线索
-        ├─ 条件式 Classic Memory Search
+        ├─ 条件式个人历史召回
+        ├─ 条件式个人历史事实检索
+        ├─ 条件式时代背景检索
         └─ 形成短 Context Hint
         |
         v
@@ -85,7 +87,9 @@ Slow Agent 不是每轮固定执行 Retriever。
 - 是否出现疑似新 Story；
 - 是否偏离当前采访目标；
 - 是否值得进一步深挖；
-- 是否需要 Memory Search。
+- 是否需要个人历史召回；
+- 是否需要个人历史事实检索；
+- 当前时间 / 地点 / 年龄 / 人生阶段是否值得触发时代背景检索。
 
 只有符合条件时才调用 Tool。
 
@@ -93,15 +97,25 @@ Slow Agent 不是每轮固定执行 Retriever。
 
 ## 5. Realtime 只允许 Classic Retrieval
 
-Future Realtime Memory Search 使用：
+Future Realtime 低延迟检索统一采用 Classic Retrieval，但逻辑上分为两类数据源：
 
 ```text
-memory_search
+个人历史证据索引
+ -> memory_search
+ -> Transcript / 历史事实
+
+时代背景索引
+ -> era_context_search
+ -> 年份 / 地域 / 年龄 / 人生阶段 / Story 主题
+
+两者
  -> Classic Retrieval
  -> dense / hybrid retrieval
  -> rerank
- -> small Top-K evidence
+ -> small Top-K evidence / hints
 ```
+
+个人历史证据索引属于用户私有数据；时代背景索引属于只读公共背景库，两者必须隔离。
 
 原因：
 
@@ -257,7 +271,56 @@ CLOSEOUT AGENT
   本次访谈结束后长期应该记住什么
 ```
 
-## 13. 当前版本边界
+## 13. Future：时代背景检索
+
+未来 Slow System 除了“找回用户过去说过什么”，还可以理解“用户当时生活在什么时代”。
+
+典型链路：
+
+```text
+用户提到：
+年份 / 地点 / 年龄 / Life Stage / Story 主题
+        |
+        v
+时代背景 Classic Retrieval
+        |
+        v
+少量高相关年代事件
+        |
+        v
+Slow Agent 选择 0～2 条自然话题
+        |
+        v
+Context Hint
+        |
+        v
+Safe Turn Boundary
+        |
+        v
+Fast Realtime System
+```
+
+例如用户说：
+
+> “我 2001 年大学毕业，后来去了北京。”
+
+Slow System 未来可以检索 2001 前后北京、青年、初入职场相关时代背景，并形成：
+
+> “如果自然，可以问他是否记得当时北京申奥成功后的城市氛围。”
+
+硬边界：
+
+- 时代背景只用于唤起记忆和寻找话题；
+- 时代背景不是用户个人事实；
+- 用户未确认前不得进入 Story Summary / Agent Memory / Completion / Generation；
+- 不允许为了使用检索结果而强行打断高信息密度个人叙述；
+- 默认只使用低延迟 Classic Retrieval，不需要 Agentic Retrieval。
+
+详细设计见：
+
+- `../retriever/ERA_CONTEXT_LIBRARY_v1.0.md`
+
+## 14. 当前版本边界
 
 当前 Fast Realtime 保持现有实现；Slow System、Realtime Retriever、Memory Search、Agentic Retrieval 均不开发。
 
