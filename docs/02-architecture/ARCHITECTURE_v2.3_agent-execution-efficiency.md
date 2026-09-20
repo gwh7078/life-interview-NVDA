@@ -1,4 +1,4 @@
-# Architecture v2.3 — 低轮次 Agent 执行架构
+# Architecture v2.3 — 低轮次 Agent 执行架构（Future 检索补充版）
 
 > Status: **Current**
 >
@@ -372,7 +372,8 @@ Parallel Interview Slow Agent
 Slow Agent 旁路消费 Transcript，条件式执行：
 
 - Story Agent Memory recall；
-- `memory_search` / Classic Retrieval；
+- `memory_search` / 个人历史 Classic Retrieval；
+- `era_context_search` / 时代背景 Classic Retrieval（Future）；
 - 人物关系识别；
 - 时间冲突；
 - 新 Story 线索；
@@ -384,6 +385,27 @@ Slow Agent 旁路消费 Transcript，条件式执行：
 > **Realtime Slow Agent 不调用 Agentic Retrieval。**
 
 Slow Agent 只输出短 Context Hint，在安全轮次边界注入 Fast System，不阻塞当前语音轮次。
+
+Future 慢系统的检索来源可以分为：
+
+```text
+个人历史召回
+ -> “用户以前说过什么”
+
+个人历史事实检索
+ -> “人物 / 时间 / 地点 / 关系等历史证据是什么”
+
+时代背景检索
+ -> “用户当时生活的年代有什么可能唤起记忆的话题”
+```
+
+时代背景检索使用独立只读公共资料索引，只能形成采访提示，不得自动进入用户个人事实链路。
+
+详细设计：
+
+- `docs/08-future/retriever/ERA_CONTEXT_LIBRARY_v1.0.md`
+
+**上述 Realtime Slow System 与时代背景检索都仍是 Future / Deferred，当前未实现。**
 
 ## 14. Retrieval Depth Routing
 
