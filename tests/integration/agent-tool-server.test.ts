@@ -5,14 +5,16 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { createAgentToolServer } from '../../agent/tools/server.js';
 import { noOpAgentToolAudit } from '../../agent/tools/audit-log.js';
+import { FileAgentTaskContextStore } from '../../agent/tools/task-context-store.js';
 import { AgentToolTokenService } from '../../agent/tools/token.js';
 import { createDatabase } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { accounts, lifeStages, stories, users } from '../../src/db/schema.js';
 
-test('Agent Tool API enforces token scope, owner scope and invalid-resource handling', async () => {
+test('Agent Tool API enforces story scope and run-scoped task-context transport', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'life-interview-agent-tool-api-'));
   const dbPath = path.join(dir, 'memoir.db');
+  const contextDir = path.join(dir, 'task-contexts');
   const connection = createDatabase(dbPath);
   try {
     runMigrations(connection);
@@ -31,7 +33,13 @@ test('Agent Tool API enforces token scope, owner scope and invalid-resource hand
   }
 
   const tokens = new AgentToolTokenService('phase1-test-secret-0123456789-abcdef');
-  const server = createAgentToolServer({ databasePath: dbPath, tokenService: tokens, audit: noOpAgentToolAudit });
+  const taskContexts = new FileAgentTaskContextStore(contextDir);
+  const server = createAgentToolServer({
+    databasePath: dbPath,
+    tokenService: tokens,
+    taskContexts,
+    audit: noOpAgentToolAudit,
+  });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   assert.ok(address && typeof address === 'object');
@@ -70,6 +78,81 @@ test('Agent Tool API enforces token scope, owner scope and invalid-resource hand
       body: JSON.stringify({ story_id: 'story-a' }),
     });
     assert.equal(unauthorized.status, 401);
+
+    taskContexts.put({
+      runId: 'run-context',
+      userId: 'user-a',
+      taskType: 'story.completion',
+      resourceType: 'story',
+      resourceId: 'story-a',
+      schemaVersion: 'v1',
+      skill: 'story-completion',
+      payload: {
+        title: '故事 a',
+        agent_memory: '这是一段只属于本次 run 的私密上下文。',
+      },
+    }, 5_000);
+
+    const contextToken = tokens.issue({
+      runId: 'run-context',
+      userId: 'user-a',
+      tool: 'get_task_context',
+      resourceType: 'story',
+      resourceId: 'story-a',
+      ttlMs: 5_000,
+    });
+    const contextResponse = await fetch(base + '/internal/agent-tools/get_task_context', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + contextToken, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        run_id: 'run-context',
+        resource_type: 'story',
+        resource_id: 'story-a',
+      }),
+    });
+    assert.equal(contextResponse.status, 200);
+    const contextBody = await contextResponse.json() as {
+      task_type: string;
+      skill: string;
+      context: { agent_memory: string };
+    };
+    assert.equal(contextBody.task_type, 'story.completion');
+    assert.equal(contextBody.skill, 'story-completion');
+    assert.equal(contextBody.context.agent_memory, '这是一段只属于本次 run 的私密上下文。');
+
+    const wrongRun = await fetch(base + '/internal/agent-tools/get_task_context', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + contextToken, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        run_id: 'another-run',
+        resource_type: 'story',
+        resource_id: 'story-a',
+      }),
+    });
+    assert.equal(wrongRun.status, 403);
+
+    const wrongTaskResource = await fetch(base + '/internal/agent-tools/get_task_context', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + contextToken, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        run_id: 'run-context',
+        resource_type: 'story',
+        resource_id: 'story-b',
+      }),
+    });
+    assert.equal(wrongTaskResource.status, 403);
+
+    taskContexts.delete('run-context');
+    const missingContext = await fetch(base + '/internal/agent-tools/get_task_context', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + contextToken, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        run_id: 'run-context',
+        resource_type: 'story',
+        resource_id: 'story-a',
+      }),
+    });
+    assert.equal(missingContext.status, 404);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     rmSync(dir, { recursive: true, force: true });

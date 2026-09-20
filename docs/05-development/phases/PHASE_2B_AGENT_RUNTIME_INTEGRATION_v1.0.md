@@ -48,7 +48,7 @@ Skills inherit frozen evidence and context boundaries from Contract v1.0.
 
 ### 2B-3 — Structured Context Transport
 
-Not implemented in the first slice.
+**Implemented in the second slice.**
 
 Large Transcript payloads must not be blindly serialized into command-line arguments.
 
@@ -60,7 +60,19 @@ The next runtime step must choose a transport that:
 - does not expose payloads in shell process listings;
 - works inside NemoClaw/OpenShell isolation.
 
-Candidate architecture: a short-lived, run-scoped read-only task-context endpoint exposed by the backend/tool service. This is transport, not Agent-selected retrieval.
+Implemented architecture:
+
+```text
+Backend / Executor
+ -> 0600 temporary run-context file
+ -> scoped get_task_context Tool API
+ -> OpenClaw Skill
+ -> cleanup in executor finally
+```
+
+The context filename is derived from a hash of runId rather than containing the raw runId. The file is TTL-bound and is deleted when the task finishes. SQLite remains untouched.
+
+This endpoint is transport, not Agent-selected retrieval.
 
 ### 2B-4 — NemoClaw/OpenClaw Executor
 
@@ -104,7 +116,7 @@ The existing `story-context-inspector` Phase 1 smoke Skill and `NemoClawOpenClaw
 
 - [x] NemoClawAgentTaskAdapter verified
 - [x] 4 formal Skill families committed
-- [ ] structured context transport frozen and tested
+- [x] structured context transport frozen and tested
 - [ ] NemoClaw/OpenClaw task executor implemented
 - [ ] all four Task families return schema-valid results through real Agent runtime
 - [ ] retry/repair policy implemented

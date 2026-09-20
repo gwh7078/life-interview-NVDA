@@ -7,6 +7,20 @@ description: Organize ended onboarding interviews into evidence-backed profile c
 
 Use only for `onboarding.closeout`.
 
+## Runtime Context
+
+Before reasoning, load the structured Task Context through the run-scoped Tool API:
+
+```bash
+curl -fsS -X POST \
+  "$LIFE_INTERVIEW_TOOL_BASE_URL/internal/agent-tools/get_task_context" \
+  -H "Authorization: Bearer $LIFE_INTERVIEW_TOOL_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data "{\"run_id\":\"$LIFE_INTERVIEW_RUN_ID\",\"resource_type\":\"$LIFE_INTERVIEW_RESOURCE_TYPE\",\"resource_id\":\"$LIFE_INTERVIEW_RESOURCE_ID\"}"
+```
+
+Use only the returned `context` field as task-specific product input. Never print or repeat the token.
+
 ## Input
 
 The runtime provides structured Task Context containing:
