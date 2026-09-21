@@ -11,6 +11,7 @@ export interface StoryGenerationStoryRecord {
   title: string;
   summary: string;
   status: string;
+  updatedAt: string;
 }
 
 export interface StoryGenerationProfileRecord {
@@ -56,6 +57,7 @@ export interface CreateNextStoryDocumentInput {
   content: string;
   status: 'draft';
   sourceJson: string;
+  expectedStoryUpdatedAt: string;
 }
 
 export interface StoryGenerationCreatedDocument extends StoryGenerationDocumentRecord {
@@ -112,6 +114,15 @@ export interface StoryGenerationModelResponse {
 
 export interface StoryGenerationModelPort {
   generate(input: StoryGenerationModelRequest): Promise<StoryGenerationModelResponse>;
+}
+
+export interface StoryGenerationContextModelPort {
+  generateContext(input: {
+    ownerId: string;
+    storyId: string;
+    resourceVersion: string;
+    context: StoryGenerationContext;
+  }): Promise<StoryGenerationModelResponse>;
 }
 
 export interface StoryGenerationPromptProfile {
