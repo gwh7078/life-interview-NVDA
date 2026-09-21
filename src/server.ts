@@ -2628,6 +2628,7 @@ function createRealtimeHandler(
             sessionId: interviewSession.sessionId,
             config: closeoutModelConfig(config),
             textModelProvider: dependencies.closeout?.textModelProvider,
+            agentTaskPort: dependencies.agentTasks ?? undefined,
           });
           closeout = { status: 'completed' };
         } catch (error) {
