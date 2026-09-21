@@ -48,6 +48,10 @@ export function createAgentTaskPort(
     sandboxName,
     ...(optionalEnv(env, 'AGENT_PROVIDER') ? { provider: optionalEnv(env, 'AGENT_PROVIDER') } : {}),
     ...(optionalEnv(env, 'AGENT_MODEL_DEFAULT') ? { defaultModel: optionalEnv(env, 'AGENT_MODEL_DEFAULT') } : {}),
+    ...(optionalEnv(env, 'AGENT_THINKING') ? { thinking: optionalEnv(env, 'AGENT_THINKING') } : {}),
+    ...(optionalEnv(env, 'AGENT_RUNTIME_DIAGNOSTICS_PATH')
+      ? { diagnosticsPath: optionalEnv(env, 'AGENT_RUNTIME_DIAGNOSTICS_PATH') }
+      : {}),
     models: {
       ...(optionalEnv(env, 'AGENT_MODEL_REASONING') ? { reasoning: optionalEnv(env, 'AGENT_MODEL_REASONING') } : {}),
       ...(optionalEnv(env, 'AGENT_MODEL_REASONING_FAST') ? { 'reasoning-fast': optionalEnv(env, 'AGENT_MODEL_REASONING_FAST') } : {}),

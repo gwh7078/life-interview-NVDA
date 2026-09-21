@@ -1,4 +1,7 @@
+import { appendFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import type { AgentRunStore } from '../tracing/agent-run-repository.js';
 import type {
   AgentTaskExecutionRequest,
@@ -38,6 +41,26 @@ export interface AgentAttemptResult {
   scriptCallCount: number;
 }
 
+export interface AgentRuntimeTimingEvent {
+  timestamp: string;
+  runId: string;
+  taskType: string;
+  mode: AgentAttemptMode;
+  attemptNumber: number;
+  provider?: string;
+  model?: string;
+  thinking?: string;
+  promptBytes: number;
+  stdoutBytes: number;
+  stderrBytes: number;
+  promptBuildMs: number;
+  commandMs: number;
+  openclawMs?: number;
+  hostOverheadMs?: number;
+  parseMs: number;
+  totalMs: number;
+}
+
 export interface AgentTaskAttemptRunner {
   run(request: AgentAttemptRequest): Promise<AgentAttemptResult>;
 }
@@ -68,6 +91,33 @@ export interface NemoClawAttemptRunnerConfig {
   provider?: string;
   defaultModel?: string | null;
   models?: Partial<Record<AgentModelProfile, string>>;
+  thinking?: string | null;
+  diagnosticsPath?: string | null;
+}
+
+function roundMilliseconds(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function parseOpenClawTiming(stderr: string, commandMs: number): Pick<AgentRuntimeTimingEvent, 'openclawMs' | 'hostOverheadMs'> {
+  const started = /LIFE_INTERVIEW_RUNTIME openclaw_start_ms=(\d+)/u.exec(stderr)?.[1];
+  const ended = /LIFE_INTERVIEW_RUNTIME openclaw_end_ms=(\d+)/u.exec(stderr)?.[1];
+  if (!started || !ended) return {};
+  const openclawMs = Math.max(0, Number(ended) - Number(started));
+  return {
+    openclawMs,
+    hostOverheadMs: roundMilliseconds(Math.max(0, commandMs - openclawMs)),
+  };
+}
+
+function writeRuntimeTiming(pathname: string | null | undefined, event: AgentRuntimeTimingEvent): void {
+  if (!pathname) return;
+  try {
+    mkdirSync(path.dirname(pathname), { recursive: true });
+    appendFileSync(pathname, `${JSON.stringify(event)}\n`, 'utf8');
+  } catch {
+    // Diagnostics must never turn a successful Agent Task into a failure.
+  }
 }
 
 function parseLifeInterviewResult(stdout: string): Record<string, unknown> {
@@ -165,20 +215,29 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
     if (request.task.executionPolicy.scriptCapabilities.length > 0) {
       throw new Error('AGENT_SCRIPT_CAPABILITIES_NOT_IMPLEMENTED');
     }
+    const started = performance.now();
     const model = this.config.models?.[request.task.modelProfile]
       ?? this.config.defaultModel
       ?? null;
+    const thinking = this.config.thinking?.trim() || null;
+    const promptStarted = performance.now();
     const prompt = buildPrompt(request);
+    const promptBuildMs = performance.now() - promptStarted;
     if (Buffer.byteLength(prompt, 'utf8') > 4 * 1024 * 1024) {
       throw new Error('AGENT_CONTEXT_TOO_LARGE');
     }
 
-    const started = Date.now();
     const sandboxAgentCommand =
       'tmp=$(mktemp /tmp/life-interview-task.XXXXXX); '
       + 'trap \'rm -f "$tmp"\' EXIT; '
       + 'cat > "$tmp"; '
-      + 'openclaw agent "$@" --message-file "$tmp"';
+      + 'openclaw_start_ms=$(date +%s%3N); '
+      + 'printf "LIFE_INTERVIEW_RUNTIME openclaw_start_ms=%s\\n" "$openclaw_start_ms" >&2; '
+      + 'openclaw agent "$@" --message-file "$tmp"; '
+      + 'openclaw_exit=$?; '
+      + 'openclaw_end_ms=$(date +%s%3N); '
+      + 'printf "LIFE_INTERVIEW_RUNTIME openclaw_end_ms=%s openclaw_exit=%s\\n" "$openclaw_end_ms" "$openclaw_exit" >&2; '
+      + 'exit "$openclaw_exit"';
     const args = [
       this.config.sandboxName,
       'exec',
@@ -199,7 +258,9 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
       String(Math.max(1, Math.ceil(request.task.executionPolicy.timeoutMs / 1000))),
     ];
     if (model) args.push('--model', model);
+    if (thinking) args.push('--thinking', thinking);
 
+    const commandStarted = performance.now();
     const executed = await this.runner.run(
       'nemoclaw',
       args,
@@ -207,14 +268,36 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
       prompt,
       request.task.signal,
     );
+    const commandMs = performance.now() - commandStarted;
+    const parseStarted = performance.now();
     const output = parseLifeInterviewResult(executed.stdout);
+    const parseMs = performance.now() - parseStarted;
+    const totalMs = performance.now() - started;
+    writeRuntimeTiming(this.config.diagnosticsPath, {
+      timestamp: new Date().toISOString(),
+      runId: request.task.runId,
+      taskType: request.task.taskType,
+      mode: request.mode,
+      attemptNumber: request.attemptNumber,
+      ...(this.config.provider ? { provider: this.config.provider } : {}),
+      ...(model ? { model } : {}),
+      ...(thinking ? { thinking } : {}),
+      promptBytes: Buffer.byteLength(prompt, 'utf8'),
+      stdoutBytes: Buffer.byteLength(executed.stdout, 'utf8'),
+      stderrBytes: Buffer.byteLength(executed.stderr, 'utf8'),
+      promptBuildMs: roundMilliseconds(promptBuildMs),
+      commandMs: roundMilliseconds(commandMs),
+      ...parseOpenClawTiming(executed.stderr, commandMs),
+      parseMs: roundMilliseconds(parseMs),
+      totalMs: roundMilliseconds(totalMs),
+    });
     return {
       output,
       runtime: {
         runtime: 'nemoclaw-openclaw',
         ...(this.config.provider ? { provider: this.config.provider } : {}),
         ...(model ? { model } : {}),
-        latencyMs: Date.now() - started,
+        latencyMs: Math.round(totalMs),
       },
       execCallCount: 0,
       scriptCallCount: 0,

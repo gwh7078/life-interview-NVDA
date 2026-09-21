@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { test } from 'node:test';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import {
   AgentResultFormatError,
   NemoClawAgentTaskExecutor,
@@ -72,8 +75,8 @@ class CaptureRunner implements CommandRunner {
     this.stdin = stdin ?? '';
     this.signal = signal;
     return {
-    stdout: 'trace\nLIFE_INTERVIEW_RESULT {"status":"interviewing","gaps":[]}\n[agents/agent-command] run ended with stopReason=stop\n',
-      stderr: '',
+      stdout: 'trace\nLIFE_INTERVIEW_RESULT {"status":"interviewing","gaps":[]}\n[agents/agent-command] run ended with stopReason=stop\n',
+      stderr: 'LIFE_INTERVIEW_RUNTIME openclaw_start_ms=1000\nLIFE_INTERVIEW_RUNTIME openclaw_end_ms=1200 openclaw_exit=0\n',
     };
   }
 }
@@ -106,6 +109,53 @@ test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scrip
   assert.equal(result.execCallCount, 0);
   assert.equal(result.scriptCallCount, 0);
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
+});
+
+test('AttemptRunner records timing diagnostics without task content', async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'life-interview-agent-timing-'));
+  const diagnosticsPath = path.join(directory, 'timing.jsonl');
+  try {
+    const runner = new CaptureRunner();
+    const attempts = new NemoClawOpenClawAttemptRunner({
+      sandboxName: 'my-assistant',
+      provider: 'stepfun',
+      thinking: 'off',
+      diagnosticsPath,
+      models: { 'reasoning-fast': 'step-test-model' },
+    }, runner);
+
+    await attempts.run({
+      task: taskRequest(),
+      attemptNumber: 1,
+      mode: 'normal',
+    });
+
+    assert.ok(runner.args.includes('--thinking'));
+    assert.ok(runner.args.includes('off'));
+    const timing = JSON.parse(readFileSync(diagnosticsPath, 'utf8')) as {
+      taskType: string;
+      mode: string;
+      attemptNumber: number;
+      thinking?: string;
+      promptBytes: number;
+      stdoutBytes: number;
+      stderrBytes: number;
+      openclawMs?: number;
+      hostOverheadMs?: number;
+    };
+    assert.equal(timing.taskType, 'story.completion');
+    assert.equal(timing.mode, 'normal');
+    assert.equal(timing.attemptNumber, 1);
+    assert.equal(timing.thinking, 'off');
+    assert.ok(timing.promptBytes > 0);
+    assert.ok(timing.stdoutBytes > 0);
+    assert.ok(timing.stderrBytes > 0);
+    assert.equal(timing.openclawMs, 200);
+    assert.ok((timing.hostOverheadMs ?? 0) >= 0);
+    assert.equal(JSON.stringify(timing).includes('完整采访内容'), false);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 class SequenceAttemptRunner implements AgentTaskAttemptRunner {

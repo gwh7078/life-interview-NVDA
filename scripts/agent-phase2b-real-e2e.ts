@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createAgentTaskPort, type AgentTaskRequestUnion } from '../src/agent-tasks/index.js';
@@ -239,6 +239,7 @@ async function main(): Promise<void> {
 
   const directory = mkdtempSync(path.join(tmpdir(), 'life-interview-phase2b-e2e-'));
   const databasePath = path.join(directory, 'memoir.db');
+  const runtimeTimingPath = path.join(directory, 'agent-runtime-timing.jsonl');
   const ownerId = 'phase2b-e2e-owner';
   const database = createDatabase(databasePath);
   try {
@@ -264,6 +265,7 @@ async function main(): Promise<void> {
     ...process.env,
     AI_TASK_RUNTIME: 'agent',
     DATABASE_PATH: databasePath,
+    AGENT_RUNTIME_DIAGNOSTICS_PATH: runtimeTimingPath,
   };
   const tasks = createAgentTaskPort(env, { databasePath });
   if (!tasks) throw new Error('Agent runtime did not resolve to AgentTaskPort.');
@@ -328,6 +330,14 @@ async function main(): Promise<void> {
       traceDatabase.close();
     }
 
+    let runtimeTimings: unknown[] = [];
+    try {
+      const content = readFileSync(runtimeTimingPath, 'utf8').trim();
+      if (content) runtimeTimings = content.split('\n').map((line) => JSON.parse(line));
+    } catch {
+      // Timing diagnostics are best-effort and must not change the E2E result.
+    }
+
     const report = {
       generatedAt: new Date().toISOString(),
       sandbox: process.env.NEMOCLAW_SANDBOX,
@@ -338,8 +348,10 @@ async function main(): Promise<void> {
         reasoningFast: process.env.AGENT_MODEL_REASONING_FAST ?? null,
         writing: process.env.AGENT_MODEL_WRITING ?? null,
       },
+      thinking: process.env.AGENT_THINKING ?? null,
       passed: results.filter((item) => item.ok).length,
       total: results.length,
+      runtimeTimings,
       tracing,
       results,
     };
