@@ -6,7 +6,7 @@
 
 当前 DGX Spark 模型职责划分与候选模型已经形成 v1.0 推荐方案：
 
-- Realtime Fast System：MiniCPM-o 4.5；
+- Realtime Fast System：MiniCPM-o 4.5；第一备选 Step-Audio-2-mini（DGX Spark 必测，定制 vLLM / 实时性能待验证）；
 - Slow Decision：`nvidia/Qwen3-8B-FP4`；
 - Slow Search：NeMo Retriever + Nemotron Embedding / Rerank；
 - Slow Execution / Summary：`nvidia/Qwen3.6-35B-A3B-NVFP4`；
