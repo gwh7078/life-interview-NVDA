@@ -13,6 +13,7 @@ export interface AgentRunCreateInput extends AgentRunRequest {
   model?: string | null;
   contextVersion?: string | null;
   schemaVersion?: string | null;
+  resourceVersion?: string | null;
   inputHash?: string | null;
 }
 
@@ -20,6 +21,7 @@ export interface AgentRunAttemptMetrics {
   attemptCount: number;
   repairCount: number;
   toolCallCount: number;
+  scriptCallCount: number;
   formatRepairUsed: boolean;
   provider?: string | null;
   model?: string | null;
@@ -59,6 +61,7 @@ export class AgentRunRepository implements AgentRunStore {
         taskType: input.taskType,
         resourceType: input.resourceType,
         resourceId: input.resourceId,
+        resourceVersion: input.resourceVersion ?? null,
         runtime: input.runtime,
         mode: input.mode ?? null,
         skill: input.skill ?? null,
@@ -105,6 +108,7 @@ export class AgentRunRepository implements AgentRunStore {
       attemptCount: metrics.attemptCount,
       repairCount: metrics.repairCount,
       toolCallCount: metrics.toolCallCount,
+      scriptCallCount: metrics.scriptCallCount,
       formatRepairUsed: metrics.formatRepairUsed,
       ...(metrics.provider !== undefined ? { provider: metrics.provider } : {}),
       ...(metrics.model !== undefined ? { model: metrics.model } : {}),
