@@ -1,4 +1,4 @@
-# NeMo Retriever Deferred Integration Plan v1.3
+# NeMo Retriever Deferred Integration Plan v1.4
 
 > Status: **Future / Deferred**
 >
@@ -90,12 +90,12 @@ Query
 - Realtime Slow System 的按需 Recall；
 - 旧人物、旧事件、时间点快速查找；
 - 普通 Story 历史证据查询；
-- 需要低延迟返回的 Agent Tool。
+- 需要低延迟返回的 Agent Skill Script。
 
-Future Tool 名：
+Future Script：
 
 ```text
-memory_search
+scripts/memory-search.mjs
 ```
 
 原则：
@@ -131,10 +131,10 @@ Question
 - 独立 Deep Evidence / Conflict Analysis；
 - Story Generation 在证据规模很大时的辅助检索。
 
-Future Tool 名：
+Future Script：
 
 ```text
-memory_deep_search
+scripts/memory-deep-search.mjs
 ```
 
 默认不用于：
@@ -160,12 +160,12 @@ Agent 判断
 │  → 直接完成
 │
 ├─ 普通历史疑点
-│  → memory_search
+│  → memory-search.mjs
 │  → Classic Retrieval
 │  → 少量高相关历史证据
 │
 └─ 复杂跨历史问题
-   → memory_deep_search
+   → memory-deep-search.mjs
    → Agentic Retrieval
    → 多步证据搜索
    ↓
@@ -185,13 +185,13 @@ Agent 判断
 
 > **正常任务 1 Run 0 Tool；普通复杂任务少量 Classic Search；真正复杂历史问题才升级 Agentic Search。**
 
-## 6. Tool Contract 原则
+## 6. Skill Script Contract 原则
 
-正式访问必须经过 Backend / scoped tool / RetrieverAdapter。
+正式访问必须经过 Skill Script → Backend authorization / RetrieverAdapter。模型不直接连接 Retriever，也不接收专用 Retrieval Tool Schema。
 
 浏览器和小程序不直接连接 Retriever。
 
-两类 Tool 都必须：
+两类 Retrieval Script 都必须：
 
 - owner scoped；
 - resource scoped；
@@ -271,20 +271,20 @@ B. 时代背景索引
 Future Tool 可以分别设计为：
 
 ```text
-memory_search
+memory-search.mjs
  -> 个人历史 Classic Retrieval
 
-era_context_search
+era-context-search.mjs
  -> 时代背景 Classic Retrieval
 ```
 
 两者目标也不同：
 
 ```text
-memory_search
+memory-search.mjs
  -> 回忆“用户以前说过什么”
 
-era_context_search
+era-context-search.mjs
  -> 找到“用户当时所处时代有什么可能唤起记忆的话题”
 ```
 
@@ -370,13 +370,13 @@ DGX Spark
 2. RetrieverAdapter；
 3. Transcript async indexing；
 4. scoped Evidence Search Contract；
-5. `memory_search` / 个人历史 Classic Retrieval；
+5. `memory-search.mjs` / 个人历史 Classic Retrieval Skill Script；
 6. Interview Closeout 条件式 Classic Search 试验；
 7. Realtime Slow Agent + 个人历史 Classic Retrieval；
 8. 时代背景最小数据集与独立只读 Index；
-9. `era_context_search` / 时代背景 Classic Retrieval；
+9. `era-context-search.mjs` / 时代背景 Classic Retrieval；
 10. Classic recall / era hint quality / latency / unnecessary-search benchmark；
-11. `memory_deep_search` / Agentic Retrieval；
+11. `memory-deep-search.mjs` / Agentic Retrieval；
 12. Offline Agent Deep Search integration；
 13. Agentic recall quality / latency / resource benchmark；
 14. 根据真实效果决定是否扩大使用范围。
@@ -390,3 +390,24 @@ DGX Spark
 > **用户个人历史：SQLite / Transcript 永远是 Source of Truth，个人历史 Retriever 只是可重建的派生证据索引。**
 >
 > **时代背景索引是独立只读公共资料库。第一版不做地域维度，只保留开始年份、结束年份、类别、标题和两句摘要；先按年份范围过滤，再做语义检索。检索结果只能提供采访话题提示，不属于用户事实证据。**
+
+
+## 14. Skill Script 封装结论
+
+Retriever 对 Agent 的暴露方式冻结为：
+
+```text
+Skill
+↓
+scripts/*.mjs
+↓
+restricted exec
+↓
+Backend / RetrieverAdapter
+```
+
+不再让模型直接理解和填写 Retriever 的完整 Product Tool Schema。
+
+脚本负责封装 owner / run / resource scope、凭据、检索参数、rerank、Top-K 和 Evidence 格式。
+
+详细映射：`../../03-agent/SKILL_SCRIPT_MAPPING_v1.0.md`.

@@ -90,23 +90,46 @@ Interview Closeout Agent
 
 Story Discovery 与 Memory Reconcile 默认不拆成独立 Agent。
 
-### Tool
+### Skill Script 与 Runtime exec
 
-Tool 用于 Agent 运行时才发现的外部信息需求。
+对于运行中才发现的**只读外部信息需求**，本项目优先把调用封装成对应 Skill 的 `scripts/*`，而不是给模型注册一组专用 Product Tool Schema。
 
-Tool 不应按数据库表拆成大量 CRUD，也不应为了“展示 Tool Calling”被固定调用。
+模型只需要理解：
 
-Future 历史检索 Tool 分两级：
+- 什么时候需要搜索；
+- 应该搜索什么；
+- 返回 Evidence 应如何用于当前判断。
+
+脚本内部负责：
+
+- run / owner / resource scope；
+- 凭据；
+- Backend / Retriever endpoint；
+- retrieval mode；
+- rerank；
+- Top-K；
+- 来源补全；
+- 结果裁剪。
+
+OpenClaw 底层仍可通过受限的通用 `exec` 能力运行脚本，因此 Agent Loop 仍然保留“判断 → 执行 → 观察 → 继续推理”的能力。
+
+Future Retrieval Script：
 
 ```text
-memory_search
+scripts/memory-search.mjs
  -> Classic Retrieval
  -> 低延迟普通 Recall
 
-memory_deep_search
+scripts/memory-deep-search.mjs
  -> Agentic Retrieval
  -> 高延迟复杂 Deep Evidence Search
+
+scripts/era-context-search.mjs
+ -> 时代背景 Classic Retrieval
+ -> 只用于采访线索
 ```
+
+详细映射见 `docs/03-agent/SKILL_SCRIPT_MAPPING_v1.0.md`.
 
 ## 4. 固定 Context 在 Agent 启动前由 Backend 预取
 
@@ -166,9 +189,9 @@ Backend 继续负责：
 
 > **Agent 输出结果，Backend 自动接管执行。**
 
-## 6. Tool 只解决增量信息需求
+## 6. Skill Script 只解决增量信息需求
 
-当 Agent 已经拥有标准 Context 后，只有出现以下类型的“运行时疑点”时才考虑 Tool：
+当 Agent 已经拥有标准 Context 后，只有出现运行时疑点时才考虑执行 Skill Script：
 
 - 用户明确引用以前说过的内容；
 - 当前陈述与 Agent Memory 明显冲突；
@@ -181,21 +204,23 @@ Backend 继续负责：
 
 ```text
 Agent Memory 足够
-→ 0 Tool
+→ 0 Script
 
 普通历史疑点
-→ memory_search
+→ memory-search.mjs
 → Classic Retrieval
 
 Classic Retrieval 仍不足
 且任务允许高延迟
-→ memory_deep_search
+→ memory-deep-search.mjs
 → Agentic Retrieval
 ```
 
-两类 Search 当前仍是 Deferred，不进入 Phase 2B 核心产品依赖。
+这些 Search 当前仍是 Deferred，不进入 Phase 2B 核心产品依赖。
 
-## 7. Memory Search 必须条件触发
+数据库写入永远不通过 Skill Script。
+
+## 7. Memory Search Script 必须条件触发
 
 未来禁止：
 
@@ -229,9 +254,9 @@ Agent 判断
 
 目标：
 
-- 正常任务：1 次 Agent Run，0 次 Tool Call；
-- 普通复杂任务：1 次 Agent Run + 少量 Classic Search；
-- 极少数深层任务：1 次 Agent Run + 必要 Agentic Search；
+- 正常任务：1 次 Agent Run，0 次 Retrieval Script；
+- 普通复杂任务：1 次 Agent Run + 少量 Classic Search Script；
+- 极少数深层任务：1 次 Agent Run + 必要 Agentic Search Script；
 - 不启动不必要的新 Agent。
 
 ## 8. Retrieval 返回必须最小化且可回溯
@@ -268,7 +293,7 @@ Search 只解决当前疑点，不负责重新加载全部历史。
 
 默认由 Interview Closeout Agent 在当前 Context 内判断。
 
-只有现有 Context 不足时，未来才允许调用 Retrieval Tool。
+只有现有 Context 不足时，未来才允许执行受限 Retrieval Script。
 
 ### Memory Reconcile
 
@@ -285,8 +310,8 @@ Search 只解决当前疑点，不负责重新加载全部历史。
 ```text
 分析
 → 判断
-→ Tool Call（可选）
-→ Tool Result
+→ exec Skill Script（可选）
+→ Script Result
 → 继续分析
 → Final Result
 ```
@@ -301,7 +326,7 @@ LIFE_INTERVIEW_RESULT <strict JSON>
 
 原则：
 
-> **中间允许 Agent Tool Calling；终止时才强制业务 Schema。**
+> **中间允许 Agent 按 Skill 规则执行受限脚本；终止时才强制业务 Schema。**
 
 ## 11. 强制 JSON 只作为格式失败兜底
 
@@ -372,8 +397,8 @@ Parallel Interview Slow Agent
 Slow Agent 旁路消费 Transcript，条件式执行：
 
 - Story Agent Memory recall；
-- `memory_search` / 个人历史 Classic Retrieval；
-- `era_context_search` / 时代背景 Classic Retrieval（Future）；
+- `memory-search.mjs` / 个人历史 Classic Retrieval；
+- `era-context-search.mjs` / 时代背景 Classic Retrieval（Future）；
 - 人物关系识别；
 - 时间冲突；
 - 新 Story 线索；
@@ -418,12 +443,12 @@ L1 Story Agent Memory
  -> 默认工作记忆
 
 L2 Classic Retrieval
- -> memory_search
+ -> memory-search.mjs
  -> 低延迟普通 Evidence Recall
  -> Realtime Slow Agent 可用
 
 L3 Agentic Retrieval
- -> memory_deep_search
+ -> memory-deep-search.mjs
  -> 多查询 / 多跳 / 跨 Session / Story
  -> 仅 Post-session / Offline Deep Evidence Task
 ```
@@ -433,7 +458,7 @@ L3 Agentic Retrieval
 - 共用同一 Derived Transcript Index；
 - 不改变 SQLite / Transcript 的 Source of Truth 地位；
 - 不修改 Task Contract v1.0 的固定输入字段；
-- Future 通过版本化 Tool Policy / TaskDefinition 决定某 Task 是否允许 Deep Search。
+- Future 通过版本化 Script Capability / TaskDefinition 决定某 Task 是否允许 Deep Search。
 
 ## 15. 事实核查边界
 
@@ -458,9 +483,9 @@ Transcript
 固定上下文 → Backend 预取
 语义判断 → Agent
 专项方法 → Skill
-动态额外信息 → Tool
-普通历史检索 → Classic Retrieval
-复杂深层检索 → Agentic Retrieval
+动态只读额外信息 → Skill Script
+普通历史检索 → memory-search.mjs / Classic Retrieval
+复杂深层检索 → memory-deep-search.mjs / Agentic Retrieval
 最终 Proposal → Backend Validate / Apply
 ```
 
@@ -468,6 +493,6 @@ Transcript
 
 > **减少 Agent Round Trip，而不是增加 Agent 数量。**
 
-> **正常任务 1 次 Agent Run；复杂任务仍尽量在同一个 Agent Run 内完成必要 Tool Loop。**
+> **正常任务 1 次 Agent Run；复杂任务仍尽量在同一个 Agent Run 内完成必要 Script Loop。**
 
 > **Realtime 追求及时；Agentic Deep Search 追求完整，两者不混用延迟预算。**

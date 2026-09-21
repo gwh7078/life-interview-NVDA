@@ -20,7 +20,7 @@ Phase 2B 不重新设计产品 API 或 Domain Rule。
 - 固定 Context 由 Backend 预取；
 - Agent 默认一次运行完成任务；
 - 同一职责内优先使用 Skill，不为小功能新增 Agent；
-- Tool 只用于运行时才能判断是否需要的额外信息；
+- 运行时额外只读检索优先使用 Skill 内脚本，不为每种检索能力注册专用 Product Tool；
 - Agent 返回 Proposal，Backend 自动 Validate / Apply；
 - 正常首次执行保留 Tool Calling；
 - 纯格式错误才用强制 JSON / JSON Schema 做 Format Repair；
@@ -85,7 +85,7 @@ OpenClaw --message-file -
 - 不需要 `get_task_context` Agent Tool；
 - 不计入 `tool_call_count`；
 - 正常 Task 可以保持 `1 Agent Run / 0 Dynamic Tool Call`；
-- OpenClaw 的正常 Tool Loop 能力仍保留给 Future 动态 Tool。
+- OpenClaw 的通用受限 exec 能力仍保留给 Future Skill Script。
 
 当前实现对单次 stdin Prompt 设置 4 MiB 上限，与 OpenClaw message-file 边界一致。
 
@@ -155,35 +155,72 @@ Tracing 增加：
 - latency；
 - error_code。
 
-### 2B-6 — Tool Strategy
+### 2B-6 — Skill Script Strategy
 
 当前 Phase 2B 核心 4 Task 不依赖 Memory Search。
 
-Future Tool 接入原则已经冻结：
+Future 动态只读检索采用：
 
-- 只用于运行时额外信息；
-- 不按数据库表拆 CRUD；
-- 优先任务级、问题级能力；
-- scoped token + owner/resource/run scope；
-- Agent 不直接访问 SQLite；
-- 正常任务 0 Tool Call；
-- 普通历史疑点优先使用 `memory_search` / Classic Retrieval；
-- 真正复杂跨历史问题才升级 `memory_deep_search` / Agentic Retrieval；
-- Realtime Slow Agent 只允许 Classic Retrieval，不允许 Agentic Retrieval 阻塞语音。
+```text
+Agent
+ -> Skill
+ -> scripts/*
+ -> OpenClaw restricted exec
+ -> Backend / Retriever
+ -> compact evidence
+ -> same Agent Run
+```
 
-Future：
+不再为以下能力分别向模型暴露专用 Product Tool Schema：
 
 ```text
 memory_search
- -> Classic Retrieval
- -> low-latency recall
-
 memory_deep_search
- -> Agentic Retrieval
- -> post-session / offline deep evidence search
+era_context_search
 ```
 
-当前只保留 Runtime 对 Tool Loop 的兼容性，不在 Phase 2B 核心路径实现这两个 Tool。
+冻结映射：
+
+```text
+onboarding-closeout
+ -> 无脚本
+
+interview-closeout / story_create
+ -> 无脚本
+
+interview-closeout / story_continue
+ -> scripts/memory-search.mjs        (Future / Priority)
+ -> scripts/memory-deep-search.mjs   (Future / Later)
+
+interview-closeout / contributor
+ -> 无脚本
+ -> 禁止搜索主人公历史
+
+story-completion
+ -> 无脚本
+
+story-generation
+ -> 当前无脚本
+
+Future interview-observer
+ -> scripts/memory-search.mjs
+ -> scripts/era-context-search.mjs
+ -> 禁止 memory-deep-search.mjs
+```
+
+脚本负责封装 scope、凭据、Retriever 参数、Search → Rerank → Top-K 裁剪等确定性步骤。
+
+Agent 只负责：
+
+- 是否需要检索；
+- 查询什么；
+- 如何解释返回 Evidence。
+
+数据库写入不得通过 Skill Script 完成。
+
+详细规范：`docs/03-agent/SKILL_SCRIPT_MAPPING_v1.0.md`.
+
+当前只冻结设计；Phase 2B 核心路径仍保持 1 Agent Run / 0 Retrieval Script。
 
 ## 4. Explicitly out of scope
 
@@ -197,7 +234,7 @@ memory_deep_search
 - 外部世界事实核查；
 - public API redesign。
 
-但需要为后续条件式 Tool Calling 保留 Runtime 能力，不能把 Agent Executor 设计成“永远只能单次直接 JSON 输出”的简单模型代理。
+但需要为后续条件式 Skill Script 执行保留受限 exec 能力，不能把 Agent Executor 设计成“永远只能单次直接 JSON 输出”的简单模型代理。
 
 ## 5. Phase 1 compatibility
 

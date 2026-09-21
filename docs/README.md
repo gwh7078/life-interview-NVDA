@@ -20,11 +20,12 @@
 4. [当前主架构 v2.3](02-architecture/ARCHITECTURE_v2.3_agent-execution-efficiency.md)
 5. [Agent Task Contract](03-agent/contracts/AGENT_TASK_CONTRACTS_v1.0.md)
 6. [Agent 执行策略](03-agent/AGENT_EXECUTION_POLICY_v1.0.md)
-7. [当前 Phase 2B 开发计划](05-development/phases/PHASE_2B_AGENT_RUNTIME_INTEGRATION_v1.0.md)
-8. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
-9. [NVIDIA Integration](04-nvidia/README.md)
-10. [工程报告入口](07-reports/README.md)
-11. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
+7. [Skill / Script 映射](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)
+8. [当前 Phase 2B 开发计划](05-development/phases/PHASE_2B_AGENT_RUNTIME_INTEGRATION_v1.0.md)
+9. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
+10. [NVIDIA Integration](04-nvidia/README.md)
+11. [工程报告入口](07-reports/README.md)
+12. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
 
 ## 当前状态
 

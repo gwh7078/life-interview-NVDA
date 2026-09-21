@@ -15,6 +15,7 @@ Phase 2A 已完成并冻结 Backend / Agent Contract。
 当前 Agent 执行策略：
 
 - [`AGENT_EXECUTION_POLICY_v1.0.md`](AGENT_EXECUTION_POLICY_v1.0.md)
+- [`SKILL_SCRIPT_MAPPING_v1.0.md`](SKILL_SCRIPT_MAPPING_v1.0.md) — Skill 内脚本映射与禁止项
 
 当前 Phase 2B 计划：
 
@@ -63,7 +64,7 @@ AgentTaskRequest
 OpenClaw Agent
 ├── 主 Skill
 ├── 辅助 Skill
-└── 条件 Tool（Future）
+└── Skill 内条件脚本（Future）
         |
         v
 Proposal
@@ -124,7 +125,7 @@ Agent 返回 Proposal；Backend 保留 Validator / Applier / Transaction 权限�
 
 ## 输出与 Tool Calling
 
-正常 Agent Loop 可以调用授权 Tool。
+正常 Agent Loop 可以按 Skill 规则运行授权脚本；当前核心 Task 默认不执行动态脚本。
 
 最终完成时才必须返回：
 
@@ -139,8 +140,8 @@ LIFE_INTERVIEW_RESULT <strict JSON>
 ## 当前效率目标
 
 - 正常 Task：1 次 Agent Run；
-- 正常 Task：0 次动态 Tool Call；
-- 特殊历史疑点：尽量仍在同一个 Agent Run 内完成少量 Tool Call；
+- 正常 Task：0 次 Retrieval Script；
+- 特殊历史疑点：尽量仍在同一个 Agent Run 内完成少量 Skill Script 调用；
 - Skill 优先于新 Agent；
 - 不增加无业务价值的总控 Agent。
 

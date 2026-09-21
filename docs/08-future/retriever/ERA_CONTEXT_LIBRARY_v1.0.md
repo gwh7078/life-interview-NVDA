@@ -1,4 +1,4 @@
-# 时代背景检索库设计 v1.1
+# 时代背景检索库设计 v1.2
 
 > Status: **Future / Planned / Deferred**
 >
@@ -168,8 +168,8 @@ event.end_year >= query_start_year
 时代背景库
 = 提供背景事实
 
-Retriever
-= 找到相关背景
+Skill Script
+= `era-context-search.mjs` 调用 Retriever 找到相关背景
 
 Slow Agent
 = 判断值不值得聊、与当前故事怎么连接
@@ -286,7 +286,24 @@ Reranker（如有必要）
 - **未实现 Realtime Slow System；**
 - **未实现时代背景库；**
 - **未实现时代背景检索索引；**
-- **未实现 era_context_search；**
+- **未实现 era-context-search.mjs；**
 - **未完成相关 Benchmark。**
 
 当前仅冻结 Future 方向，不得在比赛材料中描述为已实现能力。
+
+
+## 14. Future Skill Script 形态
+
+时代背景检索不向模型注册专用 `era_context_search` Product Tool。
+
+Future Realtime Slow Agent 使用：
+
+```text
+agent/skills/interview-observer/
+└── scripts/
+    └── era-context-search.mjs
+```
+
+Agent 只提供时间范围与查询意图；脚本内部完成年份过滤、Retriever 调用、rerank、Top-K 裁剪和统一 JSON 返回。
+
+底层通过 OpenClaw 受限通用 exec 运行脚本，但模型不需要读取复杂 Tool Schema。

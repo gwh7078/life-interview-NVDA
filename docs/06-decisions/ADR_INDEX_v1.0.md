@@ -82,9 +82,9 @@ Old Agent Memory + Current Transcript -> Updated Memory
 
 **Accepted.** Story Discovery、Memory Reconcile 等同一职责内的专项判断优先做辅助 Skill。只有角色目标、上下文、模型或评测体系明显不同才拆 Agent。
 
-## ADR-018 — Tool 只用于运行时增量信息
+## ADR-018 — 动态能力只用于运行时增量信息
 
-**Accepted.** Tool 用于 Agent 推理过程中才发现的额外信息需求。未来 Memory Search 必须条件触发，不作为每次 Closeout 的固定步骤。
+**Accepted / Refined by ADR-024.** 只有 Agent 推理过程中才发现的额外信息需求才允许动态获取。未来 Memory Search 必须条件触发，不作为每次 Closeout 的固定步骤。
 
 ## ADR-019 — Agent 不调用固定 Submit Tool
 
@@ -115,3 +115,35 @@ Old Agent Memory + Current Transcript -> Updated Memory
 - 避免把正常任务人为变成 1 次额外 Tool Round Trip；
 - 大 Transcript 不进入 CLI 参数和 process listing；
 - 保留 OpenClaw Tool Loop 给真正运行时才发现的增量信息需求。
+
+
+## ADR-024 — 动态只读检索优先使用 Skill 内脚本，而不是专用 Product Tool
+
+**Accepted.** `memory-search`、`memory-deep-search`、`era-context-search` 不再分别向模型暴露专用 Product Tool Schema。
+
+推荐：
+
+```text
+Agent
+-> Skill
+-> scripts/*.mjs
+-> restricted generic exec
+-> Backend / RetrieverAdapter
+-> Evidence
+-> same Agent Run
+```
+
+理由：
+
+- 减少模型每轮读取 Tool Schema 的 Token；
+- 减少模型选择 Tool 与填写基础设施参数的错误；
+- scope、token、endpoint、Top-K、rerank 等确定性参数由脚本封装；
+- 多个低级检索步骤可以压缩成一次脚本执行；
+- Agent 仍保留真正自主性：决定是否搜索、搜索什么、如何解释结果。
+
+边界：
+
+- Skill Script 只做受限只读检索与确定性辅助处理；
+- 不允许脚本直接修改 Story、Agent Memory、Completion、Document 或 SQLite；
+- 固定 Context 继续由 Backend 预注入，不通过脚本重新读取；
+- OpenClaw 底层通用 exec 仍需要 sandbox / allowlist / authorization / audit。

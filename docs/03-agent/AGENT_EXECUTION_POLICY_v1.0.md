@@ -1,4 +1,4 @@
-# Agent Execution Policy v1.1
+# Agent Execution Policy v1.2
 
 > Status: **Current**
 >
@@ -14,13 +14,13 @@ Agent Runtime 必须优先优化“有效推理次数”，而不是追求更多
 
 ```text
 正常任务
-= 1 Agent Run + 0 Tool Call
+= 1 Agent Run + 0 Retrieval Script
 
 普通历史疑点
-= 1 Agent Run + 少量 Classic Retrieval Tool Call
+= 1 Agent Run + 少量 Skill Script 调用（Classic Retrieval）
 
 复杂跨历史问题
-= 1 Agent Run + 必要的 Agentic Retrieval Tool Call
+= 1 Agent Run + 必要的 Skill Script 调用（Agentic Retrieval）
 
 格式失败
 = 在不重新扩展复杂工作流的前提下做结构化修复
@@ -77,9 +77,16 @@ Backend ContextBuilder
 
 只有当职责、上下文、模型或评测体系明显不同，才拆新 Agent。
 
-## 5. Tool 使用条件
+## 5. Skill Script 使用条件
 
-Tool 只在 Agent 推理过程中出现额外信息需求时调用。
+动态只读检索优先通过 Skill 内脚本提供，而不是给模型注册专用 Product Tool Schema。
+
+准确边界：
+
+- 模型不直接看到 `memory_search` / `memory_deep_search` / `era_context_search` 的复杂 Tool Schema；
+- Skill 告诉模型在什么情况下可以运行哪个脚本；
+- OpenClaw 底层可以通过受限通用 `exec` 执行脚本；
+- 脚本封装 run / owner / resource scope、凭据、Retriever 参数、Top-K、rerank 和结果裁剪。
 
 Future Memory Search 典型触发：
 
@@ -90,52 +97,45 @@ Future Memory Search 典型触发：
 5. 时间 / 地点 / 人物关系异常；
 6. 不补历史信息会显著增加错误 Proposal 风险。
 
-否则不调用。
+否则不执行检索脚本。
 
-## 6. Retrieval Tool 分级
+详细映射见：`SKILL_SCRIPT_MAPPING_v1.0.md`.
 
-Future 不使用一个无限能力的万能 `memory_search`。
+## 6. Retrieval Script 分级
 
-### 6.1 `memory_search` — Classic Retrieval
+Future 不给模型暴露一个无限能力的万能 Retrieval Tool，而是在允许检索的 Skill 目录中放置受限脚本。
+
+### 6.1 `scripts/memory-search.mjs` — Classic Retrieval
 
 用途：
 
 - 普通历史 Recall；
 - 单个或少量相关证据查询；
-- 低延迟后台 Tool；
+- 低延迟后台检索；
 - Future Realtime Slow Agent。
 
 典型：
 
 ```text
 query
+ -> script
  -> dense / hybrid retrieval
  -> rerank
  -> small Top-K
+ -> evidence JSON
 ```
 
 默认优先使用这一档。
 
-### 6.2 `memory_deep_search` — Agentic Retrieval
+### 6.2 `scripts/memory-deep-search.mjs` — Agentic Retrieval
 
 用途：
 
 - 跨多个 Session / Story；
 - 需要多个检索子问题；
 - 复杂人物 / 时间线冲突；
-- 普通 Classic Search 无法可靠回答的问题；
+- Classic Search 无法可靠回答的问题；
 - Post-session / Offline Deep Evidence Task。
-
-典型：
-
-```text
-reason
- -> retrieve
- -> refine query
- -> retrieve
- -> fuse
- -> select evidence
-```
 
 默认不用于：
 
@@ -148,31 +148,35 @@ reason
 
 ```text
 Agent Memory 足够
- -> 0 Tool
+ -> 0 Script
 
 普通历史疑点
- -> memory_search
+ -> memory-search.mjs
 
 Classic Search 仍不足
 且任务允许高延迟 Deep Search
- -> memory_deep_search
+ -> memory-deep-search.mjs
 ```
 
-## 7. Tool 安全边界
+## 7. Script 安全边界
 
-Tool 面向“Agent 当前需要解决的问题”，不按数据库表设计 CRUD。
+Skill Script 面向“Agent 当前需要解决的只读信息问题”，不按数据库表设计 CRUD。
 
-两类 Retrieval Tool 都必须通过：
+Retrieval Script 必须继续通过：
 
+- sandbox / exec allowlist；
 - run scope；
 - owner scope；
 - resource scope；
-- 短期 token；
+- 短期凭据；
+- Backend authorization；
 - audit log。
 
-Agent 不直接访问 SQLite / memoir.db。
+Agent 和脚本都不直接访问 SQLite / memoir.db。
 
-Retriever 只返回 Evidence，不拥有写库权限。
+Retriever Script 只返回 Evidence，不拥有写库权限。
+
+不要创建 `update-story`、`update-memory`、`create-story`、`save-document` 等写业务数据脚本。
 
 ## 8. Proposal 与写库
 
@@ -197,11 +201,13 @@ Schema Validation
 
 ```text
 reason
-→ tool
+→ exec Skill Script（可选）
 → observation
 → reason
 → final
 ```
+
+这里的 `exec` 是 OpenClaw 的通用受限执行能力，不代表重新向模型暴露专用 Product Tool Schema。
 
 最终输出必须是：
 
@@ -329,7 +335,8 @@ run_start_resource_version
 
 - input hash；
 - output hash；
-- tool_call_count；
+- tool_call_count（底层通用 exec 等 Runtime 统计）；
+- script_call_count；
 - memory_search_used；
 - memory_deep_search_used；
 - retrieval_mode；
@@ -344,8 +351,8 @@ run_start_resource_version
 
 - schema success rate；
 - first-pass success rate；
-- tool-call rate；
-- unnecessary tool-call rate；
+- script-call rate；
+- unnecessary script-call rate；
 - Classic Search hit / usefulness rate；
 - Agentic Search escalation rate；
 - Agentic Search quality gain；
@@ -370,11 +377,12 @@ run_start_resource_version
 
 - 旁路观察 Transcript；
 - 不阻塞实时语音；
-- 条件式 `memory_search`；
+- 条件式运行 `scripts/memory-search.mjs`；
+- 条件式运行 `scripts/era-context-search.mjs`；
 - **只使用 Classic Retrieval**；
 - 输出短 Context Hint；
 - 不写长期 Story Memory；
-- 不调用 `memory_deep_search` 阻塞实时会话；
+- 不运行 `memory-deep-search.mjs` 阻塞实时会话；
 - 永久 Memory 仍由 Interview Closeout 统一维护。
 
 ## 16. Retrieval Source of Truth
