@@ -1,4 +1,4 @@
-# 人生采访局 — DGX Spark 大模型选型 v1.1
+# 人生采访局 — DGX Spark 大模型选型 v1.2
 
 > Status: **Current Recommendation / Pending DGX Spark Benchmark**
 >
@@ -34,8 +34,11 @@
 用户语音
    ↓
 FAST SYSTEM
-MiniCPM-o 4.5
-本地实时全双工语音
+Step-Audio-2-mini（本地第一主测）
+官方 vLLM-Omni 路线
+
+本地对照：MiniCPM-o 4.5
+云端体验基准：StepAudio 3 Realtime
    │
    └── User Transcript Final
             ↓
@@ -81,129 +84,145 @@ Realtime 默认路径不再要求 35B 参与每轮 Context Hint；35B 主要留�
 
 ## 3. Realtime Fast System
 
-### 主选：MiniCPM-o 4.5
+### 第一主测：Step-Audio-2-mini
 
 定位：
 
-> **实时语音采访的快系统。**
+> **DGX Spark 本地 Realtime 第一优先候选，也是比赛 StepFun 技术栈的核心语音模型。**
+
+当前结论：
+
+- Step-Audio-2-mini 为开源中文语音模型，8B 级；
+- 支持 Audio-to-Audio / Speech-to-Speech 方向；
+- 当前 upstream **vLLM-Omni 已原生支持 StepAudio2**；
+- 不再把 StepFun 旧版 custom vLLM fork 作为推荐部署路径；
+- 推荐优先使用官方 vLLM / vLLM-Omni 技术栈，而不是维护单独 patched vLLM；
+- vLLM-Omni 已提供多模态 / Omni 模型部署能力，适合作为当前 Realtime Runtime 基线；
+- DGX Spark / GB10 上的完整 Step-Audio-2-mini Realtime 性能仍必须实测，不在文档中提前宣称已验证。
 
 选择原因：
 
-- 总参数约 9B；
-- 支持中文与英文语音；
-- 支持端到端语音输入与语音输出；
-- 支持 Full-Duplex / Duplex Omni Mode；
+1. **比赛扣题**：StepFun 模型在 DGX Spark 本地真实运行，比仅调用云 API 更有价值；
+2. **中文语音适配**：模型本身就是中文语音方向；
+3. **模型规模合适**：8B 级更适合 128GB unified memory 单机与其他模型共存；
+4. **运行时复杂度下降**：当前优先走 upstream vLLM-Omni，不再依赖 StepFun 自维护 fork；
+5. **可形成明确 Benchmark**：本地 Step-Audio-2-mini 对比云端 StepAudio 3 Realtime。
+
+### 本地对照：MiniCPM-o 4.5
+
+MiniCPM-o 4.5 不再作为第一主选，但保留为**本地强对照 / 失败回退候选**。
+
+选择价值：
+
+- 中文端到端语音能力强；
+- Full-Duplex / Duplex Omni Mode 路径更明确；
 - 支持用户插话、持续监听和实时流式交互；
-- 已提供本地部署、WebRTC / Realtime Demo 路径；
-- 相比 30B 级 Omni 模型，对 DGX Spark 统一内存压力明显更低。
+- 本地部署资料较成熟；
+- 如果 Step-Audio-2-mini 在 Spark 上的首音延迟、打断或稳定性不达标，可以快速切换。
 
-公开资料中的模型资源参考：
+### 云端 Gold Baseline：StepAudio 3 Realtime
 
-- 标准 GPU 版本约 19GB；
-- AWQ 版本约 11GB；
-- GGUF 版本约 10GB。
+StepAudio 3 Realtime 当前作为**体验基准线**，而不是本地部署候选。
 
-上述数字只能作为模型权重/参考部署占用，**不能直接等同于 DGX Spark 最终运行内存**。实际还要包含 KV Cache、音频流、Runtime、CUDA、WebRTC 等开销。
+Benchmark 目标不是要求本地模型完全复现云端服务，而是量化：
 
-主要职责：
-
-- 当前 Session 即时自然对话；
-- speech-to-speech；
+- 本地首音延迟与云端基准差距；
+- 中文采访自然度；
 - interrupt / barge-in；
-- 当前轮快速追问；
-- 消费 Slow System 注入的短 Context Hint；
-- 不等待 Retriever；
-- 不执行 Agentic Retrieval；
-- 不直接维护长期 Story Agent Memory。
+- 长时间访谈稳定性；
+- 情绪 / 副语言理解；
+- Tool / Slow Context 注入后的自然衔接。
 
-### 第一备选：Step-Audio-2-mini
+目标表述：
 
-定位：
+> **以 StepAudio 3 Realtime 作为云端体验基准，在 DGX Spark 单机上优先验证 Step-Audio-2-mini，争取实现尽可能接近的本地、隐私优先实时采访体验。**
 
-> **StepFun 开源中文语音模型；作为 Realtime 强备选，并列入 DGX Spark 第一批必测模型。**
+### Step-Audio-2-mini 推荐部署路径
 
-当前判断：
-
-- 开源确定，Apache 2.0；
-- 8B 级模型，模型规模与 DGX Spark 128GB unified memory 高度匹配；
-- 官方提供 PyTorch / Transformers 推理路径；
-- 官方提供 StepFun 定制 vLLM 流式服务路径；
-- 从模型结构和基础依赖看，在 DGX Spark 本地运行的可行性较高；
-- 当前公开证据不足以把它写成“已在 DGX Spark 官方验证”。
-
-当前真正的技术风险不是模型是否能装入 Spark，而是：
-
-- StepFun 定制 vLLM 分支与当前 DGX Spark / GB10 / sm_121 / ARM64 基线的适配；
-- 流式 Speech-to-Speech 的实际首音延迟；
-- 连续长访谈的稳定性；
-- 用户打断 / barge-in / full-duplex 能力；
-- 与 2B Realtime Judge、Retriever、后台 35B 同机并发时的资源竞争。
-
-推荐验证顺序：
+当前推荐：
 
 ```text
-1. Transformers / PyTorch Smoke
-   -> 验证模型基本推理
-
-2. 完整 Speech-to-Speech
-   -> 验证音频输入 / token2wav / 音频输出
-
-3. StepFun custom vLLM
-   -> 适配 Spark-compatible CUDA / ARM64 / GB10
-
-4. Streaming
-   -> 首音延迟 / RTF / 30 分钟稳定性
-
-5. 与 MiniCPM-o 4.5 A/B
-   -> 决定最终 Realtime 主模型
+DGX Spark
+   ↓
+官方 NVIDIA / CUDA Runtime
+   ↓
+upstream vLLM
+   ↓
+vLLM-Omni
+   ↓
+Step-Audio-2-mini
+   ↓
+Realtime Speech-to-Speech
 ```
 
-比赛价值：
+不再推荐：
 
-- StepFun 开源模型真实进入本地技术栈，而不是仅调用云端 API；
-- 若 Spark 适配成功，可形成“StepFun Audio + NVIDIA DGX Spark”的明确工程成果；
-- 与比赛要求中的 StepFun 模型使用形成真实技术证据。
+```text
+普通 vllm-openai
+→ 卸载 upstream vLLM
+→ 安装 StepFun custom fork
+```
 
-### 第二备选：GLM-4-Voice 9B
+旧 custom fork 只作为历史兼容 / 故障排查参考，不作为目标架构。
 
-适合作为中文实时语音备选。
+### 必测风险
 
-进入正式 Benchmark 的条件：
+即使 vLLM-Omni 已支持 StepAudio2，以下仍必须在真实 DGX Spark 上验证：
 
-- MiniCPM-o 4.5 在 GB10 / ARM64 上出现明显兼容问题；
-- 全双工稳定性不足；
-- 多轮长访谈出现音频延迟持续累积；
-- 与慢系统同时运行后无法维持目标实时体验。
+- ARM64 / aarch64 镜像与依赖安装；
+- GB10 / Blackwell kernel 兼容；
+- 模型完整加载；
+- Audio → Audio 基础 Smoke；
+- Streaming；
+- 用户停说 → 首音延迟；
+- interrupt / barge-in；
+- full-duplex / 半双工实际能力边界；
+- 连续 30 分钟访谈稳定性；
+- 与 Qwen3.5-2B Judge 并发；
+- 与 NeMo Retriever 并发；
+- 与后台 35B Agent 同机时的资源竞争；
+- 单 Session / 双 Session；
+- unified memory 峰值。
 
-### 暂不作为主选
+### 推荐验证顺序
+
+```text
+P0  vLLM-Omni + Step-Audio-2-mini on DGX Spark
+    -> model load
+    -> Audio-to-Audio smoke
+
+P1  Streaming
+    -> first-audio latency
+    -> RTF
+    -> 30 min stability
+
+P2  Conversation
+    -> interruption / barge-in
+    -> Chinese interview quality
+
+P3  Slow System concurrency
+    -> 2B Judge
+    -> Embedding / Retrieval
+    -> 5~6s conditional hold
+
+P4  A/B
+    -> MiniCPM-o 4.5 local
+    -> StepAudio 3 Realtime cloud baseline
+```
+
+### 其他备选
+
+#### GLM-4-Voice 9B
+
+仅当 Step-Audio-2-mini 与 MiniCPM-o 4.5 都无法达到 Realtime 要求时进入正式 Benchmark。
 
 #### NVIDIA PersonaPlex
 
-优势：
-
-- NVIDIA 原生；
-- 本地；
-- 真全双工；
-- 资源规模较小。
-
-当前不作为中文版人生采访局主选的主要原因：
-
-- 当前公开模型重点面向英文语音场景；
-- 中文能力不满足本项目核心需求。
-
-保留为 NVIDIA Realtime 技术对照项。
+保留为 NVIDIA 原生全双工技术对照，但当前公开模型重点并非中文，因此不作为中文版人生采访局主选。
 
 #### Qwen3-Omni
 
-中文、多模态和语音能力较强，但完整模型对统一内存与实时并发压力过高。
-
-不适合作为当前“快系统”。
-
-#### Step-Audio R1 / R1.1
-
-可作为比赛 StepFun 技术对照与研究对象，但模型规模和官方测试硬件要求明显高于 MiniCPM-o 4.5。
-
-当前不把它作为单台 DGX Spark 的主 Realtime 模型。
+中文、多模态能力强，但当前完整模型资源成本较高，不作为单台 Spark 的第一 Realtime 候选。
 
 ---
 
@@ -448,7 +467,8 @@ NVIDIA Nemotron 30B 级 Agent / Reasoning 模型继续保留为 Post-session 对
 
 ```text
 实时语音
-→ MiniCPM-o 4.5
+→ Step-Audio-2-mini（第一主测）
+→ MiniCPM-o 4.5（本地对照）
 
 每轮 Judge
 → Qwen3.5-2B
@@ -484,7 +504,10 @@ DGX Spark：
 当前候选模型公开资源量级说明：
 
 ```text
-MiniCPM-o 4.5
+Step-Audio-2-mini
+8B 级；完整 Runtime / KV / Audio pipeline 占用待 Spark 实测
+
+MiniCPM-o 4.5（本地对照）
 ≈ 19GB 标准 GPU 版本参考
 或 11GB AWQ / 10GB GGUF
 
@@ -504,8 +527,8 @@ Embedding / Reranker
 
 - KV Cache；
 - CUDA / Runtime；
-- vLLM / SGLang / TensorRT-LLM；
-- MiniCPM 音频流与 TTS；
+- vLLM / **vLLM-Omni** / SGLang / TensorRT-LLM；
+- Step-Audio-2-mini / MiniCPM 音频流、Audio Codec / TTS Runtime；
 - NeMo Retriever；
 - Index；
 - Node Backend；
@@ -549,8 +572,8 @@ P4  Agentic Deep Search（Future）
 
 | 服务 | 初始并发策略 |
 |---|---|
-| MiniCPM-o Realtime | 先测 1，再测 2 个同时活跃 Session |
-| Step-Audio-2-mini Realtime | 备选路径先完成单 Session Smoke，再测 2 Session |
+| Step-Audio-2-mini Realtime | **第一主测**：先完成单 Session Smoke，再测 2 Session |
+| MiniCPM-o Realtime | 本地对照：先测 1，再测 2 个同时活跃 Session |
 | Qwen3.5-2B Realtime Judge / Evidence Summary | 先测 1，再测 2 → 4 |
 | Classic Retrieval | 2 → 4 |
 | Qwen3.6 Post-session Agent | Realtime 活跃时默认不运行；后台先限制 1–2 |
@@ -563,7 +586,7 @@ P4  Agentic Deep Search（Future）
 
 ### Realtime Fast
 
-主选 MiniCPM-o 4.5 与备选 Step-Audio-2-mini 使用同一套测试集，避免只比较“能不能跑”。
+**Step-Audio-2-mini 为第一主测**，MiniCPM-o 4.5 为本地对照，StepAudio 3 Realtime 为云端 Gold Baseline。三者尽量使用同一套采访测试集，避免只比较“能不能跑”。
 
 记录：
 
@@ -632,13 +655,14 @@ P4  Agentic Deep Search（Future）
 
 ### Realtime 主模型替换条件
 
-只有出现以下情况才考虑从 MiniCPM-o 4.5 切换：
+当前默认先测 Step-Audio-2-mini。只有出现以下情况才考虑把 MiniCPM-o 4.5 提升为正式主选：
 
-- GB10 / ARM64 无法稳定部署；
-- 真实全双工无法稳定运行；
+- Step-Audio-2-mini 在 GB10 / ARM64 无法稳定部署；
+- Streaming / 首音延迟不达标；
+- interrupt / barge-in 能力不足；
 - 中文长访谈效果不达标；
-- 与慢系统并发导致不可接受的延迟；
-- Step-Audio-2-mini、GLM-4-Voice 或其他候选在同一 Benchmark 明显更优。
+- 与 2B Judge / Retriever 并发后延迟不可接受；
+- MiniCPM-o 4.5 在同一 Benchmark 明显更优。
 
 ### Realtime Judge 2B → 8B
 
@@ -717,7 +741,7 @@ NVFP4 Local Inference
 
 | 层 | 主选 |
 |---|---|
-| Realtime Fast System | **MiniCPM-o 4.5** |
+| Realtime Fast System | **Step-Audio-2-mini（DGX Spark 第一主测）** |
 | Realtime Judge / Evidence Summary | **`Qwen/Qwen3.5-2B`（第一候选，Pending Spark Eval）** |
 | Slow Search | **NeMo Retriever + Nemotron 1B Embedding / Rerank** |
 | Post-session Agent / Summary / Generation | **`nvidia/Qwen3.6-35B-A3B-NVFP4`** |
@@ -726,7 +750,7 @@ NVFP4 Local Inference
 
 | 层 | 备选 |
 |---|---|
-| Realtime | **Step-Audio-2-mini（第一备选 / Spark 必测）**；GLM-4-Voice 9B（第二备选） |
+| Realtime | **MiniCPM-o 4.5（本地强对照 / 回退）**；GLM-4-Voice 9B（第二备选） |
 | Realtime Judge | **`nvidia/Qwen3-8B-FP4`**（2B 对照 / 质量兜底） |
 | Retrieval | NVIDIA 当前 Spark/NIM 可用的兼容 Nemotron Embed / Rerank 版本 |
 | Post-session Agent | NVIDIA Nemotron 30B 级 Agent / Reasoning 模型 |
