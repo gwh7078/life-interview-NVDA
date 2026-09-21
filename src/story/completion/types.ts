@@ -57,6 +57,15 @@ export interface StoryCompletionResultWriter {
   ): Awaitable<StoryCompletionOutput>;
 }
 
+export interface StoryCompletionExecutionContext {
+  userId: string;
+  storyId: string;
+  signal?: AbortSignal;
+}
+
 export interface StoryCompletionProcessorPort {
-  process(context: StoryCompletionContext): Promise<StoryCompletionOutput>;
+  process(
+    context: StoryCompletionContext,
+    execution?: StoryCompletionExecutionContext,
+  ): Promise<StoryCompletionOutput>;
 }
