@@ -112,7 +112,55 @@ Closeout / Memory Update / Story Summary / Generation
 - 不执行 Agentic Retrieval；
 - 不直接维护长期 Story Agent Memory。
 
-### 第一备选：GLM-4-Voice 9B
+### 第一备选：Step-Audio-2-mini
+
+定位：
+
+> **StepFun 开源中文语音模型；作为 Realtime 强备选，并列入 DGX Spark 第一批必测模型。**
+
+当前判断：
+
+- 开源确定，Apache 2.0；
+- 8B 级模型，模型规模与 DGX Spark 128GB unified memory 高度匹配；
+- 官方提供 PyTorch / Transformers 推理路径；
+- 官方提供 StepFun 定制 vLLM 流式服务路径；
+- 从模型结构和基础依赖看，在 DGX Spark 本地运行的可行性较高；
+- 当前公开证据不足以把它写成“已在 DGX Spark 官方验证”。
+
+当前真正的技术风险不是模型是否能装入 Spark，而是：
+
+- StepFun 定制 vLLM 分支与当前 DGX Spark / GB10 / sm_121 / ARM64 基线的适配；
+- 流式 Speech-to-Speech 的实际首音延迟；
+- 连续长访谈的稳定性；
+- 用户打断 / barge-in / full-duplex 能力；
+- 与 Slow Decision、Retriever、35B Slow Execution 同机并发时的资源竞争。
+
+推荐验证顺序：
+
+```text
+1. Transformers / PyTorch Smoke
+   -> 验证模型基本推理
+
+2. 完整 Speech-to-Speech
+   -> 验证音频输入 / token2wav / 音频输出
+
+3. StepFun custom vLLM
+   -> 适配 Spark-compatible CUDA / ARM64 / GB10
+
+4. Streaming
+   -> 首音延迟 / RTF / 30 分钟稳定性
+
+5. 与 MiniCPM-o 4.5 A/B
+   -> 决定最终 Realtime 主模型
+```
+
+比赛价值：
+
+- StepFun 开源模型真实进入本地技术栈，而不是仅调用云端 API；
+- 若 Spark 适配成功，可形成“StepFun Audio + NVIDIA DGX Spark”的明确工程成果；
+- 与比赛要求中的 StepFun 模型使用形成真实技术证据。
+
+### 第二备选：GLM-4-Voice 9B
 
 适合作为中文实时语音备选。
 
@@ -502,6 +550,7 @@ P4  Agentic Deep Search（Future）
 | 服务 | 初始并发策略 |
 |---|---|
 | MiniCPM-o Realtime | 先测 1，再测 2 个同时活跃 Session |
+| Step-Audio-2-mini Realtime | 备选路径先完成单 Session Smoke，再测 2 Session |
 | Qwen3-8B Slow Decision | 2 → 4 |
 | Classic Retrieval | 2 → 4 |
 | Qwen3.6 Slow Execution / Agent | 先限制 1–2；再测 4 sequence |
@@ -513,6 +562,8 @@ P4  Agentic Deep Search（Future）
 ## 10. 必须执行的 Benchmark
 
 ### Realtime Fast
+
+主选 MiniCPM-o 4.5 与备选 Step-Audio-2-mini 使用同一套测试集，避免只比较“能不能跑”。
 
 记录：
 
@@ -581,7 +632,7 @@ P4  Agentic Deep Search（Future）
 - 真实全双工无法稳定运行；
 - 中文长访谈效果不达标；
 - 与慢系统并发导致不可接受的延迟；
-- GLM-4-Voice 或其他候选在同一 Benchmark 明显更优。
+- Step-Audio-2-mini、GLM-4-Voice 或其他候选在同一 Benchmark 明显更优。
 
 ### Slow Decision 8B → 14B
 
@@ -667,7 +718,7 @@ NVFP4 Local Inference
 
 | 层 | 备选 |
 |---|---|
-| Realtime | GLM-4-Voice 9B |
+| Realtime | **Step-Audio-2-mini（第一备选 / Spark 必测）**；GLM-4-Voice 9B（第二备选） |
 | Slow Decision | `nvidia/Qwen3-14B-FP4` |
 | Retrieval | NVIDIA 当前 Spark/NIM 可用的兼容 Nemotron Embed / Rerank 版本 |
 | Slow Execution | NVIDIA Nemotron 30B 级 Agent / Reasoning 模型 |
@@ -700,6 +751,11 @@ NVIDIA Retrieval：
 MiniCPM-o：
 
 - https://github.com/OpenBMB/MiniCPM-o
+
+StepFun Step-Audio-2：
+
+- https://github.com/stepfun-ai/Step-Audio2
+- https://huggingface.co/stepfun-ai/Step-Audio-2-mini
 
 项目内部：
 
