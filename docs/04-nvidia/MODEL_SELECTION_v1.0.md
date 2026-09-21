@@ -1,4 +1,4 @@
-# 人生采访局 — DGX Spark 大模型选型 v1.0
+# 人生采访局 — DGX Spark 大模型选型 v1.1
 
 > Status: **Current Recommendation / Pending DGX Spark Benchmark**
 >
@@ -20,7 +20,7 @@
 核心原则：
 
 1. **Realtime Fast System 优先实时性、中文语音体验、全双工与可打断。**
-2. **Slow Decision Model 优先低延迟、高频判断与稳定结构化输出。**
+2. **Realtime Judge 优先低延迟、高频判断与稳定结构化输出；每个 User Turn Final 都判断，但不是每轮都搜索。**
 3. **Slow Retrieval 不使用通用 LLM 直接搜索，而使用 Embedding + Retrieval + Rerank。**
 4. **Slow Execution / Summary Model 优先复杂中文理解、长上下文、事实约束和结构化输出。**
 5. **隐私相关的长期 Memory、Retriever、Agent 推理与 Closeout 优先留在 DGX Spark 本地。**
@@ -37,33 +37,35 @@ FAST SYSTEM
 MiniCPM-o 4.5
 本地实时全双工语音
    │
-   └── Transcript Events
+   └── User Transcript Final
             ↓
-SLOW DECISION
-nvidia/Qwen3-8B-FP4
-判断是否需要处理 / 是否搜索 / 搜什么
+      TURN BOUNDARY HOLD
+       最多约 5～6 秒
             │
-     ┌──────┴────────┐
-     │               │
-无需搜索          需要搜索
-     │               ↓
-     │        NeMo Retriever
-     │        Embedding
-     │        → Classic Retrieval
-     │        → Rerank
-     │        → Small Top-K
-     │               │
-     └───────┬───────┘
-             ↓
-SLOW EXECUTION / SYNTHESIS
-nvidia/Qwen3.6-35B-A3B-NVFP4
-综合 Transcript + Agent Memory + Evidence
-             ↓
-Short Context Hint
-             ↓
-Safe Turn Boundary
-             ↓
-FAST SYSTEM 下一轮
+      ┌─────┴────────────────┐
+      │                      │
+REALTIME JUDGE           SPECULATIVE SEARCH PREP
+Qwen/Qwen3.5-2B         Query Embedding / First-stage Recall
+固定最近 3 轮            当前回答 + 当前问答双路 Query
+Reference / Target
+      │                      │
+      ├─ 不需要 Search ──────┤
+      │      立即 Release     │
+      │                      │
+      └─ 需要 Search ────────┘
+                 ↓
+          NeMo Retriever
+          merge / dedupe
+          → Rerank
+          → Small Top-K
+                 ↓
+EVIDENCE SUMMARY
+同一个 Qwen/Qwen3.5-2B
+压缩为极短 Context Hint
+                 ↓
+      5～6 秒 Deadline 内 Release
+                 ↓
+        FAST SYSTEM 下一问
 
 访谈结束后：
 Transcript + Story Context
@@ -72,6 +74,8 @@ nvidia/Qwen3.6-35B-A3B-NVFP4
         ↓
 Closeout / Memory Update / Story Summary / Generation
 ```
+
+Realtime 默认路径不再要求 35B 参与每轮 Context Hint；35B 主要留给访谈结束后的复杂 Agent 工作。
 
 ---
 
@@ -203,70 +207,89 @@ Closeout / Memory Update / Story Summary / Generation
 
 ---
 
-## 4. Slow Decision Model
+## 4. Realtime Judge Model
 
-### 主选：`nvidia/Qwen3-8B-FP4`
+### 第一候选：`Qwen/Qwen3.5-2B`
 
 定位：
 
-> **高频、低延迟的慢系统判断模型，不负责最终长文本生成。**
+> **每个 User Turn Final 都运行的高频轻量 Judge。**
 
-NVIDIA 官方当前已经给出 Qwen3-8B FP4 在 DGX Spark 上的 SGLang / TensorRT-LLM 支持路径。
+当前推荐先使用官方 Qwen3.5-2B checkpoint，通过标准 upstream vLLM / SGLang 路径部署；不为了判断层引入 OpenJev 所需的 patched vLLM / 独立特殊 Runtime。最终精度、量化方式和 Spark 部署参数由真实 Benchmark 冻结。
 
 选择原因：
 
-- 8B 规模，适合高频短判断；
-- NVIDIA NVFP4，适配 Blackwell；
-- DGX Spark 已有官方验证路径；
-- 中文理解能力适合采访语义判断；
-- 与 35B 执行模型相比，单位判断成本和延迟更低；
-- 输出内容很短，适合严格 Schema。
+- 2B 规模更适合每轮固定调用；
+- Judge 输入很小：固定最近 3 个完整对话轮次；
+- 输出很短，只做判断 / 路由，不写长文本；
+- 与 Retriever 并行后，Judge 延迟可以隐藏在 Query Embedding / 首召回期间；
+- 同一个 2B 服务还可以承担 Evidence Summary，避免再常驻一个 Realtime 综合模型；
+- 使用普通 vLLM / SGLang 服务方式，系统复杂度低于 OpenJev patched-vLLM 路线。
 
-主要职责：
+### 固定 3 轮输入
 
-- 当前 Transcript Event 是否值得 Slow System 处理；
-- 是否引用历史信息；
-- 是否出现旧人物；
-- 是否出现时间 / 人物关系冲突；
-- 是否出现新 Story 线索；
-- 是否偏离采访主题；
-- 是否值得深挖；
+```text
+[REFERENCE TURN -2]
+Assistant: ...
+User: ...
+
+[REFERENCE TURN -1]
+Assistant: ...
+User: ...
+
+[TARGET TURN]
+Assistant: ...
+User: ...
+```
+
+Prompt 必须明确：
+
+- 只判断 `TARGET TURN`；
+- 前两轮只用于理解指代、人物、时间和话题延续；
+- 不得仅因为 Reference Turn 本身值得检索而触发本轮 Search。
+
+### 主要职责
+
+- Target Turn 是否需要 Slow Search；
 - 是否需要个人历史检索；
 - 是否需要时代背景检索；
-- 生成检索 Query；
-- 给 Slow Execution Model 提供结构化信号。
+- 是否存在可能的时间 / 人物关系冲突；
+- 是否出现旧人物或 Story 跳转；
+- 是否值得进一步深挖；
+- 返回极短结构化信号。
 
-推荐输出形态：
+推荐输出：
 
 ```json
 {
-  "process": true,
+  "need_search": true,
   "need_memory_search": true,
   "need_era_search": false,
-  "signals": [
-    "old_person_reappeared",
-    "possible_time_conflict"
-  ],
-  "memory_query": "王师傅 进厂 时间",
-  "era_query": null
+  "possible_conflict": false,
+  "signals": ["old_person_reappeared"]
 }
 ```
 
-约束：
+Judge 不需要负责长 Query Rewrite。Retrieval 默认直接使用：
 
-- 不生成面向用户的最终回答；
-- 不生成长 Context Hint；
-- 不直接写 Story Agent Memory；
-- 不直接做复杂跨 Session Deep Search；
-- 正常情况下不需要长 Chain-of-Thought；
-- 目标是低成本路由与判断。
+- Query A = 当前 Target User Answer；
+- Query B = Target Assistant Question + Target User Answer。
 
-### 备选
+### 对照 / 兜底：`nvidia/Qwen3-8B-FP4`
 
-- `nvidia/Qwen3-14B-FP4`：如果 8B 的判断准确率不足；
-- `nvidia/Llama-3.1-8B-Instruct-FP4`：NVIDIA 原生兼容性对照，但中文优先级低于 Qwen。
+8B 不再作为默认第一候选，但必须作为 Spark Benchmark 对照。
 
-升级 8B → 14B 的条件必须来自 Eval，而不是主观感觉。
+只有当 2B 在真实采访 Eval 中出现明显质量问题时升级，包括：
+
+- missed-search rate 过高；
+- memory / era route accuracy 不达标；
+- 被前两轮 Reference 带偏；
+- 人物 / 时间指代理解明显不足；
+- Evidence Summary 质量不足。
+
+原则：
+
+> **先证明 2B 不够，再升级 8B；不因为“更大更稳”而默认长期占用更多实时资源。**
 
 ---
 
@@ -279,9 +302,10 @@ NVIDIA 官方当前已经给出 Qwen3-8B FP4 在 DGX Spark 上的 SGLang / Tenso
 Realtime Slow System 的搜索应该严格采用 Architecture v2.3 已冻结的 **Classic Retrieval**：
 
 ```text
-Query
- -> Embedding
- -> Dense / Hybrid Retrieval
+Transcript Final
+ -> Judge 与 Query Embedding / First-stage Recall 并行
+ -> Judge=No：丢弃 speculative candidates，立即 Release
+ -> Judge=Yes：merge / dedupe
  -> Rerank
  -> Small Top-K Evidence
 ```
@@ -328,6 +352,23 @@ read-only
 
 严禁将两个索引混为同一事实空间。
 
+### Realtime Query 策略
+
+不把最近 3 轮完整对话拼成一个 Embedding。
+
+固定两路 Query：
+
+```text
+Query A = 当前 Target User Answer
+Query B = Target Assistant Question + Target User Answer
+```
+
+两路 Query Embedding 可以与 2B Judge 同时启动，并允许提前完成 Dense / Hybrid First-stage Recall。
+
+Judge=No 时，Embedding / Candidate 直接丢弃；Judge=Yes 时直接复用，避免串行等待。
+
+注意：历史 Transcript / Agent Memory 的文档向量应提前建立，本轮只计算 Query Embedding。
+
 ### Realtime 搜索硬边界
 
 - 只允许 Classic Retrieval；
@@ -340,39 +381,24 @@ read-only
 
 ---
 
-## 6. Slow Execution / Synthesis / Summary Model
+## 6. Realtime Evidence Summary 与 Post-session 35B
 
-### 主选：`nvidia/Qwen3.6-35B-A3B-NVFP4`
+### Realtime Evidence Summary：优先复用 `Qwen/Qwen3.5-2B`
 
-定位：
+Realtime Search 命中后，不默认再调用 35B。
 
-> **慢系统复杂执行、证据综合、Context Hint 形成，以及访谈结束后的 Agent 主模型。**
+同一个 2B 服务切换到 Evidence Summary Prompt，输入：
 
-NVIDIA 当前在 DGX Spark Agent-ready Models 与 OpenShell / OpenClaw 本地路径中推荐：
-
-```text
-nvidia/Qwen3.6-35B-A3B-NVFP4
-```
-
-公开 NVIDIA DGX Spark 资料中，该 NVFP4 版本权重约 22GB，并明确针对 Blackwell / DGX Spark 优化。
-
-### Realtime Slow System 中的职责
-
-输入：
-
-- 当前 Transcript 窗口；
-- Story Agent Memory；
-- Slow Decision 信号；
-- 可选个人历史 Top-K Evidence；
-- 可选时代背景 Top-K Hint；
-- 当前采访目标。
+- 固定最近 3 轮；
+- Judge 信号；
+- Small Top-K Evidence；
+- source refs。
 
 输出：
 
-- 极短 Context Hint；
+- 极短 facts；
 - possible conflicts；
-- memory recall；
-- interview hints；
+- 0～2 条 interview hints；
 - source refs。
 
 示例：
@@ -380,97 +406,71 @@ nvidia/Qwen3.6-35B-A3B-NVFP4
 ```json
 {
   "based_on_turn_id": "turn_18",
-  "memory_recall": [
+  "facts": [
     {
-      "claim": "用户此前提到大约 1978 年进厂",
+      "claim": "用户此前提到王师傅是入厂后的第一位师傅",
       "source_message_ids": ["msg_123"]
     }
   ],
-  "possible_conflicts": [
-    {
-      "current": "1979 年进厂",
-      "previous": "约 1978 年进厂",
-      "action": "clarify_if_natural"
-    }
-  ],
+  "possible_conflicts": [],
   "interview_hints": [
-    "如果自然，可询问王师傅第一次带他工作的场景"
+    "如果自然，可追问第一次跟王师傅上班的场景"
   ]
 }
 ```
 
-### Post-session Agent 中的职责
+2B 是否足以承担这项工作必须实测。如果 Judge 足够但 Summary 不够，可以只升级 Summary，不必连 Judge 一起升级。
 
-同一模型继续承担当前 Task Contract 中高质量任务：
+### Post-session 主模型：`nvidia/Qwen3.6-35B-A3B-NVFP4`
+
+35B 主要承担访谈结束后的复杂任务：
 
 - `onboarding.closeout`；
 - `interview.closeout / story_create`；
 - `interview.closeout / story_continue`；
 - `interview.closeout / contributor`；
-- `story.generation`。
+- Story Agent Memory 更新；
+- Story Summary；
+- `story.generation`；
+- 复杂离线分析。
 
-`story.completion` 仍属于 `reasoning-fast`，后续可以根据 Benchmark 决定继续使用 8B，还是与 35B 共用同一服务。
+这样避免每个 Realtime Turn 都让 35B 与语音模型争抢 GB10 算力。
 
 ### 第一备选
 
-NVIDIA Nemotron 30B 级 Agent / Reasoning 模型。
-
-备选价值：
-
-- 更高 NVIDIA 原生技术栈比例；
-- 可作为 Agent Benchmark 对照；
-- Tool Calling / Agent reasoning 能力适合比赛展示。
-
-但中文采访质量必须通过真实 Eval 后才能替换 Qwen。
+NVIDIA Nemotron 30B 级 Agent / Reasoning 模型继续保留为 Post-session 对照；中文采访质量必须通过真实 Eval 后才能替换 Qwen。
 
 ---
 
-## 7. 为什么不使用一个模型处理全部任务
+## 7. 为什么 Realtime 不直接统一使用 35B
 
-如果所有任务都统一使用 35B：
-
-```text
-Realtime 判断
-→ 35B
-
-简单搜索 Query 生成
-→ 35B
-
-Context Hint
-→ 35B
-
-Closeout
-→ 35B
-
-Generation
-→ 35B
-```
-
-问题：
-
-- 高频短任务浪费推理资源；
-- Realtime Slow System P95 延迟变高；
-- 大模型 KV Cache 占用增加；
-- 多用户并发容易影响实时语音；
-- 无法体现 latency-aware Model Routing。
-
-因此冻结：
+新的默认职责分层：
 
 ```text
 实时语音
-→ 9B Omni Voice
+→ MiniCPM-o 4.5
 
-高频判断
-→ 8B FP4
+每轮 Judge
+→ Qwen3.5-2B
 
-搜索
-→ 1B 级 Embed / Rerank
+Query Embedding / Retrieval / Rerank
+→ NeMo Retriever + 1B 级 Embed / Rerank
 
-复杂执行与总结
-→ 35B A3B NVFP4
+Realtime Evidence Summary
+→ 同一个 Qwen3.5-2B
+
+Closeout / Memory / Generation
+→ Qwen3.6-35B-A3B-NVFP4
 ```
 
-这是当前最符合 DGX Spark 本地资源利用方式的职责分层。
+收益：
+
+- 绝大多数 Realtime Turn 不触发 35B；
+- 2B 可以每轮运行而不会长期占用大量统一内存；
+- Judge 与 Embedding / 首召回并行；
+- Search Path 有机会稳定压入 5～6 秒 Hold Budget；
+- 保持普通 upstream vLLM / SGLang 路线，不引入第二套 patched vLLM；
+- 35B 算力留给真正复杂的 Post-session Agent 任务。
 
 ---
 
@@ -488,8 +488,8 @@ MiniCPM-o 4.5
 ≈ 19GB 标准 GPU 版本参考
 或 11GB AWQ / 10GB GGUF
 
-Qwen3-8B-FP4
-8B NVFP4 级别
+Qwen3.5-2B
+2B 官方 checkpoint；具体量化方式待 Spark Benchmark 冻结
 
 Qwen3.6-35B-A3B-NVFP4
 ≈ 22GB 模型权重参考
@@ -524,9 +524,9 @@ Embedding / Reranker
 
 ```text
 P0  Realtime Fast Voice
-P1  Slow Decision
+P1  Realtime Judge（2B）
 P1  Classic Retrieval
-P2  Slow Context Hint Synthesis
+P1  Realtime Evidence Summary（复用 2B）
 P3  Interview Closeout
 P4  Story Generation
 P4  Agentic Deep Search（Future）
@@ -551,9 +551,9 @@ P4  Agentic Deep Search（Future）
 |---|---|
 | MiniCPM-o Realtime | 先测 1，再测 2 个同时活跃 Session |
 | Step-Audio-2-mini Realtime | 备选路径先完成单 Session Smoke，再测 2 Session |
-| Qwen3-8B Slow Decision | 2 → 4 |
+| Qwen3.5-2B Realtime Judge / Evidence Summary | 先测 1，再测 2 → 4 |
 | Classic Retrieval | 2 → 4 |
-| Qwen3.6 Slow Execution / Agent | 先限制 1–2；再测 4 sequence |
+| Qwen3.6 Post-session Agent | Realtime 活跃时默认不运行；后台先限制 1–2 |
 | Story Generation | 后台队列，默认 1 |
 | Agentic Retrieval | Future，默认 1 |
 
@@ -576,16 +576,22 @@ P4  Agentic Deep Search（Future）
 - 1 / 2 并发 Session；
 - 与 35B 同时推理时的 P50 / P95。
 
-### Slow Decision
+### Realtime Judge / Conditional Hold
 
 测试：
 
-- 是否需要 Search 判断准确率；
+- 固定 3 轮输入下是否需要 Search 的判断准确率；
+- Reference-vs-Target 抗干扰准确率；
 - unnecessary-search rate；
 - missed-search rate；
 - memory / era route accuracy；
 - JSON Schema success；
-- P50 / P95；
+- Judge P50 / P95；
+- Judge + Embedding 并行后的端到端 P50 / P95；
+- Judge=No 的 Release 延迟；
+- Judge=Yes 的完整 Hold 延迟；
+- 5～6 秒 Deadline 超时率；
+- 2B Evidence Summary usefulness / evidence accuracy；
 - 2 / 4 并发。
 
 ### Retrieval
@@ -634,13 +640,15 @@ P4  Agentic Deep Search（Future）
 - 与慢系统并发导致不可接受的延迟；
 - Step-Audio-2-mini、GLM-4-Voice 或其他候选在同一 Benchmark 明显更优。
 
-### Slow Decision 8B → 14B
+### Realtime Judge 2B → 8B
 
 只有当：
 
 - Search Route Accuracy 不达标；
-- 8B 经 Prompt / Skill 优化后仍有明显误判；
-- 14B 的质量提升足以抵消延迟与内存成本。
+- missed-search rate 过高；
+- Reference Turn 明显干扰 Target 判断；
+- 2B 经 Prompt / Eval 优化后仍有明显误判；
+- 8B 的质量提升足以抵消延迟与内存成本。
 
 ### Slow Execution 35B 替换
 
@@ -678,10 +686,10 @@ NVFP4 Local Inference
 
 本地承担：
 
-- Slow Decision；
+- Realtime Judge / Evidence Summary；
 - Memory Retrieval；
 - Era Retrieval；
-- Slow Execution；
+- Post-session Agent；
 - Closeout；
 - Story Generation；
 - Agent Runtime。
@@ -710,18 +718,18 @@ NVFP4 Local Inference
 | 层 | 主选 |
 |---|---|
 | Realtime Fast System | **MiniCPM-o 4.5** |
-| Slow Decision Model | **`nvidia/Qwen3-8B-FP4`** |
+| Realtime Judge / Evidence Summary | **`Qwen/Qwen3.5-2B`（第一候选，Pending Spark Eval）** |
 | Slow Search | **NeMo Retriever + Nemotron 1B Embedding / Rerank** |
-| Slow Execution / Summary | **`nvidia/Qwen3.6-35B-A3B-NVFP4`** |
+| Post-session Agent / Summary / Generation | **`nvidia/Qwen3.6-35B-A3B-NVFP4`** |
 
 ### 备选
 
 | 层 | 备选 |
 |---|---|
 | Realtime | **Step-Audio-2-mini（第一备选 / Spark 必测）**；GLM-4-Voice 9B（第二备选） |
-| Slow Decision | `nvidia/Qwen3-14B-FP4` |
+| Realtime Judge | **`nvidia/Qwen3-8B-FP4`**（2B 对照 / 质量兜底） |
 | Retrieval | NVIDIA 当前 Spark/NIM 可用的兼容 Nemotron Embed / Rerank 版本 |
-| Slow Execution | NVIDIA Nemotron 30B 级 Agent / Reasoning 模型 |
+| Post-session Agent | NVIDIA Nemotron 30B 级 Agent / Reasoning 模型 |
 
 ### 不进入 Realtime 默认链路
 
