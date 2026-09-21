@@ -22,7 +22,7 @@
 1. **Realtime Fast System 优先实时性、中文语音体验、全双工与可打断。**
 2. **Realtime Judge 优先低延迟、高频判断与稳定结构化输出；每个 User Turn Final 都判断，但不是每轮都搜索。**
 3. **Slow Retrieval 不使用通用 LLM 直接搜索，而使用 Embedding + Retrieval + Rerank。**
-4. **Slow Execution / Summary Model 优先复杂中文理解、长上下文、事实约束和结构化输出。**
+4. **Realtime Evidence Summary 优先短、快、证据约束；复杂中文理解、长上下文和长期 Memory 更新交给 Post-session 35B。**
 5. **隐私相关的长期 Memory、Retriever、Agent 推理与 Closeout 优先留在 DGX Spark 本地。**
 6. **所有最终吞吐、P50/P95、并发上限与统一内存占用必须以真实 DGX Spark Benchmark 为准。**
 
@@ -137,7 +137,7 @@ Realtime 默认路径不再要求 35B 参与每轮 Context Hint；35B 主要留�
 - 流式 Speech-to-Speech 的实际首音延迟；
 - 连续长访谈的稳定性；
 - 用户打断 / barge-in / full-duplex 能力；
-- 与 Slow Decision、Retriever、35B Slow Execution 同机并发时的资源竞争。
+- 与 2B Realtime Judge、Retriever、后台 35B 同机并发时的资源竞争。
 
 推荐验证顺序：
 
@@ -535,9 +535,9 @@ P4  Agentic Deep Search（Future）
 原则：
 
 - Realtime Fast Voice 不排队等待后台任务；
-- Slow Decision 必须短任务优先；
+- Realtime Judge 必须短任务优先；
 - Classic Retrieval 必须可并发但限制 Top-K；
-- Slow Context Hint 如果超过 Safe Turn Boundary，结果可以过期丢弃；
+- Realtime Evidence Summary 超过 5～6 秒 Hold Deadline 时先 Release，迟到结果按 stale/relevance 规则处理；
 - Closeout 可以短暂排队；
 - Story Generation 可以排队；
 - Agentic Deep Search 未来只能低优先级运行；
@@ -606,7 +606,7 @@ P4  Agentic Deep Search（Future）
 - Index memory；
 - 个人历史和时代背景隔离。
 
-### Slow Execution / Summary
+### Post-session 35B / Summary / Generation
 
 测试：
 
@@ -650,7 +650,7 @@ P4  Agentic Deep Search（Future）
 - 2B 经 Prompt / Eval 优化后仍有明显误判；
 - 8B 的质量提升足以抵消延迟与内存成本。
 
-### Slow Execution 35B 替换
+### Post-session 35B 替换
 
 只有当候选模型同时满足：
 
