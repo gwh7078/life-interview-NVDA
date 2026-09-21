@@ -364,7 +364,7 @@ Format Repair Retry
 
 ### 缺少历史信息
 
-不能关闭 Tool Calling 后强迫 JSON；应先补信息。
+不能禁止必要的 Skill Script 后强迫 JSON；应先补信息。
 
 ## 12. Retry 所有权
 

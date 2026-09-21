@@ -22,7 +22,7 @@ Phase 2B 不重新设计产品 API 或 Domain Rule。
 - 同一职责内优先使用 Skill，不为小功能新增 Agent；
 - 运行时额外只读检索优先使用 Skill 内脚本，不为每种检索能力注册专用 Product Tool；
 - Agent 返回 Proposal，Backend 自动 Validate / Apply；
-- 正常首次执行保留 Tool Calling；
+- 正常首次执行保留按 Skill 规则运行受限脚本的能力；
 - 纯格式错误才用强制 JSON / JSON Schema 做 Format Repair；
 - Runtime Retry、Validation Repair、Format Repair 分开处理；
 - 正式 Agent 模式不隐式 fallback 到 Legacy。
@@ -131,7 +131,7 @@ Backend ContextBuilder
 
 timeout / runtime unavailable / network/provider error。
 
-保持 Tool Calling，正常重跑。
+保留受限 Skill Script / exec 能力，正常重跑。
 
 #### Validation Repair
 
@@ -251,7 +251,7 @@ Phase 2B 新增正式路径，不改写历史 Smoke 证据。
 - [ ] all four Task families return schema-valid results through real Agent runtime
 - [ ] retry/repair policy implemented
 - [ ] format-repair 强制 JSON 兜底实现并测试
-- [x] tracing records task/skill/model/runtime/attempt/tool metadata
+- [x] tracing records task/skill/model/runtime/attempt/exec metadata
 - [ ] Agent E2E report written
-- [x] normal task runtime path is covered by deterministic test as zero dynamic Tool Call
+- [x] normal task runtime path is covered by deterministic test as zero Retrieval Script
 - [x] no Realtime / Retriever scope creep

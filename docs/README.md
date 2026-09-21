@@ -33,7 +33,7 @@
 
 - Architecture v2.3 — 低轮次 Agent 执行策略
 - Agent Task Contract v1.0 — Frozen
-- Agent Execution Policy v1.0
+- Agent Execution Policy v1.2
 - Phase 2A Contract Scaffold — Completed
 - Phase 2B Agent Runtime Integration — In Progress
 - 4 个正式 Skill family — 已提交
@@ -49,7 +49,7 @@
 ### Future / Deferred
 
 - Realtime Slow System
-- 条件式 Memory Search
+- 条件式 Skill Script Memory Search
 - NeMo Retriever 产品集成
 - DGX Spark 最终本地推理与 Benchmark
 - 外部世界事实核查
@@ -69,14 +69,14 @@
 同一职责内的专项方法
 → Skill
 
-运行中才发现的额外信息需求
-→ Tool
+运行中才发现的额外只读信息需求
+→ Skill Script（受限 exec）
 
 最终 Proposal
 → Backend Validate / Apply
 ```
 
-目标不是“最多 Agent / 最多 Tool Call”，而是：
+目标不是“最多 Agent / 最多 Tool / 最多脚本调用”，而是：
 
 > **最少调用次数下实现真正必要的 Agent 自主性。**
 

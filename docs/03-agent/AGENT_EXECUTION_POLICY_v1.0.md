@@ -45,7 +45,7 @@ Task 路由是确定性的：
 
 Agent 不应再为了读取同一批固定数据调用通用数据库 Tool。
 
-Tool 的职责是运行时增量信息，而不是固定 Context 搬运。
+动态 Skill Script 的职责是运行时增量只读信息，而不是固定 Context 搬运。
 
 ### 3.1 当前固定 Context Transport
 
@@ -217,7 +217,7 @@ LIFE_INTERVIEW_RESULT <JSON>
 
 Final Result 后不得继续输出解释。
 
-业务 Schema 只约束最终结果，不应让第一轮模型调用失去 Tool Calling 能力。
+业务 Schema 只约束最终结果，不应让第一轮模型调用失去按 Skill 规则执行受限脚本的能力。
 
 ## 10. Retry 分类
 
