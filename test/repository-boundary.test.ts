@@ -228,12 +228,15 @@ test('domain repositories enforce user ownership for Story, LifeStage, Session, 
   assert.equal(documentsRepo.findByIdForUser(userA, documentB), null);
   assert.deepEqual(documentsRepo.listForStory(userA, storyA).map((document) => document.versionNumber), [1]);
   assert.equal(documentsRepo.findForStoryForUser(userA, storyA, documentB), null);
+  const storyVersionBeforeGeneration = storiesRepo.findByIdForUser(userA, storyA)?.updatedAt;
+  assert.ok(storyVersionBeforeGeneration);
   const versionTwo = documentsRepo.createNextVersion({
     userId: userA,
     storyId: storyA,
     title: '故事 A 新标题',
     content: '第二版内容',
     sourceJson: '{"storyId":"boundary-story-a","generationMode":"revision"}',
+    expectedStoryUpdatedAt: storyVersionBeforeGeneration,
   });
   assert.equal(versionTwo?.versionNumber, 2);
   assert.equal(versionTwo?.status, 'draft');

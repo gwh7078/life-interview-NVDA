@@ -58,7 +58,7 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
   assert.equal(executor.requests[0]?.modelProfile, 'reasoning-fast');
   assert.equal(executor.requests[0]?.contextVersion, 'v1');
   assert.equal(executor.requests[0]?.executionPolicy.maxAttempts, 3);
-  assert.deepEqual(executor.requests[0]?.executionPolicy.dynamicTools, []);
+  assert.deepEqual(executor.requests[0]?.executionPolicy.scriptCapabilities, []);
   assert.equal(executor.requests[0]?.payload, request.payload);
   assert.deepEqual(executor.requests[0]?.validateOutput({ status: 'interviewing', gaps: [] }), {
     status: 'interviewing',
@@ -68,6 +68,35 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
   assert.equal(result.runtime.skillVersion, 'v1');
   assert.equal(result.runtime.provider, 'stepfun');
   assert.equal(result.runtime.model, 'test-model');
+});
+
+test('NemoClawAgentTaskAdapter rejects unsupported schemaVersion before execution', async () => {
+  const executor = new FakeExecutor({
+    output: { status: 'interviewing', gaps: [] },
+    runtime: { runtime: 'nemoclaw-openclaw' },
+  });
+  const adapter = new NemoClawAgentTaskAdapter(executor);
+  const request: StoryCompletionTaskRequest = {
+    runId: 'run-version',
+    taskType: 'story.completion',
+    ownerId: 'owner-1',
+    resource: { type: 'story', id: 'story-1' },
+    schemaVersion: 'v999',
+    payload: {
+      title: '第一次登台',
+      agent_memory: '工作记忆。',
+      stage_title: '学生时期',
+      current_status: 'interviewing',
+      previous_gaps: [],
+      blocked_directions: [],
+    },
+  };
+  await assert.rejects(
+    () => adapter.run(request),
+    (error: unknown) => error instanceof AgentTaskContractError
+      && error.code === 'AGENT_TASK_SCHEMA_VERSION_MISMATCH',
+  );
+  assert.equal(executor.requests.length, 0);
 });
 
 test('NemoClawAgentTaskAdapter routes contributor through interview-closeout without Story context', async () => {
@@ -100,7 +129,7 @@ test('NemoClawAgentTaskAdapter routes contributor through interview-closeout wit
   const result = await adapter.run(request);
   assert.equal(executor.requests[0]?.skill, 'interview-closeout');
   assert.equal(executor.requests[0]?.modelProfile, 'reasoning');
-  assert.deepEqual(executor.requests[0]?.executionPolicy.dynamicTools, []);
+  assert.deepEqual(executor.requests[0]?.executionPolicy.scriptCapabilities, []);
   assert.equal('current_story' in (executor.requests[0]?.payload as Record<string, unknown>), false);
   assert.deepEqual(result.output, { summary: '第三者的独立回忆。' });
 });

@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit",
     "agent:tool-server": "node --env-file-if-exists=.env --import tsx agent/tools/start-server.ts",
     "agent:smoke": "node --env-file-if-exists=.env --import tsx agent/runtime/smoke.ts",
-    "test:agent": "tsx --test tests/unit/*.test.ts tests/integration/*.test.ts"
+    "test:agent": "tsx --test tests/unit/*.test.ts tests/integration/*.test.ts",
+    "test:agent:real": "node --env-file-if-exists=.env --import tsx scripts/agent-phase2b-real-e2e.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

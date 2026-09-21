@@ -35,10 +35,15 @@ Do not commit `.env`.
 ./deploy/mac/check-env.sh
 ```
 
-## 3. Install Skill
+## 3. Install legacy Phase 1 Skill
+
+The current `deploy/mac/install-skill.sh` installs the four formal Phase 2B-C Skills and is no longer the Phase 1 smoke installer.
+
+For historical Phase 1 smoke reproduction, install the legacy inspector explicitly:
 
 ```bash
-./deploy/mac/install-skill.sh
+repo_root="$(pwd)"
+nemoclaw "$NEMOCLAW_SANDBOX" skill install "$repo_root/agent/skills/story-context-inspector"
 nemoclaw "$NEMOCLAW_SANDBOX" skill list
 ```
 

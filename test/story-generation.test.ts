@@ -28,6 +28,7 @@ const story: StoryGenerationStoryRecord = {
   title: '第一次独立远行',
   summary: 'SUMMARY_SENTINEL：这次远行的故事骨架。',
   status: 'complete',
+  updatedAt: '2026-09-03T00:00:00.000Z',
 };
 
 const transcript: StoryGenerationTranscriptMessage[] = [
@@ -78,6 +79,7 @@ function setup(options: {
   provider?: string;
   model?: string;
   modelError?: Error;
+  createError?: Error;
 } = {}) {
   const calls = {
     model: [] as StoryGenerationModelRequest[],
@@ -108,6 +110,7 @@ function setup(options: {
     },
     async createNextVersion(input) {
       calls.create.push(input);
+      if (options.createError) throw options.createError;
       return {
         ...input,
         documentId: 'document-db-v2',
@@ -285,6 +288,17 @@ test('generation model failures and invalid structured output do not retry or wr
   );
   assert.equal(invalid.calls.model.length, 1);
   assert.equal(invalid.calls.create.length, 0);
+});
+
+test('generation rejects a stale Story version after model output and before document persistence', async () => {
+  const { service, calls } = setup({ createError: new Error('STORY_CHANGED_DURING_GENERATION') });
+  await expectGenerationError(
+    service.generate({ ownerId, storyId, style: 'documentary' }),
+    'STORY_CHANGED_DURING_GENERATION',
+  );
+  assert.equal(calls.model.length, 1);
+  assert.equal(calls.create.length, 1);
+  assert.equal(calls.create[0]?.expectedStoryUpdatedAt, story.updatedAt);
 });
 
 test('structured output contains only a non-empty content field', () => {

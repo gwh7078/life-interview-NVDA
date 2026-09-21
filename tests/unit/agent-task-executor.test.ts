@@ -11,12 +11,12 @@ import {
 import { CommandExecutionError, type CommandRunner } from '../../agent/runtime/command-runner.js';
 import type { AgentTaskExecutionRequest } from '../../src/agent-tasks/ports/agent-task-executor.js';
 
-function taskRequest(): AgentTaskExecutionRequest {
+function taskRequest(signal?: AbortSignal): AgentTaskExecutionRequest {
   return {
     runId: 'run-1',
     ownerId: 'user-1',
     taskType: 'story.completion',
-    resource: { type: 'story', id: 'story-1' },
+    resource: { type: 'story', id: 'story-1', version: 'story-version-1' },
     schemaVersion: 'v1',
     contextVersion: 'v1',
     skill: 'story-completion',
@@ -25,7 +25,7 @@ function taskRequest(): AgentTaskExecutionRequest {
     executionPolicy: {
       maxAttempts: 3,
       timeoutMs: 1_000,
-      dynamicTools: [],
+      scriptCapabilities: [],
       allowFormatRepair: true,
     },
     payload: {
@@ -36,12 +36,20 @@ function taskRequest(): AgentTaskExecutionRequest {
       previous_gaps: [],
       blocked_directions: [],
     },
+    ...(signal ? { signal } : {}),
     validateOutput(output) {
       const value = output as { status?: unknown; gaps?: unknown };
       if (value.status !== 'interviewing' || !Array.isArray(value.gaps)) {
         throw new Error('invalid completion output');
       }
       return output;
+    },
+    validationFeedback(error) {
+      return [{
+        code: 'INVALID_COMPLETION_OUTPUT',
+        path: 'status',
+        instruction: error instanceof Error ? error.message : '修正 Completion Proposal。',
+      }];
     },
   };
 }
@@ -50,11 +58,19 @@ class CaptureRunner implements CommandRunner {
   command = '';
   args: string[] = [];
   stdin = '';
+  signal?: AbortSignal;
 
-  async run(command: string, args: string[], _timeoutMs: number, stdin?: string) {
+  async run(
+    command: string,
+    args: string[],
+    _timeoutMs: number,
+    stdin?: string,
+    signal?: AbortSignal,
+  ) {
     this.command = command;
     this.args = args;
     this.stdin = stdin ?? '';
+    this.signal = signal;
     return {
       stdout: 'trace\nLIFE_INTERVIEW_RESULT {"status":"interviewing","gaps":[]}\n',
       stderr: '',
@@ -62,7 +78,7 @@ class CaptureRunner implements CommandRunner {
   }
 }
 
-test('AttemptRunner injects fixed Context through stdin and performs zero dynamic Tool calls', async () => {
+test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scripts', async () => {
   const runner = new CaptureRunner();
   const attempts = new NemoClawOpenClawAttemptRunner({
     sandboxName: 'life-interview-agent',
@@ -70,8 +86,9 @@ test('AttemptRunner injects fixed Context through stdin and performs zero dynami
     models: { 'reasoning-fast': 'step-test-model' },
   }, runner);
 
+  const controller = new AbortController();
   const result = await attempts.run({
-    task: taskRequest(),
+    task: taskRequest(controller.signal),
     attemptNumber: 1,
     mode: 'normal',
   });
@@ -83,10 +100,11 @@ test('AttemptRunner injects fixed Context through stdin and performs zero dynami
   assert.ok(runner.args.includes('--model'));
   assert.ok(runner.args.includes('step-test-model'));
   assert.equal(runner.args.some((arg) => arg.includes('完整采访内容')), false);
-  assert.equal(runner.args.some((arg) => arg.includes('get_task_context')), false);
   assert.ok(runner.stdin.includes('完整采访内容'));
-  assert.ok(runner.stdin.includes('Do not call a Tool to reload this fixed Context.'));
-  assert.equal(result.toolCallCount, 0);
+  assert.ok(runner.stdin.includes('Do not run a script to reload this fixed Context.'));
+  assert.equal(runner.signal, controller.signal);
+  assert.equal(result.execCallCount, 0);
+  assert.equal(result.scriptCallCount, 0);
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
 });
 
@@ -108,46 +126,68 @@ function okAttempt(output: unknown): AgentAttemptResult {
   return {
     output,
     runtime: { runtime: 'nemoclaw-openclaw', latencyMs: 1 },
-    toolCallCount: 0,
+    execCallCount: 0,
+    scriptCallCount: 0,
   };
 }
 
-test('TaskExecutor owns runtime retry and succeeds within one logical Agent Run', async () => {
+test('TaskExecutor owns runtime retry inside one total three-attempt budget', async () => {
   const attempts = new SequenceAttemptRunner([
     new CommandExecutionError('timeout', 'AGENT_RUNTIME_TIMEOUT'),
     okAttempt({ status: 'interviewing', gaps: [] }),
   ]);
   const executor = new NemoClawAgentTaskExecutor(attempts);
-
   const result = await executor.execute(taskRequest());
+
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
   assert.equal(attempts.requests.length, 2);
   assert.equal(attempts.requests[0]?.mode, 'normal');
   assert.equal(attempts.requests[1]?.mode, 'runtime_retry');
 });
 
-test('TaskExecutor uses format repair only after final-result formatting failure', async () => {
+test('TaskExecutor uses Format Repair only after final-result formatting failure', async () => {
   const attempts = new SequenceAttemptRunner([
     new AgentResultFormatError('AGENT_RESULT_INVALID', 'bad json', '{"status":'),
     okAttempt({ status: 'interviewing', gaps: [] }),
   ]);
   const executor = new NemoClawAgentTaskExecutor(attempts);
-
   const result = await executor.execute(taskRequest());
+
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
   assert.equal(attempts.requests.length, 2);
   assert.equal(attempts.requests[1]?.mode, 'format_repair');
-  assert.match(attempts.requests[1]?.repairFeedback ?? '', /AGENT_RESULT_INVALID/);
 });
 
-test('TaskExecutor converts registered-schema failure into format repair', async () => {
+test('TaskExecutor sends schema or business validation failure to Validation Repair', async () => {
   const attempts = new SequenceAttemptRunner([
     okAttempt({ status: 'broken', gaps: [] }),
     okAttempt({ status: 'interviewing', gaps: [] }),
   ]);
   const executor = new NemoClawAgentTaskExecutor(attempts);
-
   const result = await executor.execute(taskRequest());
+
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
-  assert.equal(attempts.requests[1]?.mode, 'format_repair');
+  assert.equal(attempts.requests.length, 2);
+  assert.equal(attempts.requests[1]?.mode, 'validation_repair');
+  assert.deepEqual(attempts.requests[1]?.repairFeedback, [{
+    code: 'INVALID_COMPLETION_OUTPUT',
+    path: 'status',
+    instruction: 'invalid completion output',
+  }]);
+});
+
+test('TaskExecutor does not retry a cancelled task', async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const attempts = new SequenceAttemptRunner([
+    okAttempt({ status: 'interviewing', gaps: [] }),
+  ]);
+  const executor = new NemoClawAgentTaskExecutor(attempts);
+
+  await assert.rejects(
+    () => executor.execute(taskRequest(controller.signal)),
+    (error: unknown) => error instanceof CommandExecutionError
+      && error.code === 'AGENT_RUNTIME_CANCELLED',
+  );
+  assert.equal(attempts.requests.length, 0);
 });

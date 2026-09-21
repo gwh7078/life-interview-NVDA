@@ -32,6 +32,11 @@ export const agentTaskRuntimeMetadataSchema = z.object({
   provider: z.string().trim().min(1).max(128).optional(),
   model: z.string().trim().min(1).max(200).optional(),
   latencyMs: z.number().finite().nonnegative().optional(),
+  attemptCount: z.number().int().positive().optional(),
+  repairCount: z.number().int().nonnegative().optional(),
+  execCallCount: z.number().int().nonnegative().optional(),
+  scriptCallCount: z.number().int().nonnegative().optional(),
+  formatRepairUsed: z.boolean().optional(),
   usage: z.object({
     promptTokens: z.number().int().nonnegative().optional(),
     completionTokens: z.number().int().nonnegative().optional(),

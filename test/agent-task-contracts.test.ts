@@ -48,8 +48,8 @@ test('TaskDefinitionRegistry exposes four tasks and three interview.closeout mod
   assert.equal(getAgentTaskDefinition('story.completion').modelProfile, 'reasoning-fast');
   assert.equal(getAgentTaskDefinition('story.generation').modelProfile, 'writing');
   assert.equal(getAgentTaskDefinition('story.completion').executionPolicy.maxAttempts, 3);
-  assert.deepEqual(getAgentTaskDefinition('story.completion').executionPolicy.dynamicTools, []);
-  assert.deepEqual(getAgentTaskDefinition('story.generation').executionPolicy.dynamicTools, []);
+  assert.deepEqual(getAgentTaskDefinition('story.completion').executionPolicy.scriptCapabilities, []);
+  assert.deepEqual(getAgentTaskDefinition('story.generation').executionPolicy.scriptCapabilities, []);
   assert.throws(
     () => getAgentTaskDefinition('interview.closeout'),
     (error: unknown) => error instanceof AgentTaskContractError
@@ -399,7 +399,9 @@ test('StubAgentTaskAdapter returns schema-valid results for all four task famili
     .outputSchema.parse(generationResult.output);
 });
 
-test('AI_TASK_RUNTIME supports explicit stub and agent composition', () => {
+test('AI_TASK_RUNTIME defaults to direct and supports explicit stub or agent composition', () => {
+  assert.equal(resolveAgentTaskRuntime({} as NodeJS.ProcessEnv), 'direct');
+  assert.equal(createAgentTaskPort({} as NodeJS.ProcessEnv), null);
   assert.equal(resolveAgentTaskRuntime({ AI_TASK_RUNTIME: 'stub' } as NodeJS.ProcessEnv), 'stub');
   assert.ok(createAgentTaskPort({ AI_TASK_RUNTIME: 'stub' } as NodeJS.ProcessEnv) instanceof StubAgentTaskAdapter);
 

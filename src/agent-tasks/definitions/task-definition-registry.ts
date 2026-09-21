@@ -22,7 +22,7 @@ export type AgentModelProfile = 'reasoning' | 'reasoning-fast' | 'writing';
 export interface AgentTaskExecutionPolicy {
   maxAttempts: number;
   timeoutMs: number;
-  dynamicTools: readonly string[];
+  scriptCapabilities: readonly string[];
   allowFormatRepair: boolean;
 }
 
@@ -42,21 +42,21 @@ export interface AgentTaskDefinition {
 const standardReasoningPolicy: AgentTaskExecutionPolicy = Object.freeze({
   maxAttempts: 3,
   timeoutMs: 180_000,
-  dynamicTools: Object.freeze([]),
+  scriptCapabilities: Object.freeze([]),
   allowFormatRepair: true,
 });
 
 const completionPolicy: AgentTaskExecutionPolicy = Object.freeze({
   maxAttempts: 3,
   timeoutMs: 120_000,
-  dynamicTools: Object.freeze([]),
+  scriptCapabilities: Object.freeze([]),
   allowFormatRepair: true,
 });
 
 const generationPolicy: AgentTaskExecutionPolicy = Object.freeze({
   maxAttempts: 3,
   timeoutMs: 300_000,
-  dynamicTools: Object.freeze([]),
+  scriptCapabilities: Object.freeze([]),
   allowFormatRepair: true,
 });
 

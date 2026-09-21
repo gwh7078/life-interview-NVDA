@@ -85,6 +85,13 @@
       "when": 1790066400000,
       "tag": "0011_agent_run_execution_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790152800000,
+      "tag": "0012_agent_run_resource_and_script_metrics",
+      "breakpoints": true
     }
   ]
 }

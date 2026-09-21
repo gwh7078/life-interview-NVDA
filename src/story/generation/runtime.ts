@@ -8,6 +8,7 @@ import { OpenAICompatibleTextModelProvider, type TextModelProvider } from '../..
 import { StoryGenerationError, StoryGenerationService } from './index.js';
 import { loadStoryCreationEvidenceMessages } from './source-evidence.js';
 import type {
+  StoryGenerationContextModelPort,
   StoryGenerationDataPort,
   StoryGenerationModelPort,
   StoryGenerationTranscriptMessage,
@@ -44,6 +45,7 @@ export function createStoryGenerationService(
   databasePath: string | undefined,
   config: StoryGenerationRuntimeConfig,
   textModelProvider: TextModelProvider = new OpenAICompatibleTextModelProvider(),
+  contextModel?: StoryGenerationContextModelPort,
 ): StoryGenerationService {
   const stories = new StoryRepository(databasePath);
   const profiles = new ProfileRepository(databasePath);
@@ -60,6 +62,7 @@ export function createStoryGenerationService(
         title: story.title,
         summary: story.summary,
         status: story.status,
+        updatedAt: story.updatedAt,
       } : null;
     },
     async findProfileForUser(ownerId) {
@@ -113,6 +116,7 @@ export function createStoryGenerationService(
           title: input.title,
           content: input.content,
           sourceJson: input.sourceJson,
+          expectedStoryUpdatedAt: input.expectedStoryUpdatedAt,
         });
         if (!document) throw new Error('DOCUMENT_CREATE_FAILED');
         return {
@@ -132,6 +136,9 @@ export function createStoryGenerationService(
         }
         if (error instanceof Error && error.message === 'STORY_NOT_COMPLETE') {
           throw new StoryGenerationError('故事资料尚未完成，暂时不能生成成稿。', 'STORY_NOT_COMPLETE', 409);
+        }
+        if (error instanceof Error && error.message === 'STORY_CHANGED_DURING_GENERATION') {
+          throw new StoryGenerationError('故事在生成期间已更新，请基于最新内容重新生成。', 'STORY_CHANGED_DURING_GENERATION', 409);
         }
         throw error;
       }
@@ -156,5 +163,5 @@ export function createStoryGenerationService(
     },
   };
 
-  return new StoryGenerationService(data, model);
+  return new StoryGenerationService(data, model, contextModel);
 }

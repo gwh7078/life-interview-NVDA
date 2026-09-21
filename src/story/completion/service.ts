@@ -33,7 +33,7 @@ export class StoryCompletionService {
       agentMemoryChars: context.agentMemory.length,
       sessionCount: context.sessionCount,
     });
-    const output = await this.processor.process(context);
+    const output = await this.processor.process(context, { userId, storyId });
     console.info('[story-completion] model_output', {
       storyId,
       status: output.status,

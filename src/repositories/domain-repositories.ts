@@ -623,16 +623,23 @@ export class MemoirDocumentRepository {
     title: string;
     content: string;
     sourceJson: string;
+    expectedStoryUpdatedAt: string;
   }) {
     const connection = createDatabase(this.databasePath);
     try {
       return connection.db.transaction((tx) => {
-        const story = tx.select({ status: stories.status }).from(stories).where(and(
+        const story = tx.select({
+          status: stories.status,
+          updatedAt: stories.updatedAt,
+        }).from(stories).where(and(
           eq(stories.userId, input.userId),
           eq(stories.storyId, input.storyId),
         )).get();
         if (!story) throw new Error('STORY_NOT_FOUND');
         if (story.status !== 'complete') throw new Error('STORY_NOT_COMPLETE');
+        if (story.updatedAt !== input.expectedStoryUpdatedAt) {
+          throw new Error('STORY_CHANGED_DURING_GENERATION');
+        }
 
         const existing = connection.sqlite.prepare(`
           SELECT COALESCE(MAX(version_number), 0) AS currentVersion

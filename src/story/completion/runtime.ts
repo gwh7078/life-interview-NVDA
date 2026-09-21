@@ -12,6 +12,7 @@ import {
   StoryCompletionPersistenceError,
   StoryCompletionPersistenceRepository,
 } from './persistence.js';
+import type { StoryCompletionProcessorPort } from './types.js';
 
 export interface StoryCompletionRuntimeConfig {
   provider?: string;
@@ -26,6 +27,7 @@ export function createStoryCompletionService(
   databasePath: string | undefined,
   config: StoryCompletionRuntimeConfig,
   textModelProvider: TextModelProvider = new OpenAICompatibleTextModelProvider(),
+  processorOverride?: StoryCompletionProcessorPort,
 ): StoryCompletionService {
   const stories = new StoryRepository(databasePath);
   const completionPersistence = new StoryCompletionPersistenceRepository(databasePath);
@@ -46,7 +48,7 @@ export function createStoryCompletionService(
       };
     },
   });
-  const processor = new StoryCompletionProcessor({
+  const directProcessor = new StoryCompletionProcessor({
     async complete(request) {
       try {
         const result = await textModelProvider.complete(request.prompt, {
@@ -66,6 +68,7 @@ export function createStoryCompletionService(
       }
     },
   });
+  const processor = processorOverride ?? directProcessor;
   const writer = {
     updateCompletionForUser(
       userId: string,
