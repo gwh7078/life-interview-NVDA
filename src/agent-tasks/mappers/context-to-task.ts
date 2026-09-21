@@ -158,8 +158,8 @@ export function mapStoryCloseoutContextToTask(
       mode: 'story_continue',
       ownerId: context.userId,
       resource: {
-        type: 'interview_session',
-        id: context.sessionId,
+        type: 'story',
+        id: context.currentStory.story_id,
         version: context.currentStory.updated_at,
       },
       schemaVersion: 'v1',
@@ -192,6 +192,7 @@ export interface ContributorCloseoutTaskContext {
   relationship: string;
   previousContributorSummary: string | null;
   transcript: TranscriptMessage[];
+  shareId?: string;
   resourceVersion?: string;
 }
 
@@ -207,8 +208,8 @@ export function mapContributorCloseoutContextToTask(
       mode: 'contributor',
       ownerId: context.userId,
       resource: {
-        type: 'interview_session',
-        id: context.sessionId,
+        type: context.shareId ? 'story_share' : 'interview_session',
+        id: context.shareId ?? context.sessionId,
         ...(context.resourceVersion ? { version: context.resourceVersion } : {}),
       },
       schemaVersion: 'v1',
