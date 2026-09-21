@@ -28,6 +28,7 @@ const story: StoryGenerationStoryRecord = {
   title: '第一次独立远行',
   summary: 'SUMMARY_SENTINEL：这次远行的故事骨架。',
   status: 'complete',
+  updatedAt: '2026-09-03T00:00:00.000Z',
 };
 
 const transcript: StoryGenerationTranscriptMessage[] = [
