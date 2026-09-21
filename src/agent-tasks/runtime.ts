@@ -8,7 +8,7 @@ import { StubAgentTaskAdapter } from './adapters/stub-agent-task-adapter.js';
 import { AgentTaskContractError } from './errors.js';
 import type { AgentTaskPort } from './ports/agent-task-port.js';
 
-export type AgentTaskRuntimeId = 'stub' | 'agent';
+export type AgentTaskRuntimeId = 'direct' | 'stub' | 'agent';
 
 function optionalEnv(env: NodeJS.ProcessEnv, key: string): string | undefined {
   const value = env[key]?.trim();
@@ -16,10 +16,10 @@ function optionalEnv(env: NodeJS.ProcessEnv, key: string): string | undefined {
 }
 
 export function resolveAgentTaskRuntime(env: NodeJS.ProcessEnv = process.env): AgentTaskRuntimeId {
-  const runtime = env.AI_TASK_RUNTIME?.trim() || 'stub';
-  if (runtime !== 'stub' && runtime !== 'agent') {
+  const runtime = env.AI_TASK_RUNTIME?.trim() || 'direct';
+  if (runtime !== 'direct' && runtime !== 'stub' && runtime !== 'agent') {
     throw new AgentTaskContractError(
-      'AI_TASK_RUNTIME must be stub or agent.',
+      'AI_TASK_RUNTIME must be direct, stub or agent.',
       'AGENT_TASK_RUNTIME_INVALID',
       { runtime },
     );
@@ -27,8 +27,12 @@ export function resolveAgentTaskRuntime(env: NodeJS.ProcessEnv = process.env): A
   return runtime;
 }
 
-export function createAgentTaskPort(env: NodeJS.ProcessEnv = process.env): AgentTaskPort {
+export function createAgentTaskPort(
+  env: NodeJS.ProcessEnv = process.env,
+  options: { databasePath?: string } = {},
+): AgentTaskPort | null {
   const runtime = resolveAgentTaskRuntime(env);
+  if (runtime === 'direct') return null;
   if (runtime === 'stub') return new StubAgentTaskAdapter();
 
   const sandboxName = optionalEnv(env, 'NEMOCLAW_SANDBOX');
@@ -50,6 +54,6 @@ export function createAgentTaskPort(env: NodeJS.ProcessEnv = process.env): Agent
       ...(optionalEnv(env, 'AGENT_MODEL_WRITING') ? { writing: optionalEnv(env, 'AGENT_MODEL_WRITING') } : {}),
     },
   });
-  const runs = new AgentRunRepository(optionalEnv(env, 'DATABASE_PATH'));
+  const runs = new AgentRunRepository(options.databasePath ?? optionalEnv(env, 'DATABASE_PATH'));
   return new NemoClawAgentTaskAdapter(new NemoClawAgentTaskExecutor(attempts, runs));
 }
