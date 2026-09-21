@@ -76,6 +76,14 @@ import { BookService, BookServiceError, parseBookSaveInput } from './book/servic
 import { StoryShareRepository, isStoryShareRelationship } from './repositories/story-share-repository.js';
 import { parseStoryGaps } from './story/gaps.js';
 import { markExternalContributorSessionCloseout, runExternalContributorCloseout } from './interview/external-contributor/closeout.js';
+import {
+  AgentOnboardingCloseoutProcessor,
+  AgentStoryCloseoutProcessor,
+  AgentStoryCompletionProcessor,
+  AgentStoryGenerationContextModel,
+  createAgentTaskPort,
+  type AgentTaskPort,
+} from './agent-tasks/index.js';
 
 const DEFAULT_PORT = 4174;
 const DEFAULT_HOST = '127.0.0.1';
@@ -141,6 +149,7 @@ export interface InterviewServiceDependencies {
   onboardingCloseout?: OnboardingCloseoutDependencies;
   storyCompletion?: Pick<StoryCompletionService, 'evaluate'>;
   storyGeneration?: Pick<StoryGenerationService, 'generate'>;
+  agentTasks?: AgentTaskPort | null;
 }
 
 interface ProviderTranscriptMessage {
@@ -513,16 +522,33 @@ function createStoryWorkflowDependencies(
   dependencies: InterviewServiceDependencies,
 ): InterviewServiceDependencies {
   const textModelProvider = dependencies.closeout?.textModelProvider ?? new DirectTextModelProvider();
+  const agentTasks = dependencies.agentTasks === undefined
+    ? createAgentTaskPort(process.env, { databasePath: config.databasePath })
+    : dependencies.agentTasks;
   const storyCompletion = dependencies.storyCompletion
-    ?? createStoryCompletionService(config.databasePath, storyCompletionModelConfig(config), textModelProvider);
+    ?? createStoryCompletionService(
+      config.databasePath,
+      storyCompletionModelConfig(config),
+      textModelProvider,
+      agentTasks ? new AgentStoryCompletionProcessor(agentTasks) : undefined,
+    );
   const storyGeneration = dependencies.storyGeneration
-    ?? createStoryGenerationService(config.databasePath, storyGenerationModelConfig(config), textModelProvider);
+    ?? createStoryGenerationService(
+      config.databasePath,
+      storyGenerationModelConfig(config),
+      textModelProvider,
+      agentTasks ? new AgentStoryGenerationContextModel(agentTasks) : undefined,
+    );
   return {
     ...dependencies,
+    agentTasks,
     storyCompletion,
     storyGeneration,
     closeout: {
       ...dependencies.closeout,
+      ...(agentTasks && !dependencies.closeout?.processor
+        ? { processor: new AgentStoryCloseoutProcessor(agentTasks) }
+        : {}),
       async afterApply(userId, storyId) {
         if (dependencies.closeout?.afterApply) {
           try { await dependencies.closeout.afterApply(userId, storyId); }
@@ -537,6 +563,9 @@ function createStoryWorkflowDependencies(
     },
     onboardingCloseout: {
       ...dependencies.onboardingCloseout,
+      ...(agentTasks && !dependencies.onboardingCloseout?.processor
+        ? { processor: new AgentOnboardingCloseoutProcessor(agentTasks) }
+        : {}),
       async afterApply(userId, storyId) {
         if (dependencies.onboardingCloseout?.afterApply) {
           try { await dependencies.onboardingCloseout.afterApply(userId, storyId); }
@@ -890,6 +919,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           sessionId,
           config: closeoutModelConfig(config),
           textModelProvider: dependencies.closeout?.textModelProvider,
+          agentTaskPort: dependencies.agentTasks ?? undefined,
         });
         sendJson(response, 200, { ok: true });
       } catch (error) {
