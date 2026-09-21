@@ -9,6 +9,13 @@ import type { StoryCloseoutContext } from '../interview/closeout/context-builder
 import { CloseoutWorkflowError } from '../interview/closeout/errors.js';
 import type { CompactPromptReferences } from '../interview/closeout/prompt-builder.js';
 import { StoryCloseoutValidator } from '../interview/closeout/validator.js';
+import { StoryCompletionValidator } from '../story/completion/validator.js';
+import type {
+  StoryCompletionContext,
+  StoryCompletionExecutionContext,
+  StoryCompletionOutput,
+  StoryCompletionProcessorPort,
+} from '../story/completion/types.js';
 import type {
   OnboardingCloseoutProcessor,
   ProcessOnboardingCloseoutInput,
@@ -20,6 +27,7 @@ import { OnboardingCloseoutValidator } from '../onboarding/validator.js';
 import {
   mapOnboardingCloseoutContextToTask,
   mapStoryCloseoutContextToTask,
+  mapStoryCompletionContextToTask,
 } from './mappers/context-to-task.js';
 import type {
   AgentRepairFeedback,
@@ -185,5 +193,45 @@ export class AgentOnboardingCloseoutProcessor implements OnboardingCloseoutProce
       output: validated,
       modelResult: modelResultFromAgent(result),
     };
+  }
+}
+
+function completionRepairFeedback(error: unknown): AgentRepairFeedback[] {
+  const candidate = error as { code?: unknown; path?: unknown; message?: unknown };
+  return [{
+    code: typeof candidate?.code === 'string'
+      ? candidate.code
+      : 'STORY_COMPLETION_OUTPUT_INVALID',
+    ...(typeof candidate?.path === 'string' ? { path: candidate.path } : {}),
+    instruction: typeof candidate?.message === 'string'
+      ? candidate.message.slice(0, 500)
+      : '修正 Completion Proposal，使 status 与 gaps 满足业务约束。',
+  }];
+}
+
+export class AgentStoryCompletionProcessor implements StoryCompletionProcessorPort {
+  private readonly validator = new StoryCompletionValidator();
+
+  constructor(private readonly tasks: AgentTaskPort) {}
+
+  async process(
+    context: StoryCompletionContext,
+    execution?: StoryCompletionExecutionContext,
+  ): Promise<StoryCompletionOutput> {
+    if (!execution) throw new Error('AGENT_COMPLETION_EXECUTION_CONTEXT_REQUIRED');
+    const mapped = mapStoryCompletionContextToTask(context, {
+      runId: randomUUID(),
+      ownerId: execution.userId,
+      storyId: execution.storyId,
+    });
+    let validated: StoryCompletionOutput | undefined;
+    const result = await this.tasks.run(mapped.request, {
+      ...(execution.signal ? { signal: execution.signal } : {}),
+      validateProposal: (candidate) => {
+        validated = this.validator.validate(candidate);
+      },
+      repairFeedback: completionRepairFeedback,
+    });
+    return validated ?? this.validator.validate(result.output);
   }
 }
