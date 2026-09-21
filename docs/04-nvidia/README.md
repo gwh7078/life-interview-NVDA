@@ -4,17 +4,21 @@
 
 ## 当前推荐模型选型
 
-当前 DGX Spark 模型职责划分与候选模型已经形成 v1.0 推荐方案：
+当前 DGX Spark 模型职责划分与候选模型已经形成 v1.2 推荐方案：
 
-- Realtime Fast System：MiniCPM-o 4.5；第一备选 Step-Audio-2-mini（DGX Spark 必测，定制 vLLM / 实时性能待验证）；
-- Slow Decision：`nvidia/Qwen3-8B-FP4`；
+- Realtime Fast System 第一主测：**`Step-Audio-2-mini`**；
+- Realtime 本地对照 / 回退：MiniCPM-o 4.5；
+- 云端体验基准：StepAudio 3 Realtime；
+- Realtime Judge / Evidence Summary 第一候选：`Qwen/Qwen3.5-2B`；
 - Slow Search：NeMo Retriever + Nemotron Embedding / Rerank；
-- Slow Execution / Summary：`nvidia/Qwen3.6-35B-A3B-NVFP4`；
+- Post-session Agent / Summary / Generation：`nvidia/Qwen3.6-35B-A3B-NVFP4`；
+- Step-Audio-2-mini 优先走 upstream vLLM-Omni；当前确认的是模型 Pipeline 支持，Realtime WebSocket / full-duplex / barge-in 仍需 DGX Spark 实机验证；
+- `Step-Audio-2-mini-Think` 仅作为专项 A/B 候选，不进入默认 Realtime 主链；
 - 最终 Production Model 仍需真实 DGX Spark Benchmark 后冻结。
 
 详细设计：
 
-- [DGX Spark 大模型选型 v1.0](MODEL_SELECTION_v1.0.md)
+- [DGX Spark 大模型选型 v1.2](MODEL_SELECTION_v1.0.md)
 
 ## 当前已经验证
 
