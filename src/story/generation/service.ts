@@ -106,16 +106,29 @@ export class StoryGenerationService {
       sessionIds: context.transcriptSessionIds,
     }) as StoryGenerationSourceMetadata;
 
-    const created = await this.data.createNextVersion({
-      ownerId: request.ownerId,
-      scopeType: 'story',
-      scopeId: story.storyId,
-      title: story.title,
-      content: parsedOutput.data.content.trim(),
-      status: 'draft',
-      sourceJson: JSON.stringify(source),
-      expectedStoryUpdatedAt: story.updatedAt,
-    });
+    let created;
+    try {
+      created = await this.data.createNextVersion({
+        ownerId: request.ownerId,
+        scopeType: 'story',
+        scopeId: story.storyId,
+        title: story.title,
+        content: parsedOutput.data.content.trim(),
+        status: 'draft',
+        sourceJson: JSON.stringify(source),
+        expectedStoryUpdatedAt: story.updatedAt,
+      });
+    } catch (error) {
+      if (error instanceof StoryGenerationError) throw error;
+      if (error instanceof Error && error.message === 'STORY_CHANGED_DURING_GENERATION') {
+        throw new StoryGenerationError(
+          '故事在生成期间已更新，请基于最新内容重新生成。',
+          'STORY_CHANGED_DURING_GENERATION',
+          409,
+        );
+      }
+      throw error;
+    }
     writeDiagnosticLog('story-generation', 'info', 'Story generation completed.', {
       storyId: story.storyId,
       documentId: created.documentId,
