@@ -26,6 +26,7 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
     repo.create({
       runId: 'run-a', userId: 'user-a', agentType: 'story-context-inspector',
       taskType: 'inspect-story-context', resourceType: 'story', resourceId: 'story-a',
+      resourceVersion: 'story-v1',
       runtime: 'nemoclaw-openclaw', mode: 'story_continue',
       skill: 'interview-closeout', skillVersion: 'v1',
       provider: 'stepfun', model: 'hosted-test',
@@ -38,6 +39,7 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
       attemptCount: 2,
       repairCount: 1,
       toolCallCount: 0,
+      scriptCallCount: 0,
       formatRepairUsed: true,
       provider: 'stepfun',
       model: 'hosted-test',
@@ -56,9 +58,11 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
     assert.equal(saved?.provider, 'stepfun');
     assert.equal(saved?.contextVersion, 'v1');
     assert.equal(saved?.schemaVersion, 'v1');
+    assert.equal(saved?.resourceVersion, 'story-v1');
     assert.equal(saved?.attemptCount, 2);
     assert.equal(saved?.repairCount, 1);
     assert.equal(saved?.toolCallCount, 0);
+    assert.equal(saved?.scriptCallCount, 0);
     assert.equal(saved?.formatRepairUsed, true);
     assert.equal(saved?.inputHash, 'input-hash');
     assert.equal(saved?.outputHash, 'output-hash');
