@@ -1,10 +1,12 @@
-# Realtime Fast / Slow Dual-System Architecture v1.3
+# Realtime Fast / Slow Dual-System Architecture v1.4
 
 > Status: **Future / Deferred**
 >
 > 当前版本不开发，只冻结演进方向。
 >
 > 本版明确：Realtime Slow Agent 仍是 **Future / Deferred**。未来可在不阻塞语音的前提下使用 Story Agent Memory + Classic Retrieval，并把检索分为个人历史召回、个人历史事实检索与时代背景检索；Agentic Retrieval 不进入默认实时链路。
+>
+> v1.4 新增两条冻结机制：**Slow Agent 全程不阻塞 Fast System**；**Slow Queue 采用 latest-only，不允许形成历史任务积压**。
 
 ## 1. 问题
 
@@ -57,7 +59,95 @@ Context Bridge
 FAST SYSTEM 下一轮
 ```
 
-## 3. Fast System
+## 3. 两条 Realtime 硬规则
+
+### 3.1 Slow Agent 全程不阻塞 Fast System
+
+Fast System 与 Slow System 之间只能是旁路异步关系：
+
+```text
+Transcript Event
+     |
+     +----> FAST SYSTEM 继续当前语音轮次
+     |
+     +----> SLOW SYSTEM 异步处理
+```
+
+冻结规则：
+
+- Fast System 发送 Transcript Event 后立即继续，不 `await` Slow Agent；
+- 当前语音回答不得等待 Slow Decision、Retriever、Memory Search 或 Context Hint；
+- Slow System 超时、报错、未加载或资源不足时，Fast System 继续工作；
+- Slow System 不能对正在生成或播放的当前回答做中途改写；
+- Slow Result 只允许在后续 Safe Turn Boundary 注入；
+- Slow Queue 满载时只能替换 / 丢弃慢任务，不能向 Fast System 施加 backpressure；
+- Realtime Voice 的可用性优先级高于 Slow System 的完整性。
+
+原则：
+
+> **Slow Intelligence 可以迟到或被丢弃，但不能让实时对话等待。**
+
+### 3.2 Slow Queue = latest-only
+
+Realtime Interview 是持续输入流，Slow Agent 不允许使用普通 FIFO 队列积压历史任务。
+
+每个 Session 的 Slow Queue 最多保持：
+
+```text
+1 × active
++
+1 × pending_latest
+```
+
+示例：
+
+```text
+Turn 18
+ -> Slow Run A 正在执行
+
+Turn 19
+ -> pending = Turn 19
+
+Turn 20 到达
+ -> 不追加 Turn 20
+ -> 直接用 Turn 20 替换 pending Turn 19
+
+A 完成
+ -> 先做 Stale Protection
+ -> 然后只处理最新 pending Turn 20
+```
+
+冻结规则：
+
+- 已在执行的 active task 默认不强制取消；
+- 运行时若未来支持安全 cancellation，可以优化，但不是正确性前提；
+- 新任务到达时只覆盖 `pending_latest`，不形成 FIFO 队列；
+- 被覆盖的 pending task 不再执行；
+- active task 返回后必须先经过 Stale Protection；
+- active result 已过期则直接 DROP，不为了“已经算完了”而注入；
+- Slow System 永远优先处理“现在最相关的上下文”，而不是补做已经过去的历史窗口。
+
+目的：
+
+- 防止长访谈中慢任务越积越多；
+- 避免 10～30 秒前的分析污染当前话题；
+- 降低 DGX Spark 上高频 Slow Decision / Retrieval 的无效资源消耗；
+- 让 Slow System 的计算量天然受实时对话速度约束。
+
+### 3.3 最低验收测试
+
+未来实现时至少增加：
+
+1. **Latest-only Test**：Active=A 时连续提交 B/C/D，最终 Pending 只能是 D；
+2. **No-block Test**：Slow Agent 人工延迟 10 秒，Fast Voice 当前轮延迟不增加；
+3. **Slow Failure Test**：Slow Runtime 报错 / 超时，Fast Session 不终止；
+4. **Stale Drop Test**：旧 `based_on_turn_id` 结果返回后不能注入当前轮；
+5. **Burst Test**：连续高频 Transcript Event 下，pending depth 始终 ≤ 1；
+6. **Safe Boundary Test**：Slow Result 只能在允许的下一轮边界生效。
+
+---
+
+## 5. Fast System
 
 负责：
 
@@ -74,7 +164,7 @@ Fast System：
 - 不调用 Agentic Retrieval；
 - 不写长期 Story Memory。
 
-## 4. Slow System 的真正 Agent 自主性
+## 5. Slow System 的真正 Agent 自主性
 
 Slow Agent 不是每轮固定执行 Retriever。
 
@@ -95,7 +185,7 @@ Slow Agent 不是每轮固定执行 Retriever。
 
 这使自主性来自真实业务判断，而不是无意义的固定多轮调用。
 
-## 5. Realtime 只允许 Classic Retrieval
+## 6. Realtime 只允许 Classic Retrieval
 
 Future Realtime 低延迟检索统一采用 Classic Retrieval，但逻辑上分为两类数据源：
 
@@ -128,7 +218,7 @@ Realtime 目标：
 
 > **及时找到足够好的证据，而不是把历史搜索到最完整。**
 
-## 6. Agentic Retrieval 的边界
+## 7. Agentic Retrieval 的边界
 
 Agentic Retrieval 需要：
 
@@ -158,7 +248,7 @@ Agentic Retrieval 详细设计见：
 
 - `../retriever/RETRIEVER_DEFERRED_PLAN_v1.0.md`
 
-## 7. SlowContextUpdate / Context Hint
+## 8. SlowContextUpdate / Context Hint
 
 Slow Agent 不直接替用户回答，也不把 Top-K raw chunks 无差别塞给 Voice Model。
 
@@ -191,7 +281,7 @@ Slow Agent 不直接替用户回答，也不把 Top-K raw chunks 无差别塞给
 
 > **Retriever 返回 Evidence；Slow Agent 返回 Context Hint；Fast Voice System 消费 Context Hint。**
 
-## 8. 注入规则
+## 9. 注入规则
 
 Slow Result 只允许在 Safe Turn Boundary 注入：
 
@@ -200,7 +290,7 @@ Slow Result 只允许在 Safe Turn Boundary 注入：
 - 下一轮生成前：可以注入；
 - 已经过时：丢弃。
 
-## 9. Stale Protection
+## 10. Stale Protection
 
 至少带：
 
@@ -212,7 +302,7 @@ context_version
 expires_after_turn
 ```
 
-## 10. 条件式 Memory Search 触发
+## 11. 条件式 Memory Search 触发
 
 适合触发：
 
@@ -229,7 +319,7 @@ expires_after_turn
 - 为了展示 Tool Calling 固定 Search；
 - 简单 Agent Memory 已经足够时仍 Search。
 
-## 11. 可以提前检索，不提前回答
+## 12. 可以提前检索，不提前回答
 
 人生采访常出现长叙述。
 
@@ -249,7 +339,7 @@ Partial Transcript / Entity Signal
 
 > **Speculative Retrieval 可以；Speculative Response 谨慎。**
 
-## 12. Slow System 不写长期 Story Memory
+## 13. Slow System 不写长期 Story Memory
 
 Slow Recall 只服务当前 Realtime Session。
 
@@ -271,7 +361,7 @@ CLOSEOUT AGENT
   本次访谈结束后长期应该记住什么
 ```
 
-## 13. Future：时代背景检索
+## 14. Future：时代背景检索
 
 未来 Slow System 除了“找回用户过去说过什么”，还可以理解“用户当时生活在什么时代”。
 
@@ -323,7 +413,7 @@ Slow System 未来可以先筛选 1998～2002 年的时代背景，再根据当�
 
 - `../retriever/ERA_CONTEXT_LIBRARY_v1.0.md`
 
-## 14. 当前版本边界
+## 15. 当前版本边界
 
 当前 Fast Realtime 保持现有实现；Slow System、Realtime Retriever、Memory Search、时代背景检索、Agentic Retrieval 均不开发。
 
