@@ -243,7 +243,8 @@ Judge = Yes：
 
 Fast System：
 
-- 不等待 Retriever / Memory Search；
+- 用户说话以及 Fast Voice 正在生成 / 播放时，不等待 Retriever / Memory Search；
+- 仅在 User Turn Final 后按 §3 的 5～6 秒硬预算进入条件式 Hold；
 - 不直接读取大批历史 Transcript；
 - 不调用 Agentic Retrieval；
 - 不写长期 Story Memory。
