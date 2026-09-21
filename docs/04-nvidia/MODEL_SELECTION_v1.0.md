@@ -94,10 +94,10 @@ Realtime 默认路径不再要求 35B 参与每轮 Context Hint；35B 主要留�
 
 - Step-Audio-2-mini 为开源中文语音模型，8B 级；
 - 支持 Audio-to-Audio / Speech-to-Speech 方向；
-- 当前 upstream **vLLM-Omni 已原生支持 StepAudio2**；
+- 当前 upstream **vLLM-Omni 已支持 Step-Audio-2-mini 所属的 StepAudio2 模型 Pipeline**；
 - 不再把 StepFun 旧版 custom vLLM fork 作为推荐部署路径；
 - 推荐优先使用官方 vLLM / vLLM-Omni 技术栈，而不是维护单独 patched vLLM；
-- vLLM-Omni 已提供多模态 / Omni 模型部署能力，适合作为当前 Realtime Runtime 基线；
+- vLLM-Omni 已提供 StepAudio2 多阶段音频 Pipeline 支持；但不能据此宣称 Step-Audio-2-mini 已具备 vLLM-Omni Realtime WebSocket / full-duplex 能力；
 - DGX Spark / GB10 上的完整 Step-Audio-2-mini Realtime 性能仍必须实测，不在文档中提前宣称已验证。
 
 选择原因：
@@ -152,7 +152,9 @@ vLLM-Omni
    ↓
 Step-Audio-2-mini
    ↓
-Realtime Speech-to-Speech
+Audio-to-Audio / Streaming Pipeline
+   ↓
+Realtime 接入能力待 Spark 实测
 ```
 
 不再推荐：
@@ -167,7 +169,7 @@ Realtime Speech-to-Speech
 
 ### 必测风险
 
-即使 vLLM-Omni 已支持 StepAudio2，以下仍必须在真实 DGX Spark 上验证：
+即使 vLLM-Omni 已支持 Step-Audio-2-mini 所属的 StepAudio2 Pipeline，以下仍必须在真实 DGX Spark 上验证：
 
 - ARM64 / aarch64 镜像与依赖安装；
 - GB10 / Blackwell kernel 兼容；
@@ -209,6 +211,17 @@ P4  A/B
     -> MiniCPM-o 4.5 local
     -> StepAudio 3 Realtime cloud baseline
 ```
+
+### Think 版本定位
+
+`Step-Audio-2-mini-Think` 保留为专项 A/B 候选，不进入默认 Realtime 主链。
+
+原因：
+
+- 与普通 mini 同属 8B 级路线，但回答前增加显式推理；
+- 更适合复杂音频理解 / 推理场景；
+- 会增加 Turn Final → 首音延迟；
+- 当前产品已经由 2B Judge + Retriever + Evidence Summary 承担慢思考，因此默认不重复引入 Think 延迟。
 
 ### 其他备选
 
@@ -784,7 +797,7 @@ MiniCPM-o：
 
 - https://github.com/OpenBMB/MiniCPM-o
 
-StepFun Step-Audio-2：
+StepFun Step-Audio-2-mini：
 
 - https://github.com/stepfun-ai/Step-Audio2
 - https://huggingface.co/stepfun-ai/Step-Audio-2-mini
