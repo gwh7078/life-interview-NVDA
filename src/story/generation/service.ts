@@ -10,6 +10,7 @@ import {
   storyGenerationSourceSchema,
 } from './schema.js';
 import type {
+  StoryGenerationContextModelPort,
   StoryGenerationDataPort,
   StoryGenerationModelPort,
   StoryGenerationSourceMetadata,
@@ -31,6 +32,7 @@ export class StoryGenerationService {
   constructor(
     private readonly data: StoryGenerationDataPort,
     private readonly model: StoryGenerationModelPort,
+    private readonly contextModel?: StoryGenerationContextModelPort,
   ) {
     this.contextBuilder = new StoryGenerationContextBuilder(data);
   }
@@ -69,16 +71,21 @@ export class StoryGenerationService {
       story,
       baseDocument,
     });
-    const prompt = buildStoryGenerationPrompt(context);
-
-    // Exactly one model call. Generation failures are returned to the caller for manual retry.
-    const modelResponse = await this.model.generate({
-      prompt,
-      structuredOutput: {
-        name: 'story_generation',
-        jsonSchema: storyGenerationJsonSchema,
-      },
-    });
+    // Agent mode consumes structured Context through the Skill. Direct mode preserves the legacy Prompt path.
+    const modelResponse = this.contextModel
+      ? await this.contextModel.generateContext({
+          ownerId: request.ownerId,
+          storyId: story.storyId,
+          resourceVersion: story.updatedAt,
+          context,
+        })
+      : await this.model.generate({
+          prompt: buildStoryGenerationPrompt(context),
+          structuredOutput: {
+            name: 'story_generation',
+            jsonSchema: storyGenerationJsonSchema,
+          },
+        });
     const parsedOutput = storyGenerationOutputSchema.safeParse(modelResponse.output);
     if (!parsedOutput.success || !parsedOutput.data.content.trim()) {
       throw new StoryGenerationError('模型没有返回有效的文章正文。', 'GENERATION_OUTPUT_INVALID', 422);
@@ -107,6 +114,7 @@ export class StoryGenerationService {
       content: parsedOutput.data.content.trim(),
       status: 'draft',
       sourceJson: JSON.stringify(source),
+      expectedStoryUpdatedAt: story.updatedAt,
     });
     writeDiagnosticLog('story-generation', 'info', 'Story generation completed.', {
       storyId: story.storyId,
