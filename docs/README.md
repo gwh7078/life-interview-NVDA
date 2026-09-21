@@ -10,7 +10,8 @@
 2. 新方案新建版本文档；
 3. README 只指向当前推荐版本；
 4. 部署、测试、Benchmark 和失败报告长期保留；
-5. 已实现与 Planned / Future 必须清楚区分。
+5. 已实现与 Planned / Future 必须清楚区分；
+6. 早期快照统一归档到 `archive/`，仅供追溯，不作为当前开发依据。
 
 ## 评委推荐阅读路径
 
@@ -92,6 +93,7 @@ docs/
 ├── 06-decisions/      ADR
 ├── 07-reports/        测试 / 部署 / Benchmark
 ├── 08-future/         已冻结但延期的未来架构
+├── archive/           早期项目快照，仅供历史追溯
 ├── nvidia-agent-native/  Phase 0/1 历史资料
 └── product/           Web 产品与验收基线
 ```
@@ -103,5 +105,7 @@ docs/
 产品基线继续保留在 `product/`。
 
 比赛原始要求、DGX Spark 技术资料与来源清单位于仓库根目录 `../资料库/`。
+
+早期项目文档已归档到 `archive/initial-snapshot/`。这些文件记录项目早期产品、数据库、原型和竞品研究状态，**不得作为当前开发、架构或 Agent 行为的规范来源**；当前实现请始终从本 README 的“评委推荐阅读路径”与 Current 文档进入。
 
 文档版本化的目的不是堆数量，而是让每一次技术判断、验证、失败与收敛都可以追溯。
