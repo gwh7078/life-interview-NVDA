@@ -34,7 +34,7 @@ test('AgentGateway uses nemoclaw exec and records succeeded state', async () => 
   const runs = new FakeRuns();
   const runner = new FakeRunner();
   const gateway = new NemoClawOpenClawGateway({
-    sandboxName: 'life-interview-agent', toolBaseUrl: 'http://10.0.0.5:4175', timeoutMs: 1_000,
+    sandboxName: 'my-assistant', toolBaseUrl: 'http://10.0.0.5:4175', timeoutMs: 1_000,
   }, new AgentToolTokenService('phase1-test-secret-0123456789-abcdef'), runs, runner);
   const result = await gateway.run(request);
   assert.deepEqual(result.output, { title: '测试故事', gap_count: 2 });
@@ -49,7 +49,7 @@ test('AgentGateway records runtime timeout as failed', async () => {
   const runs = new FakeRuns();
   const runner = new FakeRunner(new CommandExecutionError('timeout', 'AGENT_RUNTIME_TIMEOUT'));
   const gateway = new NemoClawOpenClawGateway({
-    sandboxName: 'life-interview-agent', toolBaseUrl: 'http://10.0.0.5:4175', timeoutMs: 1_000,
+    sandboxName: 'my-assistant', toolBaseUrl: 'http://10.0.0.5:4175', timeoutMs: 1_000,
   }, new AgentToolTokenService('phase1-test-secret-0123456789-abcdef'), runs, runner);
   await assert.rejects(() => gateway.run(request), /timeout/);
   assert.deepEqual(runs.transitions, ['queued', 'running', 'failed']);

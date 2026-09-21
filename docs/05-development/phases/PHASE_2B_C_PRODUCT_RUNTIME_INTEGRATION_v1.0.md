@@ -152,7 +152,7 @@ AI_TASK_RUNTIME=agent    # NemoClaw/OpenClaw product path
 Phase 2B model profiles:
 
 ```env
-NEMOCLAW_SANDBOX=life-interview-agent
+NEMOCLAW_SANDBOX=my-assistant
 AGENT_PROVIDER=
 AGENT_MODEL_DEFAULT=
 AGENT_MODEL_REASONING=

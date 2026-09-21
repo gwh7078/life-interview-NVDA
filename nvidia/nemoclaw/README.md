@@ -6,8 +6,7 @@ Phase 1 uses the real OpenClaw runtime managed by NemoClaw/OpenShell.
 
 ```bash
 nemoclaw agents list
-nemoclaw onboard --name life-interview-agent
-nemoclaw life-interview-agent status
+nemoclaw my-assistant status
 nemoclaw inference get
 ```
 
@@ -22,7 +21,7 @@ OpenClaw is the default agent for normal NemoClaw onboarding. Do not use Pi in P
 Equivalent:
 
 ```bash
-nemoclaw life-interview-agent skill install ./agent/skills/story-context-inspector
+nemoclaw my-assistant skill install ./agent/skills/story-context-inspector
 ```
 
 ## Programmatic turn
@@ -30,7 +29,7 @@ nemoclaw life-interview-agent skill install ./agent/skills/story-context-inspect
 The Node AgentGateway uses the supported sandbox exec path:
 
 ```bash
-nemoclaw life-interview-agent exec -- openclaw agent --agent main -m "..."
+nemoclaw my-assistant exec -- openclaw agent --agent main -m "..."
 ```
 
 The actual Gateway also injects the short-lived Tool token as an in-sandbox process environment variable. Do not use raw `docker exec`: that bypasses the managed sandbox user/config path.

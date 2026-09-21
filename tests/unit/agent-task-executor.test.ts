@@ -81,7 +81,7 @@ class CaptureRunner implements CommandRunner {
 test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scripts', async () => {
   const runner = new CaptureRunner();
   const attempts = new NemoClawOpenClawAttemptRunner({
-    sandboxName: 'life-interview-agent',
+    sandboxName: 'my-assistant',
     provider: 'stepfun',
     models: { 'reasoning-fast': 'step-test-model' },
   }, runner);

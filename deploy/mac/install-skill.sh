@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-sandbox="${NEMOCLAW_SANDBOX:-life-interview-agent}"
+sandbox="${NEMOCLAW_SANDBOX:-my-assistant}"
 
 skills=(
   "onboarding-closeout"

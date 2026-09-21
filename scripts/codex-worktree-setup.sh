@@ -11,12 +11,26 @@ mkdir -p data
 if [[ ! -e .env ]]; then
   bash scripts/codex-node.sh node --eval '
     const fs = require("node:fs");
+    const crypto = require("node:crypto");
+    const toolTokenSecret = crypto.randomBytes(32).toString("hex");
     const content = [
       "# 本工作树的本地设置；不会被提交到 Git。",
       "DATABASE_PATH=./data/codex-worktree.db",
       "HOST=127.0.0.1",
       "PORT=0",
       "AUTH_MODE=demo_phone",
+      "AI_TASK_RUNTIME=direct",
+      "NEMOCLAW_SANDBOX=my-assistant",
+      "AGENT_MODEL_DEFAULT=volcengine/deepseek-v4-flash",
+      "AGENT_TOOL_HOST=127.0.0.1",
+      "AGENT_TOOL_PORT=4175",
+      "AGENT_TOOL_BASE_URL=",
+      "AGENT_TOOL_TOKEN_SECRET=" + toolTokenSecret,
+      "AGENT_RUNTIME_TIMEOUT_MS=120000",
+      "OPENCLAW_SANDBOX_URL=http://127.0.0.1:18790",
+      "NEMO_RETRIEVER_BASE_URL=http://127.0.0.1:7670",
+      "NEMO_RETRIEVER_MCP_URL=http://127.0.0.1:7670/mcp",
+      "NEMO_RETRIEVER_VECTORDB_URL=http://127.0.0.1:7671",
       "# 实时语音与会后总结密钥仅在需要真实模型联调时填写。",
       "# VOLCENGINE_API_KEY=",
       "# CLOSEOUT_API_KEY=",

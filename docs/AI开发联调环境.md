@@ -15,9 +15,6 @@ Mac
 │  └─ OpenClaw sandbox: my-assistant
 │     └─ 本机转发 127.0.0.1:18790
 │
-├─ Host OpenClaw gateway
-│  └─ 127.0.0.1:18789
-│
 └─ NVIDIA NeMo Retriever
    ├─ Service + REST + MCP: 127.0.0.1:7670
    └─ Internal VectorDB:     127.0.0.1:7671
@@ -45,7 +42,6 @@ Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不�
 |---|---|---|---|
 | NemoClaw sandbox | `my-assistant` | 开发/运维 | OpenClaw 隔离运行环境 |
 | OpenClaw sandbox forward | `http://127.0.0.1:18790` | 开发者/后端 | 当前 sandbox 的 Web/服务入口 |
-| Host OpenClaw gateway | `http://127.0.0.1:18789` | 本机 OpenClaw | Host gateway，不作为产品固定依赖 |
 | NeMo Retriever Service | `http://127.0.0.1:7670` | Web Backend/Agent | ingest、query、collections、health |
 | NeMo Retriever MCP | `http://127.0.0.1:7670/mcp` | Codex/OpenClaw/Agent | Agent 工具式检索与写入 |
 | Retriever VectorDB | `http://127.0.0.1:7671` | Retriever 内部 | LanceDB 向量/混合索引 |

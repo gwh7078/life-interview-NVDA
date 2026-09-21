@@ -10,5 +10,5 @@ echo "docker: ok"
 nemoclaw agents list
 nemoclaw inference get
 
-sandbox="${NEMOCLAW_SANDBOX:-life-interview-agent}"
+sandbox="${NEMOCLAW_SANDBOX:-my-assistant}"
 nemoclaw "$sandbox" status

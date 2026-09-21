@@ -413,7 +413,7 @@ test('AI_TASK_RUNTIME defaults to direct and supports explicit stub or agent com
 
   const agent = createAgentTaskPort({
     AI_TASK_RUNTIME: 'agent',
-    NEMOCLAW_SANDBOX: 'life-interview-agent',
+    NEMOCLAW_SANDBOX: 'my-assistant',
     AGENT_PROVIDER: 'stepfun',
     AGENT_MODEL_REASONING: 'reasoning-model',
     AGENT_MODEL_REASONING_FAST: 'fast-model',

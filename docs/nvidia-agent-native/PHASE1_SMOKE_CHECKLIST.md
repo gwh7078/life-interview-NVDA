@@ -17,7 +17,7 @@ Create `.env` from `.env.example`.
 Required Phase 1 values:
 
 ```bash
-NEMOCLAW_SANDBOX=life-interview-agent
+NEMOCLAW_SANDBOX=my-assistant
 AGENT_TOOL_HOST=<PRIVATE_HOST_IP>
 AGENT_TOOL_PORT=4175
 AGENT_TOOL_BASE_URL=http://<PRIVATE_HOST_IP>:4175

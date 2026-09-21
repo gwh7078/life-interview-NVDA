@@ -16,12 +16,12 @@
 
 - NemoClaw sandbox：`my-assistant`
 - OpenClaw sandbox Web/服务转发：`http://127.0.0.1:18790`
-- Host OpenClaw gateway：`http://127.0.0.1:18789`
 - NeMo Retriever 对外 HTTP：`http://127.0.0.1:7670`
 - NeMo Retriever MCP：`http://127.0.0.1:7670/mcp`
 - Retriever 内部 VectorDB：`http://127.0.0.1:7671`，业务代码禁止直接写入
 
 这些是当前 Mac 的本机示例；业务代码和检查脚本应从环境变量读取地址，不要硬编码端口。
+本项目只使用 NemoClaw `my-assistant` sandbox 内的 OpenClaw；Host OpenClaw 不属于项目运行依赖。
 
 ## 数据边界
 
