@@ -162,6 +162,23 @@ AGENT_MODEL_WRITING=
 
 For the first real E2E, all profiles may intentionally point to the same model. Model specialization should be benchmarked only after the runtime path is stable.
 
+## 7.1 Install formal Skills on Mac
+
+The current installer is the canonical Phase 2B-C Skill setup entrypoint:
+
+```bash
+./deploy/mac/install-skill.sh
+```
+
+It installs:
+
+- `onboarding-closeout`
+- `interview-closeout`
+- `story-completion`
+- `story-generation`
+
+It intentionally does **not** install the legacy Phase 1 `story-context-inspector`.
+
 ## 8. Deterministic verification
 
 Required before real runtime testing:
