@@ -257,6 +257,7 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
     let execCallCount = 0;
     let scriptCallCount = 0;
     let formatRepairUsed = false;
+    let attemptCount = 0;
 
     for (let attemptNumber = 1; attemptNumber <= request.executionPolicy.maxAttempts; attemptNumber += 1) {
       if (request.signal?.aborted) {
@@ -309,6 +310,11 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
           runtime: {
             ...attempt.runtime,
             latencyMs: Date.now() - started,
+            attemptCount,
+            repairCount,
+            execCallCount,
+            scriptCallCount,
+            formatRepairUsed,
           },
         };
       } catch (error) {
