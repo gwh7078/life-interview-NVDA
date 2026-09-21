@@ -1,4 +1,4 @@
-# Realtime Fast / Slow Dual-System Architecture v1.4
+# Realtime Fast / Slow Dual-System Architecture v1.5
 
 > Status: **Future / Deferred**
 >
@@ -6,7 +6,7 @@
 >
 > 本版明确：Realtime Slow Agent 仍是 **Future / Deferred**。未来可在不阻塞语音的前提下使用 Story Agent Memory + Classic Retrieval，并把检索分为个人历史召回、个人历史事实检索与时代背景检索；Agentic Retrieval 不进入默认实时链路。
 >
-> v1.4 新增两条冻结机制：**Slow Agent 全程不阻塞 Fast System**；**Slow Queue 采用 latest-only，不允许形成历史任务积压**。
+> v1.5 冻结新的实时交互策略：**用户说话与正在进行的 Fast Voice 生成永不被 Slow System 中途阻塞；用户回答结束后允许最多约 5～6 秒的条件式 Hold**。每轮由轻量 Judge 判断是否需要检索；同时投机执行 Query Embedding / 首阶段召回。Judge 判定无需检索则立即 Release；需要检索则在硬 Deadline 内完成 Rerank + Evidence Summary 后再 Release。异常情况下继续保留 **latest-only + stale protection**。
 
 ## 1. 问题
 
@@ -27,7 +27,7 @@ User Speech
 
 核心原则：
 
-> **Slow System 永远不阻塞当前语音轮次。**
+> **Slow System 不阻塞用户说话和正在进行的语音生成；只允许在用户回答结束后的 Turn Boundary 做有硬截止时间的条件式 Hold。**
 
 ## 2. Future Architecture
 
@@ -59,39 +59,57 @@ Context Bridge
 FAST SYSTEM 下一轮
 ```
 
-## 3. 两条 Realtime 硬规则
+## 3. Realtime 硬规则
 
-### 3.1 Slow Agent 全程不阻塞 Fast System
+### 3.1 条件式 Hold，而不是全程异步
 
-Fast System 与 Slow System 之间只能是旁路异步关系：
+Slow System 不允许打断用户说话，也不允许中途改写 Fast Voice 正在生成 / 播放的回答。
+
+但在一个 User Turn 完整结束、拿到 `Transcript Final` 后，允许进入短暂 Turn Boundary Hold：
 
 ```text
-Transcript Event
-     |
-     +----> FAST SYSTEM 继续当前语音轮次
-     |
-     +----> SLOW SYSTEM 异步处理
+用户回答结束 / Transcript Final
+            ↓
+         HOLD START
+            ↓
+   Judge + Query Embedding / First-stage Retrieval 并行
+            ↓
+     ┌──────┴──────┐
+     │             │
+ Judge = No     Judge = Yes
+     │             │
+立即 Release    Rerank + Evidence Summary
+     │             │
+     └──────┬──────┘
+            ↓
+       HARD DEADLINE
+        约 5～6 秒
+            ↓
+          Release
+            ↓
+      Fast Voice 下一问
 ```
 
 冻结规则：
 
-- Fast System 发送 Transcript Event 后立即继续，不 `await` Slow Agent；
-- 当前语音回答不得等待 Slow Decision、Retriever、Memory Search 或 Context Hint；
-- Slow System 超时、报错、未加载或资源不足时，Fast System 继续工作；
-- Slow System 不能对正在生成或播放的当前回答做中途改写；
-- Slow Result 只允许在后续 Safe Turn Boundary 注入；
-- Slow Queue 满载时只能替换 / 丢弃慢任务，不能向 Fast System 施加 backpressure；
-- Realtime Voice 的可用性优先级高于 Slow System 的完整性。
+- 用户正在说话时：Slow System 不阻塞、不抢占对话控制权；
+- Fast Voice 已经开始生成 / 播放当前回答时：Slow Result 不做中途注入；
+- 只有在 `Transcript Final` 后的 Turn Boundary 可以 Hold；
+- Judge 判定“不需要检索”时立即 Release，不等待已经投机执行的 Embedding / Retrieval；
+- Judge 判定“需要检索”时，允许继续占用当前 Hold 预算；
+- 从 Hold Start 到 Release 的产品硬预算目标为 **约 5～6 秒**；
+- 到 Deadline 仍未完成：必须 Release Fast Voice，不能无限等待；
+- Deadline 后返回的 Slow Result 只有仍 relevant 才允许作为后续轮次候选，否则 DROP。
 
 原则：
 
-> **Slow Intelligence 可以迟到或被丢弃，但不能让实时对话等待。**
+> **绝大多数轮次只付 Judge 延迟；只有真正需要历史信息的轮次才付完整 Slow Path 延迟。**
 
-### 3.2 Slow Queue = latest-only
+### 3.2 Slow Queue = latest-only（异常保护）
 
-Realtime Interview 是持续输入流，Slow Agent 不允许使用普通 FIFO 队列积压历史任务。
+正常情况下，单轮 Slow Path 应在 5～6 秒 Deadline 内结束，不应形成队列。
 
-每个 Session 的 Slow Queue 最多保持：
+latest-only 主要用于模型卡顿、Retriever 变慢、用户异常快速连续输入等情况。每个 Session 最多保持：
 
 ```text
 1 × active
@@ -99,51 +117,117 @@ Realtime Interview 是持续输入流，Slow Agent 不允许使用普通 FIFO �
 1 × pending_latest
 ```
 
+新任务只覆盖 `pending_latest`，不形成 FIFO 历史积压。
+
 示例：
 
 ```text
 Turn 18
- -> Slow Run A 正在执行
+ -> Slow Run A 尚未结束
 
 Turn 19
- -> pending = Turn 19
+ -> pending_latest = Turn 19
 
-Turn 20 到达
- -> 不追加 Turn 20
- -> 直接用 Turn 20 替换 pending Turn 19
+Turn 20 又到达
+ -> pending_latest 直接替换为 Turn 20
 
 A 完成
  -> 先做 Stale Protection
+ -> 过期则 DROP
  -> 然后只处理最新 pending Turn 20
 ```
 
 冻结规则：
 
-- 已在执行的 active task 默认不强制取消；
-- 运行时若未来支持安全 cancellation，可以优化，但不是正确性前提；
-- 新任务到达时只覆盖 `pending_latest`，不形成 FIFO 队列；
-- 被覆盖的 pending task 不再执行；
-- active task 返回后必须先经过 Stale Protection；
-- active result 已过期则直接 DROP，不为了“已经算完了”而注入；
-- Slow System 永远优先处理“现在最相关的上下文”，而不是补做已经过去的历史窗口。
+- active task 默认不强制取消；
+- 被新 Turn 覆盖的 pending task 不再执行；
+- active result 返回后必须先经过 Stale Protection；
+- 不能因为“已经算完”就强行把旧结果注入当前话题；
+- Slow System 永远优先现在最相关的上下文。
 
-目的：
+### 3.3 Judge 固定 3 轮上下文
 
-- 防止长访谈中慢任务越积越多；
-- 避免 10～30 秒前的分析污染当前话题；
-- 降低 DGX Spark 上高频 Slow Decision / Retrieval 的无效资源消耗；
-- 让 Slow System 的计算量天然受实时对话速度约束。
+Judge 每轮固定读取最近 **3 个完整对话轮次**，不是动态扩缩窗口。
 
-### 3.3 最低验收测试
+语义角色必须明确：
+
+```text
+[REFERENCE TURN -2]
+Assistant: ...
+User: ...
+
+[REFERENCE TURN -1]
+Assistant: ...
+User: ...
+
+[TARGET TURN]
+Assistant: ...
+User: ...
+```
+
+规则：
+
+- `TARGET TURN` 是本轮唯一判断主体；
+- 前两轮只用于理解人物、指代、时间、话题延续和上下文；
+- 不允许仅因为 Reference Turn 本身“值得检索”而触发当前轮检索；
+- Prompt 必须显式告诉 Judge：**判断 TARGET，Reference 只作背景**；
+- 固定三轮的原因是避免运行时上下文策略漂移，并让 2B 级模型保持稳定输入模式。
+
+需要专门增加“Reference 有检索价值、Target 无检索价值”的反例测试，验证小模型不会被前两轮带偏。
+
+### 3.4 Speculative Embedding / Retrieval
+
+为降低 Search Path 延迟，Judge 与 Query Embedding 可以每轮并行执行。
+
+Retrieval Query 不使用三轮完整对话直接做一个 Embedding。优先使用两路 Query：
+
+```text
+Query A
+= 当前 TARGET User Answer
+
+Query B
+= TARGET Assistant Question + TARGET User Answer
+```
+
+两路可以并行 Embedding，并可进一步提前执行首阶段 Dense / Hybrid Recall：
+
+```text
+Transcript Final
+      ├─> Judge（最近 3 轮）
+      ├─> Query A Embedding → candidate recall
+      └─> Query B Embedding → candidate recall
+```
+
+Judge = No：
+
+- 丢弃本轮 speculative embedding / candidates；
+- 立即 Release。
+
+Judge = Yes：
+
+- 复用已经完成的 embedding / candidates；
+- merge / dedupe；
+- Rerank；
+- Small Top-K；
+- Evidence Summary。
+
+原则：
+
+> **允许浪费少量 Embedding / 首召回计算，换取需要搜索时更短的用户等待。**
+
+### 3.5 最低验收测试
 
 未来实现时至少增加：
 
-1. **Latest-only Test**：Active=A 时连续提交 B/C/D，最终 Pending 只能是 D；
-2. **No-block Test**：Slow Agent 人工延迟 10 秒，Fast Voice 当前轮延迟不增加；
-3. **Slow Failure Test**：Slow Runtime 报错 / 超时，Fast Session 不终止；
-4. **Stale Drop Test**：旧 `based_on_turn_id` 结果返回后不能注入当前轮；
-5. **Burst Test**：连续高频 Transcript Event 下，pending depth 始终 ≤ 1；
-6. **Safe Boundary Test**：Slow Result 只能在允许的下一轮边界生效。
+1. **No-search Release Test**：Judge=No 时不等待 Embedding / Retrieval 完成；
+2. **Hold Deadline Test**：完整 Slow Path 超过 5～6 秒时强制 Release；
+3. **Parallelism Test**：Judge 与 Embedding / 首召回确实并行，而不是串行；
+4. **Reference-vs-Target Test**：前两轮值得搜、Target 不值得搜时不得误触发；
+5. **Latest-only Test**：Active=A 时连续提交 B/C/D，Pending 最终只能是 D；
+6. **Slow Failure Test**：Judge / Retriever / Summary 任一失败不终止 Realtime Session；
+7. **Stale Drop Test**：旧 `based_on_turn_id` 结果不能污染当前话题；
+8. **Safe Boundary Test**：Slow Result 只能在允许的 Turn Boundary 生效；
+9. **End-to-end Budget Test**：Judge=Yes 路径记录 P50 / P95，并验证真实 Spark 上能否稳定落在 5～6 秒预算内。
 
 ---
 
@@ -166,24 +250,26 @@ Fast System：
 
 ## 5. Slow System 的真正 Agent 自主性
 
-Slow Agent 不是每轮固定执行 Retriever。
+Slow System **每个 User Turn Final 都触发一次 Judge**，但不是每轮固定执行 Retriever。
 
-它持续观察 Transcript，并自主判断：
+当前模型候选优先采用轻量 2B 级 Judge。Judge 读取固定最近 3 轮，其中前两轮是 Reference，最后一轮是 Target，然后判断：
 
-- 当前信息是否值得处理；
-- 是否引用了过去内容；
+- Target 是否需要 Slow Search；
+- 是否引用历史信息；
 - 是否出现旧人物；
-- 是否存在时间冲突；
+- 是否存在时间 / 人物关系冲突；
 - 是否出现疑似新 Story；
-- 是否偏离当前采访目标；
 - 是否值得进一步深挖；
-- 是否需要个人历史召回；
-- 是否需要个人历史事实检索；
-- 当前对话中出现的年份 / 时间范围是否值得触发时代背景检索。
+- 是否需要个人历史检索；
+- 是否需要时代背景检索。
 
-只有符合条件时才调用 Tool。
+Judge 输出应非常短、结构化，不负责面向用户生成回答。
 
-这使自主性来自真实业务判断，而不是无意义的固定多轮调用。
+只有 Judge 判定需要 Search 时，才继续消费已经 speculative 生成的 Retrieval Candidate，并执行 Rerank / Evidence Summary。
+
+这使自主性来自：
+
+> **每轮都判断，但不是每轮都搜索。**
 
 ## 6. Realtime 只允许 Classic Retrieval
 
@@ -248,47 +334,54 @@ Agentic Retrieval 详细设计见：
 
 - `../retriever/RETRIEVER_DEFERRED_PLAN_v1.0.md`
 
-## 8. SlowContextUpdate / Context Hint
+## 8. Evidence Summary / Context Hint
 
-Slow Agent 不直接替用户回答，也不把 Top-K raw chunks 无差别塞给 Voice Model。
+Realtime Slow Path 不再默认调用 35B 模型做 Context Hint。
 
-它只产生短 Context Hint，例如：
+当前优先方案是：**同一个轻量 2B 模型同时承担 Judge 与 Evidence Summary 两个窄职责 Prompt**。
+
+Evidence Summary 输入：
+
+- 固定最近 3 轮对话；
+- Judge 结构化信号；
+- Small Top-K Evidence；
+- 必要的 source refs。
+
+输出必须极短，只保留 Realtime 下一问真正需要的信息，例如：
 
 ```json
 {
   "based_on_turn_id": "turn_18",
-  "memory_recall": [
+  "facts": [
     {
-      "claim": "用户此前提到大约 1978 年进厂",
+      "claim": "用户此前提到王师傅是入厂后的第一位师傅",
       "source_message_ids": ["msg_123"]
     }
   ],
-  "possible_conflicts": [
-    {
-      "current": "1979 年进厂",
-      "previous": "约 1978 年进厂",
-      "action": "clarify_if_natural",
-      "source_message_ids": ["msg_123"]
-    }
-  ],
+  "possible_conflicts": [],
   "interview_hints": [
-    "如果自然，可询问王师傅第一次带他工作的场景"
+    "如果自然，可以追问第一次跟王师傅上班的场景"
   ]
 }
 ```
 
 原则：
 
-> **Retriever 返回 Evidence；Slow Agent 返回 Context Hint；Fast Voice System 消费 Context Hint。**
+> **Retriever 返回 Evidence；2B Evidence Summary 压成短 Context Hint；Fast Voice 消费 Context Hint。**
 
-## 9. 注入规则
+2B 是否足以承担 Evidence Summary，必须通过真实采访 Eval 验证；如果质量不足，再升级模型，而不是预先固定 35B 进入 Realtime Path。
 
-Slow Result 只允许在 Safe Turn Boundary 注入：
+## 9. 注入与 Release 规则
 
-- 用户正在说话：不注入；
-- Fast System 正在生成当前回答：不强制改变；
-- 下一轮生成前：可以注入；
-- 已经过时：丢弃。
+Slow Result 的正常注入点就是当前 User Turn 结束后的 Hold Boundary。
+
+- Judge = No：立即 Release，不注入 Slow Context；
+- Judge = Yes 且 5～6 秒内完成：先注入短 Context Hint，再 Release Fast Voice；
+- 用户已经开始下一轮说话：不强制插入；
+- Fast Voice 已经开始生成 / 播放：不做中途改写；
+- Deadline 已到：先 Release；
+- Deadline 后结果仍 relevant：可以作为下一轮候选；
+- 已经过时：DROP。
 
 ## 10. Stale Protection
 
@@ -319,25 +412,27 @@ expires_after_turn
 - 为了展示 Tool Calling 固定 Search；
 - 简单 Agent Memory 已经足够时仍 Search。
 
-## 12. 可以提前检索，不提前回答
+## 12. 每轮允许投机 Embedding / 首阶段召回
 
-人生采访常出现长叙述。
+当前冻结策略比“检测到实体后再提前检索”更明确：
 
-Future 可以：
+> **每个 User Turn Final 都允许 Judge 与 Query Embedding / First-stage Retrieval 并行启动。**
 
-```text
-Partial Transcript / Entity Signal
- -> candidate Classic Retrieval prefetch
- -> user turn final
- -> validate
- -> reuse or discard
-```
+原因：
 
-但不建议因为用户尚未说完就提前生成下一条语音回答。
+- Query Embedding 成本远小于一次完整 LLM 推理；
+- 用户每轮问答通常已有约 15 秒以上自然间隔；
+- 真正需要 Search 时，可以节省串行等待；
+- Judge=No 时直接丢弃结果即可。
 
-原则：
+注意：
 
-> **Speculative Retrieval 可以；Speculative Response 谨慎。**
+- 这里计算的是 Query Embedding，不是重新 Embedding 历史知识库；
+- 历史 Transcript / Agent Memory 索引应该提前建立；
+- 三轮完整上下文只给 Judge / Evidence Summary；
+- Retrieval Query 使用当前回答，以及“当前问题 + 当前回答”两路；
+- speculative recall 不能自动写入 Memory，也不能直接影响 Realtime；
+- 是否真正采用搜索结果仍由 Judge 决定。
 
 ## 13. Slow System 不写长期 Story Memory
 
