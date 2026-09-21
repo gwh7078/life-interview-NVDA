@@ -7,3 +7,4 @@ export * from './adapters/nemoclaw-agent-task-adapter.js';
 export * from './mappers/context-to-task.js';
 export * from './runtime.js';
 export * from './errors.js';
+export * from './product-processors.js';
