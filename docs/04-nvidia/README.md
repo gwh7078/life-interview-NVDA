@@ -2,6 +2,20 @@
 
 本目录用于整理 NVIDIA 相关 Runtime、DGX Spark、本地推理、Retriever 与部署资料。
 
+## 当前推荐模型选型
+
+当前 DGX Spark 模型职责划分与候选模型已经形成 v1.0 推荐方案：
+
+- Realtime Fast System：MiniCPM-o 4.5；
+- Slow Decision：`nvidia/Qwen3-8B-FP4`；
+- Slow Search：NeMo Retriever + Nemotron Embedding / Rerank；
+- Slow Execution / Summary：`nvidia/Qwen3.6-35B-A3B-NVFP4`；
+- 最终 Production Model 仍需真实 DGX Spark Benchmark 后冻结。
+
+详细设计：
+
+- [DGX Spark 大模型选型 v1.0](MODEL_SELECTION_v1.0.md)
+
 ## 当前已经验证
 
 ### NemoClaw / OpenShell / OpenClaw
