@@ -72,7 +72,7 @@ class CaptureRunner implements CommandRunner {
     this.stdin = stdin ?? '';
     this.signal = signal;
     return {
-      stdout: 'trace\nLIFE_INTERVIEW_RESULT {"status":"interviewing","gaps":[]}\n',
+    stdout: 'trace\nLIFE_INTERVIEW_RESULT {"status":"interviewing","gaps":[]}\n[agents/agent-command] run ended with stopReason=stop\n',
       stderr: '',
     };
   }
@@ -94,9 +94,9 @@ test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scrip
   });
 
   assert.equal(runner.command, 'nemoclaw');
-  assert.ok(runner.args.includes('agent'));
-  assert.ok(runner.args.includes('--message-file'));
-  assert.ok(runner.args.includes('-'));
+  assert.ok(runner.args.includes('exec'));
+  assert.ok(runner.args.includes('--stdin'));
+  assert.ok(runner.args.some((arg) => arg.includes('openclaw agent "$@" --message-file "$tmp"')));
   assert.ok(runner.args.includes('--model'));
   assert.ok(runner.args.includes('step-test-model'));
   assert.equal(runner.args.some((arg) => arg.includes('完整采访内容')), false);
@@ -140,6 +140,7 @@ test('TaskExecutor owns runtime retry inside one total three-attempt budget', as
   const result = await executor.execute(taskRequest());
 
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
+  assert.equal(result.runtime.attemptCount, 2);
   assert.equal(attempts.requests.length, 2);
   assert.equal(attempts.requests[0]?.mode, 'normal');
   assert.equal(attempts.requests[1]?.mode, 'runtime_retry');

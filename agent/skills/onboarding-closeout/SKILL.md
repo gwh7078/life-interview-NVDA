@@ -52,7 +52,37 @@ Story status is always `pending`.
 
 ## Output
 
-Return only the registered output object.
+Return only the registered output object. The exact top-level shape is:
+
+```json
+{
+  "profile": {
+    "name": {"value": "林岚", "source_refs": ["source_1"]},
+    "birth_year": {"value": 1990, "source_refs": ["source_1"]},
+    "gender": {"value": null, "source_refs": []},
+    "birth_place": {"value": null, "source_refs": []},
+    "current_location": {"value": "杭州", "source_refs": ["source_1"]},
+    "current_status": {"value": null, "source_refs": []},
+    "profile_summary": {"value": "...", "source_refs": ["source_1"]}
+  },
+  "life_stages": [{
+    "title": "毕业后独自赴北京工作",
+    "start_year": null,
+    "end_year": null,
+    "source_refs": ["source_2"],
+    "stories": [{
+      "title": "第一次独自赴北京工作",
+      "summary": "...",
+      "source_refs": ["source_2"],
+      "status": "pending"
+    }]
+  }]
+}
+```
+
+Every profile field is an object with `value` and `source_refs`, including
+fields whose value is `null`. Do not add a top-level `source_refs` field.
+`source_refs` may contain only the supplied user-message aliases.
 
 The final OpenClaw response must end with exactly one line:
 

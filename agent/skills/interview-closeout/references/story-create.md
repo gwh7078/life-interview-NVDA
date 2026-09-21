@@ -26,4 +26,17 @@ You may receive:
 - Do not split other experiences into additional Story seeds in this mode.
 - Do not use `other_stories` as evidence. They are duplicate/context hints only.
 
-Return only the registered `story_create` schema.
+Return only the registered `story_create` schema:
+
+```json
+{
+  "story": {
+    "title": "第一次独自赴北京工作",
+    "summary": "...",
+    "agent_memory": "...",
+    "source_message_ids": ["m1"]
+  }
+}
+```
+
+Do not add `mode`, `status`, or fields outside this shape.

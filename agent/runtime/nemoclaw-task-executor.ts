@@ -72,15 +72,15 @@ export interface NemoClawAttemptRunnerConfig {
 
 function parseLifeInterviewResult(stdout: string): Record<string, unknown> {
   const nonEmpty = stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
-  const finalLine = nonEmpty.at(-1);
-  if (!finalLine?.startsWith('LIFE_INTERVIEW_RESULT ')) {
+  const resultLine = [...nonEmpty].reverse().find((line) => line.startsWith('LIFE_INTERVIEW_RESULT '));
+  if (!resultLine) {
     throw new AgentResultFormatError(
       'AGENT_RESULT_MISSING',
       'The final LIFE_INTERVIEW_RESULT line is missing.',
       stdout.slice(-20_000),
     );
   }
-  const raw = finalLine.slice('LIFE_INTERVIEW_RESULT '.length);
+  const raw = resultLine.slice('LIFE_INTERVIEW_RESULT '.length);
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -174,16 +174,27 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
     }
 
     const started = Date.now();
+    const sandboxAgentCommand =
+      'tmp=$(mktemp /tmp/life-interview-task.XXXXXX); '
+      + 'trap \'rm -f "$tmp"\' EXIT; '
+      + 'cat > "$tmp"; '
+      + 'openclaw agent "$@" --message-file "$tmp"';
     const args = [
       this.config.sandboxName,
-      'agent',
+      'exec',
+      '--stdin',
+      '--timeout',
+      String(Math.max(1, Math.ceil(request.task.executionPolicy.timeoutMs / 1000))),
+      '--',
+      'sh',
+      '-c',
+      sandboxAgentCommand,
+      'sh',
       '--agent',
       'main',
       '--session-key',
       `agent:main:task:${request.task.runId}:attempt:${request.attemptNumber}`,
       '--local',
-      '--message-file',
-      '-',
       '--timeout',
       String(Math.max(1, Math.ceil(request.task.executionPolicy.timeoutMs / 1000))),
     ];
@@ -264,6 +275,7 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
         lastError = cancelledError();
         break;
       }
+      attemptCount = attemptNumber;
       this.runs?.recordAttempt?.(request.ownerId, request.runId, {
         attemptCount: attemptNumber,
         repairCount,

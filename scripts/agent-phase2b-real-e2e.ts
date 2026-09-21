@@ -5,6 +5,8 @@ import path from 'node:path';
 import { createAgentTaskPort, type AgentTaskRequestUnion } from '../src/agent-tasks/index.js';
 import { createDatabase } from '../src/db/client.js';
 import { runMigrations } from '../src/db/migrate.js';
+import { nowUtcIso } from '../src/db/time.js';
+import { accounts, agentRuns, users } from '../src/db/schema.js';
 
 interface CaseResult {
   name: string;
@@ -237,9 +239,23 @@ async function main(): Promise<void> {
 
   const directory = mkdtempSync(path.join(tmpdir(), 'life-interview-phase2b-e2e-'));
   const databasePath = path.join(directory, 'memoir.db');
+  const ownerId = 'phase2b-e2e-owner';
   const database = createDatabase(databasePath);
   try {
     runMigrations(database);
+    const now = nowUtcIso();
+    database.db.insert(accounts).values({
+      accountId: 'phase2b-e2e-account',
+      status: 'legacy',
+      createdAt: now,
+      updatedAt: now,
+    }).run();
+    database.db.insert(users).values({
+      userId: ownerId,
+      accountId: 'phase2b-e2e-account',
+      createdAt: now,
+      updatedAt: now,
+    }).run();
   } finally {
     database.close();
   }
@@ -252,7 +268,6 @@ async function main(): Promise<void> {
   const tasks = createAgentTaskPort(env, { databasePath });
   if (!tasks) throw new Error('Agent runtime did not resolve to AgentTaskPort.');
 
-  const ownerId = 'phase2b-e2e-owner';
   const results: CaseResult[] = [];
   try {
     for (const item of cases(ownerId)) {
@@ -282,6 +297,37 @@ async function main(): Promise<void> {
       }
     }
 
+    const traceDatabase = createDatabase(databasePath);
+    let tracing: unknown[];
+    try {
+      tracing = traceDatabase.db.select().from(agentRuns).all().map((run) => ({
+        runId: run.runId,
+        taskType: run.taskType,
+        mode: run.mode,
+        skill: run.skill,
+        skillVersion: run.skillVersion,
+        provider: run.provider,
+        model: run.model,
+        resourceType: run.resourceType,
+        resourceId: run.resourceId,
+        resourceVersion: run.resourceVersion,
+        contextVersion: run.contextVersion,
+        schemaVersion: run.schemaVersion,
+        attemptCount: run.attemptCount,
+        repairCount: run.repairCount,
+        toolCallCount: run.toolCallCount,
+        scriptCallCount: run.scriptCallCount,
+        formatRepairUsed: run.formatRepairUsed,
+        latencyMs: run.latencyMs,
+        errorCode: run.errorCode,
+        inputHash: run.inputHash,
+        outputHash: run.outputHash,
+        status: run.status,
+      }));
+    } finally {
+      traceDatabase.close();
+    }
+
     const report = {
       generatedAt: new Date().toISOString(),
       sandbox: process.env.NEMOCLAW_SANDBOX,
@@ -294,6 +340,7 @@ async function main(): Promise<void> {
       },
       passed: results.filter((item) => item.ok).length,
       total: results.length,
+      tracing,
       results,
     };
     process.stdout.write(`LIFE_INTERVIEW_PHASE2B_E2E_REPORT ${JSON.stringify(report)}\n`);

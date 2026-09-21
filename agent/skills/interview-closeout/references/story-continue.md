@@ -47,4 +47,27 @@ A new Story seed may be proposed when the user clearly mentions another independ
 - each seed needs direct user evidence
 - other Story summaries are duplicate/context hints, not evidence
 
-Return only the registered `story_continue` schema.
+Return only the registered `story_continue` schema:
+
+```json
+{
+  "current_story": {
+    "summary": "...",
+    "agent_memory": "...",
+    "memory_changes": [{
+      "type": "correct",
+      "previous_text": "用户大约在2012年前后第一次独自去北京工作。",
+      "new_text": "用户是2013年春节以后第一次独自去北京工作的。",
+      "source_message_ids": ["m2"]
+    }],
+    "source_message_ids": ["m2", "m3"]
+  },
+  "new_stories": []
+}
+```
+
+`current_story` contains only `summary`, `agent_memory`,
+`memory_changes`, and `source_message_ids`. Each memory change uses exactly
+`type`, `previous_text`, `new_text`, and `source_message_ids`; do not use
+`change_type`, `evidence`, `mode`, or `status`. Use the transcript aliases
+(`m1`, `m2`, ...) for `source_message_ids`.
