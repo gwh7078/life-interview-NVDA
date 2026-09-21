@@ -16,6 +16,11 @@ import type {
   StoryCompletionOutput,
   StoryCompletionProcessorPort,
 } from '../story/completion/types.js';
+import { storyGenerationOutputSchema } from '../story/generation/schema.js';
+import type {
+  StoryGenerationContextModelPort,
+  StoryGenerationModelResponse,
+} from '../story/generation/types.js';
 import type {
   OnboardingCloseoutProcessor,
   ProcessOnboardingCloseoutInput,
@@ -28,6 +33,7 @@ import {
   mapOnboardingCloseoutContextToTask,
   mapStoryCloseoutContextToTask,
   mapStoryCompletionContextToTask,
+  mapStoryGenerationContextToTask,
 } from './mappers/context-to-task.js';
 import type {
   AgentRepairFeedback,
@@ -233,5 +239,48 @@ export class AgentStoryCompletionProcessor implements StoryCompletionProcessorPo
       repairFeedback: completionRepairFeedback,
     });
     return validated ?? this.validator.validate(result.output);
+  }
+}
+
+function generationRepairFeedback(error: unknown): AgentRepairFeedback[] {
+  const candidate = error as { issues?: Array<{ path?: unknown; code?: unknown }> };
+  const first = Array.isArray(candidate?.issues) ? candidate.issues[0] : undefined;
+  return [{
+    code: 'GENERATION_OUTPUT_INVALID',
+    ...(first && Array.isArray(first.path) && first.path.length
+      ? { path: first.path.map(String).join('.') }
+      : {}),
+    instruction: '只返回 Schema 要求的 content 正文，并确保正文非空。',
+  }];
+}
+
+export class AgentStoryGenerationContextModel implements StoryGenerationContextModelPort {
+  constructor(private readonly tasks: AgentTaskPort) {}
+
+  async generateContext(input: {
+    ownerId: string;
+    storyId: string;
+    resourceVersion: string;
+    context: Parameters<StoryGenerationContextModelPort['generateContext']>[0]['context'];
+  }): Promise<StoryGenerationModelResponse> {
+    const mapped = mapStoryGenerationContextToTask(input.context, {
+      runId: randomUUID(),
+      ownerId: input.ownerId,
+      storyId: input.storyId,
+      resourceVersion: input.resourceVersion,
+    });
+    let validated: { content: string } | undefined;
+    const result = await this.tasks.run(mapped.request, {
+      validateProposal: (candidate) => {
+        validated = storyGenerationOutputSchema.parse(candidate);
+      },
+      repairFeedback: generationRepairFeedback,
+    });
+    const output = validated ?? storyGenerationOutputSchema.parse(result.output);
+    return {
+      output,
+      provider: result.runtime.provider ?? result.runtime.runtime,
+      model: result.runtime.model,
+    };
   }
 }
