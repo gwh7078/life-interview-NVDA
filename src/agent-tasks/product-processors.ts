@@ -39,10 +39,17 @@ import type {
   AgentRepairFeedback,
   AgentTaskPort,
 } from './ports/agent-task-port.js';
+import { getAgentTaskDefinition } from './definitions/task-definition-registry.js';
 import type {
   AgentTaskReferenceMap,
   AgentTaskResultUnion,
 } from './contracts/index.js';
+import { AgentToolTokenService } from '../../agent/tools/token.js';
+
+export interface StoryCloseoutScriptConfig {
+  baseUrl: string;
+  tokenService: AgentToolTokenService;
+}
 
 function modelResultFromAgent(result: AgentTaskResultUnion): CloseoutModelResult {
   const usage = result.runtime.usage
@@ -137,16 +144,35 @@ function onboardingRepairFeedback(error: unknown): AgentRepairFeedback[] {
 export class AgentStoryCloseoutProcessor implements CloseoutProcessor {
   private readonly validator = new StoryCloseoutValidator();
 
-  constructor(private readonly tasks: AgentTaskPort) {}
+  constructor(
+    private readonly tasks: AgentTaskPort,
+    private readonly scriptConfig?: StoryCloseoutScriptConfig,
+  ) {}
 
   async process(input: ProcessStoryCloseoutInput): Promise<ProcessStoryCloseoutResult> {
     input.assertCurrentAttempt();
     const mapped = mapStoryCloseoutContextToTask(input.context, randomUUID());
     const references = storyReferences(input.context, mapped.references);
     let validated: ProcessStoryCloseoutResult['output'] | undefined;
+    const storyContinuePolicy = getAgentTaskDefinition('interview.closeout', 'story_continue').executionPolicy;
+    const scriptContext = input.context.mode === 'continue' && this.scriptConfig && input.context.currentStory
+      ? {
+          baseUrl: this.scriptConfig.baseUrl,
+          token: this.scriptConfig.tokenService.issue({
+            runId: mapped.request.runId,
+            userId: input.context.userId,
+            tool: 'memory_search',
+            resourceType: 'story',
+            resourceId: input.context.currentStory.story_id,
+            ttlMs: storyContinuePolicy.timeoutMs * storyContinuePolicy.maxAttempts
+              + 60_000,
+          }),
+        }
+      : undefined;
 
     const result = await this.tasks.run(mapped.request, {
       signal: input.signal,
+      ...(scriptContext ? { scriptContext } : {}),
       validateProposal: (candidate) => {
         input.assertCurrentAttempt();
         validated = this.validator.validate(candidate, input.context, references);

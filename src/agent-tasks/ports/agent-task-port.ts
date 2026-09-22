@@ -9,8 +9,14 @@ export interface AgentRepairFeedback {
   instruction: string;
 }
 
+export interface AgentScriptContext {
+  baseUrl: string;
+  token: string;
+}
+
 export interface AgentTaskRunOptions {
   signal?: AbortSignal;
+  scriptContext?: AgentScriptContext;
   // Deterministic Backend validation. Throw to request Validation Repair.
   validateProposal?(output: unknown): void;
   // Convert a validation error into compact, model-safe repair instructions.

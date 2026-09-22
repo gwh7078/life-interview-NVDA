@@ -56,6 +56,13 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
     }
 
     const definition = getAgentTaskDefinition(request.taskType, request.mode);
+    if (options.scriptContext && !definition.executionPolicy.scriptCapabilities.includes('memory-search')) {
+      throw new AgentTaskContractError(
+        'This Agent Task does not authorize retrieval Skill Scripts.',
+        'AGENT_SCRIPT_CAPABILITY_UNAUTHORIZED',
+        { taskType: request.taskType, ...(request.mode ? { mode: request.mode } : {}) },
+      );
+    }
     if (request.schemaVersion !== definition.schemaVersion) {
       throw new AgentTaskContractError(
         `Agent Task schema version ${request.schemaVersion} is not supported; expected ${definition.schemaVersion}.`,
@@ -96,6 +103,7 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
       modelProfile: definition.modelProfile,
       executionPolicy: definition.executionPolicy,
       payload: request.payload,
+      ...(options.scriptContext ? { scriptContext: options.scriptContext } : {}),
       ...(options.signal ? { signal: options.signal } : {}),
       validateOutput(output) {
         const parsed = definition.outputSchema.parse(output);

@@ -59,6 +59,9 @@ export interface AgentRuntimeTimingEvent {
   openclawMs?: number;
   hostOverheadMs?: number;
   parseMs: number;
+  scriptCallCount: number;
+  scriptResultCount?: number;
+  scriptLatencyMs?: number;
   totalMs: number;
   errorCode?: string;
 }
@@ -130,6 +133,26 @@ function diagnosticErrorCode(error: unknown): string | undefined {
   return error instanceof Error ? error.name : undefined;
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function countScriptCalls(value: string): number {
+  return value.match(/LIFE_INTERVIEW_SCRIPT_CALL\b/gu)?.length ?? 0;
+}
+
+function parseScriptDiagnostics(value: string): {
+  callCount: number;
+  resultCount?: number;
+  latencyMs?: number;
+} {
+  const result = /LIFE_INTERVIEW_SCRIPT_RESULT\s+memory-search\s+result_count=(\d+)\s+latency_ms=(\d+)/u.exec(value);
+  return {
+    callCount: countScriptCalls(value),
+    ...(result ? { resultCount: Number(result[1]), latencyMs: Number(result[2]) } : {}),
+  };
+}
+
 function parseLifeInterviewResult(stdout: string): Record<string, unknown> {
   const nonEmpty = stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
   const resultLine = [...nonEmpty].reverse().find((line) => line.startsWith('LIFE_INTERVIEW_RESULT '));
@@ -177,6 +200,9 @@ function buildPrompt(request: AgentAttemptRequest): string {
   } else {
     lines.push(
       `Only these Skill Script capabilities are authorized when genuinely needed: ${task.executionPolicy.scriptCapabilities.join(', ')}.`,
+      'If historical evidence is genuinely needed, run the authorized Skill Script from the installed skill directory and use its small JSON result as supplementary evidence.',
+      'For memory-search, use: node {baseDir}/scripts/memory-search.mjs "<short natural-language query>".',
+      'Never provide owner IDs, resource IDs, tokens, endpoints, or other security fields to the script; the runtime supplies them.',
     );
   }
 
@@ -228,9 +254,6 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
   }
 
   async run(request: AgentAttemptRequest): Promise<AgentAttemptResult> {
-    if (request.task.executionPolicy.scriptCapabilities.length > 0) {
-      throw new Error('AGENT_SCRIPT_CAPABILITIES_NOT_IMPLEMENTED');
-    }
     const started = performance.now();
     const model = this.config.models?.[request.task.modelProfile]
       ?? this.config.defaultModel
@@ -243,9 +266,21 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
     let stdout = '';
     let stderr = '';
     let failure: unknown;
+    let scriptCallCount = 0;
+    let scriptResultCount: number | undefined;
+    let scriptLatencyMs: number | undefined;
 
+    const authorizedScriptContext = request.task.scriptContext
+      && request.task.executionPolicy.scriptCapabilities.includes('memory-search')
+      ? request.task.scriptContext
+      : undefined;
+    const scriptEnvironment = authorizedScriptContext
+      ? `export LIFE_INTERVIEW_RETRIEVAL_BASE_URL=${shellQuote(authorizedScriptContext.baseUrl)}; `
+        + `export LIFE_INTERVIEW_RETRIEVAL_TOKEN=${shellQuote(authorizedScriptContext.token)}; `
+      : '';
     const sandboxAgentCommand =
-      'tmp=$(mktemp /tmp/life-interview-task.XXXXXX); '
+      scriptEnvironment
+      + 'tmp=$(mktemp /tmp/life-interview-task.XXXXXX); '
       + 'trap \'rm -f "$tmp"\' EXIT; '
       + 'cat > "$tmp"; '
       + 'openclaw_start_ms=$(date +%s%3N); '
@@ -300,6 +335,10 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
       }
       stdout = executed.stdout;
       stderr = executed.stderr;
+      const scriptDiagnostics = parseScriptDiagnostics(`${executed.stdout}\n${executed.stderr}`);
+      scriptCallCount = scriptDiagnostics.callCount;
+      scriptResultCount = scriptDiagnostics.resultCount;
+      scriptLatencyMs = scriptDiagnostics.latencyMs;
       const parseStarted = performance.now();
       let output: Record<string, unknown>;
       try {
@@ -316,7 +355,7 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
           latencyMs: Math.round(performance.now() - started),
         },
         execCallCount: 0,
-        scriptCallCount: 0,
+        scriptCallCount,
       };
     } catch (error) {
       failure = error;
@@ -324,6 +363,10 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
       throw error;
     } finally {
       const totalMs = performance.now() - started;
+      const scriptDiagnostics = parseScriptDiagnostics(`${stdout}\n${stderr}`);
+      scriptCallCount = scriptDiagnostics.callCount;
+      scriptResultCount = scriptDiagnostics.resultCount;
+      scriptLatencyMs = scriptDiagnostics.latencyMs;
       writeRuntimeTiming(this.config.diagnosticsPath, {
         timestamp: new Date().toISOString(),
         runId: request.task.runId,
@@ -340,6 +383,9 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
         commandMs: roundMilliseconds(commandMs),
         ...parseOpenClawTiming(stderr, commandMs),
         parseMs: roundMilliseconds(parseMs),
+        scriptCallCount,
+        ...(scriptResultCount !== undefined ? { scriptResultCount } : {}),
+        ...(scriptLatencyMs !== undefined ? { scriptLatencyMs } : {}),
         totalMs: roundMilliseconds(totalMs),
         ...(failure ? { errorCode: diagnosticErrorCode(failure) } : {}),
       });

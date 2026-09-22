@@ -22,7 +22,9 @@ export const bookCoverStyles = ['paper', 'sage', 'rose'] as const;
 export const storyShareStatuses = ['active', 'revoked'] as const;
 export const interviewSourceTypes = ['subject', 'external_contributor'] as const;
 export const agentRunStatuses = ['queued', 'running', 'succeeded', 'failed'] as const;
+export const retrieverIndexStatuses = ['pending', 'indexing', 'indexed', 'failed'] as const;
 export type AgentRunStatus = (typeof agentRunStatuses)[number];
+export type RetrieverIndexStatus = (typeof retrieverIndexStatuses)[number];
 
 export const accounts = sqliteTable(
   'accounts',
@@ -194,6 +196,32 @@ export const interviewSessions = sqliteTable(
   ],
 );
 
+export const retrieverIndexJobs = sqliteTable(
+  'retriever_index_jobs',
+  {
+    sessionId: text('session_id')
+      .primaryKey()
+      .references(() => interviewSessions.sessionId, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.userId, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    status: text('status', { enum: retrieverIndexStatuses }).notNull().default('pending'),
+    contentHash: text('content_hash'),
+    retrieverJobId: text('retriever_job_id'),
+    retrieverDocumentId: text('retriever_document_id'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    lastErrorCode: text('last_error_code'),
+    lastErrorMessage: text('last_error_message'),
+    indexedAt: text('indexed_at'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('retriever_index_jobs_user_status_idx').on(table.userId, table.status),
+    index('retriever_index_jobs_status_updated_idx').on(table.status, table.updatedAt),
+  ],
+);
+
 
 export const agentRuns = sqliteTable(
   'agent_runs',
@@ -313,6 +341,7 @@ export const schema = {
   lifeStages,
   stories,
   interviewSessions,
+  retrieverIndexJobs,
   storyShareLinks,
   agentRuns,
   memoirDocuments,
@@ -330,6 +359,8 @@ export type Story = typeof stories.$inferSelect;
 export type NewStory = typeof stories.$inferInsert;
 export type InterviewSession = typeof interviewSessions.$inferSelect;
 export type NewInterviewSession = typeof interviewSessions.$inferInsert;
+export type RetrieverIndexJob = typeof retrieverIndexJobs.$inferSelect;
+export type NewRetrieverIndexJob = typeof retrieverIndexJobs.$inferInsert;
 export type StoryShareLink = typeof storyShareLinks.$inferSelect;
 export type NewStoryShareLink = typeof storyShareLinks.$inferInsert;
 export type AgentRun = typeof agentRuns.$inferSelect;

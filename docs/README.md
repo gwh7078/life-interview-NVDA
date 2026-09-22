@@ -37,7 +37,7 @@
 - Agent Execution Policy v1.2
 - Phase 2A Contract Scaffold — Completed
 - Phase 2B-C Agent Runtime Integration — Completed / six-path Real Agent E2E 6/6
-- Next Phase 3A — NeMo Retriever + Classic Retrieval
+- Phase 3A NeMo Retriever + Classic Retrieval — 本机联调中；真实 Retriever 服务验收待恢复
 - 4 个正式 Skill family — 已提交
 
 ### Validated Historical Work
@@ -51,8 +51,8 @@
 ### Future / Deferred
 
 - Realtime Slow System（v1.6：优先 Step-Audio Tool Trigger；2B Judge 为 Benchmark / Fallback）
-- 条件式 Skill Script Memory Search
-- NeMo Retriever 产品集成
+- Agentic Retrieval、Realtime Slow System
+- 真实 DGX / NeMo Retriever 服务验收
 - DGX Spark 最终本地推理与 Benchmark
 - 外部世界事实核查
 

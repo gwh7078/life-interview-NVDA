@@ -68,6 +68,13 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
   assert.equal(result.runtime.skillVersion, 'v1');
   assert.equal(result.runtime.provider, 'stepfun');
   assert.equal(result.runtime.model, 'test-model');
+  await assert.rejects(
+    () => adapter.run(request, {
+      scriptContext: { baseUrl: 'http://backend.test', token: 'short-lived' },
+    }),
+    (error: unknown) => error instanceof AgentTaskContractError
+      && error.code === 'AGENT_SCRIPT_CAPABILITY_UNAUTHORIZED',
+  );
 });
 
 test('NemoClawAgentTaskAdapter rejects unsupported schemaVersion before execution', async () => {

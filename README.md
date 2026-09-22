@@ -2,7 +2,7 @@
 
 人生采访局 NVIDIA Agent-Native 比赛版。
 
-> 当前开发阶段：**Phase 2B-C 已完成真实验收；下一阶段为 Phase 3A Retriever / Classic Retrieval**
+> 当前开发阶段：**Phase 2B-C 已完成真实验收；Phase 3A Retriever / Classic Retrieval 正在本机联调**
 >
 > 当前主架构：**Architecture v2.3 — 低轮次 Agent 执行策略**
 >
@@ -59,7 +59,7 @@ Local / Remote Model
 - 复杂任务目标是 **1 次 Agent Run + 少量必要 Tool Call**。
 - 最终结果严格结构化；仅在“结果格式失败”时使用强制 JSON / JSON Schema 作为兜底修复。
 - Realtime 主链路当前保持低延迟；Future v1.6 优先采用 Step-Audio Tool Calling 触发慢系统，Backend Adapter 负责 HOLD / Deadline / Stale Protection，独立 2B Judge 暂作为 Benchmark / Fallback。
-- Retriever / Memory Search 当前仍为 Deferred，但其未来定位已经明确为条件式历史补充能力。
+- Retriever / Memory Search 已进入 Phase 3A 本机联调；真实 NeMo Retriever 服务验收仍待服务恢复。
 
 ## 当前 4 个 Agent Task
 
@@ -90,7 +90,7 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 | Phase 1 Agent Runtime Smoke | 已完成 | Node → NemoClaw → OpenClaw → Scoped Tool API 的真实最小闭环 |
 | Phase 2A Contract-First Scaffold | 已完成 | 冻结 Task Contract、Context、Output Schema、Port、Stub |
 | Phase 2B-C Agent Runtime Integration | **已完成 / 6 路真实 E2E 通过** | 正式 Skills、NemoClaw Adapter、Executor、重试/修复、Tracing、真实 E2E |
-| Phase 3A Retriever / Classic Retrieval | **下一阶段** | SQLite Transcript 异步索引、RetrieverAdapter、条件式 Memory Search |
+| Phase 3A Retriever / Classic Retrieval | **开发中 / 本地确定性通过** | SQLite Transcript 异步索引、RetrieverAdapter、条件式 Memory Search；真实 Retriever 验收待服务恢复 |
 | Realtime Fast/Slow + Agentic Retrieval | 延期 | Slow System、Agentic Retrieval、时代背景检索 |
 | DGX Spark Optimization | 后续 | 本地推理、模型评测、性能优化 |
 | Competition Packaging | 后续 | README、部署文档、Demo、Benchmark、视频、征文 |
@@ -108,6 +108,8 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 9. [比赛要求原始整理](资料库/DGX_Spark_Hackathon_比赛要求.md)
 
 真实 Agent 验收记录：[`docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md`](docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md)
+
+Phase 3A 本机报告：[`docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md`](docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md)
 
 ## 历史资料
 
