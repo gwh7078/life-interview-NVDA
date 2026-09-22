@@ -8,7 +8,7 @@
 chmod +x ./deploy/mac/install-skill.sh
 ./deploy/mac/install-skill.sh
 nemoclaw "$NEMOCLAW_SANDBOX" skill list
-npm run test:agent:real
+bash scripts/codex-node.sh npm run test:agent:real
 ```
 
 需要先确认 `NEMOCLAW_SANDBOX` 指向实际可用 Sandbox；不要因为 `.env.example` 的示例值而创建第二个 Sandbox。

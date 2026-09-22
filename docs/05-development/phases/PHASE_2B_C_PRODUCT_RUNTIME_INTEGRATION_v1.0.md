@@ -213,7 +213,7 @@ Coverage includes:
 Run on a machine where NemoClaw/OpenClaw and the configured model are available:
 
 ```bash
-npm run test:agent:real
+bash scripts/codex-node.sh npm run test:agent:real
 ```
 
 The gate runs all six paths sequentially through the formal `AgentTaskPort`.
