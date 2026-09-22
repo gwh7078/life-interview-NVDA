@@ -58,7 +58,7 @@ Local / Remote Model
 - 正常任务目标是 **1 次 Agent Run 完成**。
 - 复杂任务目标是 **1 次 Agent Run + 少量必要 Tool Call**。
 - 最终结果严格结构化；仅在“结果格式失败”时使用强制 JSON / JSON Schema 作为兜底修复。
-- Realtime 主链路当前保持低延迟；未来采用快系统 + 并行慢系统。
+- Realtime 主链路当前保持低延迟；Future v1.6 优先采用 Step-Audio Tool Calling 触发慢系统，Backend Adapter 负责 HOLD / Deadline / Stale Protection，独立 2B Judge 暂作为 Benchmark / Fallback。
 - Retriever / Memory Search 当前仍为 Deferred，但其未来定位已经明确为条件式历史补充能力。
 
 ## 当前 4 个 Agent Task
@@ -102,7 +102,7 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 4. [Agent 执行策略](docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md)
 5. [Phase 2B 开发计划](docs/05-development/phases/PHASE_2B_AGENT_RUNTIME_INTEGRATION_v1.0.md)
 6. [架构决策 ADR](docs/06-decisions/ADR_INDEX_v1.0.md)
-7. [未来 Realtime Fast / Slow](docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
+7. [未来 Realtime Fast / Slow](docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
 8. [比赛评分对照](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)
 9. [比赛要求原始整理](资料库/DGX_Spark_Hackathon_比赛要求.md)
 
