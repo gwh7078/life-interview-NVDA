@@ -41,6 +41,7 @@
 - Phase 2B-C Agent Runtime Integration — Completed / six-path Real Agent E2E 6/6
 - Phase 3A NeMo Retriever + Classic Retrieval — **真实 Mac ingest/query、来源追溯与索引状态验收通过**
 - Phase 3 A+B Integration Gate — **自动 Gate G0–G8 全部 PASS**；人工真实语音体验验收仍待完成
+- NAT-1 NeMo Agent Toolkit Evaluation Lane — **真实 Runtime Smoke 6/6；24 条 Synthetic Regression Stub Gate 通过**；Relay / ATIF / Phoenix 仍为 Future
 - 4 个正式 Skill family — 已提交
 
 ### Validated Historical Work

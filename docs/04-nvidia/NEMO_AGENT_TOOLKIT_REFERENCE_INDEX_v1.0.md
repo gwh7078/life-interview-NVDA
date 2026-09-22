@@ -1,12 +1,13 @@
 # NeMo Agent Toolkit 开发参考资料索引 v1.0
 
-> Status: **Reference / Pre-implementation**
+> Status: **Reference / NAT-1 implemented and validated; Observability extensions remain future**
 >
 > Date: 2026-09-22
 >
-> Scope: 为 `life-interview-NVDA` 后续接入 NVIDIA NeMo Agent Toolkit（NAT）提供开发 AI 可直接阅读的官方资料入口与项目边界。
+> Scope: 为 `life-interview-NVDA` 的 NAT-1 Evaluation Lane 和后续 Observability Lane 提供开发 AI 可直接阅读的官方资料入口与项目边界。
 >
-> 重要说明：本文档是**开发参考资料**，不代表 NAT、NeMo Relay、ATIF 或 Phoenix 已在项目中落地。
+> 重要说明：本文档是**开发参考资料**。NAT-1 Evaluation / Regression / Profiling 已落地并完成六路真实 Smoke；NeMo Relay、ATIF、Phoenix
+> 尚未接入，仍属于 Future / Experimental。
 
 ## 1. 项目中的目标定位
 

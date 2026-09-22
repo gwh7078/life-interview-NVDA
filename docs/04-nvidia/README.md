@@ -22,7 +22,7 @@
 
 ## NeMo Agent Toolkit
 
-NeMo Agent Toolkit（NAT）计划用于现有 NemoClaw / OpenClaw Agent Runtime 的：
+NeMo Agent Toolkit（NAT）用于现有 NemoClaw / OpenClaw Agent Runtime 的：
 
 - Agent Evaluation；
 - Regression Test；
@@ -171,4 +171,6 @@ memory.deep_search
 - **Current Development**
 - **Planned / Future**
 
-不能把仅有架构设计但尚未完成的 NVIDIA / DGX Spark / Retriever / NAT 能力写成已落地。
+不能把仅有架构设计但尚未完成的 NVIDIA / DGX Spark / Retriever / NAT 能力写成已落地。当前 NAT-1 的
+Implemented / Validated 范围以 [接入说明](NEMO_AGENT_TOOLKIT_INTEGRATION_v1.0.md) 为准；Relay、ATIF、Phoenix
+仍属于 Future / Experimental。

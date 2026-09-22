@@ -102,6 +102,7 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 | Phase 2B-C Agent Runtime Integration | **已完成 / 6 路真实 E2E 通过** | 正式 Skills、NemoClaw Adapter、Executor、重试/修复、Tracing、真实 E2E |
 | Phase 3A Retriever / Classic Retrieval | **已完成 / 真实 Gate 通过** | SQLite Transcript 异步索引、RetrieverAdapter、条件式 Memory Search、真实 ingest/query 与来源追溯 |
 | Phase 3 A+B Integration Gate | **自动验收通过 / G0–G8 PASS** | Realtime Tool/HOLD/Resume、Slow Coordinator、Retriever recall、并发隔离、延迟与最终状态核对 |
+| NAT-1 Agent Evaluation Lane | **已完成 / 真实 Smoke 6/6** | NAT Bridge、确定性 Evaluator、Profiler、24 条 Synthetic Regression；Relay / ATIF / Phoenix 后续 |
 | Realtime Fast/Slow + Agentic Retrieval | 延期 | Slow System、Agentic Retrieval、时代背景检索 |
 | DGX Spark Optimization | 后续 | 本地推理、模型评测、性能优化 |
 | Competition Packaging | 后续 | README、部署文档、Demo、Benchmark、视频、征文 |
