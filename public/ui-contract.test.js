@@ -128,6 +128,7 @@ test('Story sharing keeps a simple public contributor surface without internal i
   assert.match(share, /id="interview-link"/);
   assert.match(share, /id="processing-note"/);
   assert.match(share, /id="share-retry-closeout"/);
+  assert.match(share, /href="\/ui\.css"/);
   assert.doesNotMatch(share, /user[_ -]?id|share[_ -]?id|session[_ -]?id|provider|model/i);
   assert.doesNotMatch(shareScript, /contributor_summary|user_id|share_id|session_id/);
 

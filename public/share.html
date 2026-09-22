@@ -3,48 +3,104 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7f4ee">
-  <title>补充这段人生故事</title>
+  <meta name="theme-color" content="#f8f6f1">
+  <title>补充这段人生故事 · 人生采访局</title>
+  <link rel="stylesheet" href="/ui.css">
   <link rel="stylesheet" href="/share.css">
 </head>
 <body>
   <main class="share-shell">
-    <section id="loading" class="share-card">
-      <p class="eyebrow">人生采访局</p>
+    <header class="share-header" aria-label="人生采访局">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">人</span>
+        <span class="brand-copy">
+          <strong>人生采访局</strong>
+          <small>把人生讲出来，慢慢写下来</small>
+        </span>
+      </div>
+      <span class="header-note">亲友补充</span>
+    </header>
+
+    <section id="loading" class="share-card state-card" role="status" aria-live="polite">
+      <p class="section-label">正在读取</p>
       <h1>正在打开故事…</h1>
+      <p class="state-copy">请稍候，我们正在读取这段亲友补充邀请。</p>
     </section>
 
-    <section id="error" class="share-card" hidden>
-      <p class="eyebrow">人生采访局</p>
-      <h1>这个分享链接已不可用</h1>
-      <p id="error-message" class="muted">链接可能已经过期或被撤销。</p>
+    <section id="error" class="share-card state-card" hidden role="alert" aria-labelledby="error-heading">
+      <p class="section-label">链接状态</p>
+      <h1 id="error-heading">这个分享链接已不可用</h1>
+      <p id="error-message" class="state-copy">链接可能已经过期或被撤销。</p>
+      <p class="state-helper">如果你仍想补充这段故事，请向分享者重新索取一个链接。</p>
     </section>
 
-    <section id="content" class="share-card" hidden>
-      <div id="processing-note" class="completed-note" hidden>
-        通话已经结束，内容已保存，正在整理你的补充…
+    <section id="content" class="share-card content-card" hidden aria-labelledby="story-title">
+      <div id="processing-note" class="state-note state-note-processing" hidden role="status" aria-live="polite">
+        <div class="note-heading">
+          <div>
+            <p class="note-label">采访内容已保存</p>
+            <strong>正在整理你的补充</strong>
+          </div>
+          <span class="note-status">进行中</span>
+        </div>
+        <p>这部分会以亲友的视角单独保存，方便你下次从上次聊过的地方继续。</p>
+        <ol class="processing-steps" aria-label="整理进度">
+          <li class="processing-step is-done">
+            <span class="step-marker" aria-hidden="true">1</span>
+            <span><strong>访谈内容已保存</strong><small>你刚刚分享的内容已经留下。</small></span>
+          </li>
+          <li class="processing-step is-active">
+            <span class="step-marker" aria-hidden="true">2</span>
+            <span><strong>正在整理这次补充</strong><small>请稍候，整理完成后可以继续进入。</small></span>
+          </li>
+          <li class="processing-step">
+            <span class="step-marker" aria-hidden="true">3</span>
+            <span><strong>为下次续访保留线索</strong><small>同一个链接会接着之前聊过的内容继续。</small></span>
+          </li>
+        </ol>
       </div>
-      <div id="completed-note" class="completed-note" hidden>
-        你的补充已经保存。再次进入时，采访官会接着之前聊过的内容继续。
+
+      <div id="completed-note" class="state-note state-note-success" hidden role="status" aria-live="polite">
+        <p class="note-label">这次补充已保存</p>
+        <strong>谢谢你留下另一个视角。</strong>
+        <p>再次进入时，采访官会接着之前聊过的内容继续。</p>
       </div>
-      <div id="failed-note" class="completed-note" hidden>
-        原始访谈内容已经保存，但整理失败。你可以直接重新整理，不需要重新讲一遍。
+
+      <div id="failed-note" class="state-note state-note-failed" hidden role="alert" aria-live="polite">
+        <p class="note-label">整理暂时没有完成</p>
+        <strong>原始访谈内容已经保存。</strong>
+        <p>你可以直接重新整理，不需要重新讲一遍。</p>
         <button id="share-retry-closeout" class="primary-action" type="button">重新整理</button>
       </div>
-      <p class="eyebrow">人生采访局 · 亲友补充采访</p>
-      <p id="invite-copy" class="invite-copy"></p>
-      <div class="title-row">
-        <h1 id="story-title"></h1>
+
+      <header class="story-intro">
+        <p class="section-label">亲友补充采访</p>
+        <p id="invite-copy" class="invite-copy"></p>
+        <p class="boundary-note">你的记忆会以亲友的视角单独保存，为这段人生故事补充另一面。</p>
+      </header>
+
+      <div class="story-title-row">
+        <div class="story-title-copy">
+          <p class="section-label">这段故事</p>
+          <h1 id="story-title"></h1>
+        </div>
         <span id="story-status" class="status-chip"></span>
       </div>
 
-      <section class="story-section">
-        <h2>目前整理出的内容</h2>
+      <section class="story-section" aria-labelledby="summary-heading">
+        <div class="section-heading">
+          <p class="section-label">当前整理</p>
+          <h2 id="summary-heading">目前整理出的内容</h2>
+        </div>
         <p id="story-summary" class="story-summary"></p>
       </section>
 
-      <section id="gaps-section" class="story-section">
-        <h2>还想了解</h2>
+      <section id="gaps-section" class="story-section" aria-labelledby="gaps-heading">
+        <div class="section-heading">
+          <p class="section-label">下一次可以聊</p>
+          <h2 id="gaps-heading">还想了解</h2>
+        </div>
+        <p class="section-description">从你记得最清楚的一件事开始就好。</p>
         <ul id="story-gaps" class="gap-list"></ul>
       </section>
 
@@ -52,7 +108,10 @@
         你之前已经通过这个链接聊过。再次通话时，采访官会基于上次的内容继续。
       </p>
 
-      <a id="interview-link" class="primary-action" href="#">和 AI 聊聊这段故事</a>
+      <div class="action-block">
+        <a id="interview-link" class="primary-action" href="#">和 AI 聊聊这段故事</a>
+        <p class="action-helper">亲友的补充会以独立视角留下，和主人公的讲述一起保留。</p>
+      </div>
       <p id="expires-copy" class="expires-copy"></p>
     </section>
   </main>
