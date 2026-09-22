@@ -1,0 +1,12 @@
+{"query":"刚参加工作时的娱乐生活","start_year":1998,"end_year":2002,"expected_titles":["网吧成为互联网普及的重要入口","网吧成为年轻人的公共娱乐空间","网吧和QQ逐渐普及","QQ成为即时通信工具"]}
+{"query":"小时候家里过年看什么节目","start_year":1983,"end_year":1990,"expected_titles":["春节看春晚成为家庭节日习惯","春晚歌曲形成全民记忆"]}
+{"query":"九十年代怎么买东西和吃饭","start_year":1990,"end_year":1999,"expected_titles":["麦当劳等洋快餐进入城市生活","超市和大型卖场逐渐普及"]}
+{"query":"大学毕业以后找工作的方式","start_year":1999,"end_year":2008,"expected_titles":["高校扩招改变青年教育路径","招聘网站改变求职方式"]}
+{"query":"小时候听港台歌曲和磁带","start_year":1985,"end_year":1999,"expected_titles":["港台流行音乐进入大陆生活","港台流行音乐进入大陆生活"]}
+{"query":"第一次用手机和发短信","start_year":1998,"end_year":2008,"expected_titles":["手机从奢侈品变成日常用品","短信祝福形成节庆传播方式"]}
+{"query":"买房装修成为家庭大事","start_year":1995,"end_year":2010,"expected_titles":["商品房和装修成为家庭大额消费","城市商品住房逐渐出现"]}
+{"query":"家里第一次买冰箱彩电洗衣机","start_year":1978,"end_year":1995,"expected_titles":["家电消费成为家庭改善的重要标志","冰箱洗衣机空调成为常见家电"]}
+{"query":"网课和线上学习","start_year":2019,"end_year":2020,"expected_titles":["疫情期间线上学习快速普及"]}
+{"query":"看奥运和体育比赛","start_year":2001,"end_year":2008,"expected_titles":["北京奥运会举办","北京奥运会成为全国体育盛会"]}
+{"query":"农村家庭成员外出打工","start_year":1985,"end_year":2005,"expected_titles":["农民工群体形成并扩大","农民工进入制造业和建筑业"]}
+{"query":"从BP机到手机联系亲友","start_year":1988,"end_year":2005,"expected_titles":["BP机成为移动联系工具","BP机到手机完成通信方式转换"]}

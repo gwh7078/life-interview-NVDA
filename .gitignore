@@ -9,7 +9,9 @@ dist/
 !.env.example
 
 # Local data and generated artifacts
-data/
+data/*
+!data/era-context/
+!data/era-context/*.jsonl
 openclaw-plugin/data/
 *.db
 *.db-wal

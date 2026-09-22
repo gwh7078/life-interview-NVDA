@@ -95,6 +95,8 @@ import { createRetrieverClientFromEnv, type RetrieverAdapter } from './retriever
 import { RetrieverIndexService } from './retriever/indexer.js';
 import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
 import { RetrieverRealtimeRecall } from './realtime/retriever-recall.js';
+import { createEraContextClientFromEnv } from './era-context/client.js';
+import { EraContextScriptError, EraContextScriptGateway } from './era-context/script-gateway.js';
 
 const DEFAULT_PORT = 4174;
 const DEFAULT_HOST = '127.0.0.1';
@@ -168,6 +170,7 @@ export interface InterviewServiceDependencies {
   retriever?: RetrieverAdapter;
   retrieverIndex?: RetrieverIndexService;
   retrieverScriptGateway?: RetrieverScriptGateway;
+  eraContextScriptGateway?: EraContextScriptGateway;
   realtimeRecall?: RealtimeRecallPort;
 }
 
@@ -590,6 +593,10 @@ function createStoryWorkflowDependencies(
     : undefined;
   const retrieverScriptGateway = dependencies.retrieverScriptGateway
     ?? (retriever && retrievalTokenService ? new RetrieverScriptGateway(retriever, retrievalTokenService) : undefined);
+  const eraContextScriptGateway = dependencies.eraContextScriptGateway
+    ?? (process.env.NEMO_ERA_CONTEXT_ENABLED?.trim() === 'true' && retrievalTokenService
+      ? new EraContextScriptGateway(createEraContextClientFromEnv(process.env), retrievalTokenService)
+      : undefined);
   const retrievalScriptConfig = retrievalTokenService && process.env.AGENT_RETRIEVAL_BASE_URL?.trim()
     ? {
         baseUrl: process.env.AGENT_RETRIEVAL_BASE_URL.trim().replace(/\/+$/u, ''),
@@ -603,6 +610,7 @@ function createStoryWorkflowDependencies(
     ...(realtimeRecall ? { realtimeRecall } : {}),
     ...(retrieverIndex ? { retrieverIndex } : {}),
     ...(retrieverScriptGateway ? { retrieverScriptGateway } : {}),
+    ...(eraContextScriptGateway ? { eraContextScriptGateway } : {}),
     storyCompletion,
     storyGeneration,
     closeout: {
@@ -674,6 +682,29 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           return;
         }
         sendJson(response, 400, { error: 'Invalid retrieval request.', errorCode: 'INVALID_RETRIEVAL_REQUEST' });
+      }
+      return;
+    }
+    if (request.method === 'POST' && url.pathname === '/internal/agent-retrieval/era-context-search') {
+      const gateway = dependencies.eraContextScriptGateway;
+      if (!gateway) {
+        sendJson(response, 503, { error: 'Era context Retriever is not configured.', errorCode: 'ERA_CONTEXT_UNAVAILABLE' });
+        return;
+      }
+      const token = readBearerToken(request);
+      if (!token) {
+        sendJson(response, 401, { error: 'Missing era context token.', errorCode: 'ERA_CONTEXT_TOKEN_INVALID' });
+        return;
+      }
+      try {
+        const body = await readJsonObject(request);
+        sendJson(response, 200, await gateway.search(token, body));
+      } catch (error) {
+        if (error instanceof EraContextScriptError) {
+          sendJson(response, error.statusCode, { error: error.message, errorCode: error.code });
+          return;
+        }
+        sendJson(response, 400, { error: 'Invalid era context request.', errorCode: 'INVALID_ERA_CONTEXT_REQUEST' });
       }
       return;
     }

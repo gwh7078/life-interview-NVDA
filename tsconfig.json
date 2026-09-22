@@ -23,6 +23,9 @@
     "scripts/phase3-backend-stepfun-e2e.ts",
     "scripts/agent-eval/**/*.ts",
     "scripts/nat-agent-runner.ts",
+    "scripts/index-era-context.ts",
+    "scripts/benchmark-era-context.ts",
+    "scripts/retry-era-context.ts",
     "drizzle.config.ts",
     "agent/**/*.ts",
     "tests/**/*.ts"
