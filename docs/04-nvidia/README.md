@@ -83,7 +83,7 @@ Future Retriever 也应在真实 DGX Spark 上单独记录：
 
 ## NeMo Retriever
 
-当前延期，不进入 Phase 2A / Phase 2B 第一阶段核心链路。
+Phase 3 A+B 已完成 Mac 本机真实 Integration Gate：REST ingest/query、MCP query、条件式 Realtime recall、并发隔离、延迟预算和最终 SQLite / Retriever / trace 状态均已通过。Retriever 仍不进入 Phase 1 核心链路；Agentic Retrieval 与 DGX Spark 实机验证继续作为后续工作。
 
 Future 设计明确区分两档：
 

@@ -61,7 +61,7 @@ Agentic Retrieval
 
 时代背景只负责唤起记忆和寻找采访话题，绝不自动成为用户事实。
 
-**注意：上述 Slow System、Realtime Retrieval 与时代背景库当前均为 Planned / Future，不属于已实现能力。**
+**注意：个人历史 Classic Retrieval 已完成 Phase 3 A+B Mac 自动 Gate；Agentic Retrieval 与时代背景库仍为 Planned / Future。人工真实语音体验验收仍待完成。**
 
 主要证据：
 
@@ -86,6 +86,8 @@ Agentic Retrieval
 - Task → Skill / Model Profile 确定性路由；
 - Agent / Skill / Tool 职责分层；
 - 低轮次执行策略已经冻结。
+- Phase 3 A+B 真实 Integration Gate G0–G8；
+- Realtime Tool/HOLD/Resume 与个人历史 Classic Retrieval 真实联调。
 
 后续需要补齐：
 
@@ -95,7 +97,7 @@ Agentic Retrieval
 - Model Router；
 - Agent Eval；
 - Schema success / first-pass success / evidence accuracy / latency / tool-call-rate benchmark；
-- Future Classic Memory Search；
+- 条件式个人历史 Classic Memory Search 已通过 Phase 3 Gate；
 - Future Agentic Deep Search；
 - Future Realtime Slow Agent；
 - Future 时代背景事件库与 `era_context_search`；
@@ -137,7 +139,7 @@ Agentic Retrieval 必须以真实 Tool 调用、证据质量和 Benchmark 作为
 - 正式 Skills；
 - Phase 2B Adapter boundary。
 
-当前缺口主要是 NeMo Retriever Classic Retrieval、Agent Eval / Benchmark、DGX Spark 本地运行证据与比赛包装材料。
+当前缺口主要是 Agent Eval / Benchmark、DGX Spark 本地运行证据与比赛包装材料；Agentic Retrieval 和时代背景检索仍属于后续范围。
 
 Retriever 不应为了比赛加分破坏已有产品完整性，因此：
 
@@ -149,13 +151,13 @@ Retriever 不应为了比赛加分破坏已有产品完整性，因此：
 
 - NemoClaw / OpenShell / OpenClaw 已进入 Runtime 方案；
 - Mac 开发环境已验证真实 Sandbox Smoke。
+- Mac 已完成 StepFun Realtime + NeMo Retriever Classic Retrieval 的真实 A+B Integration Gate。
 
 后续：
 
 - DGX Spark 本地推理；
 - NVIDIA 模型或 NVIDIA 推理能力；
-- StepFun 模型正式接入与评测；
-- NeMo Retriever Classic Retrieval；
+- DGX Spark 上的 StepFun / NVIDIA 模型正式部署与评测；
 - NeMo Retriever Agentic Retrieval；
 - 本地 Agent 部署说明；
 - 性能与资源 Benchmark。
@@ -229,13 +231,13 @@ All Future Retrieval
 - [ ] GitHub README 500 字以上项目说明完整
 - [ ] 部署说明完整
 - [ ] NVIDIA 技术栈说明完整
-- [ ] StepFun 使用有真实代码或 Benchmark 证据
+- [x] StepFun 使用有真实代码或 Benchmark 证据
 - [x] Skill Markdown 文件齐全
 - [x] 正式 Agent 六路径 E2E
 - [x] Retry / Repair / Format Repair 测试
 - [ ] DGX Spark 本地运行步骤可复现
 - [ ] Agent Eval / Benchmark 有报告
-- [ ] Classic Retrieval 如宣称已实现，必须有真实代码 / 测试 / latency 证据
+- [x] Classic Retrieval 如宣称已实现，必须有真实代码 / 测试 / latency 证据
 - [ ] 时代背景检索如宣称已实现，必须有真实数据集 / Index / Tool 调用 / 事实隔离测试 / latency 证据
 - [ ] Agentic Retrieval 如宣称已实现，必须有真实 Tool 调用 / quality / latency 证据
 - [ ] Demo 视频链接

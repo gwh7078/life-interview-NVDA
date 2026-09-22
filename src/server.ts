@@ -1949,6 +1949,8 @@ function createRealtimeHandler(
         latencyMs: result.latencyMs,
         slowRecallLatencyMs: result.latencyMs,
         totalElapsedMs: performance.now() - recallStartedAt,
+        factCount: result.hint?.facts.length ?? 0,
+        factSourceMessageIds: result.hint?.facts.flatMap((fact) => fact.sourceMessageIds).join(','),
         contextVersion: version,
         errorCode: result.errorCode,
       });

@@ -1,6 +1,6 @@
 # 人生采访局 NVIDIA 版｜AI 开发、对接、联调与测试环境
 
-版本：2026-09-20
+版本：2026-09-22
 适用对象：Codex、其他 AI 开发 Agent、前后端开发、Agent/Skill 开发、联调与测试人员。
 
 ## 1. 文档目的
@@ -21,9 +21,9 @@ Mac
       └─ LanceDB
 ```
 
-当前 Retriever 使用 NVIDIA `nvidia/llama-nemotron-embed-1b-v2` 远程 embedding endpoint；本机配置的索引模式为 `hybrid`。
+当前 Retriever 使用百炼 `qwen3.7-text-embedding` 与 `qwen3.7-text-rerank` 远程接口；本机配置的索引模式为 `hybrid`。服务配置通过环境变量读取凭证，不要求使用 NVIDIA 远程模型。
 
-Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不依赖 Retriever 或 RAG。Retriever 是本机联调能力和后续 Phase 3 的预留边界；在对应阶段开始前，不把它接入 Phase 1 的核心用户路径。
+Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不依赖 Retriever 或 RAG。Phase 3 A+B 已将 Retriever 接入 Realtime Slow Path 的条件式 recall，但不改变 Phase 1 核心用户路径；当前自动 Gate G0–G8 已通过。
 
 ## 2. 环境文件
 
@@ -294,13 +294,19 @@ nemoclaw my-assistant dashboard-url --quiet
 
 ## 11. 凭证
 
-当前 Retriever 的远程 embedding 会读取：
+当前 NeMo Retriever 服务的远程 embedding / rerank 会读取：
 
 ```text
-NVIDIA_API_KEY
+DASHSCOPE_API_KEY
 ```
 
-NemoClaw onboarding 之前使用的 inference credential 可通过安全 shell 环境提供，例如：
+当前 StepFun Realtime 联调会读取：
+
+```text
+STEPFUN_API_KEY
+```
+
+切换到 NVIDIA endpoint 时才需要相应的 NVIDIA credential，例如：
 
 ```text
 NVIDIA_INFERENCE_API_KEY
@@ -309,7 +315,8 @@ NVIDIA_INFERENCE_API_KEY
 原则：
 
 - `.env.example` 只能保留空值/变量名。
-- `.env` 不提交 Git；当前项目也不保存真实 Key。
+- `.env` 不提交 Git；本机凭证通过 macOS 登录钥匙串同步到当前工作树，当前文件权限为 `0600`。
+- `scripts/codex-keychain.swift` 支持 `VOLCENGINE_API_KEY`、`STEPFUN_API_KEY` 与 `CLOSEOUT_API_KEY` 的安全导入和同步。
 - AI 不得通过 `printenv`、日志、异常堆栈主动输出完整 Key。
 - 重新部署时若缺凭证，应提示开发者在本机安全环境设置，而不是写死到代码。
 
@@ -341,14 +348,26 @@ getIndexStatus(sessionId)
 7. Retriever 失败时状态进入 `failed` 且可重试。
 8. 不在浏览器代码中出现 `7670/7671` 或 NVIDIA Key。
 
-## 14. 本机验证记录（2026-09-20）
+## 14. 本机验证记录
 
 环境状态会随本机服务变化，不能把下面的结果当作永久可用性保证：
 
+### 2026-09-20 历史记录
+
 - 先前验收记录曾确认 NeMo Retriever `7670 /v1/health`、VectorDB `7671 /v1/health` 返回 HTTP 200，并已初始化 `life-interview-transcripts` collection。
-- 本次合并前重新运行 `scripts/check-ai-env.sh` 时，Retriever 和 VectorDB 当前均返回 HTTP 503；检查脚本必须以失败退出，修复服务后再进行 Retriever ingest/query 验收。
+- 本次合并前重新运行 `scripts/check-ai-env.sh` 时，Retriever 和 VectorDB 当前均返回 HTTP 503；这条记录保留为当时的失败证据，不能代表当前状态。
 - 当前 OpenClaw sandbox 转发可达（HTTP 400 仍证明端口监听），Codex 已注册 `nemo-retriever-local -> http://127.0.0.1:7670/mcp`。
 - NemoClaw sandbox `my-assistant` 经 OpenShell 转发到本机 `18790`；Phase 1 smoke 不因 Retriever 503 而失效。
+
+### 2026-09-22 当前记录
+
+- `bash scripts/check-ai-env.sh`：通过；NeMo Retriever、VectorDB、OpenClaw 转发与 Codex MCP 均可达。
+- `bash scripts/codex-node.sh npm run test:phase3:integration`：Phase 3 A+B Gate G0–G8 全部通过。
+- 真实 REST ingest/query、MCP query、StepFun Realtime、Retriever scoped concurrency、slow recall latency 与最终 SQLite / Retriever index / trace 状态均已核对。
+- 当前真实会话最终 SQLite 状态为 `completed`，Retriever index 为 `indexed`；SQLite 仍是权威事实源，Retriever 仍是可重建派生索引。
+- 自动化 Gate 通过后，仍需人工完成最后的真实语音体验验收。
+
+当前报告：`docs/07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md`。
 
 ### Codex 项目环境
 

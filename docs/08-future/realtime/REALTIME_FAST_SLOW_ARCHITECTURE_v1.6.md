@@ -6,7 +6,7 @@
 >
 > Supersedes the previous Future recommendation: `REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`（内部版本 v1.5）
 >
-> 当前代码已实现候选 Tool Call、HOLD/Resume、Slow Coordinator 和 RealtimeRecall 边界。真实 Retriever ingest/query、真实 Agent/Step-Audio 联调和人工语音体验仍需通过本阶段 Gate 后才能宣告完成。
+> 当前代码已实现候选 Tool Call、HOLD/Resume、Slow Coordinator 和 RealtimeRecall 边界。Phase 3 A+B 自动 Gate G0–G8 已通过，覆盖真实 Retriever ingest/query、Agent/Step-Audio 联调、并发隔离、延迟和最终持久化状态；人工语音体验仍需单独完成。
 >
 > 本阶段的实时 Slow Path 验收范围是 Step-Audio / StepFun；Qwen 保留为 inactive / legacy provider adapter，不在本阶段新增历史上下文 Tool。
 
@@ -498,7 +498,7 @@ OFFLINE DEEP SEARCH
 
 ## 15. 最低验收测试
 
-未来实现时至少增加：
+Phase 3 A+B 自动 Gate G0–G8 已覆盖真实 Tool/HOLD/Resume、Retriever recall、并发隔离、延迟预算和最终状态；以下项目继续作为回归、边界或后续模型评测要求：
 
 1. **No-Tool Test**：普通采访轮不应固定进入 Slow System；
 2. **Tool Trigger Positive Test**：明确历史引用能触发 get_interview_context；
@@ -520,11 +520,8 @@ OFFLINE DEEP SEARCH
 
 以下仍为 **Future / Deferred**：
 
-- Realtime Slow Agent；
-- Step-Audio Tool-triggered Slow Path；
-- Realtime Memory Search；
+- 人工真实语音体验验收；
 - Era Context Search；
-- NeMo Retriever 产品接入；
 - Step-Audio-mini Tool Trigger Eval；
 - Realtime 2B Judge A/B；
 - Agentic Retrieval 的 Offline 深检索。

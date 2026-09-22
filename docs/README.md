@@ -26,7 +26,8 @@
 9. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
 10. [NVIDIA Integration](04-nvidia/README.md)
 11. [工程报告入口](07-reports/README.md)
-12. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
+12. [Phase 3 A+B Integration Gate](07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md)
+13. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
 
 ## 当前状态
 
@@ -37,8 +38,8 @@
 - Agent Execution Policy v1.2
 - Phase 2A Contract Scaffold — Completed
 - Phase 2B-C Agent Runtime Integration — Completed / six-path Real Agent E2E 6/6
-- Phase 3A NeMo Retriever + Classic Retrieval — 本机联调中；真实 Retriever 服务验收待恢复
-- Phase 3 A+B Integration Gate — Tool/HOLD/Resume、Slow Coordinator、Retriever recall 和 Agent safety 已完成本地确定性验证；真实 Retriever 当前被 HTTP 503 阻断
+- Phase 3A NeMo Retriever + Classic Retrieval — **真实 Mac ingest/query、来源追溯与索引状态验收通过**
+- Phase 3 A+B Integration Gate — **自动 Gate G0–G8 全部 PASS**；人工真实语音体验验收仍待完成
 - 4 个正式 Skill family — 已提交
 
 ### Validated Historical Work
@@ -52,7 +53,7 @@
 ### Future / Deferred
 
 - Agentic Retrieval、Realtime Slow System 的完整真实验收
-- 真实 DGX / NeMo Retriever 服务验收
+- 人工真实语音体验验收
 - DGX Spark 最终本地推理与 Benchmark
 - 外部世界事实核查
 

@@ -52,7 +52,7 @@ Old Agent Memory + Current Transcript -> Updated Memory
 
 ## ADR-010 — NeMo Retriever 产品集成延期
 
-**Accepted.** SQLite 始终是 Source of Truth；Retriever 是未来可重建 Derived Index。
+**Historical decision.** 在 Phase 2 阶段，SQLite 始终是 Source of Truth；Retriever 被定义为未来可重建 Derived Index。当前 Phase 3 集成状态由 ADR-025 记录。
 
 ## ADR-011 — 历史文档不删除
 
@@ -147,3 +147,9 @@ Agent
 - 不允许脚本直接修改 Story、Agent Memory、Completion、Document 或 SQLite；
 - 固定 Context 继续由 Backend 预注入，不通过脚本重新读取；
 - OpenClaw 底层通用 exec 仍需要 sandbox / allowlist / authorization / audit。
+
+## ADR-025 — Phase 3 A+B 真实 Integration Gate
+
+**Accepted 2026-09-22.** Phase 3 将条件式 Classic Retrieval 接入 Realtime Slow Path：Step-Audio 通过 Tool Call 触发，Backend 负责 HOLD / Resume、scope、超时与结果校验；SQLite 继续保存权威 Transcript，Retriever 只保存可重建的派生索引。
+
+Mac 本机自动 Gate G0–G8 已全部通过，覆盖 Retriever REST / MCP、真实 StepFun 会话、Tool/HOLD/Resume、并发隔离、slow recall 延迟、SQLite Transcript、Retriever index 与 trace 最终状态。Agentic Retrieval 不作为 Realtime 默认路径，人工真实语音体验验收另行完成。

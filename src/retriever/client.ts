@@ -13,6 +13,10 @@ export type { RetrieverAdapter } from './types.js';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_DOCUMENT_NAME = 'session-transcript.md';
 const DEFAULT_DOCUMENT_TYPE = 'text/markdown';
+// Older local Retriever builds accept metadata_filter syntactically but do not
+// apply it before top_k truncation. Overfetch so local fail-closed filtering
+// does not lose a scoped hit when a modest number of other documents rank first.
+const MIN_SCOPED_QUERY_TOP_K = 50;
 
 type JsonRecord = Record<string, unknown>;
 type FetchLike = typeof fetch;
@@ -49,6 +53,7 @@ export class RetrieverClientError extends Error {
 interface SessionReference {
   jobId?: string;
   documentId?: string;
+  attemptId?: string;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -135,7 +140,7 @@ function evidenceFrom(value: unknown, input: RetrieverSearchInput): RetrieverEvi
   const ownerIdValue = read(['user_id', 'userId', 'owner_id', 'ownerId']);
   const sessionId = typeof read(['session_id', 'sessionId']) === 'string'
     ? read(['session_id', 'sessionId']) as string
-    : input.sessionId ?? '';
+    : '';
   const storyIdValue = read(['story_id', 'storyId']);
   const sourceTypeValue = read(['source_type', 'sourceType']);
   const messageIdValue = read(['message_ids', 'messageIds', 'message_id', 'messageId']);
@@ -254,6 +259,7 @@ export class RetrieverClient implements RetrieverAdapter {
       body: JSON.stringify({
         expected_documents: 1,
         label: `session:${input.sessionId}`,
+        collection_name: this.collection,
         metadata,
       }),
     }, options);
@@ -272,9 +278,9 @@ export class RetrieverClient implements RetrieverAdapter {
     const filename = `${DEFAULT_DOCUMENT_NAME.replace('.md', '')}-${input.sessionId}.md`;
     form.append('file', new Blob([input.transcriptText], { type: DEFAULT_DOCUMENT_TYPE }), filename);
     form.append('metadata', JSON.stringify({
-      ...metadata,
       filename,
       content_type: DEFAULT_DOCUMENT_TYPE,
+      metadata,
     }));
     const documentPayload = await this.request(
       `/v1/ingest/job/${encodePath(jobId)}/document`,
@@ -290,7 +296,12 @@ export class RetrieverClient implements RetrieverAdapter {
         true,
       );
     }
-    this.sessions.set(input.sessionId, { jobId, documentId });
+    const attemptId = identifier(documentPayload, ['attempt_id', 'attemptId']);
+    this.sessions.set(input.sessionId, {
+      jobId,
+      documentId,
+      ...(attemptId ? { attemptId } : {}),
+    });
     return {
       jobId,
       documentId,
@@ -313,17 +324,24 @@ export class RetrieverClient implements RetrieverAdapter {
       ...(input.sessionId ? { session_id: input.sessionId } : {}),
       ...(input.sourceType ? { source_type: input.sourceType } : {}),
     };
+    // Keep this filter for Retriever versions that support it, but enforce the
+    // same scope locally because older service versions may ignore the field.
     const payload = await this.request('/v1/query', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         collection_name: this.collection,
         query: input.query,
-        top_k: input.topK,
+        top_k: Math.max(input.topK, MIN_SCOPED_QUERY_TOP_K),
         metadata_filter: metadataFilter,
       }),
     }, { signal: input.signal });
-    return evidenceRows(payload).map((row) => evidenceFrom(row, input));
+    return evidenceRows(payload)
+      .map((row) => evidenceFrom(row, input))
+      .filter((item) => item.ownerId === input.ownerId
+        && (!input.storyId || item.storyId === input.storyId)
+        && (!input.sessionId || item.sessionId === input.sessionId)
+        && (!input.sourceType || item.sourceType === input.sourceType));
   }
 
   async deleteSessionTranscript(
@@ -373,8 +391,44 @@ export class RetrieverClient implements RetrieverAdapter {
         'RETRIEVER_INPUT_INVALID',
       );
     }
+    if (reference.jobId) {
+      return this.getJobDocumentsStatus(reference.jobId, reference.documentId, options);
+    }
     const documentId = reference.documentId;
     return this.getDocumentStatus(documentId, options, reference?.jobId);
+  }
+
+  private async getJobDocumentsStatus(
+    jobId: string,
+    documentId: string,
+    options: RetrieverRequestOptions = {},
+  ): Promise<RetrieverIndexStatus> {
+    const payload = await this.request(
+      `/v1/ingest/job/${encodePath(jobId)}/documents`,
+      { method: 'GET' },
+      options,
+    );
+    const items = isRecord(payload) && Array.isArray(payload.items) ? payload.items : [];
+    const item = items.find((candidate) => {
+      if (!isRecord(candidate)) return false;
+      return candidate.document_id === documentId
+        || candidate.documentId === documentId
+        || candidate.attempt_id === documentId
+        || candidate.attemptId === documentId;
+    });
+    if (!isRecord(item)) {
+      throw new RetrieverClientError(
+        'Retriever job document status did not include the requested document.',
+        'RETRIEVER_RESPONSE_INVALID',
+        undefined,
+        true,
+      );
+    }
+    return {
+      jobId: identifier(item, ['job_id', 'jobId']) ?? jobId,
+      documentId: identifier(item, ['document_id', 'documentId']) ?? documentId,
+      status: statusValue(item),
+    };
   }
 
   async getJobStatus(jobId: string, options: RetrieverRequestOptions = {}): Promise<RetrieverIndexStatus> {

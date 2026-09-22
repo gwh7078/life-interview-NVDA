@@ -53,6 +53,7 @@ test('Retriever index creates a job, uploads one multipart Session document, and
   const createBody = JSON.parse(String(calls[0]?.init?.body)) as Record<string, any>;
   assert.equal(createBody.expected_documents, 1);
   assert.equal(createBody.label, 'session:session-1');
+  assert.equal(createBody.collection_name, 'life-interview-transcripts');
   assert.deepEqual(createBody.metadata, {
     collection_name: 'life-interview-transcripts',
     user_id: 'user-1',
@@ -72,9 +73,9 @@ test('Retriever index creates a job, uploads one multipart Session document, and
   assert.ok(file instanceof Blob);
   assert.equal(await file.text(), indexInput.transcriptText);
   assert.deepEqual(JSON.parse(String(form.get('metadata'))), {
-    ...createBody.metadata,
     filename: 'session-transcript-session-1.md',
     content_type: 'text/markdown',
+    metadata: createBody.metadata,
   });
   assert.ok(calls[0]?.init?.signal instanceof AbortSignal);
   assert.ok(calls[1]?.init?.signal instanceof AbortSignal);
@@ -130,7 +131,7 @@ test('Retriever health and search send the configured collection and return trac
   assert.deepEqual(queryBody, {
     collection_name: 'life-interview-transcripts',
     query: '第一次创业',
-    top_k: 5,
+    top_k: 50,
     metadata_filter: {
       user_id: 'user-1',
       story_id: 'story-1',
@@ -210,6 +211,78 @@ test('Retriever flattens NeMo results groups before normalizing evidence', async
   }]);
 });
 
+test('Retriever search filters out evidence without matching scope metadata', async () => {
+  const client = new RetrieverClient({
+    endpoint: 'http://retriever.test',
+    collection: 'life-interview-transcripts',
+    fetch: async () => jsonResponse({ hits: [
+      {
+        text: '属于当前 Story 的片段',
+        metadata: {
+          user_id: 'user-1',
+          story_id: 'story-1',
+          session_id: 'session-1',
+          source_type: 'subject',
+        },
+      },
+      {
+        text: '属于其他用户的片段',
+        metadata: {
+          user_id: 'user-2',
+          story_id: 'story-2',
+          session_id: 'session-2',
+          source_type: 'subject',
+        },
+      },
+      { text: '没有归属元数据的片段' },
+    ] }),
+  });
+
+  const evidence = await client.searchTranscript({
+    ownerId: 'user-1',
+    storyId: 'story-1',
+    sessionId: 'session-1',
+    sourceType: 'subject',
+    query: '当前 Story',
+    topK: 5,
+  });
+
+  assert.deepEqual(evidence.map((item) => item.text), ['属于当前 Story 的片段']);
+});
+
+test('Retriever scoped search overfetches before local filtering', async () => {
+  let requestedTopK = 0;
+  const client = new RetrieverClient({
+    endpoint: 'http://retriever.test',
+    collection: 'life-interview-transcripts',
+    fetch: async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { top_k?: number };
+      requestedTopK = body.top_k ?? 0;
+      return jsonResponse({ hits: [{
+        text: '[message_id=message-scoped] 目标历史片段',
+        metadata: {
+          user_id: 'user-1',
+          story_id: 'story-1',
+          session_id: 'session-1',
+          source_type: 'subject',
+        },
+      }] });
+    },
+  });
+
+  const evidence = await client.searchTranscript({
+    ownerId: 'user-1',
+    storyId: 'story-1',
+    sessionId: 'session-1',
+    sourceType: 'subject',
+    query: '目标历史片段',
+    topK: 5,
+  });
+
+  assert.equal(requestedTopK, 50);
+  assert.equal(evidence[0]?.messageIds[0], 'message-scoped');
+});
+
 test('Retriever exposes job/document status and deletes the indexed Session document', async () => {
   const calls: string[] = [];
   const fetchMock: typeof fetch = async (input) => {
@@ -221,6 +294,9 @@ test('Retriever exposes job/document status and deletes the indexed Session docu
     }
     if (url.endsWith('/v1/ingest/job/job-1')) {
       return jsonResponse({ job_id: 'job-1', document_ids: ['document-1'], status: 'processing' });
+    }
+    if (url.endsWith('/v1/ingest/job/job-1/documents')) {
+      return jsonResponse({ items: [{ job_id: 'job-1', document_id: 'document-1', status: 'completed' }] });
     }
     if (url.endsWith('/v1/ingest/status/document-1')) {
       return jsonResponse({ document_id: 'document-1', job_id: 'job-1', status: 'completed' });
