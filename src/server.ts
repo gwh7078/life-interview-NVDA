@@ -84,6 +84,10 @@ import {
   createAgentTaskPort,
   type AgentTaskPort,
 } from './agent-tasks/index.js';
+import { AgentToolTokenService } from '../agent/tools/token.js';
+import { createRetrieverClientFromEnv, type RetrieverAdapter } from './retriever/client.js';
+import { RetrieverIndexService } from './retriever/indexer.js';
+import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
 
 const DEFAULT_PORT = 4174;
 const DEFAULT_HOST = '127.0.0.1';
@@ -150,6 +154,9 @@ export interface InterviewServiceDependencies {
   storyCompletion?: Pick<StoryCompletionService, 'evaluate'>;
   storyGeneration?: Pick<StoryGenerationService, 'generate'>;
   agentTasks?: AgentTaskPort | null;
+  retriever?: RetrieverAdapter;
+  retrieverIndex?: RetrieverIndexService;
+  retrieverScriptGateway?: RetrieverScriptGateway;
 }
 
 interface ProviderTranscriptMessage {
@@ -352,6 +359,13 @@ function sendJson(response: ServerResponse, status: number, value: unknown, head
   response.end(headOnly ? undefined : JSON.stringify(value));
 }
 
+function readBearerToken(request: IncomingMessage): string | null {
+  const value = request.headers.authorization;
+  if (!value?.startsWith('Bearer ')) return null;
+  const token = value.slice('Bearer '.length).trim();
+  return token || null;
+}
+
 async function readJsonObject(request: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -539,15 +553,35 @@ function createStoryWorkflowDependencies(
       textModelProvider,
       agentTasks ? new AgentStoryGenerationContextModel(agentTasks) : undefined,
     );
+  const retriever = dependencies.retriever
+    ?? (process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true' ? createRetrieverClientFromEnv(process.env) : undefined);
+  const retrieverIndex = dependencies.retrieverIndex
+    ?? (retriever ? new RetrieverIndexService(config.databasePath, retriever) : undefined);
+  const retrievalTokenSecret = process.env.AGENT_RETRIEVAL_TOKEN_SECRET?.trim()
+    || process.env.AGENT_TOOL_TOKEN_SECRET?.trim();
+  const retrievalTokenService = retrievalTokenSecret
+    ? new AgentToolTokenService(retrievalTokenSecret)
+    : undefined;
+  const retrieverScriptGateway = dependencies.retrieverScriptGateway
+    ?? (retriever && retrievalTokenService ? new RetrieverScriptGateway(retriever, retrievalTokenService) : undefined);
+  const retrievalScriptConfig = retrievalTokenService && process.env.AGENT_RETRIEVAL_BASE_URL?.trim()
+    ? {
+        baseUrl: process.env.AGENT_RETRIEVAL_BASE_URL.trim().replace(/\/+$/u, ''),
+        tokenService: retrievalTokenService,
+      }
+    : undefined;
   return {
     ...dependencies,
     agentTasks,
+    ...(retriever ? { retriever } : {}),
+    ...(retrieverIndex ? { retrieverIndex } : {}),
+    ...(retrieverScriptGateway ? { retrieverScriptGateway } : {}),
     storyCompletion,
     storyGeneration,
     closeout: {
       ...dependencies.closeout,
       ...(agentTasks && !dependencies.closeout?.processor
-        ? { processor: new AgentStoryCloseoutProcessor(agentTasks) }
+        ? { processor: new AgentStoryCloseoutProcessor(agentTasks, retrievalScriptConfig) }
         : {}),
       async afterApply(userId, storyId) {
         if (dependencies.closeout?.afterApply) {
@@ -559,6 +593,7 @@ function createStoryWorkflowDependencies(
           }
         }
         await storyCompletion.evaluate(userId, storyId);
+        void retrieverIndex?.reindexStorySessions(userId, storyId).catch(() => undefined);
       },
     },
     onboardingCloseout: {
@@ -576,6 +611,7 @@ function createStoryWorkflowDependencies(
           }
         }
         await storyCompletion.evaluate(userId, storyId);
+        void retrieverIndex?.reindexStorySessions(userId, storyId).catch(() => undefined);
       },
     },
   };
@@ -591,6 +627,29 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
   const closeoutDependencies: CloseoutWorkflowDependencies = dependencies.closeout ?? {};
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const url = new URL(request.url ?? '/', 'http://localhost');
+    if (request.method === 'POST' && url.pathname === '/internal/agent-retrieval/memory-search') {
+      const gateway = dependencies.retrieverScriptGateway;
+      if (!gateway) {
+        sendJson(response, 503, { error: 'Retriever is not configured.', errorCode: 'RETRIEVER_UNAVAILABLE' });
+        return;
+      }
+      const token = readBearerToken(request);
+      if (!token) {
+        sendJson(response, 401, { error: 'Missing retrieval token.', errorCode: 'RETRIEVAL_TOKEN_INVALID' });
+        return;
+      }
+      try {
+        const body = await readJsonObject(request);
+        sendJson(response, 200, await gateway.memorySearch(token, body));
+      } catch (error) {
+        if (error instanceof RetrieverScriptError) {
+          sendJson(response, error.statusCode, { error: error.message, errorCode: error.code });
+          return;
+        }
+        sendJson(response, 400, { error: 'Invalid retrieval request.', errorCode: 'INVALID_RETRIEVAL_REQUEST' });
+      }
+      return;
+    }
     if (await handleAuthRequest(request, response, authService, {
       developmentAuthEnabled: config.developmentAuthEnabled === true,
       secureCookie: config.secureCookies === true,
@@ -2529,6 +2588,7 @@ function createRealtimeHandler(
       }
       await transcriptWriteTail;
 
+      const endedSessionId = interviewSession?.sessionId;
       let transcriptCount = 0;
       let endError: string | undefined;
       let closeoutError: string | undefined;
@@ -2551,6 +2611,20 @@ function createRealtimeHandler(
         );
       } catch (error) {
         endError = error instanceof Error ? error.message : '结束 Session 时写入失败。';
+      }
+      if (!endError && transcriptWriteErrors.length === 0 && drained && endedSessionId) {
+        recordTrace('retriever.index_scheduled', { sessionId: endedSessionId });
+        void dependencies.retrieverIndex?.indexSessionTranscript(
+          authContext.userId,
+          endedSessionId,
+        ).then((outcome) => outcome.status === 'indexing'
+          ? dependencies.retrieverIndex?.waitForIndex(authContext.userId, endedSessionId)
+          : undefined).catch((error) => {
+            recordTrace('retriever.index_failed', {
+              sessionId: endedSessionId,
+              errorCode: error instanceof Error ? error.name : 'unknown',
+            });
+          });
       }
       if (interviewSession.sessionType === 'onboarding') {
         if (reason === 'model_complete') {

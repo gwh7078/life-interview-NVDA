@@ -7,7 +7,7 @@ import type {
   AgentModelProfile,
   AgentTaskExecutionPolicy,
 } from '../definitions/task-definition-registry.js';
-import type { AgentRepairFeedback } from './agent-task-port.js';
+import type { AgentRepairFeedback, AgentScriptContext } from './agent-task-port.js';
 
 export interface AgentTaskExecutionRequest {
   runId: string;
@@ -22,6 +22,7 @@ export interface AgentTaskExecutionRequest {
   modelProfile: AgentModelProfile;
   executionPolicy: AgentTaskExecutionPolicy;
   payload: unknown;
+  scriptContext?: AgentScriptContext;
   signal?: AbortSignal;
   validateOutput(output: unknown): unknown;
   validationFeedback(error: unknown): AgentRepairFeedback[];

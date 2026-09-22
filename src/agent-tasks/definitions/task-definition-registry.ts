@@ -46,6 +46,11 @@ const standardReasoningPolicy: AgentTaskExecutionPolicy = Object.freeze({
   allowFormatRepair: true,
 });
 
+const storyContinuePolicy: AgentTaskExecutionPolicy = Object.freeze({
+  ...standardReasoningPolicy,
+  scriptCapabilities: Object.freeze(['memory-search']),
+});
+
 const completionPolicy: AgentTaskExecutionPolicy = Object.freeze({
   maxAttempts: 3,
   timeoutMs: 120_000,
@@ -84,7 +89,7 @@ const definitions: AgentTaskDefinition[] = [
       : interviewCloseoutOutputSchemas[mode],
     contextVersion: 'v1',
     schemaVersion: 'v1',
-    executionPolicy: standardReasoningPolicy,
+    executionPolicy: mode === 'story_continue' ? storyContinuePolicy : standardReasoningPolicy,
   })),
   {
     taskType: 'story.completion',

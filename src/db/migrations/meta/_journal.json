@@ -92,6 +92,13 @@
       "when": 1790152800000,
       "tag": "0012_agent_run_resource_and_script_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1790156400000,
+      "tag": "0013_retriever_index_jobs",
+      "breakpoints": true
     }
   ]
 }

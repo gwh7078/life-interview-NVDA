@@ -30,6 +30,14 @@ Read the matching reference:
 - Never access SQLite, memoir.db, repository files, or hidden application data to fill gaps.
 - Do not mutate product data. Return a Proposal only.
 
+For `story_continue`, `scripts/memory-search.mjs` is available only when the
+runtime explicitly authorizes the `memory-search` capability. Use it only when
+the current Transcript and Story Memory leave a concrete historical question
+unresolved. Pass a short natural-language query only. The runtime supplies the
+owner, Story scope, endpoint, and authorization token; never provide those
+fields yourself. Retrieved matches are supplementary evidence and must not
+override a clear correction in the current user Transcript.
+
 ## Output protocol
 
 Return only the schema for the active mode.

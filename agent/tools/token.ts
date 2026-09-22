@@ -12,7 +12,7 @@ export interface AgentToolTokenPayload {
 export interface AgentToolTokenExpectation {
   tool: string;
   resourceType: string;
-  resourceId: string;
+  resourceId?: string;
 }
 
 export class AgentToolTokenError extends Error {
@@ -76,7 +76,7 @@ export class AgentToolTokenService {
     }
     if (payload.exp <= this.now()) throw new AgentToolTokenError('Agent tool token expired.', 'TOKEN_EXPIRED');
     if (payload.tool !== expected.tool || payload.resourceType !== expected.resourceType
-      || payload.resourceId !== expected.resourceId) {
+      || (expected.resourceId !== undefined && payload.resourceId !== expected.resourceId)) {
       throw new AgentToolTokenError('Agent tool token scope mismatch.', 'TOKEN_SCOPE_MISMATCH');
     }
     return payload;

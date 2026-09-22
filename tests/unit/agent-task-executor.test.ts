@@ -57,6 +57,25 @@ function taskRequest(signal?: AbortSignal): AgentTaskExecutionRequest {
   };
 }
 
+function scriptTaskRequest(): AgentTaskExecutionRequest {
+  const base = taskRequest();
+  return {
+    ...base,
+    taskType: 'interview.closeout',
+    mode: 'story_continue',
+    skill: 'interview-closeout',
+    modelProfile: 'reasoning',
+    executionPolicy: {
+      ...base.executionPolicy,
+      scriptCapabilities: ['memory-search'],
+    },
+    scriptContext: {
+      baseUrl: 'http://host.example:4174',
+      token: 'short-lived-secret',
+    },
+  };
+}
+
 class CaptureRunner implements CommandRunner {
   command = '';
   args: string[] = [];
@@ -143,6 +162,32 @@ test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scrip
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
 });
 
+test('AttemptRunner exposes only the authorized retrieval script and counts its marker', async () => {
+  const runner = new CaptureRunner();
+  runner.run = async (
+    command: string,
+    args: string[],
+    timeoutMs: number,
+    stdin?: string,
+    signal?: AbortSignal,
+  ) => {
+    runner.command = command;
+    runner.args = args;
+    runner.stdin = stdin ?? '';
+    runner.signal = signal;
+    return {
+      stdout: 'LIFE_INTERVIEW_RESULT {"status":"interviewing","gaps":[]}',
+      stderr: 'LIFE_INTERVIEW_SCRIPT_CALL memory-search\nLIFE_INTERVIEW_SCRIPT_RESULT memory-search result_count=2 latency_ms=37\n',
+    };
+  };
+  const attempts = new NemoClawOpenClawAttemptRunner({ sandboxName: 'my-assistant' }, runner);
+  const result = await attempts.run({ task: scriptTaskRequest(), attemptNumber: 1, mode: 'normal' });
+  assert.equal(result.scriptCallCount, 1);
+  assert.match(runner.stdin, /scripts\/memory-search\.mjs/);
+  assert.equal(runner.stdin.includes('short-lived-secret'), false);
+  assert.equal(runner.args.some((arg) => arg.includes('LIFE_INTERVIEW_RETRIEVAL_BASE_URL')), true);
+});
+
 test('AttemptRunner records timing diagnostics without task content', async () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'life-interview-agent-timing-'));
   const diagnosticsPath = path.join(directory, 'timing.jsonl');
@@ -174,6 +219,7 @@ test('AttemptRunner records timing diagnostics without task content', async () =
       stderrBytes: number;
       openclawMs?: number;
       hostOverheadMs?: number;
+      scriptCallCount: number;
     };
     assert.equal(timing.taskType, 'story.completion');
     assert.equal(timing.mode, 'normal');

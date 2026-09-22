@@ -50,6 +50,9 @@ test('TaskDefinitionRegistry exposes four tasks and three interview.closeout mod
   assert.equal(getAgentTaskDefinition('story.completion').executionPolicy.maxAttempts, 3);
   assert.deepEqual(getAgentTaskDefinition('story.completion').executionPolicy.scriptCapabilities, []);
   assert.deepEqual(getAgentTaskDefinition('story.generation').executionPolicy.scriptCapabilities, []);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'story_create').executionPolicy.scriptCapabilities, []);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'story_continue').executionPolicy.scriptCapabilities, ['memory-search']);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'contributor').executionPolicy.scriptCapabilities, []);
   assert.throws(
     () => getAgentTaskDefinition('interview.closeout'),
     (error: unknown) => error instanceof AgentTaskContractError
