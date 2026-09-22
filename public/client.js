@@ -152,6 +152,7 @@ const precallLastDisclosure = createTextDisclosure({
 const providerNames = {
   doubao: '豆包火山引擎 Seeduplex 1.0',
   qwen: '千问 Qwen Realtime',
+  stepfun: '阶跃星辰 Step-Audio 2 Mini',
 };
 
 const PLAYBACK_SCHEDULE_AHEAD_SECONDS = 0.12;
@@ -391,8 +392,11 @@ function updateProviderSelection() {
   }
   if (provider === 'doubao') {
     elements.connectionNote.textContent = '数据库已连接 · 豆包 Seeduplex 1.0 Realtime';
+  } else if (provider === 'stepfun') {
+    const config = state.providers.stepfun || {};
+    elements.connectionNote.textContent = `数据库已连接 · StepFun ${config.model || 'step-audio-2-mini'} Realtime`;
   } else {
-    const config = state.providers.qwen;
+    const config = state.providers.qwen || {};
     elements.connectionNote.textContent = `数据库已连接 · Qwen ${config.region || ''} · ${config.model || ''}`;
   }
   setStatus('idle', '未开始');
@@ -998,11 +1002,13 @@ async function setupMicrophone() {
   state.audioSettings = mediaStream.getAudioTracks()[0]?.getSettings?.() || {};
 
   state.audioSource = context.createMediaStreamSource(state.mediaStream);
+  const targetSampleRate = elements.providerSelect?.value === 'stepfun' ? 24000 : 16000;
+  const frameSamples = targetSampleRate === 24000 ? 480 : 320;
   state.workletNode = new AudioWorkletNode(context, 'interview-pcm-resampler', {
     numberOfInputs: 1,
     numberOfOutputs: 1,
     outputChannelCount: [1],
-    processorOptions: { targetSampleRate: 16000, frameSamples: 320 },
+    processorOptions: { targetSampleRate, frameSamples },
   });
   state.muteNode = context.createGain();
   state.muteNode.gain.value = 0;

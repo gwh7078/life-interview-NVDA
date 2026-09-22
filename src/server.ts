@@ -50,6 +50,12 @@ import {
   DOUBAO_CONFIGURABLE_VOICE_IDS,
   DOUBAO_MODEL_NAME,
 } from './realtime/doubao.js';
+import { DEFAULT_STEPFUN_MODEL } from './realtime/stepfun.js';
+import {
+  RealtimeSlowCoordinator,
+  StubRealtimeRecall,
+  type RealtimeRecallPort,
+} from './realtime/slow-coordinator.js';
 import {
   createRealtimeTraceStageTracker,
   createRealtimeTraceWriter,
@@ -94,6 +100,7 @@ const DEFAULT_MAX_SESSION_MS = 20 * 60 * 1_000;
 const DEFAULT_CLOSE_GRACE_MS = 45_000;
 const DEFAULT_OPENING_RESPONSE_TIMEOUT_MS = 8_000;
 const DEFAULT_USER_TURN_STALL_TIMEOUT_MS = 4_000;
+const DEFAULT_REALTIME_SLOW_DEADLINE_MS = 5_500;
 
 export interface RuntimeConfig {
   host: string;
@@ -107,7 +114,9 @@ export interface RuntimeConfig {
   doubaoModel?: string;
   doubaoVoice?: string;
   qwenModel?: string;
+  stepfunModel?: string;
   doubaoApiKey?: string;
+  stepfunApiKey?: string;
   closeoutApiKey?: string;
   closeoutBaseUrl?: string;
   closeoutApiFormat?: 'chat-completions' | 'chat-json-schema' | 'responses';
@@ -134,6 +143,7 @@ export interface RuntimeConfig {
   closeGraceMs?: number;
   openingResponseTimeoutMs?: number;
   userTurnStallTimeoutMs?: number;
+  realtimeSlowDeadlineMs?: number;
   authSessionSecret?: string;
   authMode?: 'sms' | 'demo_phone';
   developmentAuthEnabled?: boolean;
@@ -150,6 +160,7 @@ export interface InterviewServiceDependencies {
   storyCompletion?: Pick<StoryCompletionService, 'evaluate'>;
   storyGeneration?: Pick<StoryGenerationService, 'generate'>;
   agentTasks?: AgentTaskPort | null;
+  realtimeRecall?: RealtimeRecallPort;
 }
 
 interface ProviderTranscriptMessage {
@@ -241,6 +252,7 @@ export function readRuntimeConfig(): RuntimeConfig {
   const closeGraceMs = Number(process.env.REALTIME_CLOSE_GRACE_MS ?? DEFAULT_CLOSE_GRACE_MS);
   const openingResponseTimeoutMs = Number(process.env.REALTIME_OPENING_RESPONSE_TIMEOUT_MS ?? DEFAULT_OPENING_RESPONSE_TIMEOUT_MS);
   const userTurnStallTimeoutMs = Number(process.env.REALTIME_USER_TURN_STALL_TIMEOUT_MS ?? DEFAULT_USER_TURN_STALL_TIMEOUT_MS);
+  const realtimeSlowDeadlineMs = Number(process.env.REALTIME_SLOW_DEADLINE_MS ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS);
   const closeoutTimeoutMs = Number(closeoutTask.parameters.timeoutMs ?? 60_000);
   const closeoutApiFormat = String(closeoutTask.parameters.apiFormat ?? 'chat-completions');
   const storyCompletionTimeoutMs = Number(storyCompletionTask.parameters.timeoutMs ?? closeoutTimeoutMs);
@@ -271,6 +283,9 @@ export function readRuntimeConfig(): RuntimeConfig {
   if (!Number.isFinite(userTurnStallTimeoutMs) || userTurnStallTimeoutMs <= 0 || userTurnStallTimeoutMs > 60_000) {
     throw new Error('REALTIME_USER_TURN_STALL_TIMEOUT_MS must be greater than 0 and at most 60000.');
   }
+  if (!Number.isInteger(realtimeSlowDeadlineMs) || realtimeSlowDeadlineMs <= 0 || realtimeSlowDeadlineMs > 60_000) {
+    throw new Error('REALTIME_SLOW_DEADLINE_MS must be an integer between 1 and 60000.');
+  }
   if (!Number.isInteger(closeoutTimeoutMs) || closeoutTimeoutMs <= 0 || closeoutTimeoutMs > 300_000) {
     throw new Error('CLOSEOUT_TIMEOUT_MS must be an integer between 1 and 300000.');
   }
@@ -296,16 +311,22 @@ export function readRuntimeConfig(): RuntimeConfig {
     apiKey: process.env.DASHSCOPE_API_KEY?.trim() || undefined,
     workspaceId: process.env.DASHSCOPE_WORKSPACE_ID?.trim() || undefined,
     region: rawRegion,
-    model: interviewTask.provider === 'qwen'
+    model: interviewTask.provider === 'qwen' || interviewTask.provider === 'stepfun'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
-    defaultRealtimeProvider: interviewTask.provider === 'qwen' ? 'qwen' : 'doubao',
+    defaultRealtimeProvider: interviewTask.provider === 'qwen'
+      ? 'qwen'
+      : interviewTask.provider === 'stepfun' ? 'stepfun' : 'doubao',
     doubaoModel: interviewTask.provider === 'doubao' ? interviewTask.model : DEFAULT_DOUBAO_MODEL,
     doubaoVoice,
     qwenModel: interviewTask.provider === 'qwen'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
+    stepfunModel: interviewTask.provider === 'stepfun'
+      ? interviewTask.model
+      : process.env.STEPFUN_REALTIME_MODEL?.trim() || DEFAULT_STEPFUN_MODEL,
     doubaoApiKey: process.env.VOLCENGINE_API_KEY?.trim() || undefined,
+    stepfunApiKey: process.env.STEPFUN_API_KEY?.trim() || undefined,
     closeoutApiKey: process.env.TEXT_MODEL_API_KEY?.trim()
       || process.env.CLOSEOUT_API_KEY?.trim()
       || undefined,
@@ -334,6 +355,7 @@ export function readRuntimeConfig(): RuntimeConfig {
     closeGraceMs,
     openingResponseTimeoutMs,
     userTurnStallTimeoutMs,
+    realtimeSlowDeadlineMs,
     authSessionSecret,
     authMode,
     developmentAuthEnabled: process.env.NODE_ENV !== 'production'
@@ -1691,6 +1713,12 @@ function createRealtimeHandler(
   const activeResponses = new Set<string>();
   const assistantResponses = new Map<string, AssistantResponse>();
   const providerAudioTrace = new Map<string, ProviderAudioTrace>();
+  const slowCoordinator = new RealtimeSlowCoordinator(
+    dependencies.realtimeRecall ?? new StubRealtimeRecall(),
+    config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS,
+  );
+  let currentTurnId: string | undefined;
+  let contextVersion = 0;
 
   const send = (message: Record<string, unknown>): boolean => {
     if (client.readyState !== WebSocket.OPEN) return false;
@@ -1764,6 +1792,99 @@ function createRealtimeHandler(
     traceWriter?.record(event, fields);
   };
   const traceStageTracker = createRealtimeTraceStageTracker();
+
+  const waitForResponseIdle = async (responseId: string, timeoutMs: number): Promise<boolean> => {
+    const deadline = Date.now() + timeoutMs;
+    while (activeResponses.has(responseId) && Date.now() < deadline) await delay(25);
+    return !activeResponses.has(responseId);
+  };
+
+  const handleRealtimeToolCall = (
+    event: Extract<NormalizedRealtimeEvent, { type: 'tool.call.requested' }>,
+  ): void => {
+    if (!selectedAdapter?.handleToolResult || !interviewSession || !sessionContext) {
+      recordTrace('realtime.tool_call_ignored', { name: event.name, reason: 'adapter_or_session_unavailable' });
+      return;
+    }
+    const turnId = currentTurnId ?? event.itemId ?? event.callId;
+    const version = contextVersion;
+    const args = record(event.arguments);
+    const query = typeof args?.query === 'string' ? args.query.trim() : '';
+    recordTrace('realtime.tool_call_requested', {
+      provider: selectedProvider,
+      name: event.name,
+      callId: event.callId,
+      responseId: event.responseId,
+      queryChars: query.length,
+      contextVersion: version,
+    });
+
+    void (async () => {
+      const recallStartedAt = performance.now();
+      const storyContext = sessionContext && 'story' in sessionContext
+        ? record(sessionContext.story)
+        : undefined;
+      const result = await slowCoordinator.run({
+        ownerId: authContext.userId,
+        sessionId: interviewSession!.sessionId,
+        storyId: typeof storyContext?.story_id === 'string'
+          ? storyContext.story_id
+          : undefined,
+        turnId,
+        contextVersion: version,
+        query,
+      }, () => phase === 'active'
+        && contextVersion === version
+        && (currentTurnId === undefined || currentTurnId === turnId));
+      recordTrace('realtime.slow_recall_finished', {
+        runId: result.runId,
+        status: result.status,
+        latencyMs: result.latencyMs,
+        totalElapsedMs: performance.now() - recallStartedAt,
+        contextVersion: version,
+        errorCode: result.errorCode,
+      });
+
+      const responseIdle = await waitForResponseIdle(event.responseId, (config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS) + 1_000);
+      if (!responseIdle) {
+        recordTrace('realtime.tool_result_deferred', {
+          callId: event.callId,
+          responseId: event.responseId,
+          reason: 'response_not_idle',
+        });
+      }
+      if (phase !== 'active' || !provider || provider.readyState !== WebSocket.OPEN || !selectedAdapter?.handleToolResult) return;
+
+      const current = phase === 'active'
+        && contextVersion === version
+        && (currentTurnId === undefined || currentTurnId === turnId);
+      const effectiveStatus = current ? result.status : 'stale';
+      const output = effectiveStatus === 'completed' && result.hint
+        ? result.hint
+        : {
+            status: effectiveStatus,
+            facts: [],
+            possibleConflicts: [],
+            interviewHints: [],
+          };
+      const sent = sendProviderMessages(selectedAdapter.handleToolResult(event, output, {
+        resume: effectiveStatus !== 'stale',
+      }));
+      recordTrace('realtime.tool_result_sent', {
+        callId: event.callId,
+        responseId: event.responseId,
+        sent,
+        recallStatus: effectiveStatus,
+        stale: effectiveStatus === 'stale',
+        resumeRequested: effectiveStatus !== 'stale',
+      });
+    })().catch((error) => {
+      recordTrace('realtime.tool_result_failed', {
+        callId: event.callId,
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+    });
+  };
 
   const armUserTurnStallWatchdog = (): void => {
     clearUserTurnStallWatchdog();
@@ -2029,9 +2150,15 @@ function createRealtimeHandler(
       return;
     }
 
+    if (event.type === 'tool.call.requested') {
+      handleRealtimeToolCall(event);
+      return;
+    }
+
     setActivity();
 
     if (event.type === 'speech.started') {
+      slowCoordinator.cancel();
       clearUserTurnStallWatchdog();
       userTurnRecoveryAttempted = false;
       pendingSpeech = true;
@@ -2097,6 +2224,9 @@ function createRealtimeHandler(
       pendingSpeech = false;
       const text = event.text;
       const providerMessageId = event.itemId ?? event.eventId ?? `user-${Date.now()}`;
+      currentTurnId = providerMessageId;
+      contextVersion += 1;
+      slowCoordinator.cancel();
       awaitingUserTranscript = false;
       const userFinalTrace = text.trim()
         ? traceStageTracker.mark('user_final', {
@@ -2485,6 +2615,7 @@ function createRealtimeHandler(
   ): Promise<void> => {
     if (endingPromise) return endingPromise;
     endingPromise = (async () => {
+      slowCoordinator.cancel();
       if (phase === 'connecting') {
         phase = 'failed';
         startupReject?.(new Error('采访连接尚未完成，已取消启动。'));
@@ -2786,7 +2917,7 @@ function createRealtimeHandler(
       : requestedProvider;
     if (!isRealtimeProviderId(requestedId)) {
       phase = 'failed';
-      send({ type: 'error', message: '不支持的语音 Provider；请选择豆包或 Qwen。' });
+      send({ type: 'error', message: '不支持的语音 Provider；请选择豆包、Qwen 或 StepFun。' });
       return;
     }
     const providerName: RealtimeInterviewProvider = requestedId;
@@ -3207,6 +3338,7 @@ function startServer(): void {
     console.log(`人生采访局本机语音服务已启动：http://${config.host}:${port}/interview`);
     console.log(`豆包 ${DOUBAO_MODEL_NAME} API Key：${config.doubaoApiKey ? '已配置' : '未配置'}`);
     console.log(`Qwen Realtime 凭据：${config.apiKey && config.workspaceId ? '已配置' : '未配置'}`);
+    console.log(`StepFun ${config.stepfunModel ?? DEFAULT_STEPFUN_MODEL} API Key：${config.stepfunApiKey ? '已配置' : '未配置'}`);
     writeDiagnosticLog('server', 'info', 'Interview service started.', {
       host: config.host,
       port,
@@ -3214,6 +3346,8 @@ function startServer(): void {
       realtimeProvider: config.defaultRealtimeProvider ?? 'doubao',
       doubaoConfigured: Boolean(config.doubaoApiKey),
       qwenConfigured: Boolean(config.apiKey && config.workspaceId),
+      stepfunConfigured: Boolean(config.stepfunApiKey),
+      stepfunModel: config.stepfunModel ?? DEFAULT_STEPFUN_MODEL,
       textProvider: config.closeoutProvider ?? 'volcengine-agent-plan',
       textModel: config.closeoutModel ?? 'deepseek-v4-flash',
       diagnosticsRoot: resolveDiagnosticsPath(),

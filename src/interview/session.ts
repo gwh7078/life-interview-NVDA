@@ -6,7 +6,7 @@ import { nowUtcIso } from '../db/time.js';
 import { closeoutResultSchema, serializeJsonColumn } from '../db/transcript.js';
 import type { ExternalContributorInterviewContext, RealtimeInterviewContext, StoryInterviewContext } from '../realtime/prompt.js';
 
-export type RealtimeInterviewProvider = 'doubao' | 'qwen';
+export type RealtimeInterviewProvider = 'doubao' | 'qwen' | 'stepfun';
 
 export class InterviewSessionError extends Error {
   constructor(message: string, readonly code: string) {

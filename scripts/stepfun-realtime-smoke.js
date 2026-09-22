@@ -17,6 +17,12 @@ const CONTEXT_ROLE = process.env.STEPFUN_CONTEXT_ROLE || 'user';
 const CONTEXT_TEXT = process.env.STEPFUN_CONTEXT_TEXT
   || '补充上下文（来自本地 Judge/Retriever）：请在回答开头明确说“上下文已注入”，然后围绕用户的第一次创业经历提出一个追问。';
 const CONTEXT_ITEM_ID = 'stepfun_probe_context';
+const TOOL_TEST_MODE = process.env.STEPFUN_TOOL_TEST_MODE || '';
+const TOOL_NAME = 'get_interview_context';
+const TOOL_INPUT_TEXT = process.env.STEPFUN_TOOL_INPUT_TEXT
+  || (TOOL_TEST_MODE === 'positive'
+    ? '我以前跟你讲过王师傅，你还记得他和我的关系吗？'
+    : '那天我第一次到厂里，特别紧张。');
 const REPORT_PATH = process.env.STEPFUN_REPORT_PATH || '';
 const OUTPUT_PATH = process.env.STEPFUN_OUTPUT_PATH
   || path.join(os.tmpdir(), `stepfun-realtime-output-${Date.now()}.wav`);
@@ -29,6 +35,9 @@ if (!Number.isInteger(HOLD_MS) || HOLD_MS < 0 || HOLD_MS > 6_000) {
 }
 if (!['user', 'assistant'].includes(CONTEXT_ROLE)) {
   throw new Error('STEPFUN_CONTEXT_ROLE must be user or assistant.');
+}
+if (!['', 'positive', 'negative'].includes(TOOL_TEST_MODE)) {
+  throw new Error('STEPFUN_TOOL_TEST_MODE must be empty, positive or negative.');
 }
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -99,7 +108,7 @@ function makeInputAudio() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stepfun-realtime-input-'));
   const aiffPath = path.join(tempDir, 'input.aiff');
   const wavPath = path.join(tempDir, 'input.wav');
-  const speech = spawnSync('say', ['-v', TTS_VOICE, '-o', aiffPath, INPUT_TEXT], {
+  const speech = spawnSync('say', ['-v', TTS_VOICE, '-o', aiffPath, TOOL_TEST_MODE ? TOOL_INPUT_TEXT : INPUT_TEXT], {
     encoding: 'utf8',
   });
   if (speech.status !== 0) {
@@ -225,6 +234,7 @@ class RealtimeProbe {
     this.fallbackOutputChunks = [];
     this.inputTranscript = '';
     this.outputTranscript = '';
+    this.toolCalls = new Map();
     this.closeInfo = null;
     this.messageChain = Promise.resolve();
     this.closePromise = new Promise((resolve) => { this.resolveClose = resolve; });
@@ -307,6 +317,46 @@ class RealtimeProbe {
     if (event.type === 'conversation.item.input_audio_transcription.completed') {
       this.inputTranscript = event.transcript || '';
     }
+    if (event.type === 'response.function_call_arguments.delta') {
+      const callId = typeof event.call_id === 'string' ? event.call_id : '';
+      if (callId) {
+        const previous = this.toolCalls.get(callId) || { call_id: callId };
+        this.toolCalls.set(callId, {
+          ...previous,
+          name: typeof event.name === 'string' ? event.name : previous.name,
+          arguments: `${previous.arguments || ''}${event.delta || ''}`,
+          response_id: typeof event.response_id === 'string' ? event.response_id : previous.response_id,
+        });
+      }
+    }
+    if (event.type === 'response.function_call_arguments.done') {
+      const callId = typeof event.call_id === 'string' ? event.call_id : '';
+      if (callId) {
+        const previous = this.toolCalls.get(callId) || { call_id: callId };
+        this.toolCalls.set(callId, {
+          ...previous,
+          name: typeof event.name === 'string' ? event.name : previous.name,
+          arguments: typeof event.arguments === 'string' ? event.arguments : previous.arguments || '',
+          response_id: typeof event.response_id === 'string' ? event.response_id : previous.response_id,
+        });
+      }
+    }
+    if (event.type === 'response.output_item.added' || event.type === 'response.output_item.done') {
+      const item = event.item;
+      if (item?.type === 'function_call') {
+        const callId = typeof item.call_id === 'string' ? item.call_id : item.id;
+        if (callId) {
+          const previous = this.toolCalls.get(callId) || { call_id: callId };
+          this.toolCalls.set(callId, {
+            ...previous,
+            name: typeof item.name === 'string' ? item.name : previous.name,
+            arguments: typeof item.arguments === 'string' ? item.arguments : previous.arguments || '',
+            item_id: typeof item.id === 'string' ? item.id : previous.item_id,
+            response_id: typeof event.response_id === 'string' ? event.response_id : previous.response_id,
+          });
+        }
+      }
+    }
     if (event.type === 'response.audio_transcript.delta') {
       this.outputTranscript += event.delta || '';
     }
@@ -327,6 +377,10 @@ class RealtimeProbe {
       clearTimeout(waiter.timeout);
       waiter.resolve({ event, entry });
     }
+  }
+
+  firstToolCall() {
+    return this.toolCalls.values().next().value || null;
   }
 
   recordLocalError(error) {
@@ -446,6 +500,17 @@ async function main() {
     context_role: CONTEXT_ROLE,
     context_ack_event_observed: false,
     context_marker_in_output: false,
+    tool_test_mode: TOOL_TEST_MODE || null,
+    tool_configured: TOOL_TEST_MODE !== '',
+    tool_call_requested: false,
+    tool_call_name: null,
+    tool_call_id: null,
+    tool_arguments: null,
+    tool_result_sent: false,
+    tool_resume_response_create: false,
+    tool_resume_response_done_status: null,
+    tool_resume_audio_received: false,
+    negative_no_tool_call: false,
     response_done_status: null,
     commit_to_response_create_ms: null,
     response_transcript: '',
@@ -470,11 +535,35 @@ async function main() {
     probe.send('session.update', {
       session: {
         modalities: ['text', 'audio'],
-        instructions: '你是人生采访局的中文采访官。请简洁、温和地追问用户的经历。请使用默认男声与用户交流',
+        instructions: TOOL_TEST_MODE === 'positive'
+          ? `你是人生采访局的中文采访官。用户提到以前讲过的人物时，必须先静默调用 ${TOOL_NAME}，只传递你需要确认的信息。不要假装记得，也不要先回答。收到工具结果后，再用简洁、温和的中文继续采访。请使用默认男声与用户交流`
+            : TOOL_TEST_MODE === 'negative'
+              ? `你是人生采访局的中文采访官。当前用户只是在继续描述眼前经历，当前信息足够，不要调用任何工具，直接用简洁、温和的中文追问。请使用默认男声与用户交流`
+              : '你是人生采访局的中文采访官。请简洁、温和地追问用户的经历。请使用默认男声与用户交流',
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
         voice: VOICE,
         turn_detection: null,
+        ...(TOOL_TEST_MODE ? {
+          tools: [{
+            type: 'function',
+            function: {
+              name: TOOL_NAME,
+              description: '当继续采访需要确认用户过去提到的人物、时间、关系或历史原话时调用。不要在当前信息足够时调用。',
+              parameters: {
+                type: 'object',
+                properties: {
+                  query: {
+                    type: 'string',
+                    description: '用一句简短中文描述需要确认的历史信息。',
+                  },
+                },
+                required: ['query'],
+                additionalProperties: false,
+              },
+            },
+          }],
+        } : {}),
       },
     });
     const sessionUpdated = await probe.waitForType('session.updated', 15_000, updateAfterSeq);
@@ -493,34 +582,36 @@ async function main() {
     result.manual_commit = true;
 
     const holdStartedAtMs = Date.now();
-    const contextAfterSeq = probe.seq;
-    probe.send('conversation.item.create', {
-      item: {
-        id: CONTEXT_ITEM_ID,
-        type: 'message',
-        role: CONTEXT_ROLE,
-        content: [{
-          type: 'input_text',
-          text: CONTEXT_TEXT,
-        }],
-      },
-    });
-    try {
-      await probe.waitFor(
-        (event) => event.type === 'conversation.item.created'
-          && event.item?.role === CONTEXT_ROLE
-          && event.item?.id
-          && event.item.id !== committed.event.item_id,
-        750,
-        'context conversation.item.created',
-        contextAfterSeq,
-      );
-      result.context_ack_event_observed = true;
-    } catch {
-      result.context_ack_event_observed = false;
+    if (!TOOL_TEST_MODE) {
+      const contextAfterSeq = probe.seq;
+      probe.send('conversation.item.create', {
+        item: {
+          id: CONTEXT_ITEM_ID,
+          type: 'message',
+          role: CONTEXT_ROLE,
+          content: [{
+            type: 'input_text',
+            text: CONTEXT_TEXT,
+          }],
+        },
+      });
+      try {
+        await probe.waitFor(
+          (event) => event.type === 'conversation.item.created'
+            && event.item?.role === CONTEXT_ROLE
+            && event.item?.id
+            && event.item.id !== committed.event.item_id,
+          750,
+          'context conversation.item.created',
+          contextAfterSeq,
+        );
+        result.context_ack_event_observed = true;
+      } catch {
+        result.context_ack_event_observed = false;
+      }
     }
 
-    const remainingHoldMs = HOLD_MS - (Date.now() - holdStartedAtMs);
+    const remainingHoldMs = TOOL_TEST_MODE ? 0 : HOLD_MS - (Date.now() - holdStartedAtMs);
     if (remainingHoldMs > 0) await sleep(remainingHoldMs);
 
     const responseBeforeCreate = probe.rawEvents.some((event) => event.type === 'response.created'
@@ -532,16 +623,67 @@ async function main() {
     const responseCreated = await probe.waitForType('response.created', 30_000, responseAfterSeq);
     result.manual_response_create = responseCreated.entry.receivedAtMs >= responseCreateSentAtMs - 100;
     result.commit_to_response_create_ms = responseCreateSentAtMs - commitEntry.receivedAtMs;
-    result.delayed_response_5_to_6_seconds = result.commit_to_response_create_ms >= 4_500
-      && result.commit_to_response_create_ms <= 6_500;
+    result.delayed_response_5_to_6_seconds = TOOL_TEST_MODE
+      ? true
+      : result.commit_to_response_create_ms >= 4_500 && result.commit_to_response_create_ms <= 6_500;
 
-    const responseDone = await probe.waitForType('response.done', 60_000, responseCreated.entry.seq - 1);
-    result.response_done_status = responseDone.event.response?.status || null;
-    result.input_transcript = probe.inputTranscript;
-    result.response_transcript = probe.outputTranscript;
-    result.context_marker_in_output = probe.outputTranscript.includes('上下文已注入');
-    result.context_injected_before_response = result.context_ack_event_observed
-      || result.context_marker_in_output;
+    if (TOOL_TEST_MODE === 'positive') {
+      const toolEvent = await probe.waitFor(
+        (event) => event.type === 'response.function_call_arguments.done'
+          || (event.type === 'response.output_item.done' && event.item?.type === 'function_call'),
+        30_000,
+        'Step-Audio function call',
+        responseCreated.entry.seq - 1,
+      );
+      const toolCall = probe.firstToolCall();
+      if (!toolCall?.call_id || toolCall.name !== TOOL_NAME) {
+        throw new Error(`Unexpected tool call: ${JSON.stringify({ event: toolEvent.event, toolCall })}`);
+      }
+      result.tool_call_requested = true;
+      result.tool_call_name = toolCall.name;
+      result.tool_call_id = toolCall.call_id;
+      result.tool_arguments = toolCall.arguments || '';
+
+      const toolResponseDone = await probe.waitForType('response.done', 30_000, responseCreated.entry.seq - 1);
+      result.response_done_status = toolResponseDone.event.response?.status || null;
+      probe.send('conversation.item.create', {
+        item: {
+          type: 'function_call_output',
+          call_id: toolCall.call_id,
+          output: JSON.stringify({
+            based_on_turn_id: 'probe-turn-1',
+            facts: [{ claim: '用户此前提到王师傅是入厂后的第一位师傅。', source_message_ids: ['probe-msg-1'] }],
+            possible_conflicts: [],
+            interview_hints: ['可以自然追问第一次跟王师傅一起工作的场景。'],
+          }),
+        },
+      });
+      result.tool_result_sent = true;
+      const resumeAfterSeq = probe.seq;
+      probe.send('response.create');
+      const resumedResponse = await probe.waitForType('response.created', 30_000, resumeAfterSeq);
+      result.tool_resume_response_create = Boolean(resumedResponse.event);
+      const resumedDone = await probe.waitForType('response.done', 60_000, resumedResponse.entry.seq - 1);
+      result.tool_resume_response_done_status = resumedDone.event.response?.status || null;
+      result.response_done_status = result.tool_resume_response_done_status;
+      result.input_transcript = probe.inputTranscript;
+      result.response_transcript = probe.outputTranscript;
+      result.tool_resume_audio_received = probe.outputChunks.length > 0 || probe.fallbackOutputChunks.length > 0;
+    } else if (TOOL_TEST_MODE === 'negative') {
+      const responseDone = await probe.waitForType('response.done', 60_000, responseCreated.entry.seq - 1);
+      result.response_done_status = responseDone.event.response?.status || null;
+      result.negative_no_tool_call = ![...probe.toolCalls.values()].some((call) => call.name === TOOL_NAME);
+      result.input_transcript = probe.inputTranscript;
+      result.response_transcript = probe.outputTranscript;
+    } else {
+      const responseDone = await probe.waitForType('response.done', 60_000, responseCreated.entry.seq - 1);
+      result.response_done_status = responseDone.event.response?.status || null;
+      result.input_transcript = probe.inputTranscript;
+      result.response_transcript = probe.outputTranscript;
+      result.context_marker_in_output = probe.outputTranscript.includes('上下文已注入');
+      result.context_injected_before_response = result.context_ack_event_observed
+        || result.context_marker_in_output;
+    }
     result.input_audio_recognized = Boolean(probe.inputTranscript.trim());
     if (probe.outputChunks.length === 0) probe.outputChunks = probe.fallbackOutputChunks;
     result.output_audio_received = probe.outputChunks.some((chunk) => chunk.length > 0)
@@ -565,7 +707,7 @@ async function main() {
     await probe.close();
   }
 
-  const passed = result.websocket_auth
+  const basePassed = result.websocket_auth
     && result.session_updated
     && result.manual_commit
     && result.manual_response_create
@@ -574,6 +716,21 @@ async function main() {
     && result.input_audio_recognized
     && result.output_audio_received
     && result.response_done_status === 'completed';
+  const passed = TOOL_TEST_MODE === 'positive'
+    ? result.websocket_auth
+      && result.session_updated
+      && result.manual_commit
+      && result.manual_response_create
+      && result.no_automatic_response_before_response_create
+      && result.input_audio_recognized
+      && result.tool_call_requested
+      && result.tool_result_sent
+      && result.tool_resume_response_create
+      && result.tool_resume_response_done_status === 'completed'
+      && result.tool_resume_audio_received
+      : TOOL_TEST_MODE === 'negative'
+        ? basePassed && result.tool_configured && result.negative_no_tool_call
+        : basePassed;
   const report = {
     generated_at: new Date().toISOString(),
     config: {

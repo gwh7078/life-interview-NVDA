@@ -1,4 +1,4 @@
-export type RealtimeProviderId = 'doubao' | 'qwen';
+export type RealtimeProviderId = 'doubao' | 'qwen' | 'stepfun';
 
 export type RealtimeAudioEncoding = 'pcm_s16le' | 'pcm_f32le' | string;
 
@@ -56,6 +56,16 @@ export type NormalizedRealtimeEvent =
   | { type: 'assistant.audio.done'; responseId: string; statusCode?: string }
   | { type: 'response.done'; responseId: string; status: string; finalText?: string; finalItemId?: string; message?: string }
   | { type: 'response.cancelled'; responseId: string }
+  | {
+      type: 'tool.call.requested';
+      name: string;
+      callId: string;
+      arguments: unknown;
+      rawArguments?: string;
+      responseId: string;
+      itemId?: string;
+      eventId?: string;
+    }
   | { type: 'onboarding.completion.requested'; responseId?: string; controlToken?: string; requiresAck: boolean }
   | { type: 'provider.error'; message: string; retryable?: boolean; phase?: 'connect' | 'session' | 'stream' };
 

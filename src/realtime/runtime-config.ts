@@ -6,10 +6,11 @@ import {
   DEFAULT_QWEN_MODEL,
   type QwenRealtimeRegion,
 } from './qwen.js';
+import { DEFAULT_STEPFUN_MODEL } from './stepfun.js';
 import type { RealtimeProviderConfig } from './provider.js';
 import type { RealtimeProviderId } from './types.js';
 
-export const REALTIME_PROVIDER_IDS = ['doubao', 'qwen'] as const;
+export const REALTIME_PROVIDER_IDS = ['doubao', 'qwen', 'stepfun'] as const;
 
 export interface RealtimeProviderRuntimeSource {
   apiKey?: string;
@@ -20,6 +21,8 @@ export interface RealtimeProviderRuntimeSource {
   doubaoVoice?: string;
   doubaoModel?: string;
   qwenModel?: string;
+  stepfunApiKey?: string;
+  stepfunModel?: string;
 }
 
 export function isRealtimeProviderId(value: unknown): value is RealtimeProviderId {
@@ -37,6 +40,13 @@ export function resolveRealtimeProviderConfig(
       doubaoVoice: source.doubaoVoice,
       region: source.region,
       model: source.doubaoModel ?? DEFAULT_DOUBAO_MODEL,
+    };
+  }
+  if (id === 'stepfun') {
+    return {
+      stepfunApiKey: source.stepfunApiKey,
+      region: source.region,
+      model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL,
     };
   }
   return {
@@ -62,6 +72,10 @@ export function realtimeProviderHealthSummary(
         region: source.region,
         model: source.qwenModel ?? source.model ?? DEFAULT_QWEN_MODEL,
       } : {}),
+    },
+    stepfun: {
+      configured: Boolean(source.stepfunApiKey),
+      ...(detailed ? { model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL } : {}),
     },
   };
 }
