@@ -101,35 +101,66 @@ function tail(value: string, limit = 1_500): string {
 
 function safeGateOutput(id: string, value: string): string {
   if (id !== 'G3') return redact(value);
-  const marker = [...value.split(/\r?\n/u)].reverse()
-    .find((line) => line.startsWith('LIFE_INTERVIEW_PHASE2B_E2E_REPORT '));
-  if (!marker) return redact(value);
+  const lines = value.split(/\r?\n/u);
+  const natResults = lines.flatMap((line) => {
+    const markerIndex = line.indexOf('LIFE_INTERVIEW_NAT_RESULT ');
+    if (markerIndex < 0) return [];
+    try {
+      const result = JSON.parse(line.slice(markerIndex + 'LIFE_INTERVIEW_NAT_RESULT '.length)) as Record<string, unknown>;
+      const runtime = result.runtime && typeof result.runtime === 'object' && !Array.isArray(result.runtime)
+        ? result.runtime as Record<string, unknown>
+        : {};
+      const metrics = result.metrics && typeof result.metrics === 'object' && !Array.isArray(result.metrics)
+        ? result.metrics as Record<string, unknown>
+        : {};
+      const validation = result.validation && typeof result.validation === 'object' && !Array.isArray(result.validation)
+        ? result.validation as Record<string, unknown>
+        : {};
+      return [{
+        caseId: result.case_id ?? null,
+        status: result.status ?? null,
+        provider: runtime.provider ?? null,
+        model: runtime.model ?? null,
+        latencyMs: metrics.latency_ms ?? null,
+        attempts: metrics.attempt_count ?? null,
+        repairs: metrics.repair_count ?? null,
+        contractValid: validation.contract_valid ?? null,
+        backendValidation: validation.backend_validation ?? null,
+        semanticValid: validation.semantic_valid ?? null,
+      }];
+    } catch {
+      return [];
+    }
+  });
+  if (natResults.length) return JSON.stringify({ results: natResults });
+
   try {
-    const report = JSON.parse(marker.slice('LIFE_INTERVIEW_PHASE2B_E2E_REPORT '.length)) as Record<string, unknown>;
-    const models = report.models && typeof report.models === 'object' && !Array.isArray(report.models)
-      ? report.models as Record<string, unknown>
-      : {};
-    const results = Array.isArray(report.results)
-      ? report.results.flatMap((item) => {
+    const report = JSON.parse(readFileSync(
+      path.join(projectRoot, '.tmp/nat/smoke/life_interview_result_output.json'),
+      'utf8',
+    )) as Record<string, unknown>;
+    const items = Array.isArray(report.eval_output_items)
+      ? report.eval_output_items.flatMap((item) => {
           if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
           const result = item as Record<string, unknown>;
+          const reasoning = result.reasoning && typeof result.reasoning === 'object' && !Array.isArray(result.reasoning)
+            ? result.reasoning as Record<string, unknown>
+            : {};
           return [{
-            name: result.name,
-            ok: result.ok,
-            latencyMs: result.latencyMs,
+            id: result.id ?? null,
+            score: result.score ?? null,
+            runtimeSuccess: reasoning.runtime_success ?? null,
+            contractValid: reasoning.contract_valid ?? null,
+            backendValidation: reasoning.backend_validation ?? null,
+            semanticValid: reasoning.semantic_valid ?? null,
           }];
         })
       : [];
-    return JSON.stringify({
-      sandbox: report.sandbox ?? null,
-      model: models.default ?? null,
-      passed: report.passed ?? null,
-      total: report.total ?? null,
-      results,
-    });
+    if (items.length) return JSON.stringify({ averageScore: report.average_score ?? null, results: items });
   } catch {
-    return redact(value);
+    // Keep provider output out of the phase report if NAT did not write a result file.
   }
+  return 'G3 NAT output omitted from phase3 evidence; no sanitized result was available.';
 }
 
 function addGate(gates: GateResult[], result: GateResult): void {
@@ -385,7 +416,7 @@ async function main(): Promise<void> {
       'G3',
       'Real Agent runtime acceptance',
       'bash',
-      ['scripts/codex-node.sh', 'npm', 'run', 'test:agent:real'],
+      ['scripts/codex-node.sh', 'npm', 'run', 'test:agent:nat:smoke'],
     );
     if (agent.output) appendFileSync(logPath, safeGateOutput('G3', agent.output), { mode: 0o600 });
   }

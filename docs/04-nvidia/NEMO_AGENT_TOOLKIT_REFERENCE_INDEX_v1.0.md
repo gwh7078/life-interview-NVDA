@@ -561,7 +561,7 @@ agent/tracing/
 agent-run-repository.ts
 
 scripts/
-agent-phase2b-real-e2e.ts
+nat-agent-runner.ts
 ```
 
 ---

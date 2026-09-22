@@ -17,6 +17,3 @@ life_interview_nat = "life_interview_nat.register"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-life_interview_nat = ["configs/*.yml"]

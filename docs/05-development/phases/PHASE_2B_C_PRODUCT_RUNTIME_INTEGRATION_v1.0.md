@@ -213,22 +213,19 @@ Coverage includes:
 Run on a machine where NemoClaw/OpenClaw and the configured model are available:
 
 ```bash
-bash scripts/codex-node.sh npm run test:agent:real
+bash scripts/codex-node.sh npm run test:agent:nat:smoke
 ```
 
-The gate runs all six paths sequentially through the formal `AgentTaskPort`.
+The gate runs all six paths sequentially through NAT, the shared TypeScript Fixture Registry, and the formal `AgentTaskPort`.
 
-Expected final output:
+Expected NAT summary:
 
 ```text
-PASS onboarding.closeout
-PASS interview.closeout/story_create
-PASS interview.closeout/story_continue
-PASS interview.closeout/contributor
-PASS story.completion
-PASS story.generation
-LIFE_INTERVIEW_PHASE2B_E2E_REPORT {...}
+Workflow Status: COMPLETED
+life_interview_result | 1
 ```
+
+The structured NAT report is written under `.tmp/nat/`; `test:agent:real` remains a compatibility alias for this command.
 
 The command exits non-zero when any path fails.
 

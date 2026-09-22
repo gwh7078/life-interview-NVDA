@@ -9,7 +9,7 @@ class EvaluatorTest(unittest.TestCase):
             "status": "succeeded",
             "validation": {
                 "contract_valid": True,
-                "backend_validation": "not_applicable",
+                "backend_validation": "passed",
                 "semantic_valid": True,
                 "semantic_checks": [],
             },
@@ -29,6 +29,18 @@ class EvaluatorTest(unittest.TestCase):
         })
         self.assertEqual(score, 0.0)
         self.assertEqual(len(reasoning["failed_semantic_checks"]), 1)
+
+    def test_missing_semantics_or_backend_validation_scores_zero(self):
+        for validation in (
+            {"contract_valid": True, "backend_validation": "passed"},
+            {
+                "contract_valid": True,
+                "backend_validation": "not_applicable",
+                "semantic_valid": True,
+            },
+        ):
+            score, _ = evaluate_result({"status": "succeeded", "validation": validation})
+            self.assertEqual(score, 0.0)
 
 
 if __name__ == "__main__":

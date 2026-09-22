@@ -35,11 +35,14 @@ jobs:
           node-version: 24.21.0
           cache: npm
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: nvidia/nat/uv.lock
+
       - name: Install dependencies
         run: npm ci
-
-      - name: Typecheck changed contracts first
-        run: npm run typecheck
 
       - name: Run deterministic verification
         run: bash scripts/codex-verify.sh

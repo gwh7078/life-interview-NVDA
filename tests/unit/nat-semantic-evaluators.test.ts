@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSyntheticFixtureRegistry } from '../../scripts/agent-eval/fixture-registry.js';
+import {
+  createSyntheticFixtureRegistry,
+  createSyntheticRegressionRegistry,
+  SYNTHETIC_REGRESSION_CASE_IDS,
+} from '../../scripts/agent-eval/fixture-registry.js';
 import { evaluateSyntheticSemantics } from '../../scripts/agent-eval/semantic-evaluators.js';
 
 const fixtures = createSyntheticFixtureRegistry('nat-semantic-test-owner', () => 'run');
@@ -44,4 +48,46 @@ test('contributor and generation evaluators reject unsupported certainty', () =>
     content: '我在2024年第一次独自去北京工作。',
   });
   assert.equal(hallucinated.find((item) => item.name === 'generation.no_new_years')?.passed, false);
+});
+
+test('every synthetic regression case has a case-specific semantic evaluator', () => {
+  const regression = createSyntheticRegressionRegistry('nat-semantic-coverage-owner', () => 'run');
+  for (const caseId of SYNTHETIC_REGRESSION_CASE_IDS) {
+    const fixture = regression.get(caseId);
+    assert.ok(fixture, `missing fixture for ${caseId}`);
+    assert.ok(
+      evaluateSyntheticSemantics(fixture.request, {}, caseId).length > 0,
+      `missing semantic checks for ${caseId}`,
+    );
+  }
+});
+
+test('completion evaluator distinguishes unresolved, insufficient, and complete stories', () => {
+  const regression = createSyntheticRegressionRegistry('nat-completion-test-owner', () => 'run');
+  const base = regression.get('story.completion');
+  const insufficient = regression.get('story.completion/insufficient');
+  const complete = regression.get('story.completion/complete');
+  assert.ok(base && insufficient && complete);
+
+  assert.equal(
+    evaluateSyntheticSemantics(base.request, {
+      status: 'interviewing',
+      gaps: ['你当时为什么决定去北京？'],
+    }, base.caseId).every((item) => item.passed),
+    true,
+  );
+  assert.equal(
+    evaluateSyntheticSemantics(insufficient.request, {
+      status: 'interviewing',
+      gaps: ['你还记得那段经历的具体经过吗？'],
+    }, insufficient.caseId).every((item) => item.passed),
+    true,
+  );
+  assert.equal(
+    evaluateSyntheticSemantics(complete.request, {
+      status: 'complete',
+      gaps: [],
+    }, complete.caseId).every((item) => item.passed),
+    true,
+  );
 });

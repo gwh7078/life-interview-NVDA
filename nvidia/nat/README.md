@@ -34,30 +34,30 @@ bash nvidia/nat/scripts/setup.sh
 Run the six-case real smoke gate:
 
 ```bash
-bash nvidia/nat/scripts/smoke.sh
+npm run test:agent:nat:smoke
 ```
 
 Run the 24-case synthetic regression gate when a provider-backed manual run is intended:
 
 ```bash
-bash nvidia/nat/scripts/eval.sh
+npm run test:agent:nat:eval
 ```
 
 For a deterministic bridge and validator check without model usage:
 
 ```bash
-NAT_AGENT_RUNTIME=stub bash nvidia/nat/scripts/eval.sh
+NAT_AGENT_RUNTIME=stub npm run test:agent:nat:eval
 ```
 
 Run the profiler lane with the same smoke dataset. Set `NAT_AGENT_RUNTIME=stub` for a deterministic local profiler
 check; the default is the real Agent runtime:
 
 ```bash
-bash nvidia/nat/scripts/profile.sh
+npm run test:agent:nat:profile
 ```
 
 All NAT outputs, including workflow output, evaluator output, profiler traces and effective config, belong under `.tmp/nat/` and must not be committed. The dataset stores only synthetic `case_id` values; fixture content stays in the TypeScript registry.
 
 The current evaluator reports runtime status, contract validity, backend validation state, deterministic semantic checks,
-attempts, repairs and latency. `not_applicable` is used when a Case has not wired a production business validator; it is
-kept separate from business validation success.
+attempts, repairs and latency. An explicit Backend Validator and `semantic_valid=true` are required for a passing result.
+Cases without a business validator remain outside this regression gate.

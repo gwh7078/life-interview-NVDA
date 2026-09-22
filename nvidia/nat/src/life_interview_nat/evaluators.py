@@ -16,9 +16,9 @@ def evaluate_result(result: dict[str, Any]) -> tuple[float, dict[str, Any]]:
 
     runtime_ok = result.get("status") == "succeeded"
     contract_ok = validation.get("contract_valid") is True
-    semantic_ok = validation.get("semantic_valid") is not False
+    semantic_ok = validation.get("semantic_valid") is True
     backend = validation.get("backend_validation")
-    backend_ok = backend in ("passed", "not_applicable")
+    backend_ok = backend == "passed"
     passed = runtime_ok and contract_ok and semantic_ok and backend_ok and not failed_checks
 
     return float(passed), {

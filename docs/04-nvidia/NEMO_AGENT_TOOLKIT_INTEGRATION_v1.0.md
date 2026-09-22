@@ -23,11 +23,11 @@ NAT → OpenClaw Gateway → nemo-relay → ATIF/OpenInference → Phoenix
 | 能力 | 状态 | 说明 |
 |---|---|---|
 | Node NAT Bridge | Implemented | stdin 只接收 `case_id`，调用 `createAgentTaskPort()` |
-| 6 路 Smoke Fixture Registry | Implemented | 原真实 E2E 与 NAT 共用唯一 TypeScript Fixture 来源 |
+| 6 路 Smoke Fixture Registry | Implemented | NAT Smoke 与 Regression 共用唯一 TypeScript Fixture 来源；Real Gate 已收敛到 NAT |
 | NAT Python 子项目 | Implemented | 独立 Python 3.12 / uv 环境，锁定 NAT 1.9.0 |
 | NAT Workflow / Evaluator | Implemented | 公开 Plugin API；确定性结果评分 |
 | 真实 6-case NAT Smoke | Validated | 2026-09-22：6/6 Runtime、Contract、Backend Validator 与 Semantic checks 通过 |
-| 24-case Regression Dataset | Validated locally | `NAT_AGENT_RUNTIME=stub`：24/24 Runtime、Contract 与 Backend Validator 通过；真实 Provider 全量仍是手动门禁 |
+| 24-case Regression Dataset | Validated locally | `NAT_AGENT_RUNTIME=stub`：24/24 Runtime、Contract、Backend Validator 通过；每个 case 都有确定性语义检查；真实 Provider 全量仍是手动门禁 |
 | NAT Profiler | Validated locally | Stub runtime 的 6-case profiler check 通过；真实 Provider profiling 仍是手动门禁 |
 | NeMo Relay / ATIF / OpenInference | Future | 独立 Gateway Observability Lane，不接管生产链 |
 | Phoenix | Future | 可选本地观测 UI，不是运行依赖 |
@@ -49,9 +49,12 @@ npm run test:agent:nat:profile
 npm run test:agent:nat:eval
 ```
 
+`npm test` 会自动执行 NAT Python unit/plugin import；默认 deterministic CI 不调用真实 Provider。
+`test:agent:real` 保留为兼容别名，实际执行 `test:agent:nat:smoke`。
+
 Smoke 聚合指标见 [`NAT_AGENT_EVAL_REPORT_v1.0.md`](../07-reports/nat/NAT_AGENT_EVAL_REPORT_v1.0.md)。六路 Fixture
 仍是 Runtime Port Fixture；Runner 已在 Proposal 边界复用现有 Backend Validator，六路
 `backend_validation=passed`。由于没有构建并持久化 Session、Story、Share、Document 域数据，这不代表完整产品
 工作流和数据库落库验收。
 
-真实 NAT Smoke 与 Full Eval 需要本机已有 `NEMOCLAW_SANDBOX`、Provider 配置和 NemoClaw/OpenClaw 服务，因此不放入普通 CI。
+真实 NAT Smoke 与 Full Eval 需要本机已有 `NEMOCLAW_SANDBOX`、Provider 配置和 NemoClaw/OpenClaw 服务，因此不放入普通 CI。Full Eval 只在比赛提交或版本冻结前运行。
