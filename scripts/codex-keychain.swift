@@ -3,7 +3,7 @@ import Foundation
 import Security
 
 private let service = "com.rensheng.codex-worktree"
-private let keys = ["VOLCENGINE_API_KEY", "CLOSEOUT_API_KEY"]
+private let keys = ["VOLCENGINE_API_KEY", "CLOSEOUT_API_KEY", "BAILIAN_API_KEY"]
 
 private enum Failure: Error, CustomStringConvertible {
     case usage
@@ -16,7 +16,7 @@ private enum Failure: Error, CustomStringConvertible {
         case .usage:
             return "用法：codex-keychain.swift import-env <私有.env路径> | sync-env .env"
         case .missing(let name):
-            return "指定文件缺少非空的 \(name)，未导入。"
+            return "指定文件缺少可导入的 \(name)，未导入。"
         case .keychain(let status):
             return "macOS 钥匙串操作失败（状态码 \(status)）。"
         case .unsafeEnv:
@@ -90,15 +90,17 @@ private func importEnv(_ path: String) throws {
     let contents = try String(contentsOfFile: path, encoding: .utf8)
     var values: [(String, String)] = []
     for key in keys {
-        guard let value = envValue(key, in: contents) else {
-            throw Failure.missing(key)
+        if let value = envValue(key, in: contents) {
+            values.append((key, value))
         }
-        values.append((key, value))
+    }
+    guard !values.isEmpty else {
+        throw Failure.missing(keys.joined(separator: ", "))
     }
     for (key, value) in values {
         try saveSecret(value, for: key)
     }
-    print("已将两个开发凭证保存到本机 macOS 登录钥匙串；没有显示密钥内容。")
+    print("已将 \(values.count) 个开发凭证保存到本机 macOS 登录钥匙串；没有显示密钥内容。")
 }
 
 private func isManagedLine(_ line: String, key: String) -> Bool {
@@ -133,6 +135,7 @@ private func syncEnv(_ path: String) throws {
     PORT=0
     # VOLCENGINE_API_KEY=实时语音模型凭证（本机钥匙串同步）
     # CLOSEOUT_API_KEY=会后文本总结模型凭证（本机钥匙串同步）
+    # BAILIAN_API_KEY=阿里云百炼文本模型凭证（本机钥匙串同步）
 
     """
     let contents = FileManager.default.fileExists(atPath: file.path)

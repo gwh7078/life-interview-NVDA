@@ -130,6 +130,25 @@ test('runtime config accepts a loopback local text runtime without requiring a m
   });
 });
 
+test('Bailian key feeds the generic remote text runtime without changing realtime credentials', () => {
+  withEnvironment({
+    NODE_ENV: 'test',
+    AUTH_MODE: 'demo_phone',
+    TEXT_MODEL_PROVIDER: 'openai-compatible',
+    TEXT_MODEL_BASE_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    TEXT_MODEL: 'qwen3.8-max',
+    TEXT_MODEL_API_KEY: undefined,
+    BAILIAN_API_KEY: 'bailian-secret-not-config',
+    CLOSEOUT_API_KEY: undefined,
+  }, () => {
+    const runtime = readRuntimeConfig();
+    assert.equal(runtime.closeoutProvider, 'openai-compatible');
+    assert.equal(runtime.closeoutBaseUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1');
+    assert.equal(runtime.closeoutModel, 'qwen3.8-max');
+    assert.equal(runtime.closeoutApiKey, 'bailian-secret-not-config');
+  });
+});
+
 test('runtime auth mode defaults to SMS and rejects unknown modes', () => {
   withEnvironment({ AUTH_MODE: 'sms', NODE_ENV: 'test' }, () => {
     assert.equal(readRuntimeConfig().authMode, 'sms');

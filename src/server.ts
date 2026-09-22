@@ -336,6 +336,7 @@ export function readRuntimeConfig(): RuntimeConfig {
     doubaoApiKey: process.env.VOLCENGINE_API_KEY?.trim() || undefined,
     stepfunApiKey: process.env.STEPFUN_API_KEY?.trim() || undefined,
     closeoutApiKey: process.env.TEXT_MODEL_API_KEY?.trim()
+      || process.env.BAILIAN_API_KEY?.trim()
       || process.env.CLOSEOUT_API_KEY?.trim()
       || undefined,
     closeoutBaseUrl: String(closeoutTask.parameters.baseUrl ?? 'https://ark.cn-beijing.volces.com/api/plan/v3'),
