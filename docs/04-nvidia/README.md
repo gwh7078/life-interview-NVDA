@@ -20,6 +20,26 @@
 
 - [DGX Spark 大模型选型 v1.2](MODEL_SELECTION_v1.0.md)
 
+## NeMo Agent Toolkit
+
+NeMo Agent Toolkit（NAT）计划用于现有 NemoClaw / OpenClaw Agent Runtime 的：
+
+- Agent Evaluation；
+- Regression Test；
+- Profiler；
+- Trace / Trajectory；
+- Benchmark。
+
+当前原则：**NAT 不接管业务 Adapter，也不替换 NemoClaw / OpenClaw Runtime。**
+
+开发前参考：
+
+- [NeMo Agent Toolkit 开发参考资料索引 v1.0](NEMO_AGENT_TOOLKIT_REFERENCE_INDEX_v1.0.md)
+
+该索引包含官方 Installation、Public Plugin API、Custom Evaluator、Profiler、Experimental OpenClaw Adapter、NeMo Relay、ATIF、Observability 等资料。
+
+> 当前该部分仍属于 Reference / Pre-implementation。不能在比赛材料中写成已完成接入。
+
 ## 当前已经验证
 
 ### NemoClaw / OpenShell / OpenClaw
@@ -151,4 +171,4 @@ memory.deep_search
 - **Current Development**
 - **Planned / Future**
 
-不能把仅有架构设计但尚未完成的 NVIDIA / DGX Spark / Retriever 能力写成已落地。
+不能把仅有架构设计但尚未完成的 NVIDIA / DGX Spark / Retriever / NAT 能力写成已落地。
