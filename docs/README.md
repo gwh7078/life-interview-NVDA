@@ -22,7 +22,7 @@
 5. [Agent Task Contract](03-agent/contracts/AGENT_TASK_CONTRACTS_v1.0.md)
 6. [Agent 执行策略](03-agent/AGENT_EXECUTION_POLICY_v1.0.md)
 7. [Skill / Script 映射](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)
-8. [当前 Phase 2B 开发计划](05-development/phases/PHASE_2B_AGENT_RUNTIME_INTEGRATION_v1.0.md)
+8. [Phase 2B-C 产品 Runtime 与真实 E2E](05-development/phases/PHASE_2B_C_PRODUCT_RUNTIME_INTEGRATION_v1.0.md)
 9. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
 10. [NVIDIA Integration](04-nvidia/README.md)
 11. [工程报告入口](07-reports/README.md)
@@ -36,7 +36,8 @@
 - Agent Task Contract v1.0 — Frozen
 - Agent Execution Policy v1.2
 - Phase 2A Contract Scaffold — Completed
-- Phase 2B Agent Runtime Integration — In Progress
+- Phase 2B-C Agent Runtime Integration — Completed / six-path Real Agent E2E 6/6
+- Next Phase 3A — NeMo Retriever + Classic Retrieval
 - 4 个正式 Skill family — 已提交
 
 ### Validated Historical Work

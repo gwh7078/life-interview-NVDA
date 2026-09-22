@@ -880,6 +880,38 @@ test('missing model credentials fail terminally before a provider request or par
   });
 });
 
+test('Agent runtime and exhausted proposal repairs remain manually retryable', async () => {
+  const cases = [
+    { error: Object.assign(new Error('timeout'), { code: 'AGENT_RUNTIME_TIMEOUT' }), code: 'AGENT_RUNTIME_TIMEOUT', retryable: true },
+    { error: Object.assign(new Error('exec failed'), { code: 'AGENT_RUNTIME_EXEC_FAILED' }), code: 'AGENT_RUNTIME_EXEC_FAILED', retryable: true },
+    { error: Object.assign(new Error('invalid result'), { code: 'AGENT_RESULT_INVALID' }), code: 'AGENT_RESULT_INVALID', retryable: true },
+    {
+      error: Object.assign(new Error('proposal rejected'), {
+        name: 'AgentProposalValidationError',
+        feedback: [{ code: 'INVALID_SOURCE_MESSAGE_IDS' }],
+      }),
+      code: 'INVALID_SOURCE_MESSAGE_IDS',
+      retryable: true,
+    },
+    { error: Object.assign(new Error('runtime configuration is invalid'), { code: 'AGENT_TASK_OUTPUT_INVALID' }), code: 'AGENT_TASK_OUTPUT_INVALID', retryable: false },
+  ] as const;
+
+  for (const item of cases) {
+    const scenario = prepareScenario();
+    beginInterviewCloseout(
+      scenario.databasePath,
+      scenario.sessionId,
+      { apiKey: 'test-closeout-secret' },
+      scenario.userId,
+      { processor: { process: async () => { throw item.error; } } },
+    );
+    const result = await waitForStoredResult(scenario.databasePath, scenario.sessionId, scenario.userId);
+    assert.equal(result.closeoutStatus, 'failed');
+    assert.equal(result.errorCode, item.code);
+    assert.equal(result.retryable, item.retryable, item.code);
+  }
+});
+
 test('a stale processing lease is reclaimed and completed by the new attempt', async () => {
   const scenario = prepareScenario();
   const database = createDatabase(scenario.databasePath);

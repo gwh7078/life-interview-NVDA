@@ -22,7 +22,7 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
   }
 
   try {
-    const repo = new AgentRunRepository(dbPath);
+    const repo = new AgentRunRepository(dbPath, { captureContent: true });
     repo.create({
       runId: 'run-a', userId: 'user-a', agentType: 'story-context-inspector',
       taskType: 'inspect-story-context', resourceType: 'story', resourceId: 'story-a',

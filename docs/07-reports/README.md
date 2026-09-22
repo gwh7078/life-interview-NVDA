@@ -25,6 +25,10 @@
 
 暂不移动，以保持历史路径稳定。
 
+当前验收报告：
+
+- `testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md` — Phase 2B-C 六路径真实 Agent E2E
+
 ## Future Structure
 
 ```text

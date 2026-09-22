@@ -90,8 +90,8 @@ Agentic Retrieval
 后续需要补齐：
 
 - 正式 AgentTaskExecutor；
-- 真实 4 Task Agent E2E；
-- Retry / Validation Repair / Format Repair；
+- 真实六路径 Agent E2E（6/6）；
+- Runtime Retry / Validation Repair / Format Repair；
 - Model Router；
 - Agent Eval；
 - Schema success / first-pass success / evidence accuracy / latency / tool-call-rate benchmark；
@@ -137,7 +137,7 @@ Agentic Retrieval 必须以真实 Tool 调用、证据质量和 Benchmark 作为
 - 正式 Skills；
 - Phase 2B Adapter boundary。
 
-当前缺口主要是正式 Agent Runtime E2E 与稳定性收敛。
+当前缺口主要是 NeMo Retriever Classic Retrieval、Agent Eval / Benchmark、DGX Spark 本地运行证据与比赛包装材料。
 
 Retriever 不应为了比赛加分破坏已有产品完整性，因此：
 
@@ -231,8 +231,8 @@ All Future Retrieval
 - [ ] NVIDIA 技术栈说明完整
 - [ ] StepFun 使用有真实代码或 Benchmark 证据
 - [x] Skill Markdown 文件齐全
-- [ ] 正式 Agent 4 Task E2E
-- [ ] Retry / Repair / Format Repair 测试
+- [x] 正式 Agent 六路径 E2E
+- [x] Retry / Repair / Format Repair 测试
 - [ ] DGX Spark 本地运行步骤可复现
 - [ ] Agent Eval / Benchmark 有报告
 - [ ] Classic Retrieval 如宣称已实现，必须有真实代码 / 测试 / latency 证据

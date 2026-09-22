@@ -81,6 +81,38 @@ class CaptureRunner implements CommandRunner {
   }
 }
 
+class SequenceCaptureRunner implements CommandRunner {
+  inputs: string[] = [];
+  private callCount = 0;
+
+  async run(
+    _command: string,
+    _args: string[],
+    _timeoutMs: number,
+    stdin?: string,
+  ) {
+    this.inputs.push(stdin ?? '');
+    this.callCount += 1;
+    if (this.callCount === 1) return { stdout: 'malformed candidate', stderr: '' };
+    return {
+      stdout: 'LIFE_INTERVIEW_RESULT {"status":"interviewing","gaps":[]}\n',
+      stderr: '',
+    };
+  }
+}
+
+class FailingRunner implements CommandRunner {
+  async run(
+    _command: string,
+    _args: string[],
+    _timeoutMs: number,
+    _stdin?: string,
+    _signal?: AbortSignal,
+  ): Promise<never> {
+    throw new CommandExecutionError('timeout', 'AGENT_RUNTIME_TIMEOUT', 'provider stderr');
+  }
+}
+
 test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scripts', async () => {
   const runner = new CaptureRunner();
   const attempts = new NemoClawOpenClawAttemptRunner({
@@ -158,6 +190,42 @@ test('AttemptRunner records timing diagnostics without task content', async () =
   }
 });
 
+test('AttemptRunner records failed timing diagnostics without task content', async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'life-interview-agent-failed-timing-'));
+  const diagnosticsPath = path.join(directory, 'timing.jsonl');
+  try {
+    const attempts = new NemoClawOpenClawAttemptRunner({
+      sandboxName: 'my-assistant',
+      provider: 'stepfun',
+      diagnosticsPath,
+      models: { 'reasoning-fast': 'step-test-model' },
+    }, new FailingRunner());
+
+    await assert.rejects(() => attempts.run({
+      task: taskRequest(),
+      attemptNumber: 2,
+      mode: 'runtime_retry',
+    }), (error: unknown) => error instanceof CommandExecutionError
+      && error.code === 'AGENT_RUNTIME_TIMEOUT');
+
+    const timing = JSON.parse(readFileSync(diagnosticsPath, 'utf8')) as {
+      mode: string;
+      attemptNumber: number;
+      errorCode?: string;
+      stdoutBytes: number;
+      stderrBytes: number;
+    };
+    assert.equal(timing.mode, 'runtime_retry');
+    assert.equal(timing.attemptNumber, 2);
+    assert.equal(timing.errorCode, 'AGENT_RUNTIME_TIMEOUT');
+    assert.equal(timing.stdoutBytes, 0);
+    assert.equal(timing.stderrBytes, 'provider stderr'.length);
+    assert.equal(JSON.stringify(timing).includes('provider stderr'), false);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 class SequenceAttemptRunner implements AgentTaskAttemptRunner {
   requests: AgentAttemptRequest[] = [];
 
@@ -207,6 +275,23 @@ test('TaskExecutor uses Format Repair only after final-result formatting failure
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
   assert.equal(attempts.requests.length, 2);
   assert.equal(attempts.requests[1]?.mode, 'format_repair');
+  assert.equal(attempts.requests[1]?.repairCandidate, '{"status":');
+});
+
+test('Format Repair prompt carries the malformed candidate into the next Agent attempt', async () => {
+  const runner = new SequenceCaptureRunner();
+  const attempts = new NemoClawOpenClawAttemptRunner({
+    sandboxName: 'my-assistant',
+    provider: 'stepfun',
+    models: { 'reasoning-fast': 'step-test-model' },
+  }, runner);
+  const executor = new NemoClawAgentTaskExecutor(attempts);
+
+  await executor.execute(taskRequest());
+
+  assert.equal(runner.inputs.length, 2);
+  assert.match(runner.inputs[1] ?? '', /LIFE_INTERVIEW_FORMAT_REPAIR_CANDIDATE/);
+  assert.match(runner.inputs[1] ?? '', /malformed candidate/);
 });
 
 test('TaskExecutor sends schema or business validation failure to Validation Repair', async () => {
