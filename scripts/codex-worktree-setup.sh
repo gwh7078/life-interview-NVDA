@@ -21,6 +21,8 @@ if [[ ! -e .env ]]; then
       "AUTH_MODE=demo_phone",
       "AI_TASK_RUNTIME=direct",
       "NEMOCLAW_SANDBOX=my-assistant",
+      "STORY_INTERVIEW_PROVIDER=stepfun",
+      "STEPFUN_REALTIME_MODEL=step-audio-2-mini",
       "TEXT_MODEL_PROVIDER=openai-compatible",
       "TEXT_MODEL_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1",
       "TEXT_MODEL=qwen3.5-35b-a3b",
