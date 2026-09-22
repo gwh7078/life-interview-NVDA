@@ -8,6 +8,8 @@ const SAFE_TRACE_FIELDS = new Set([
   'runId',
   'contextVersion',
   'queryChars',
+  'factCount',
+  'factSourceMessageIds',
   'deadlineMs',
   'errorCode',
   'recallStatus',

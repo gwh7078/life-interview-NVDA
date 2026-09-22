@@ -29,6 +29,7 @@
 
 - `testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md` — Phase 2B-C 六路径真实 Agent E2E
 - `testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md` — Phase 3A Retriever / Classic Retrieval 本机联调
+- `testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md` — Phase 3 A+B 真实 Integration Gate，G0–G8 全部通过
 
 ## Future Structure
 

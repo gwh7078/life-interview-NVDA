@@ -2,7 +2,7 @@
 
 人生采访局 NVIDIA Agent-Native 比赛版。
 
-> 当前开发阶段：**Phase 2B-C 已完成真实验收；Phase 3A Retriever / Classic Retrieval 正在本机联调**
+> 当前开发阶段：**Phase 3 A+B 自动 Integration Gate 已完成 G0–G8；人工真实语音体验验收待完成**
 >
 > 当前主架构：**Architecture v2.3 — 低轮次 Agent 执行策略**
 >
@@ -59,7 +59,7 @@ Local / Remote Model
 - 复杂任务目标是 **1 次 Agent Run + 少量必要 Tool Call**。
 - 最终结果严格结构化；仅在“结果格式失败”时使用强制 JSON / JSON Schema 作为兜底修复。
 - Realtime 主链路当前保持低延迟；Future v1.6 优先采用 Step-Audio Tool Calling 触发慢系统，Backend Adapter 负责 HOLD / Deadline / Stale Protection，独立 2B Judge 暂作为 Benchmark / Fallback。
-- Retriever / Memory Search 已进入 Phase 3A 本机联调；真实 NeMo Retriever 服务验收仍待服务恢复。
+- Retriever / Memory Search 已完成 Phase 3A 真实 ingest/query、限定检索与来源追溯验收。
 
 ## 当前 4 个 Agent Task
 
@@ -90,7 +90,8 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 | Phase 1 Agent Runtime Smoke | 已完成 | Node → NemoClaw → OpenClaw → Scoped Tool API 的真实最小闭环 |
 | Phase 2A Contract-First Scaffold | 已完成 | 冻结 Task Contract、Context、Output Schema、Port、Stub |
 | Phase 2B-C Agent Runtime Integration | **已完成 / 6 路真实 E2E 通过** | 正式 Skills、NemoClaw Adapter、Executor、重试/修复、Tracing、真实 E2E |
-| Phase 3A Retriever / Classic Retrieval | **开发中 / 本地确定性通过** | SQLite Transcript 异步索引、RetrieverAdapter、条件式 Memory Search；真实 Retriever 验收待服务恢复 |
+| Phase 3A Retriever / Classic Retrieval | **已完成 / 真实 Gate 通过** | SQLite Transcript 异步索引、RetrieverAdapter、条件式 Memory Search、真实 ingest/query 与来源追溯 |
+| Phase 3 A+B Integration Gate | **自动验收通过 / G0–G8 PASS** | Realtime Tool/HOLD/Resume、Slow Coordinator、Retriever recall、并发隔离、延迟与最终状态核对 |
 | Realtime Fast/Slow + Agentic Retrieval | 延期 | Slow System、Agentic Retrieval、时代背景检索 |
 | DGX Spark Optimization | 后续 | 本地推理、模型评测、性能优化 |
 | Competition Packaging | 后续 | README、部署文档、Demo、Benchmark、视频、征文 |
@@ -109,7 +110,9 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 
 真实 Agent 验收记录：[`docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md`](docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md)
 
-Phase 3A 本机报告：[`docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md`](docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md)
+Phase 3A 历史本机报告：[`docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md`](docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md)
+
+Phase 3 A+B 真实 Gate 报告：[`docs/07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md`](docs/07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md)
 
 ## 历史资料
 
