@@ -4,11 +4,11 @@
 
 ## 当前视觉基线
 
-- 参考图：[`references/ui-reference-core-v1.jpg`](references/ui-reference-core-v1.jpg)
+- 参考图：[`references/ui-reference-core-v1.webp`](references/ui-reference-core-v1.webp)
 - 日期：2026-09-22
 - 用途：作为当前 Web UI 重构的**视觉方向基线**，重点覆盖登录、首次建档、Interview 通话、Processing、整理结果、我的人生、Story、成稿与文章阅读等核心页面。
 
-![UI/UX Core Reference](references/ui-reference-core-v1.jpg)
+![UI/UX Core Reference](references/ui-reference-core-v1.webp)
 
 ## 最重要的使用规则
 
@@ -58,7 +58,7 @@ Git 不追踪空目录，因此这些子目录在首次有内容时再创建。
 
 ## 文件命名建议
 
-- 视觉基线：`ui-reference-<scope>-vX.jpg`
+- 视觉基线：`ui-reference-<scope>-vX.webp`
 - Design System：`DESIGN_SYSTEM_vX.md`
 - 页面规范：`SCREEN_<NAME>_vX.md`
 - 流程规范：`FLOW_<NAME>_vX.md`
