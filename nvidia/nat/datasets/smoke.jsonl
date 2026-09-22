@@ -1,0 +1,6 @@
+{"id":"onboarding_closeout","question":{"case_id":"onboarding.closeout"},"answer":{"status":"succeeded"}}
+{"id":"story_create","question":{"case_id":"interview.closeout/story_create"},"answer":{"status":"succeeded"}}
+{"id":"story_continue","question":{"case_id":"interview.closeout/story_continue"},"answer":{"status":"succeeded"}}
+{"id":"contributor","question":{"case_id":"interview.closeout/contributor"},"answer":{"status":"succeeded"}}
+{"id":"story_completion","question":{"case_id":"story.completion"},"answer":{"status":"succeeded"}}
+{"id":"story_generation","question":{"case_id":"story.generation"},"answer":{"status":"succeeded"}}

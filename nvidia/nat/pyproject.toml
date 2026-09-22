@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "life-interview-nat"
+version = "0.1.0"
+description = "NeMo Agent Toolkit evaluation lane for life-interview-NVDA"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "langchain-core>=0.3,<1",
+  "nvidia-nat[eval,profiler]==1.9.0",
+]
+
+[project.entry-points."nat.plugins"]
+life_interview_nat = "life_interview_nat.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+life_interview_nat = ["configs/*.yml"]

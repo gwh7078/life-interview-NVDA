@@ -24,6 +24,7 @@ runtime/diagnostics/
 logs/
 uploads/
 **/uploads/
+.tmp/nat/
 
 # macOS metadata
 .DS_Store
@@ -52,6 +53,7 @@ service-account*.json
 venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
 .cache/
 .pytest_cache/
 .mypy_cache/

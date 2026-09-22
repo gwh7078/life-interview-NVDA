@@ -38,7 +38,7 @@ NeMo Agent Toolkit（NAT）计划用于现有 NemoClaw / OpenClaw Agent Runtime 
 
 该索引包含官方 Installation、Public Plugin API、Custom Evaluator、Profiler、Experimental OpenClaw Adapter、NeMo Relay、ATIF、Observability 等资料。
 
-> 当前该部分仍属于 Reference / Pre-implementation。不能在比赛材料中写成已完成接入。
+> NAT-1 已实现并完成六路真实 Smoke；完整状态以 [NeMo Agent Toolkit 接入说明](NEMO_AGENT_TOOLKIT_INTEGRATION_v1.0.md) 和实际测试记录为准。Relay / ATIF / Phoenix 仍属于 Future / Experimental，不能提前写成生产能力。
 
 ## 当前已经验证
 

@@ -21,6 +21,8 @@
     "scripts/closeout-real-acceptance.ts",
     "scripts/phase3-ab-integration.ts",
     "scripts/phase3-backend-stepfun-e2e.ts",
+    "scripts/agent-eval/**/*.ts",
+    "scripts/nat-agent-runner.ts",
     "drizzle.config.ts",
     "agent/**/*.ts",
     "tests/**/*.ts"

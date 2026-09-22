@@ -25,9 +25,10 @@
 8. [Phase 2B-C 产品 Runtime 与真实 E2E](05-development/phases/PHASE_2B_C_PRODUCT_RUNTIME_INTEGRATION_v1.0.md)
 9. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
 10. [NVIDIA Integration](04-nvidia/README.md)
-11. [工程报告入口](07-reports/README.md)
-12. [Phase 3 A+B Integration Gate](07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md)
-13. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
+11. [NeMo Agent Toolkit 接入说明](04-nvidia/NEMO_AGENT_TOOLKIT_INTEGRATION_v1.0.md)
+12. [工程报告入口](07-reports/README.md)
+13. [Phase 3 A+B Integration Gate](07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md)
+14. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
 
 ## 当前状态
 

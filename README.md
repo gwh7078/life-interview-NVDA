@@ -45,6 +45,16 @@ OpenClaw Agent + Skills
 Local / Remote Model
 ```
 
+评测层独立于生产 Runtime：
+
+```text
+NeMo Agent Toolkit
+  -> Node NAT Bridge
+  -> AgentTaskPort
+  -> 同一条 NemoClaw / OpenClaw 生产链
+  -> Deterministic Evaluation / Workflow Profiling
+```
+
 核心原则：
 
 - **Agent = Reasoning Authority**：理解、判断、规划、写作。
@@ -109,6 +119,8 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 9. [比赛要求原始整理](资料库/DGX_Spark_Hackathon_比赛要求.md)
 
 真实 Agent 验收记录：[`docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md`](docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md)
+
+NeMo Agent Toolkit 接入说明：[`docs/04-nvidia/NEMO_AGENT_TOOLKIT_INTEGRATION_v1.0.md`](docs/04-nvidia/NEMO_AGENT_TOOLKIT_INTEGRATION_v1.0.md)
 
 Phase 3A 历史本机报告：[`docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md`](docs/07-reports/testing/PHASE3A_RETRIEVER_CLASSIC_RETRIEVAL_LOCAL_REPORT_v1.0.md)
 

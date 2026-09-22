@@ -21,6 +21,10 @@
     "agent:smoke": "node --env-file-if-exists=.env --import tsx agent/runtime/smoke.ts",
     "test:agent": "tsx --test tests/unit/*.test.ts tests/integration/*.test.ts",
     "test:agent:real": "node --env-file-if-exists=.env --import tsx scripts/agent-phase2b-real-e2e.ts",
+    "test:agent:nat:unit": "PYTHONPATH=nvidia/nat/src python3 -m unittest discover -s nvidia/nat/tests -p 'test_*.py'",
+    "test:agent:nat:smoke": "bash nvidia/nat/scripts/smoke.sh",
+    "test:agent:nat:profile": "bash nvidia/nat/scripts/profile.sh",
+    "test:agent:nat:eval": "bash nvidia/nat/scripts/eval.sh",
     "test:phase3:backend:live": "node --env-file-if-exists=.env --import tsx scripts/phase3-backend-stepfun-e2e.ts",
     "test:phase3:integration": "node --env-file-if-exists=.env --import tsx scripts/phase3-ab-integration.ts"
   },
