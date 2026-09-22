@@ -93,6 +93,23 @@ test('Documents and the reader use the shared design system while preserving gen
   assert.match(styles, /\.generation-dialog[\s\S]*border-radius/);
 });
 
+test('all user-facing product pages load the shared design system', () => {
+  for (const file of [
+    'index.html',
+    'result.html',
+    'onboarding-processing.html',
+    'onboarding-result.html',
+    'life.html',
+    'story.html',
+    'documents.html',
+    'document.html',
+    'share.html',
+    'book.html',
+  ]) {
+    assert.match(read(file), /href="\/ui\.css"/, `${file} should load ui.css`);
+  }
+});
+
 test('Book keeps three steps and an independent on-demand Preview layer', () => {
   const book = read('book.html');
   for (const stepId of ['step-information', 'step-arrangement', 'step-delivery']) {
