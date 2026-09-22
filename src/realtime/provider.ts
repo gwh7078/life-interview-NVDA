@@ -30,6 +30,7 @@ import {
   parseQwenServerEvent,
   type QwenRealtimeRegion,
 } from './qwen.js';
+import { createStepfunRealtimeProvider } from './stepfun.js';
 import type { RealtimeInterviewContext } from './prompt.js';
 import type {
   NormalizedRealtimeEvent,
@@ -54,6 +55,7 @@ const QWEN_OUTPUT_ENCODING = 'pcm_s16le';
 export interface RealtimeProviderConfig {
   doubaoApiKey?: string;
   doubaoVoice?: string;
+  stepfunApiKey?: string;
   apiKey?: string;
   workspaceId?: string;
   region: QwenRealtimeRegion;
@@ -117,6 +119,11 @@ export interface RealtimeVoiceProvider extends RealtimeProviderContract {
   connectionFailureMessage(failure: RealtimeConnectionFailure): string;
   normalizeServerMessage(raw: unknown): NormalizedRealtimeEvent[];
   handleControlEvent(event: NormalizedRealtimeEvent): Record<string, unknown>[];
+  handleToolResult?(
+    call: Extract<NormalizedRealtimeEvent, { type: 'tool.call.requested' }>,
+    output: unknown,
+    options?: { resume?: boolean },
+  ): Record<string, unknown>[];
 }
 
 /** Backwards-compatible type name only; the contract itself is provider-neutral. */
@@ -461,6 +468,8 @@ export function createRealtimeInterviewProvider(
     };
     return adapter;
   }
+
+  if (id === 'stepfun') return createStepfunRealtimeProvider(config);
 
   const audioStartedResponses = new Set<string>();
   const normalize = (raw: unknown): NormalizedRealtimeEvent[] => {

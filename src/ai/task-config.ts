@@ -11,7 +11,7 @@ export type AiTaskName =
   | 'completion.story'
   | 'generation.story';
 
-export type RealtimeModelProviderId = 'doubao' | 'qwen';
+export type RealtimeModelProviderId = 'doubao' | 'qwen' | 'stepfun';
 export interface AiTaskConfig {
   provider: RealtimeModelProviderId | TextRuntimeProviderId;
   model: string;
@@ -43,8 +43,8 @@ function independentTextTask(
 /** Task-specific model routing. Credentials deliberately remain outside this configuration object. */
 export function resolveAiTaskConfig(env: NodeJS.ProcessEnv = process.env): AiTaskConfigMap {
   const interviewProvider = env.STORY_INTERVIEW_PROVIDER?.trim() || 'doubao';
-  if (interviewProvider !== 'doubao' && interviewProvider !== 'qwen') {
-    throw new Error('STORY_INTERVIEW_PROVIDER must be doubao or qwen.');
+  if (interviewProvider !== 'doubao' && interviewProvider !== 'qwen' && interviewProvider !== 'stepfun') {
+    throw new Error('STORY_INTERVIEW_PROVIDER must be doubao, qwen or stepfun.');
   }
   const textProvider = env.TEXT_MODEL_PROVIDER?.trim() || 'volcengine-agent-plan';
   if (!isTextRuntimeProviderId(textProvider)) {
@@ -75,7 +75,11 @@ export function resolveAiTaskConfig(env: NodeJS.ProcessEnv = process.env): AiTas
     'interview.story': {
       provider: interviewProvider,
       model: env.STORY_INTERVIEW_MODEL?.trim()
-        || (interviewProvider === 'doubao' ? '1.2.6.1' : env.DASHSCOPE_MODEL?.trim() || 'qwen-audio-3.0-realtime-plus'),
+        || (interviewProvider === 'doubao'
+          ? '1.2.6.1'
+          : interviewProvider === 'stepfun'
+            ? env.STEPFUN_REALTIME_MODEL?.trim() || 'step-audio-2-mini'
+            : env.DASHSCOPE_MODEL?.trim() || 'qwen-audio-3.0-realtime-plus'),
       parameters: {
         region: env.DASHSCOPE_REGION?.trim() || 'cn-beijing',
         workspaceId: env.DASHSCOPE_WORKSPACE_ID?.trim() || '',

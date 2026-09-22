@@ -7,6 +7,7 @@ import {
   DEFAULT_DOUBAO_MODEL,
   DOUBAO_END_SMOOTH_WINDOW_MS,
 } from '../src/realtime/doubao.js';
+import { DEFAULT_STEPFUN_MODEL, STEPFUN_CONTEXT_TOOL } from '../src/realtime/stepfun.js';
 
 const storyContext = {
   user: { user_id: 'user-1', name: '测试用户' },
@@ -93,6 +94,54 @@ test('PROVIDER-CONTRACT-02 Qwen satisfies the same generic contract with its leg
   assert.equal(shutdown.length, 40);
   assert.ok(shutdown.every((step) => step.delayAfterMs === 20));
   assert.equal(adapter.closePlan(), null);
+});
+
+test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool', () => {
+  const adapter = createRealtimeInterviewProvider('stepfun', {
+    stepfunApiKey: 'test-only-key',
+    region: 'cn-beijing',
+    model: DEFAULT_STEPFUN_MODEL,
+  });
+
+  assert.equal(adapter.id, 'stepfun');
+  assert.deepEqual(adapter.audio, {
+    input: { encoding: 'pcm_s16le', sampleRate: 24_000, frameBytes: 960 },
+    output: { encoding: 'pcm_s16le', sampleRate: 24_000 },
+  });
+  assert.equal(adapter.connectOptions().url, 'wss://api.stepfun.com/v1/realtime?model=step-audio-2-mini');
+  const session = adapter.setupSession(storyContext)[0]?.session as Record<string, unknown>;
+  const tools = session.tools as Array<Record<string, unknown>>;
+  assert.equal((tools[0]?.function as Record<string, unknown>).name, STEPFUN_CONTEXT_TOOL);
+  assert.equal(adapter.appendAudioMessages(Buffer.from([0, 1]))[0]?.type, 'input_audio_buffer.append');
+
+  adapter.normalizeServerMessage(JSON.stringify({
+    type: 'response.function_call_arguments.delta',
+    call_id: 'call-1',
+    delta: '{"query":"王师傅"}',
+  }));
+  const calls = adapter.normalizeServerMessage(JSON.stringify({
+    type: 'response.function_call_arguments.done',
+    call_id: 'call-1',
+    response_id: 'response-1',
+    name: STEPFUN_CONTEXT_TOOL,
+    arguments: '{"query":"王师傅"}',
+  }));
+  assert.deepEqual(calls, [{
+    type: 'tool.call.requested',
+    name: STEPFUN_CONTEXT_TOOL,
+    callId: 'call-1',
+    arguments: { query: '王师傅' },
+    rawArguments: '{"query":"王师傅"}',
+    responseId: 'response-1',
+  }]);
+  const toolCall = calls[0];
+  assert.equal(toolCall?.type, 'tool.call.requested');
+  if (toolCall?.type !== 'tool.call.requested') throw new Error('StepFun tool call was not normalized.');
+  const toolMessages = adapter.handleToolResult?.(toolCall, { facts: [] });
+  assert.equal(toolMessages?.[0]?.type, 'conversation.item.create');
+  assert.equal((toolMessages?.[0]?.item as Record<string, unknown>).call_id, 'call-1');
+  assert.equal(toolMessages?.[1]?.type, 'response.create');
+  assert.equal(adapter.handleToolResult?.(toolCall, { status: 'stale' }, { resume: false })?.length, 1);
 });
 
 test('NORMALIZE contract maps Doubao and Qwen speech, transcript, audio and response events to the same event vocabulary', () => {

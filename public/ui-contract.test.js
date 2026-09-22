@@ -25,6 +25,7 @@ test('current profile and realtime provider UI match the V1.5.2 product surface'
   const lifeScript = read('life.js');
   assert.doesNotMatch(interview, /<option value="qwen"/);
   assert.match(interview, /<option value="doubao" selected>/);
+  assert.match(interview, /<option value="stepfun">/);
   assert.match(interviewScript, /noiseSuppression:\s*true/);
   assert.match(interviewScript, /autoGainControl:\s*false/);
   assert.match(life, /id="profile-popover-phone"/);
