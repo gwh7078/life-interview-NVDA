@@ -26,7 +26,7 @@
 9. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
 10. [NVIDIA Integration](04-nvidia/README.md)
 11. [工程报告入口](07-reports/README.md)
-12. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
+12. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
 
 ## 当前状态
 
@@ -49,7 +49,7 @@
 
 ### Future / Deferred
 
-- Realtime Slow System
+- Realtime Slow System（v1.6：优先 Step-Audio Tool Trigger；2B Judge 为 Benchmark / Fallback）
 - 条件式 Skill Script Memory Search
 - NeMo Retriever 产品集成
 - DGX Spark 最终本地推理与 Benchmark
