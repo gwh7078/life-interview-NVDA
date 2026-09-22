@@ -45,12 +45,21 @@
   line-height: 1.7;
 }
 
+.book-flow { max-width: 760px; margin: 0 auto; }
+
 .stepper {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: fit-content;
+  max-width: 100%;
   gap: 12px;
   margin: 0 auto 34px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 254, 250, .78);
+  box-shadow: var(--shadow-soft);
   color: var(--faint);
   font-size: 11px;
 }
@@ -82,6 +91,7 @@
 .stepper-item.is-active { color: var(--brand); }
 .stepper-item.is-active span { border-color: var(--brand); background: var(--brand); color: #fff; }
 .stepper-item.is-done span { border-color: #9db19e; background: var(--brand-soft); color: var(--brand); }
+.stepper > span { color: var(--sand); }
 
 .step-panel {
   max-width: 720px;
@@ -178,7 +188,10 @@
   border-radius: 14px;
   background: rgba(255, 255, 252, .72);
   box-shadow: 0 4px 12px rgba(0, 0, 0, .015);
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
 }
+
+.arrangement-card:hover { border-color: #c8d2c7; background: var(--paper); transform: translateY(-1px); }
 
 .arrangement-card.is-excluded { opacity: .58; }
 .arrangement-check { width: 18px; height: 18px; accent-color: var(--brand); }
@@ -372,7 +385,7 @@
 
 @media (max-width: 720px) {
   .book-empty { margin: 45px auto; padding: 35px 20px; }
-  .stepper { gap: 4px; margin-bottom: 25px; font-size: 9px; }
+  .stepper { gap: 4px; margin-bottom: 25px; padding: 6px 8px; font-size: 9px; }
   .stepper-item { gap: 5px; padding: 3px 2px; font-size: 9px; }
   .stepper-item span { width: 21px; height: 21px; }
   .stepper > span { font-size: 9px; }
