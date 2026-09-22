@@ -19,9 +19,8 @@ const elements = {
   storyStage: document.querySelector('#story-stage'),
   storyUpdatedAt: document.querySelector('#story-updated-at'),
   storyProgress: document.querySelector('#story-progress'),
-  progressTrack: document.querySelector('#progress-track'),
-  progressSegments: [...document.querySelectorAll('[data-progress-step]')],
   storyStatus: document.querySelector('#story-status'),
+  storyStatusDescription: document.querySelector('#story-status-description'),
   storySummary: document.querySelector('#story-summary'),
   storySummaryToggle: document.querySelector('#story-summary-toggle'),
   gapsIntro: document.querySelector('#gaps-intro'),
@@ -120,6 +119,13 @@ function statusLabel(status) {
   return '资料较少';
 }
 
+function statusDescription(status) {
+  if (status === 'pending') return '这段故事还在收集阶段，继续聊一两次，会更容易看见完整脉络。';
+  if (status === 'interviewing') return '已经整理出一部分内容，下一次可以接着当前线索继续。';
+  if (status === 'complete') return '目前的资料已经足够生成一篇故事成稿。';
+  return '这段故事还在收集阶段，继续聊一会儿就好。';
+}
+
 function formatDate(value) {
   if (typeof value !== 'string' || !value.trim()) return '更新时间暂不可用';
   const date = new Date(value);
@@ -151,16 +157,10 @@ function renderStageOptions() {
 
 function renderProgress() {
   const status = normaliseStatus(state.story.status);
-  const currentIndex = storyStatuses.indexOf(status);
   elements.storyProgress.dataset.status = status;
   elements.storyStatus.textContent = statusLabel(status);
   elements.storyStatus.dataset.status = status;
-  elements.progressTrack.dataset.status = status;
-  elements.progressTrack.setAttribute('aria-label', `故事进度：${statusLabel(status)}`);
-  elements.progressSegments.forEach((segment, index) => {
-    segment.dataset.reached = index <= currentIndex ? 'true' : 'false';
-    segment.classList.toggle('is-current', index === currentIndex);
-  });
+  elements.storyStatusDescription.textContent = statusDescription(status);
 }
 
 function renderGaps() {

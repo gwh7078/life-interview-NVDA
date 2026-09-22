@@ -63,6 +63,21 @@ test('the core user path keeps My Life, Story, Documents, and Book entry points'
   assert.match(book, /制作我的人生书/);
 });
 
+test('My Life and Story use fixed status labels without a progress meter', () => {
+  const life = read('life.html');
+  const lifeScript = read('life.js');
+  const story = read('story.html');
+  const storyScript = read('story.js');
+  assert.match(life, /id="timeline-list"/);
+  assert.match(lifeScript, /status-chip/);
+  assert.match(story, /id="story-status-description"/);
+  assert.doesNotMatch(story, /progress-track|progress-segment|progress-labels/);
+  assert.doesNotMatch(storyScript, /progressTrack|progressSegments|data-progress-step/);
+  for (const label of ['资料较少', '正在完善', '已可成稿']) {
+    assert.match(`${lifeScript}\n${storyScript}`, new RegExp(label));
+  }
+});
+
 test('Book keeps three steps and an independent on-demand Preview layer', () => {
   const book = read('book.html');
   for (const stepId of ['step-information', 'step-arrangement', 'step-delivery']) {

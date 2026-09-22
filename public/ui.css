@@ -189,6 +189,23 @@ body.debug-mode .debug-only { display: revert !important; }
   box-shadow: var(--shadow-soft);
 }
 
+.status-chip {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid #d8e2d8;
+  border-radius: 999px;
+  background: #eef4ee;
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-chip[data-status="interviewing"] { border-color: #e5dfcc; background: #f6f0e3; color: #8a7651; }
+.status-chip[data-status="pending"] { border-color: #e8ddd1; background: #f8f0e9; color: #9a775e; }
+
 .page-notice { margin: 0 0 14px; padding: 13px 15px; border: 1px solid #ecd5cc; border-radius: 12px; background: #fff8f5; color: #955548; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
 .loading-state { margin: 28px 0; color: var(--muted); font-size: 12px; }
 .page-retry { display: flex; justify-content: center; margin: 14px 0; }

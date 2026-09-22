@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f8f6f1">
     <title>故事详情 · 人生采访局</title>
+    <link rel="stylesheet" href="/ui.css">
     <link rel="stylesheet" href="/story.css">
     <script type="module" src="/story.js"></script>
   </head>
@@ -59,20 +60,11 @@
         </header>
 
         <section class="story-progress" id="story-progress" aria-labelledby="progress-heading">
-          <div class="progress-topline">
-            <span id="progress-heading">故事进度</span>
-            <strong id="story-status" role="status" aria-live="polite"></strong>
+          <div class="status-panel-topline">
+            <p class="section-label" id="progress-heading">当前状态</p>
+            <strong class="status-chip" id="story-status" role="status" aria-live="polite"></strong>
           </div>
-          <div class="progress-track" id="progress-track" role="img" aria-label="故事进度">
-            <span class="progress-segment" data-progress-step="pending"></span>
-            <span class="progress-segment" data-progress-step="interviewing"></span>
-            <span class="progress-segment" data-progress-step="complete"></span>
-          </div>
-          <div class="progress-labels" aria-hidden="true">
-            <span>资料较少</span>
-            <span>正在完善</span>
-            <span>已可成稿</span>
-          </div>
+          <p class="story-status-description" id="story-status-description"></p>
         </section>
 
         <div class="story-content-flow">

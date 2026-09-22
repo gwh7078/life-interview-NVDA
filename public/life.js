@@ -188,7 +188,7 @@ function buildStoryCard(story) {
   copy.append(title, makeElement('span', 'story-card-summary', summary));
 
   const meta = makeElement('span', 'story-card-meta');
-  const status = makeElement('span', 'story-status', storyStatusLabel(story.status));
+  const status = makeElement('span', 'story-status status-chip', storyStatusLabel(story.status));
   status.dataset.status = normaliseStoryStatus(story.status);
   const arrow = makeElement('span', 'story-card-arrow', '›');
   arrow.setAttribute('aria-hidden', 'true');
