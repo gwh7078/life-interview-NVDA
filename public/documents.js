@@ -150,6 +150,7 @@ function renderVersions() {
     openLink.className = 'version-link';
     openLink.href = `${documentsPath()}/${encodeURIComponent(item.document_id)}`;
     const version = document.createElement('span');
+    version.className = 'version-badge';
     const versionNumber = getVersionNumber(item.version_number, index + 1);
     version.textContent = `V${versionNumber}`;
     openLink.append(version);

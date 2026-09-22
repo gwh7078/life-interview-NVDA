@@ -78,6 +78,21 @@ test('My Life and Story use fixed status labels without a progress meter', () =>
   }
 });
 
+test('Documents and the reader use the shared design system while preserving generation controls', () => {
+  const documents = read('documents.html');
+  const document = read('document.html');
+  const styles = read('documents.css');
+  assert.match(documents, /href="\/ui\.css"/);
+  assert.match(document, /href="\/ui\.css"/);
+  assert.match(documents, /id="generation-dialog"/);
+  for (const style of ['documentary', 'warm', 'restrained', 'literary']) {
+    assert.match(documents, new RegExp(`value="${style}"`));
+  }
+  assert.match(document, /id="document-body"/);
+  assert.match(styles, /\.document-body[\s\S]*max-width: 680px/);
+  assert.match(styles, /\.generation-dialog[\s\S]*border-radius/);
+});
+
 test('Book keeps three steps and an independent on-demand Preview layer', () => {
   const book = read('book.html');
   for (const stepId of ['step-information', 'step-arrangement', 'step-delivery']) {
