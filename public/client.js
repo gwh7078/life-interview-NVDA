@@ -72,6 +72,9 @@ const elements = {
   liveText: document.querySelector('#live-text'),
   callStoryTitle: document.querySelector('#call-story-title'),
   callContextCopy: document.querySelector('#call-context-copy'),
+  callStage: document.querySelector('#call-stage'),
+  callStateText: document.querySelector('#call-state-text'),
+  callStageCopy: document.querySelector('#call-stage-copy'),
   callStatus: document.querySelector('#call-status'),
   callTimer: document.querySelector('#call-timer'),
   muteButton: document.querySelector('#mute-button'),
@@ -509,16 +512,34 @@ function updateInterviewTargetMode() {
 const statusLabels = {
   idle: '准备开始',
   connecting: '连接中',
-  active: '通话中',
+  active: '正在听',
+  'user-speaking': '正在听你说',
+  thinking: '正在理解',
   responding: '采访官正在说',
   ending: '正在结束',
   ended: '已结束',
   error: '连接失败',
 };
 
+const statusDescriptions = {
+  idle: '准备好后，开始这次采访。',
+  connecting: '正在建立连接，请稍候。',
+  active: '从你记得最清楚的地方开始就好。',
+  'user-speaking': '我在听，慢慢说就好。',
+  thinking: '正在理解你刚才说的内容。',
+  responding: '请听采访官的回应。',
+  ending: '正在保存这次访谈。',
+  ended: '这次访谈已经结束。',
+  error: '连接遇到问题，请稍后重试。',
+};
+
 function setStatus(status, label = statusLabels[status] || status) {
   elements.statusPill.dataset.state = status;
   elements.statusText.textContent = label;
+  if (elements.conversationCard) elements.conversationCard.dataset.state = status;
+  if (elements.callStage) elements.callStage.dataset.state = status;
+  if (elements.callStateText) elements.callStateText.textContent = label;
+  if (elements.callStageCopy) elements.callStageCopy.textContent = statusDescriptions[status] || '';
   if (elements.callStatus) {
     elements.callStatus.dataset.state = status;
     elements.callStatus.textContent = label;
@@ -1200,8 +1221,8 @@ function connectRealtime() {
         hideLive();
         if (responseActive && !deferDoubaoInterruption) {
           setLifecycle('active');
-          setStatus('active');
         }
+        setStatus('user-speaking');
         return;
       }
       if (message.type === 'speech_stopped') {
@@ -1218,6 +1239,7 @@ function connectRealtime() {
           ...markTraceStage('speech_stopped', stageDetails),
         });
         hideLive();
+        if (state.lifecycle !== 'ending') setStatus('thinking');
         return;
       }
       if (message.type === 'user_partial') {
@@ -1240,8 +1262,8 @@ function connectRealtime() {
           });
           stopPlayback();
           setLifecycle('active');
-          setStatus('active');
         }
+        setStatus('user-speaking');
         hideLive();
         traceClient('user_partial_rendered', {
           chars: partialText.length,
@@ -1274,8 +1296,8 @@ function connectRealtime() {
           });
           stopPlayback();
           setLifecycle('active');
-          setStatus('active');
         }
+        if (state.lifecycle !== 'ending') setStatus('thinking', '正在准备回应');
         hideLive();
         traceClient('user_final_rendered', {
           ...traceDetails,

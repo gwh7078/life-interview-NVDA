@@ -1,24 +1,39 @@
 :root {
   color-scheme: light;
-  --bg: #f8f6f1;
-  --paper: #fffefa;
-  --paper-soft: #fbfaf6;
-  --ink: #252821;
-  --body: #4f554d;
-  --muted: #8d9189;
+  --color-bg: #f8f6f1;
+  --color-paper: #fffefa;
+  --color-paper-soft: #fbfaf6;
+  --color-ink: #252821;
+  --color-text: #4f554d;
+  --color-muted: #8d9189;
+  --color-brand: #3f5d49;
+  --color-brand-dark: #304b3a;
+  --color-brand-soft: #edf2ed;
+  --color-sand: #b69a68;
+  --color-danger: #bf6d61;
+  --bg: var(--color-bg);
+  --paper: var(--color-paper);
+  --paper-soft: var(--color-paper-soft);
+  --ink: var(--color-ink);
+  --body: var(--color-text);
+  --muted: var(--color-muted);
   --faint: #b7bab2;
   --line: #e8e5de;
   --line-strong: #dcd8cf;
-  --brand: #3f5d49;
-  --brand-deep: #304b3a;
-  --brand-soft: #edf2ed;
-  --sand: #b69a68;
+  --brand: var(--color-brand);
+  --brand-deep: var(--color-brand-dark);
+  --brand-soft: var(--color-brand-soft);
+  --sand: var(--color-sand);
   --sand-soft: #f4eee2;
-  --danger: #bf6d61;
+  --danger: var(--color-danger);
   --danger-deep: #a95349;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
   --serif: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --shadow-soft: 0 18px 55px rgba(51, 48, 40, .055);
+  --shadow-float: 0 22px 70px rgba(51, 48, 40, .09);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -29,9 +44,7 @@ body {
   margin: 0;
   min-width: 320px;
   color: var(--ink);
-  background:
-    radial-gradient(circle at 16% 0%, rgba(255, 255, 255, .92), rgba(255, 255, 255, 0) 34rem),
-    linear-gradient(180deg, #fbfaf6 0, var(--bg) 48%, #f5f3ee 100%);
+  background: var(--color-bg);
   font-family: var(--sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -152,7 +165,7 @@ body.debug-mode .debug-only { display: revert !important; }
   gap: 7px;
   padding: 0 17px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
@@ -171,7 +184,7 @@ body.debug-mode .debug-only { display: revert !important; }
 
 .panel {
   border: 1px solid rgba(223, 216, 203, .9);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background: rgba(255, 254, 250, .9);
   box-shadow: var(--shadow-soft);
 }
