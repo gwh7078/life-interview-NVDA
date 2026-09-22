@@ -29,6 +29,7 @@
 12. [工程报告入口](07-reports/README.md)
 13. [Phase 3 A+B Integration Gate](07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md)
 14. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
+15. [UI / UX 设计资料](09-uiux/README.md)
 
 ## 当前状态
 
@@ -97,6 +98,7 @@ docs/
 ├── 06-decisions/      ADR
 ├── 07-reports/        测试 / 部署 / Benchmark
 ├── 08-future/         已冻结但延期的未来架构
+├── 09-uiux/           UI / UX 视觉基线、设计系统与交互规范
 ├── archive/           早期项目快照，仅供历史追溯
 ├── nvidia-agent-native/  Phase 0/1 历史资料
 └── product/           Web 产品与验收基线
