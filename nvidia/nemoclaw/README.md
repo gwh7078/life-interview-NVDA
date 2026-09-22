@@ -1,5 +1,7 @@
 # NemoClaw / OpenShell / OpenClaw integration
 
+> 本文的 Tool API 与 `story-context-inspector` 部分是 Phase 1 历史 Smoke 说明。当前正式产品链路见 `docs/05-development/phases/PHASE_2B_C_PRODUCT_RUNTIME_INTEGRATION_v1.0.md`，使用一个 `main` Agent 和四个正式 Skill。
+
 Phase 1 uses the real OpenClaw runtime managed by NemoClaw/OpenShell.
 
 ## Onboard
@@ -12,17 +14,21 @@ nemoclaw inference get
 
 OpenClaw is the default agent for normal NemoClaw onboarding. Do not use Pi in Phase 1.
 
-## Install the smoke Skill
+## Install the formal Phase 2B-C Skills
 
 ```bash
 ./deploy/mac/install-skill.sh
 ```
 
-Equivalent:
+The installer installs:
 
-```bash
-nemoclaw my-assistant skill install ./agent/skills/story-context-inspector
-```
+- `onboarding-closeout`
+- `interview-closeout` (including its `references/` files)
+- `story-completion`
+- `story-generation`
+
+The legacy `story-context-inspector` Skill is retained only for the historical
+Phase 1 Smoke and is not required by the formal six-path E2E.
 
 ## Programmatic turn
 

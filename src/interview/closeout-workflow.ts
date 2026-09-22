@@ -70,6 +70,33 @@ function parseCloseoutResult(value: string | null | undefined): Record<string, u
   }
 }
 
+function errorProperty(error: unknown, key: string): unknown {
+  return error && typeof error === 'object'
+    ? (error as Record<string, unknown>)[key]
+    : undefined;
+}
+
+function agentFailureCode(error: unknown): string | undefined {
+  const code = errorProperty(error, 'code');
+  if (typeof code === 'string' && code) return code;
+  if (errorProperty(error, 'name') === 'AgentProposalValidationError') {
+    const feedback = errorProperty(error, 'feedback');
+    if (Array.isArray(feedback)) {
+      const first = feedback[0];
+      if (first && typeof first === 'object' && typeof (first as { code?: unknown }).code === 'string') {
+        return (first as { code: string }).code;
+      }
+    }
+  }
+  return undefined;
+}
+
+function isRetryableAgentFailure(error: unknown): boolean {
+  const code = agentFailureCode(error);
+  if (code?.startsWith('AGENT_RUNTIME_') || code?.startsWith('AGENT_RESULT_')) return true;
+  return errorProperty(error, 'name') === 'AgentProposalValidationError';
+}
+
 function safeError(error: unknown, repairLog?: RepairAttemptLog): {
   code: string;
   message: string;
@@ -92,11 +119,16 @@ function safeError(error: unknown, repairLog?: RepairAttemptLog): {
       ...(error.diagnostics ? { diagnostics: error.diagnostics as unknown as Record<string, unknown> } : {}),
     };
   } else {
+    const agentCode = agentFailureCode(error);
+    const agentFailure = isRetryableAgentFailure(error);
     failure = {
-      code: 'CLOSEOUT_FAILED',
+      code: agentCode ?? 'CLOSEOUT_FAILED',
       message: '访谈整理失败，请稍后重试。',
-      retryable: false,
-      diagnostics: { failureType: error instanceof Error ? error.name : 'unknown' },
+      retryable: agentFailure,
+      diagnostics: {
+        failureType: error instanceof Error ? error.name : 'unknown',
+        ...(agentCode ? { agent_error_code: agentCode } : {}),
+      },
     };
   }
   if (!repairLog?.count) return failure;
@@ -230,7 +262,8 @@ function currentCloseoutAttempt(databasePath: string | undefined, sessionId: str
 }
 
 function cancellationError(error: unknown): unknown {
-  return error instanceof CloseoutModelError && error.code === 'MODEL_CANCELLED'
+  const code = errorProperty(error, 'code');
+  return (error instanceof CloseoutModelError && error.code === 'MODEL_CANCELLED') || code === 'AGENT_RUNTIME_CANCELLED'
     ? new CloseoutWorkflowError('已停止访谈整理。', 'CLOSEOUT_CANCELLED', 409)
     : error;
 }

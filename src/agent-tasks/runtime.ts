@@ -58,6 +58,8 @@ export function createAgentTaskPort(
       ...(optionalEnv(env, 'AGENT_MODEL_WRITING') ? { writing: optionalEnv(env, 'AGENT_MODEL_WRITING') } : {}),
     },
   });
-  const runs = new AgentRunRepository(options.databasePath ?? optionalEnv(env, 'DATABASE_PATH'));
+  const runs = new AgentRunRepository(options.databasePath ?? optionalEnv(env, 'DATABASE_PATH'), {
+    captureContent: env.DIAGNOSTICS_CAPTURE_CONTENT?.trim() === '1',
+  });
   return new NemoClawAgentTaskAdapter(new NemoClawAgentTaskExecutor(attempts, runs));
 }

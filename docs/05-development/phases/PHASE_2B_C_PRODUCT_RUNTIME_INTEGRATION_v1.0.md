@@ -1,6 +1,8 @@
 # Phase 2B-C — Product Runtime Integration & Real E2E v1.0
 
-> Status: **In Progress**
+> Status: **Completed / Real Agent Verified**
+>
+> Verification: 2026-09-22 · six-path NemoClaw/OpenClaw E2E gate passed 6/6 on the `my-assistant` sandbox.
 >
 > Baseline: Architecture v2.3 + Agent Execution Policy v1.1
 >
@@ -86,6 +88,11 @@ Only for final result protocol / JSON failures such as:
 - non-object final result.
 
 Business validation failures are not classified as Format Repair.
+
+When the shared three-attempt budget is exhausted, a valid Transcript-backed
+Closeout failure caused by Agent runtime, final-result format, or Proposal
+validation remains manually retryable. Transcript integrity failures remain
+blocked until the underlying Transcript problem is fixed.
 
 ## 4. Cancellation
 
@@ -234,6 +241,9 @@ The report records:
 - Proposal or error;
 - selected provider/model metadata.
 
+The committed acceptance summary is:
+`docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md`.
+
 Do not store API keys or Tool credentials in the report.
 
 ## 10. Definition of Done
@@ -252,9 +262,9 @@ Do not store API keys or Tool credentials in the report.
 - [x] Skill Script terminology aligned
 - [x] deterministic tests cover the runtime bridge
 - [x] six-path real E2E command added
-- [ ] six-path real NemoClaw/OpenClaw execution passes on the target environment
-- [ ] Phase 2B-C real E2E report committed
-- [ ] PR merged to main
+- [x] six-path real NemoClaw/OpenClaw execution passes on the target environment
+- [x] Phase 2B-C real E2E report committed
+- [x] Phase 2B-C runtime integration synchronized to main
 
 ## 11. Explicitly out of scope
 

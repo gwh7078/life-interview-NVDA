@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { createDatabase } from '../../src/db/client.js';
 import { agentRuns, type AgentRunStatus } from '../../src/db/schema.js';
 import { nowUtcIso } from '../../src/db/time.js';
+import { diagnosticsContentEnabled } from '../../src/diagnostics/snapshot.js';
 import type { AgentRunRequest } from '../runtime/types.js';
 
 export interface AgentRunCreateInput extends AgentRunRequest {
@@ -33,6 +34,10 @@ export interface AgentRunSuccessMetadata {
   model?: string | null;
 }
 
+export interface AgentRunRepositoryOptions {
+  captureContent?: boolean;
+}
+
 export interface AgentRunStore {
   create(input: AgentRunCreateInput): void;
   markRunning(userId: string, runId: string): void;
@@ -48,7 +53,10 @@ export interface AgentRunStore {
 }
 
 export class AgentRunRepository implements AgentRunStore {
-  constructor(private readonly databasePath?: string) {}
+  constructor(
+    private readonly databasePath?: string,
+    private readonly options: AgentRunRepositoryOptions = {},
+  ) {}
 
   create(input: AgentRunCreateInput): void {
     const connection = createDatabase(this.databasePath);
@@ -126,7 +134,9 @@ export class AgentRunRepository implements AgentRunStore {
       completedAt: nowUtcIso(),
       latencyMs,
       errorCode: null,
-      resultJson: JSON.stringify(result),
+      resultJson: (this.options.captureContent ?? diagnosticsContentEnabled())
+        ? JSON.stringify(result)
+        : null,
       ...(metadata.outputHash !== undefined ? { outputHash: metadata.outputHash } : {}),
       ...(metadata.provider !== undefined ? { provider: metadata.provider } : {}),
       ...(metadata.model !== undefined ? { model: metadata.model } : {}),

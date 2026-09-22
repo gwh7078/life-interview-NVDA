@@ -1,6 +1,9 @@
 # Phase 2B — Agent Runtime Integration v1.0
 
-> Status: **In Progress**
+> Status: **Historical baseline / superseded by Phase 2B-C**
+>
+> Current status and acceptance evidence are maintained in
+> `PHASE_2B_C_PRODUCT_RUNTIME_INTEGRATION_v1.0.md`.
 >
 > Start date: 2026-09-20
 >

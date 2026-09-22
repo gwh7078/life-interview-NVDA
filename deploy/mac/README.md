@@ -1,5 +1,18 @@
 # Mac Phase 1 development
 
+> 本文其余内容保留为 Phase 1 Smoke 的历史部署说明。当前正式产品验收使用 `./deploy/mac/install-skill.sh` 安装四个 Phase 2B-C Skill，并运行 `npm run test:agent:real`；当前固定 Runtime 是 NemoClaw `my-assistant` 中的 OpenClaw `main` Agent。Phase 2B-C 不需要启动 `npm run agent:tool-server`。
+
+## Current Phase 2B-C verification
+
+```bash
+chmod +x ./deploy/mac/install-skill.sh
+./deploy/mac/install-skill.sh
+nemoclaw "$NEMOCLAW_SANDBOX" skill list
+npm run test:agent:real
+```
+
+需要先确认 `NEMOCLAW_SANDBOX` 指向实际可用 Sandbox；不要因为 `.env.example` 的示例值而创建第二个 Sandbox。
+
 Target: Apple Silicon macOS with Docker Desktop or Colima, real NemoClaw/OpenShell/OpenClaw, and NVIDIA Hosted inference.
 
 ## 1. Verify environment

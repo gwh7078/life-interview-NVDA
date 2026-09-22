@@ -2,7 +2,7 @@
 
 人生采访局 NVIDIA Agent-Native 比赛版。
 
-> 当前开发阶段：**Phase 2B — Agent Runtime Integration / In Progress**
+> 当前开发阶段：**Phase 2B-C 已完成真实验收；下一阶段为 Phase 3A Retriever / Classic Retrieval**
 >
 > 当前主架构：**Architecture v2.3 — 低轮次 Agent 执行策略**
 >
@@ -89,8 +89,9 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 | Web 产品基线 | 已完成 | 完整产品逻辑与人工测试基线 |
 | Phase 1 Agent Runtime Smoke | 已完成 | Node → NemoClaw → OpenClaw → Scoped Tool API 的真实最小闭环 |
 | Phase 2A Contract-First Scaffold | 已完成 | 冻结 Task Contract、Context、Output Schema、Port、Stub |
-| Phase 2B Agent Runtime Integration | **当前进行中** | 正式 Skills、NemoClaw Adapter、Executor、重试/修复、Tracing、E2E |
-| Realtime Fast/Slow + Retriever | 延期 | Slow System、条件式 Memory Search、NeMo Retriever |
+| Phase 2B-C Agent Runtime Integration | **已完成 / 6 路真实 E2E 通过** | 正式 Skills、NemoClaw Adapter、Executor、重试/修复、Tracing、真实 E2E |
+| Phase 3A Retriever / Classic Retrieval | **下一阶段** | SQLite Transcript 异步索引、RetrieverAdapter、条件式 Memory Search |
+| Realtime Fast/Slow + Agentic Retrieval | 延期 | Slow System、Agentic Retrieval、时代背景检索 |
 | DGX Spark Optimization | 后续 | 本地推理、模型评测、性能优化 |
 | Competition Packaging | 后续 | README、部署文档、Demo、Benchmark、视频、征文 |
 
@@ -100,11 +101,13 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 2. [当前主架构 v2.3](docs/02-architecture/ARCHITECTURE_v2.3_agent-execution-efficiency.md)
 3. [Agent Task Contract](docs/03-agent/contracts/AGENT_TASK_CONTRACTS_v1.0.md)
 4. [Agent 执行策略](docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md)
-5. [Phase 2B 开发计划](docs/05-development/phases/PHASE_2B_AGENT_RUNTIME_INTEGRATION_v1.0.md)
+5. [Phase 2B-C 产品 Runtime 与真实 E2E](docs/05-development/phases/PHASE_2B_C_PRODUCT_RUNTIME_INTEGRATION_v1.0.md)
 6. [架构决策 ADR](docs/06-decisions/ADR_INDEX_v1.0.md)
 7. [未来 Realtime Fast / Slow](docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md)
 8. [比赛评分对照](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)
 9. [比赛要求原始整理](资料库/DGX_Spark_Hackathon_比赛要求.md)
+
+真实 Agent 验收记录：[`docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md`](docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md)
 
 ## 历史资料
 
