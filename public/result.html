@@ -38,6 +38,28 @@
         <p>你可以先离开此页面，整理会继续进行，完成后会自动写入故事。</p>
       </div>
 
+      <section id="processing-steps" class="processing-steps" aria-labelledby="processing-steps-title" hidden>
+        <p id="processing-steps-title" class="processing-steps-heading">这次访谈正在经历这些步骤</p>
+        <ol class="processing-step-list">
+          <li id="processing-step-transcript" class="processing-step" data-state="pending">
+            <span id="processing-step-transcript-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>保存访谈记录</strong><span id="processing-step-transcript-detail">等待确认最后一段字幕</span></span>
+          </li>
+          <li id="processing-step-closeout" class="processing-step" data-state="pending">
+            <span id="processing-step-closeout-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>整理本次访谈</strong><span id="processing-step-closeout-detail">等待开始</span></span>
+          </li>
+          <li id="processing-step-story" class="processing-step" data-state="pending">
+            <span id="processing-step-story-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>更新故事资料</strong><span id="processing-step-story-detail">等待前一步完成</span></span>
+          </li>
+          <li id="processing-step-completion" class="processing-step" data-state="pending">
+            <span id="processing-step-completion-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>分析后续主题</strong><span id="processing-step-completion-detail">等待前一步完成</span></span>
+          </li>
+        </ol>
+      </section>
+
       <div id="page-error" class="notice notice-error" role="alert" hidden></div>
       <div id="empty-notice" class="notice" hidden>
         <h2>还没有可显示的访谈结果</h2>

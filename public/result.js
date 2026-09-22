@@ -73,6 +73,55 @@
     state.processingStageIndex = (state.processingStageIndex + 1) % processingStages.length;
   }
 
+  function updateProcessingStep(id, markId, detailId, status, detail) {
+    const step = byId(id);
+    const mark = byId(markId);
+    const copy = byId(detailId);
+    if (step) step.dataset.state = status;
+    if (mark) mark.textContent = status === 'done' ? '✓' : status === 'active' ? '…' : status === 'failed' ? '!' : '·';
+    if (copy) copy.textContent = detail;
+  }
+
+  function renderProcessingSteps(data, status) {
+    const visible = status === 'processing' || status === 'failed';
+    setVisible(byId('processing-steps'), visible);
+    if (!visible) return;
+
+    const sessionSaved = data.session.status === 'ended' || data.transcript.length > 0;
+    const closeoutCompleted = data.status === 'completed';
+    const storyCompletionPending = data.storyCompletionPending;
+    const failed = status === 'failed';
+
+    updateProcessingStep(
+      'processing-step-transcript',
+      'processing-step-transcript-mark',
+      'processing-step-transcript-detail',
+      failed || sessionSaved ? 'done' : 'active',
+      failed || sessionSaved ? '已保存，可以放心离开' : '正在确认最后一段字幕',
+    );
+    updateProcessingStep(
+      'processing-step-closeout',
+      'processing-step-closeout-mark',
+      'processing-step-closeout-detail',
+      failed ? 'failed' : closeoutCompleted ? 'done' : sessionSaved ? 'active' : 'pending',
+      failed ? '整理遇到问题，可以重新整理' : closeoutCompleted ? '摘要已经整理好' : sessionSaved ? '正在提取故事摘要' : '等待访谈记录保存',
+    );
+    updateProcessingStep(
+      'processing-step-story',
+      'processing-step-story-mark',
+      'processing-step-story-detail',
+      failed ? 'pending' : closeoutCompleted ? 'done' : 'pending',
+      failed ? '等待重新整理' : closeoutCompleted ? '故事资料已经更新' : '等待整理完成',
+    );
+    updateProcessingStep(
+      'processing-step-completion',
+      'processing-step-completion-mark',
+      'processing-step-completion-detail',
+      failed ? 'pending' : closeoutCompleted && storyCompletionPending ? 'active' : closeoutCompleted ? 'done' : 'pending',
+      failed ? '等待重新整理' : closeoutCompleted && storyCompletionPending ? '正在分析后续主题' : closeoutCompleted ? '本轮分析已经完成' : '等待故事资料更新',
+    );
+  }
+
   function setStatus(status, description = '') {
     const titles = {
       loading: '正在读取访谈结果…',
@@ -83,7 +132,7 @@
     };
     const descriptions = {
       loading: '访谈记录和整理进度会显示在这里。',
-      processing: '我们正在整理本次聊天内容，请稍候。页面会自动更新。',
+      processing: '访谈记录已收到，正在整理本次聊天。你可以放心离开，页面会自动更新。',
       completed: '这次聊天已经整理好，新的故事会回到你的人生时间线。',
       failed: '整理过程中遇到问题。你可以重新尝试，访谈记录仍会保留。',
       empty: '这个链接暂时没有可显示的访谈记录。',
@@ -242,6 +291,7 @@
       ? 'processing'
       : status;
     setStatus(effectiveStatus, completionDescription);
+    renderProcessingSteps(data, effectiveStatus);
     if (cancelled) {
       byId('status-title').textContent = '已停止整理';
       byId('status-description').textContent = '本次整理已停止。访谈记录仍会保留，你可以手动重新整理。';
@@ -252,7 +302,7 @@
     } else if (status === 'empty') {
       byId('empty-notice').textContent = '这个链接暂时没有可显示的访谈记录。';
     }
-    setVisible(byId('result-content'), status === 'completed' || status === 'processing' || status === 'failed');
+    setVisible(byId('result-content'), status === 'completed' || status === 'failed');
     setVisible(byId('retry-panel'), status === 'failed' && (data.retryable || cancelled));
     setError('');
     renderSummary(data);

@@ -19,6 +19,57 @@ function setError(message) {
   error.hidden = !message;
 }
 
+function updateProcessingStep(id, markId, detailId, status, detail) {
+  const step = byId(id);
+  const mark = byId(markId);
+  const copy = byId(detailId);
+  if (step) step.dataset.state = status;
+  if (mark) mark.textContent = status === 'done' ? '✓' : status === 'active' ? '…' : status === 'failed' ? '!' : '·';
+  if (copy) copy.textContent = detail;
+}
+
+function renderProcessingSteps(payload, status) {
+  const steps = byId('processing-steps');
+  const visible = status === 'processing' || status === 'failed';
+  steps.hidden = !visible;
+  if (!visible) return;
+
+  const session = payload.session && typeof payload.session === 'object' ? payload.session : {};
+  const sessionSaved = session.status === 'ended' || Array.isArray(payload.transcript) && payload.transcript.length > 0;
+  const closeoutCompleted = payload.onboarding_status === 'completed' || session.closeout_status === 'completed';
+  const storyCompletionPending = payload.story_completion_pending === true;
+  const failed = status === 'failed';
+
+  updateProcessingStep(
+    'processing-step-transcript',
+    'processing-step-transcript-mark',
+    'processing-step-transcript-detail',
+    failed || sessionSaved ? 'done' : 'active',
+    failed || sessionSaved ? '已保存，可以放心离开' : '正在确认最后一段字幕',
+  );
+  updateProcessingStep(
+    'processing-step-closeout',
+    'processing-step-closeout-mark',
+    'processing-step-closeout-detail',
+    failed ? 'failed' : closeoutCompleted ? 'done' : sessionSaved ? 'active' : 'pending',
+    failed ? '整理遇到问题，可以重新整理' : closeoutCompleted ? '人物档案已经整理好' : sessionSaved ? '正在整理人物档案' : '等待访谈记录保存',
+  );
+  updateProcessingStep(
+    'processing-step-story',
+    'processing-step-story-mark',
+    'processing-step-story-detail',
+    failed ? 'pending' : closeoutCompleted ? 'done' : 'pending',
+    failed ? '等待重新整理' : closeoutCompleted ? '人生阶段与故事已经建立' : '等待人物档案完成',
+  );
+  updateProcessingStep(
+    'processing-step-completion',
+    'processing-step-completion-mark',
+    'processing-step-completion-detail',
+    failed ? 'pending' : closeoutCompleted && storyCompletionPending ? 'active' : closeoutCompleted ? 'done' : 'pending',
+    failed ? '等待重新整理' : closeoutCompleted && storyCompletionPending ? '正在分析后续主题' : closeoutCompleted ? '本轮分析已经完成' : '等待人生阶段建立',
+  );
+}
+
 function processingError(payload) {
   const error = payload.processing_error;
   if (typeof error === 'string' && error.trim()) return error.trim();
@@ -30,6 +81,7 @@ function processingError(payload) {
 
 function showPayload(payload) {
   const result = onboardingProcessingState(payload);
+  renderProcessingSteps(payload, result);
   if (result === 'completed') {
     window.location.assign(`/onboarding/result?session_id=${encodeURIComponent(sessionId)}`);
     return result;

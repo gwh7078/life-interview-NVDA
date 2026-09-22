@@ -194,6 +194,33 @@ body.debug-mode .debug-only { display: revert !important; }
 .page-retry { display: flex; justify-content: center; margin: 14px 0; }
 .page-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; color: #a0a49e; font-size: 10px; }
 
+.processing-steps {
+  margin-top: 16px;
+  padding: 19px 21px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 254, 250, .78);
+}
+.processing-steps-heading { margin: 0; color: var(--body); font-size: 11px; font-weight: 700; }
+.processing-step-list { display: grid; gap: 0; margin: 13px 0 0; padding: 0; list-style: none; }
+.processing-step { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 0; }
+.processing-step + .processing-step { border-top: 1px solid var(--line); }
+.processing-step-mark { display: grid; width: 20px; height: 20px; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--muted); font-size: 10px; line-height: 1; }
+.processing-step-copy { display: grid; gap: 2px; min-width: 0; }
+.processing-step-copy strong { color: var(--body); font-size: 11px; font-weight: 700; }
+.processing-step-copy span { color: var(--muted); font-size: 10px; line-height: 1.6; }
+.processing-step[data-state="done"] .processing-step-mark { border-color: var(--brand); background: var(--brand); color: #fff; }
+.processing-step[data-state="done"] .processing-step-copy strong { color: var(--brand-deep); }
+.processing-step[data-state="active"] .processing-step-mark { border-color: var(--brand); color: var(--brand); animation: processing-pulse 1.4s ease-in-out infinite; }
+.processing-step[data-state="active"] .processing-step-copy strong { color: var(--brand); }
+.processing-step[data-state="failed"] .processing-step-mark { border-color: var(--danger); color: var(--danger-deep); }
+.processing-step[data-state="failed"] .processing-step-copy strong { color: var(--danger-deep); }
+@keyframes processing-pulse { 50% { opacity: .45; transform: scale(.88); } }
+
+@media (max-width: 640px) {
+  .processing-steps { padding: 17px 16px; }
+}
+
 .text-field, input.text-field, textarea.text-field, select.text-field {
   width: 100%;
   min-height: 44px;
