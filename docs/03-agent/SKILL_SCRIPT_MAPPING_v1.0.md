@@ -48,7 +48,7 @@ Backend / Retriever API
 |---|---|---|---|
 | `onboarding-closeout` | 无 | 当前 | 固定 Profile / Transcript 由 Backend 预注入，一次 Agent Run 完成 |
 | `interview-closeout / story_create` | 无 | 当前 | 新 Story 所需 Context 已固定注入，不搜索历史 |
-| `interview-closeout / story_continue` | `scripts/memory-search.mjs` | Future / Priority | 出现明确历史疑点时做个人历史 Classic Retrieval |
+| `interview-closeout / story_continue` | `scripts/memory-search.mjs` | Phase 3A 本机已实现 / 真实服务待验收 | 出现明确历史疑点时做个人历史 Classic Retrieval |
 | `interview-closeout / story_continue` | `scripts/memory-deep-search.mjs` | Future / Later | Classic Search 仍不足，且任务允许高延迟时做 Agentic Retrieval |
 | `interview-closeout / contributor` | 无 | 当前 | 第三者证据与主人公历史隔离；禁止搜索主人公 Memory / Transcript |
 | `story-completion` | 无 | 当前 | Completion 只读 Agent Memory，不回查 Transcript |
@@ -71,7 +71,7 @@ agent/skills/interview-closeout/
     └── memory-deep-search.mjs
 ```
 
-注意：两个脚本都属于 Future；当前 Phase 2B 核心 4 Task 尚不依赖 Retriever。
+注意：`memory-search.mjs` 已完成最小受控脚本和授权边界；真实 Retriever 服务恢复后仍需完成线上 ingest/query 验收。`memory-deep-search.mjs` 仍属于 Future；当前 Phase 2B 核心 Task 不依赖 Retriever。
 
 ### 3.1 `memory-search.mjs`
 

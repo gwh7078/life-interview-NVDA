@@ -50,10 +50,10 @@ import {
   DOUBAO_CONFIGURABLE_VOICE_IDS,
   DOUBAO_MODEL_NAME,
 } from './realtime/doubao.js';
-import { DEFAULT_STEPFUN_MODEL } from './realtime/stepfun.js';
+import { DEFAULT_STEPFUN_MODEL, STEPFUN_CONTEXT_TOOL } from './realtime/stepfun.js';
 import {
   RealtimeSlowCoordinator,
-  StubRealtimeRecall,
+  UnavailableRealtimeRecall,
   type RealtimeRecallPort,
 } from './realtime/slow-coordinator.js';
 import {
@@ -94,6 +94,7 @@ import { AgentToolTokenService } from '../agent/tools/token.js';
 import { createRetrieverClientFromEnv, type RetrieverAdapter } from './retriever/client.js';
 import { RetrieverIndexService } from './retriever/indexer.js';
 import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
+import { RetrieverRealtimeRecall } from './realtime/retriever-recall.js';
 
 const DEFAULT_PORT = 4174;
 const DEFAULT_HOST = '127.0.0.1';
@@ -577,6 +578,8 @@ function createStoryWorkflowDependencies(
     );
   const retriever = dependencies.retriever
     ?? (process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true' ? createRetrieverClientFromEnv(process.env) : undefined);
+  const realtimeRecall = dependencies.realtimeRecall
+    ?? (retriever ? new RetrieverRealtimeRecall(retriever) : undefined);
   const retrieverIndex = dependencies.retrieverIndex
     ?? (retriever ? new RetrieverIndexService(config.databasePath, retriever) : undefined);
   const retrievalTokenSecret = process.env.AGENT_RETRIEVAL_TOKEN_SECRET?.trim()
@@ -596,6 +599,7 @@ function createStoryWorkflowDependencies(
     ...dependencies,
     agentTasks,
     ...(retriever ? { retriever } : {}),
+    ...(realtimeRecall ? { realtimeRecall } : {}),
     ...(retrieverIndex ? { retrieverIndex } : {}),
     ...(retrieverScriptGateway ? { retrieverScriptGateway } : {}),
     storyCompletion,
@@ -1773,7 +1777,7 @@ function createRealtimeHandler(
   const assistantResponses = new Map<string, AssistantResponse>();
   const providerAudioTrace = new Map<string, ProviderAudioTrace>();
   const slowCoordinator = new RealtimeSlowCoordinator(
-    dependencies.realtimeRecall ?? new StubRealtimeRecall(),
+    dependencies.realtimeRecall ?? new UnavailableRealtimeRecall(),
     config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS,
   );
   let currentTurnId: string | undefined;
@@ -1865,6 +1869,26 @@ function createRealtimeHandler(
       recordTrace('realtime.tool_call_ignored', { name: event.name, reason: 'adapter_or_session_unavailable' });
       return;
     }
+    const unavailableOutput = {
+      status: 'unavailable',
+      facts: [],
+      possibleConflicts: [],
+      interviewHints: [],
+    };
+    const storyContextAllowed = sessionContext.interview_type === undefined
+      || sessionContext.interview_type === 'story';
+    if (event.name !== STEPFUN_CONTEXT_TOOL || !storyContextAllowed) {
+      const sent = sendProviderMessages(selectedAdapter.handleToolResult(event, unavailableOutput, { resume: true }));
+      recordTrace('realtime.tool_call_rejected', {
+        callId: event.callId,
+        responseId: event.responseId,
+        sent,
+        errorCode: event.name !== STEPFUN_CONTEXT_TOOL
+          ? 'REALTIME_TOOL_NOT_ALLOWED'
+          : 'REALTIME_CONTEXT_NOT_ALLOWED',
+      });
+      return;
+    }
     const turnId = currentTurnId ?? event.itemId ?? event.callId;
     const version = contextVersion;
     const args = record(event.arguments);
@@ -1876,6 +1900,28 @@ function createRealtimeHandler(
       responseId: event.responseId,
       queryChars: query.length,
       contextVersion: version,
+    });
+    if (query.length < 2 || query.length > 500) {
+      const sent = sendProviderMessages(selectedAdapter.handleToolResult(event, {
+        ...unavailableOutput,
+        errorCode: 'INVALID_RECALL_QUERY',
+      }, { resume: true }));
+      recordTrace('realtime.tool_call_rejected', {
+        callId: event.callId,
+        responseId: event.responseId,
+        sent,
+        errorCode: 'INVALID_RECALL_QUERY',
+        queryChars: query.length,
+      });
+      return;
+    }
+    recordTrace('realtime.recall_started', {
+      callId: event.callId,
+      responseId: event.responseId,
+      turnId,
+      contextVersion: version,
+      queryChars: query.length,
+      deadlineMs: config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS,
     });
 
     void (async () => {
@@ -1896,9 +1942,12 @@ function createRealtimeHandler(
         && contextVersion === version
         && (currentTurnId === undefined || currentTurnId === turnId));
       recordTrace('realtime.slow_recall_finished', {
+        callId: event.callId,
+        responseId: event.responseId,
         runId: result.runId,
         status: result.status,
         latencyMs: result.latencyMs,
+        slowRecallLatencyMs: result.latencyMs,
         totalElapsedMs: performance.now() - recallStartedAt,
         contextVersion: version,
         errorCode: result.errorCode,
@@ -1934,6 +1983,7 @@ function createRealtimeHandler(
         responseId: event.responseId,
         sent,
         recallStatus: effectiveStatus,
+        toolResultLatencyMs: performance.now() - recallStartedAt,
         stale: effectiveStatus === 'stale',
         resumeRequested: effectiveStatus !== 'stale',
       });
@@ -2743,7 +2793,8 @@ function createRealtimeHandler(
       } catch (error) {
         endError = error instanceof Error ? error.message : '结束 Session 时写入失败。';
       }
-      if (!endError && transcriptWriteErrors.length === 0 && drained && endedSessionId) {
+      if (!endError && transcriptWriteErrors.length === 0 && drained && endedSessionId
+        && sessionContext?.interview_type !== 'external_contributor') {
         recordTrace('retriever.index_scheduled', { sessionId: endedSessionId });
         void dependencies.retrieverIndex?.indexSessionTranscript(
           authContext.userId,
@@ -2756,6 +2807,12 @@ function createRealtimeHandler(
               errorCode: error instanceof Error ? error.name : 'unknown',
             });
           });
+      } else if (!endError && transcriptWriteErrors.length === 0 && drained && endedSessionId
+        && sessionContext?.interview_type === 'external_contributor') {
+        recordTrace('retriever.index_skipped', {
+          sessionId: endedSessionId,
+          reason: 'external_contributor',
+        });
       }
       if (interviewSession.sessionType === 'onboarding') {
         if (reason === 'model_complete') {

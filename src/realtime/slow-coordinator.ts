@@ -48,6 +48,22 @@ export class StubRealtimeRecall implements RealtimeRecallPort {
   }
 }
 
+/** Safe production fallback when the Retriever is not configured or available. */
+export class UnavailableRealtimeRecall implements RealtimeRecallPort {
+  async recall(
+    request: RealtimeRecallRequest,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RealtimeContextHint> {
+    if (options.signal?.aborted) throw abortError();
+    return {
+      basedOnTurnId: request.turnId,
+      facts: [],
+      possibleConflicts: [],
+      interviewHints: [],
+    };
+  }
+}
+
 export type SlowRecallStatus = 'completed' | 'timeout' | 'failed' | 'aborted' | 'stale';
 
 export interface SlowRecallResult {

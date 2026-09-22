@@ -19,4 +19,4 @@
 | health | server health endpoint | KEEP |
 | Agent runtime | not in legacy product | ADD in Phase 1 |
 | Agent Tool API | not in legacy product | ADD read-only in Phase 1 |
-| NeMo Retriever | not active | DEFER to Phase 3 |
+| NeMo Retriever | Phase 3A/B integration Gate in progress; local service currently HTTP 503 | KEEP Phase 1 boundary; complete after real Gate |

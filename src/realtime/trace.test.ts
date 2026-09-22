@@ -134,6 +134,14 @@ test('realtime trace annotates A-D milestones once and derives turn latencies wi
     trace.record('provider.input_audio_buffer.speech_stopped_received', tracker.mark('speech_stopped', {
       source: 'speech_stopped',
     }));
+    trace.record('realtime.slow_recall_finished', {
+      provider: 'stepfun',
+      name: 'get_interview_context',
+      sent: true,
+      latencyMs: 12.345,
+      totalElapsedMs: 13.456,
+      error: 'must remain metadata-only',
+    });
     now = 110;
     trace.record('provider.input_audio_buffer.speech_stopped_received', tracker.mark('speech_stopped', {
       source: 'duplicate',
@@ -163,7 +171,14 @@ test('realtime trace annotates A-D milestones once and derives turn latencies wi
 
     const rows = (await readFile(trace.filePath, 'utf8')).trim().split('\n')
       .map((line) => JSON.parse(line) as Record<string, unknown>);
-    assert.equal(rows.length, 6);
+    assert.equal(rows.length, 7);
+    const recall = rows[1];
+    assert.equal(recall.provider, 'stepfun');
+    assert.equal(recall.name, 'get_interview_context');
+    assert.equal(recall.sent, true);
+    assert.equal(recall.latencyMs, 12.35);
+    assert.equal(recall.totalElapsedMs, 13.46);
+    assert.equal(recall.error, 'must remain metadata-only');
     const milestones = rows.filter((row) => typeof row.tracePoint === 'string');
     assert.deepEqual(milestones.map((row) => row.tracePoint), ['A', 'B', 'C', 'D']);
     assert.deepEqual(milestones.map((row) => row.stage), [

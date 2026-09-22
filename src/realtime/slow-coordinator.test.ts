@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   RealtimeSlowCoordinator,
+  UnavailableRealtimeRecall,
   type RealtimeRecallPort,
 } from './slow-coordinator.js';
 
@@ -13,6 +14,16 @@ const request = {
   contextVersion: 1,
   query: '确认王师傅和我的关系',
 };
+
+test('unavailable production fallback returns no semantic facts', async () => {
+  const result = await new UnavailableRealtimeRecall().recall(request);
+  assert.deepEqual(result, {
+    basedOnTurnId: 'turn-1',
+    facts: [],
+    possibleConflicts: [],
+    interviewHints: [],
+  });
+});
 
 test('slow coordinator returns a completed hint', async () => {
   const port: RealtimeRecallPort = {

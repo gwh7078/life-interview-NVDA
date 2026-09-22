@@ -1,12 +1,14 @@
 # Realtime Fast / Slow Dual-System Architecture v1.6
 
-> Status: **Future / Deferred**
+> Status: **Current implementation / Phase 3 Integration Gate**
 >
 > Date: 2026-09-22
 >
-> Supersedes as current Future recommendation: `REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`（内部版本 v1.5）
+> Supersedes the previous Future recommendation: `REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`（内部版本 v1.5）
 >
-> 当前版本不开发，只冻结后续 Realtime 演进方向。
+> 当前代码已实现候选 Tool Call、HOLD/Resume、Slow Coordinator 和 RealtimeRecall 边界。真实 Retriever ingest/query、真实 Agent/Step-Audio 联调和人工语音体验仍需通过本阶段 Gate 后才能宣告完成。
+>
+> 本阶段的实时 Slow Path 验收范围是 Step-Audio / StepFun；Qwen 保留为 inactive / legacy provider adapter，不在本阶段新增历史上下文 Tool。
 
 ## 1. 本版核心变化
 

@@ -10,4 +10,4 @@ Frozen principles:
 4. Long-term state remains in the application database, not OpenClaw session history.
 5. Mac and DGX Spark share the same business code; environment differences are adapters/configuration.
 6. Phase 1 uses a real NemoClaw/OpenClaw sandbox, not a mock runtime, for the smoke gate.
-7. NeMo Retriever is deferred to Phase 3; Phase 1 only reserves clean boundaries.
+7. NeMo Retriever remains outside the Phase 1 core path; Phase 3A/B now owns its scoped integration Gate, which is currently blocked by the local Retriever HTTP 503.

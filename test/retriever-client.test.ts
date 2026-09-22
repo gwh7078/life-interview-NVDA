@@ -140,6 +140,76 @@ test('Retriever health and search send the configured collection and return trac
   });
 });
 
+test('Retriever recovers message and segment provenance when NeMo returns only chunk text', async () => {
+  const client = new RetrieverClient({
+    endpoint: 'http://retriever.test',
+    collection: 'life-interview-transcripts',
+    fetch: async () => jsonResponse({ hits: [{
+      text: '[segment_id=segment-9][message_id=message-9][user] 这是可追溯的历史片段',
+      metadata: {
+        user_id: 'user-1',
+        story_id: 'story-1',
+        session_id: 'session-1',
+        source_type: 'subject',
+      },
+    }] }),
+  });
+
+  const evidence = await client.searchTranscript({
+    ownerId: 'user-1',
+    storyId: 'story-1',
+    sessionId: 'session-1',
+    sourceType: 'subject',
+    query: '历史片段',
+    topK: 5,
+  });
+
+  assert.deepEqual(evidence[0]?.messageIds, ['message-9']);
+  assert.deepEqual(evidence[0]?.segmentIds, ['segment-9']);
+});
+
+test('Retriever flattens NeMo results groups before normalizing evidence', async () => {
+  const client = new RetrieverClient({
+    endpoint: 'http://retriever.test',
+    collection: 'life-interview-transcripts',
+    fetch: async () => jsonResponse({
+      results: [{
+        hits: [{
+          text: '[segment_id=segment-10][message_id=message-10]嵌套命中',
+          distance: 0.42,
+          metadata: {
+            user_id: 'user-1',
+            story_id: 'story-1',
+            session_id: 'session-1',
+            source_type: 'subject',
+          },
+        }],
+      }],
+      query_mode: 'classic',
+    }),
+  });
+
+  const evidence = await client.searchTranscript({
+    ownerId: 'user-1',
+    storyId: 'story-1',
+    sessionId: 'session-1',
+    sourceType: 'subject',
+    query: '嵌套命中',
+    topK: 5,
+  });
+
+  assert.deepEqual(evidence, [{
+    text: '[segment_id=segment-10][message_id=message-10]嵌套命中',
+    score: 0.42,
+    ownerId: 'user-1',
+    storyId: 'story-1',
+    sourceType: 'subject',
+    sessionId: 'session-1',
+    messageIds: ['message-10'],
+    segmentIds: ['segment-10'],
+  }]);
+});
+
 test('Retriever exposes job/document status and deletes the indexed Session document', async () => {
   const calls: string[] = [];
   const fetchMock: typeof fetch = async (input) => {

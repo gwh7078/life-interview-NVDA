@@ -92,12 +92,13 @@ export function buildStepfunSessionUpdate(
   context: RealtimeInterviewContext,
   voice = DEFAULT_STEPFUN_VOICE,
 ): Record<string, unknown> {
+  const allowsContextTool = context.interview_type === undefined || context.interview_type === 'story';
   const toolInstructions = `\n\n## 历史上下文工具\n当当前轮需要确认用户以前讲过的人物、时间、关系或原话时，先静默调用 ${STEPFUN_CONTEXT_TOOL}，只传递需要确认的信息；不要假装记得，也不要把工具调用过程说给用户听。收到工具结果后再继续回答。当前信息足够时不要调用工具。`;
   return {
     type: 'session.update',
     session: {
       modalities: ['text', 'audio'],
-      instructions: `${buildInterviewInstructions(context)}${context.interview_type === 'onboarding' ? '' : toolInstructions}请使用默认男声与用户交流。`,
+      instructions: `${buildInterviewInstructions(context)}${allowsContextTool ? toolInstructions : ''}请使用默认男声与用户交流。`,
       input_audio_format: 'pcm16',
       output_audio_format: 'pcm16',
       voice,
@@ -106,7 +107,7 @@ export function buildStepfunSessionUpdate(
         prefix_padding_ms: 300,
         silence_duration_ms: 700,
       },
-      ...(context.interview_type === 'onboarding' ? {} : { tools: [buildStepfunContextTool()] }),
+      ...(allowsContextTool ? { tools: [buildStepfunContextTool()] } : {}),
     },
   };
 }

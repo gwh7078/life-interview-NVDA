@@ -187,6 +187,9 @@ function parseLifeInterviewResult(stdout: string): Record<string, unknown> {
 function buildPrompt(request: AgentAttemptRequest): string {
   const task = request.task;
   const context = JSON.stringify(task.payload);
+  const scriptCapabilities = request.mode === 'format_repair'
+    ? []
+    : task.executionPolicy.scriptCapabilities;
   const lines = [
     `Use the installed ${task.skill} skill (version ${task.skillVersion}).`,
     `Task: ${task.taskType}${task.mode ? ` / ${task.mode}` : ''}.`,
@@ -195,11 +198,11 @@ function buildPrompt(request: AgentAttemptRequest): string {
     'Do not run a script to reload this fixed Context.',
   ];
 
-  if (task.executionPolicy.scriptCapabilities.length === 0) {
+  if (scriptCapabilities.length === 0) {
     lines.push('No retrieval Skill Script is authorized for this task in the current phase.');
   } else {
     lines.push(
-      `Only these Skill Script capabilities are authorized when genuinely needed: ${task.executionPolicy.scriptCapabilities.join(', ')}.`,
+      `Only these Skill Script capabilities are authorized when genuinely needed: ${scriptCapabilities.join(', ')}.`,
       'If historical evidence is genuinely needed, run the authorized Skill Script from the installed skill directory and use its small JSON result as supplementary evidence.',
       'For memory-search, use: node {baseDir}/scripts/memory-search.mjs "<short natural-language query>".',
       'Never provide owner IDs, resource IDs, tokens, endpoints, or other security fields to the script; the runtime supplies them.',
@@ -270,7 +273,8 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
     let scriptResultCount: number | undefined;
     let scriptLatencyMs: number | undefined;
 
-    const authorizedScriptContext = request.task.scriptContext
+    const authorizedScriptContext = request.mode !== 'format_repair'
+      && request.task.scriptContext
       && request.task.executionPolicy.scriptCapabilities.includes('memory-search')
       ? request.task.scriptContext
       : undefined;

@@ -38,6 +38,7 @@
 - Phase 2A Contract Scaffold — Completed
 - Phase 2B-C Agent Runtime Integration — Completed / six-path Real Agent E2E 6/6
 - Phase 3A NeMo Retriever + Classic Retrieval — 本机联调中；真实 Retriever 服务验收待恢复
+- Phase 3 A+B Integration Gate — Tool/HOLD/Resume、Slow Coordinator、Retriever recall 和 Agent safety 已完成本地确定性验证；真实 Retriever 当前被 HTTP 503 阻断
 - 4 个正式 Skill family — 已提交
 
 ### Validated Historical Work
@@ -50,8 +51,7 @@
 
 ### Future / Deferred
 
-- Realtime Slow System（v1.6：优先 Step-Audio Tool Trigger；2B Judge 为 Benchmark / Fallback）
-- Agentic Retrieval、Realtime Slow System
+- Agentic Retrieval、Realtime Slow System 的完整真实验收
 - 真实 DGX / NeMo Retriever 服务验收
 - DGX Spark 最终本地推理与 Benchmark
 - 外部世界事实核查

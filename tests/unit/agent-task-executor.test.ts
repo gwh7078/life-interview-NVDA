@@ -188,6 +188,23 @@ test('AttemptRunner exposes only the authorized retrieval script and counts its 
   assert.equal(runner.args.some((arg) => arg.includes('LIFE_INTERVIEW_RETRIEVAL_BASE_URL')), true);
 });
 
+test('Format Repair removes retrieval authorization from the prompt and command', async () => {
+  const runner = new CaptureRunner();
+  const attempts = new NemoClawOpenClawAttemptRunner({ sandboxName: 'my-assistant' }, runner);
+
+  await attempts.run({
+    task: scriptTaskRequest(),
+    attemptNumber: 2,
+    mode: 'format_repair',
+    repairCandidate: '{"summary":',
+  });
+
+  assert.match(runner.stdin, /No retrieval Skill Script is authorized/);
+  assert.equal(runner.stdin.includes('memory-search.mjs'), false);
+  assert.equal(runner.args.some((arg) => arg.includes('LIFE_INTERVIEW_RETRIEVAL_BASE_URL')), false);
+  assert.equal(runner.args.some((arg) => arg.includes('short-lived-secret')), false);
+});
+
 test('AttemptRunner records timing diagnostics without task content', async () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'life-interview-agent-timing-'));
   const diagnosticsPath = path.join(directory, 'timing.jsonl');

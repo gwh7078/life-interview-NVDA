@@ -152,52 +152,55 @@ export async function runExternalContributorCloseout(input: {
     const shares = new StoryShareRepository(input.databasePath);
 
     if (input.agentTaskPort) {
-      const share = shares.findByShareIdForUser(input.userId, session.sourceShareId);
-      if (!share || share.storyId !== session.storyId) throw new Error('EXTERNAL_CONTRIBUTOR_SHARE_NOT_FOUND');
-      let validatedSummary: string | undefined;
-      const mapped = mapContributorCloseoutContextToTask({
-        userId: input.userId,
-        sessionId: input.sessionId,
-        relationship: share.relationship,
-        previousContributorSummary: share.contributorSummary,
-        transcript,
-        shareId: share.shareId,
-        resourceVersion: share.updatedAt,
-      }, randomUUID());
-      const result = await input.agentTaskPort.run(mapped.request, {
-        validateProposal(candidate) {
-          validatedSummary = asSummary(candidate);
-        },
-        repairFeedback() {
-          return [{
-            code: 'EXTERNAL_CONTRIBUTOR_CLOSEOUT_INVALID',
-            path: 'summary',
-            instruction: `只返回 summary，必须非空且不超过 ${CONTRIBUTOR_SUMMARY_MAX_LENGTH} 个字符。`,
-          }];
-        },
-      });
-      const summary = validatedSummary ?? asSummary(result.output);
-      const closeoutResult = {
-        source_type: 'external_contributor',
-        relationship: share.relationship,
-        summary,
-        runtime: result.runtime.runtime,
-        ...(result.runtime.provider ? { provider: result.runtime.provider } : {}),
-        ...(result.runtime.model ? { model: result.runtime.model } : {}),
-        ...(result.runtime.latencyMs !== undefined ? { latency_ms: result.runtime.latencyMs } : {}),
-        attempts: result.runtime.attemptCount ?? 1,
-        repair_count: result.runtime.repairCount ?? 0,
-      };
-      const applied = shares.applyContributorSummary({
-        userId: input.userId,
-        shareId: share.shareId,
-        sessionId: input.sessionId,
-        expectedUpdatedAt: share.updatedAt,
-        summary,
-        closeoutResult,
-      });
-      if (applied === 'applied') return;
-      if (applied === 'missing') throw new Error('EXTERNAL_CONTRIBUTOR_SHARE_NOT_FOUND');
+      for (let attempt = 1; attempt <= EXTERNAL_CONTRIBUTOR_CLOSEOUT_MAX_ATTEMPTS; attempt += 1) {
+        const share = shares.findByShareIdForUser(input.userId, session.sourceShareId);
+        if (!share || share.storyId !== session.storyId) throw new Error('EXTERNAL_CONTRIBUTOR_SHARE_NOT_FOUND');
+        let validatedSummary: string | undefined;
+        const mapped = mapContributorCloseoutContextToTask({
+          userId: input.userId,
+          sessionId: input.sessionId,
+          relationship: share.relationship,
+          previousContributorSummary: share.contributorSummary,
+          transcript,
+          shareId: share.shareId,
+          resourceVersion: share.updatedAt,
+        }, randomUUID());
+        const result = await input.agentTaskPort.run(mapped.request, {
+          validateProposal(candidate) {
+            validatedSummary = asSummary(candidate);
+          },
+          repairFeedback() {
+            return [{
+              code: 'EXTERNAL_CONTRIBUTOR_CLOSEOUT_INVALID',
+              path: 'summary',
+              instruction: `只返回 summary，必须非空且不超过 ${CONTRIBUTOR_SUMMARY_MAX_LENGTH} 个字符。`,
+            }];
+          },
+        });
+        const summary = validatedSummary ?? asSummary(result.output);
+        const closeoutResult = {
+          source_type: 'external_contributor',
+          relationship: share.relationship,
+          summary,
+          runtime: result.runtime.runtime,
+          ...(result.runtime.provider ? { provider: result.runtime.provider } : {}),
+          ...(result.runtime.model ? { model: result.runtime.model } : {}),
+          ...(result.runtime.latencyMs !== undefined ? { latency_ms: result.runtime.latencyMs } : {}),
+          attempts: attempt,
+          agent_attempts: result.runtime.attemptCount ?? 1,
+          repair_count: result.runtime.repairCount ?? 0,
+        };
+        const applied = shares.applyContributorSummary({
+          userId: input.userId,
+          shareId: share.shareId,
+          sessionId: input.sessionId,
+          expectedUpdatedAt: share.updatedAt,
+          summary,
+          closeoutResult,
+        });
+        if (applied === 'applied') return;
+        if (applied === 'missing') throw new Error('EXTERNAL_CONTRIBUTOR_SHARE_NOT_FOUND');
+      }
       throw new Error('EXTERNAL_CONTRIBUTOR_SUMMARY_STALE');
     }
 

@@ -7,7 +7,11 @@ import {
   DEFAULT_DOUBAO_MODEL,
   DOUBAO_END_SMOOTH_WINDOW_MS,
 } from '../src/realtime/doubao.js';
-import { DEFAULT_STEPFUN_MODEL, STEPFUN_CONTEXT_TOOL } from '../src/realtime/stepfun.js';
+import {
+  buildStepfunSessionUpdate,
+  DEFAULT_STEPFUN_MODEL,
+  STEPFUN_CONTEXT_TOOL,
+} from '../src/realtime/stepfun.js';
 
 const storyContext = {
   user: { user_id: 'user-1', name: '测试用户' },
@@ -27,6 +31,21 @@ const onboardingContext = {
   profile: { name: '测试用户' },
   previousOnboardingTranscripts: [],
   taskContext: { mode: 'new' as const },
+};
+
+const externalContributorContext = {
+  interview_type: 'external_contributor' as const,
+  share_id: 'share-1',
+  relationship: 'daughter',
+  contributor_summary: '',
+  subject: { name: '测试用户' },
+  story: {
+    story_id: 'story-1',
+    title: '第一次负责项目',
+    summary: '项目经历',
+    status: 'interviewing',
+    gaps: [],
+  },
 };
 
 test('PROVIDER-CONTRACT-01 Doubao exposes generic capabilities, audio and lifecycle plans without changing wire parameters', () => {
@@ -142,6 +161,12 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   assert.equal((toolMessages?.[0]?.item as Record<string, unknown>).call_id, 'call-1');
   assert.equal(toolMessages?.[1]?.type, 'response.create');
   assert.equal(adapter.handleToolResult?.(toolCall, { status: 'stale' }, { resume: false })?.length, 1);
+});
+
+test('Step-Audio does not expose owner history context to external contributors', () => {
+  const session = buildStepfunSessionUpdate(externalContributorContext).session as Record<string, unknown>;
+  assert.equal('tools' in session, false);
+  assert.equal(String(session.instructions).includes(STEPFUN_CONTEXT_TOOL), false);
 });
 
 test('NORMALIZE contract maps Doubao and Qwen speech, transcript, audio and response events to the same event vocabulary', () => {

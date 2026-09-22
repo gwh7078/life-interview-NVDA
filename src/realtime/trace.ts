@@ -4,6 +4,23 @@ import { performance } from 'node:perf_hooks';
 import { writeDiagnosticLog } from '../diagnostics/logger.js';
 
 const SAFE_TRACE_FIELDS = new Set([
+  'callId',
+  'runId',
+  'contextVersion',
+  'queryChars',
+  'deadlineMs',
+  'errorCode',
+  'recallStatus',
+  'resumeRequested',
+  'stale',
+  'slowRecallLatencyMs',
+  'toolResultLatencyMs',
+  'latencyMs',
+  'totalElapsedMs',
+  'provider',
+  'name',
+  'sent',
+  'error',
   'responseId',
   'eventId',
   'source',

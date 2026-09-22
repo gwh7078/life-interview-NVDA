@@ -4,7 +4,7 @@ const query = process.argv.slice(2).join(' ').trim();
 const baseUrl = process.env.LIFE_INTERVIEW_RETRIEVAL_BASE_URL?.trim();
 const token = process.env.LIFE_INTERVIEW_RETRIEVAL_TOKEN?.trim();
 
-if (!query || query.length > 500) {
+if (query.length < 2 || query.length > 500) {
   console.error('memory-search requires a short query (2-500 characters).');
   process.exit(2);
 }

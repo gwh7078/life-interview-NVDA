@@ -92,14 +92,32 @@ function stringArray(value: unknown): string[] {
   return typeof value === 'string' ? [value] : [];
 }
 
-function evidenceRows(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value;
-  for (const record of recordsFor(value)) {
-    for (const key of ['evidence', 'hits', 'matches', 'results']) {
-      if (Array.isArray(record[key])) return record[key];
-    }
+function transcriptIds(text: string, kind: 'message' | 'segment'): string[] {
+  const ids = new Set<string>();
+  const bracketPattern = new RegExp(`\\[${kind}_id=([^\\]]+)\\]`, 'g');
+  for (const match of text.matchAll(bracketPattern)) {
+    if (match[1]?.trim()) ids.add(match[1].trim());
   }
-  return [];
+  const linePattern = new RegExp(`(?:^|\\s)${kind}_id:\\s*([^\\s\\]]+)`, 'gm');
+  for (const match of text.matchAll(linePattern)) {
+    if (match[1]?.trim()) ids.add(match[1].trim());
+  }
+  return [...ids];
+}
+
+const EVIDENCE_GROUP_KEYS = ['evidence', 'hits', 'matches', 'results', 'data'] as const;
+
+function flattenEvidence(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value.flatMap(flattenEvidence);
+  if (!isRecord(value)) return [];
+  for (const key of EVIDENCE_GROUP_KEYS) {
+    if (Array.isArray(value[key])) return value[key].flatMap(flattenEvidence);
+  }
+  return [value];
+}
+
+function evidenceRows(value: unknown): unknown[] {
+  return flattenEvidence(value);
 }
 
 function evidenceFrom(value: unknown, input: RetrieverSearchInput): RetrieverEvidence {
@@ -123,9 +141,12 @@ function evidenceFrom(value: unknown, input: RetrieverSearchInput): RetrieverEvi
   const messageIdValue = read(['message_ids', 'messageIds', 'message_id', 'messageId']);
   const segmentIdValue = read(['segment_ids', 'segmentIds', 'segment_id', 'segmentId']);
   const text = read(['text', 'content', 'chunk_text']);
+  const normalizedText = typeof text === 'string' ? text : '';
+  const messageIds = stringArray(messageIdValue);
+  const segmentIds = stringArray(segmentIdValue);
 
   return {
-    text: typeof text === 'string' ? text : '',
+    text: normalizedText,
     score,
     ownerId: typeof ownerIdValue === 'string' ? ownerIdValue : null,
     storyId: typeof storyIdValue === 'string' ? storyIdValue : null,
@@ -133,8 +154,11 @@ function evidenceFrom(value: unknown, input: RetrieverSearchInput): RetrieverEvi
       ? sourceTypeValue
       : null,
     sessionId,
-    messageIds: stringArray(messageIdValue),
-    segmentIds: stringArray(segmentIdValue),
+    // NeMo may preserve document metadata or return only the chunk text. The
+    // indexer writes both ids into the controlled transcript format, so keep
+    // provenance traceable in either response shape.
+    messageIds: messageIds.length > 0 ? messageIds : transcriptIds(normalizedText, 'message'),
+    segmentIds: segmentIds.length > 0 ? segmentIds : transcriptIds(normalizedText, 'segment'),
   };
 }
 
