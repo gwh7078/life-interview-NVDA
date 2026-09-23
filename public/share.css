@@ -1,18 +1,6 @@
 :root {
   color-scheme: light;
-  --bg: var(--color-bg);
-  --paper: var(--color-paper);
-  --paper-soft: var(--color-paper-soft);
-  --ink: var(--color-ink);
-  --body: var(--color-text);
-  --muted: var(--color-muted);
-  --green: var(--color-brand);
-  --green-deep: var(--color-brand-dark);
-  --green-soft: var(--color-brand-soft);
-  --sand: var(--color-sand);
-  --danger: #a95349;
   --danger-soft: #fff6f2;
-  --shadow: var(--shadow-float);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -66,7 +54,7 @@ button:focus-visible, a:focus-visible {
   flex: 0 0 40px;
   place-items: center;
   border-radius: 13px 13px 13px 5px;
-  background: var(--green);
+  background: var(--brand);
   color: #fff;
   font-family: var(--serif);
   font-size: 20px;
@@ -83,7 +71,7 @@ button:focus-visible, a:focus-visible {
   border: 1px solid rgba(223, 216, 203, .9);
   border-radius: 24px;
   background: rgba(255, 254, 250, .94);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-float);
 }
 
 .state-card {
@@ -121,7 +109,7 @@ button:focus-visible, a:focus-visible {
   margin: 0 0 30px;
   padding: 18px 19px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--green);
+  border-left: 3px solid var(--brand);
   border-radius: 14px;
   background: var(--paper-soft);
 }
@@ -130,11 +118,11 @@ button:focus-visible, a:focus-visible {
 .state-note strong { display: block; margin-top: 5px; color: var(--ink); font-size: 15px; line-height: 1.5; }
 
 .note-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.note-status { flex: none; padding: 4px 8px; border-radius: 999px; background: var(--green-soft); color: var(--green); font-size: 9px; font-weight: 700; }
-.state-note-processing { border-color: #dce6dc; border-left-color: var(--green); background: #f8fbf7; }
-.state-note-success { border-color: #dce6dc; border-left-color: var(--green); background: var(--green-soft); }
-.state-note-failed { border-color: #efd9d2; border-left-color: var(--danger); background: var(--danger-soft); }
-.state-note-failed .note-label, .state-note-failed strong { color: var(--danger); }
+.note-status { flex: none; padding: 4px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-size: 9px; font-weight: 700; }
+.state-note-processing { border-color: #dce6dc; border-left-color: var(--brand); background: #f8fbf7; }
+.state-note-success { border-color: #dce6dc; border-left-color: var(--brand); background: var(--brand-soft); }
+.state-note-failed { border-color: #efd9d2; border-left-color: var(--danger-deep); background: var(--danger-soft); }
+.state-note-failed .note-label, .state-note-failed strong { color: var(--danger-deep); }
 
 .processing-steps {
   display: grid;
@@ -154,10 +142,10 @@ button:focus-visible, a:focus-visible {
 
 .processing-step + .processing-step { border-top: 1px solid rgba(220, 228, 218, .8); }
 .step-marker { display: grid; width: 20px; height: 20px; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--muted); font-size: 10px; line-height: 1; }
-.processing-step.is-done .step-marker { border-color: var(--green); background: var(--green); color: #fff; }
-.processing-step.is-active .step-marker { border-color: var(--green); color: var(--green); font-weight: 700; }
+.processing-step.is-done .step-marker { border-color: var(--brand); background: var(--brand); color: #fff; }
+.processing-step.is-active .step-marker { border-color: var(--brand); color: var(--brand); font-weight: 700; }
 .processing-step strong { display: block; color: var(--body); font-size: 11px; font-weight: 700; line-height: 1.5; }
-.processing-step.is-active strong { color: var(--green); }
+.processing-step.is-active strong { color: var(--brand); }
 .processing-step small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.6; }
 
 .state-note .primary-action { margin-top: 16px; }
@@ -171,19 +159,8 @@ button:focus-visible, a:focus-visible {
 .story-title-copy h1 { margin-top: 5px; font-size: clamp(30px, 6vw, 42px); overflow-wrap: anywhere; }
 
 .status-chip {
-  display: inline-flex;
-  min-height: 24px;
   flex: none;
-  align-items: center;
   margin-top: 7px;
-  padding: 0 9px;
-  border: 1px solid #d8e2d8;
-  border-radius: 999px;
-  background: #eef4ee;
-  color: var(--green);
-  font-size: 10px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .story-section { padding-top: 26px; border-top: 1px solid var(--line); }
@@ -219,7 +196,7 @@ button:focus-visible, a:focus-visible {
   padding: 0 18px;
   border: 0;
   border-radius: 12px;
-  background: var(--green);
+  background: var(--brand);
   color: #fff;
   cursor: pointer;
   font-size: 13px;
@@ -230,7 +207,7 @@ button:focus-visible, a:focus-visible {
   transition: background .16s ease, transform .16s ease;
 }
 
-.primary-action:hover:not(:disabled) { background: var(--green-deep); transform: translateY(-1px); }
+.primary-action:hover:not(:disabled) { background: var(--brand-deep); transform: translateY(-1px); }
 .primary-action:disabled { cursor: not-allowed; opacity: .55; }
 .action-helper { margin: 10px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; text-align: center; }
 .expires-copy { margin: 18px 0 0; color: #a0a49e; font-size: 10px; line-height: 1.6; text-align: center; }

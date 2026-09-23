@@ -157,6 +157,15 @@ body.debug-mode .debug-only { display: revert !important; }
 .profile-popover p { margin: 6px 0 12px; color: var(--muted); font-size: 10px; line-height: 1.6; }
 .profile-popover a { color: var(--brand); font-size: 11px; }
 
+.profile-wrap-compact .profile-entry { gap: 7px; min-height: 34px; padding: 2px 8px 2px 2px; border: 0; background: transparent; color: #6f776f; }
+.profile-wrap-compact .profile-entry:hover { background: rgba(233, 238, 233, .7); }
+.profile-wrap-compact .profile-avatar { width: 32px; height: 32px; font-size: 13px; }
+.profile-wrap-compact .profile-name { max-width: 150px; }
+.profile-wrap-compact .profile-popover { z-index: 4; top: calc(100% + 9px); width: 220px; padding: 15px; border-radius: 13px; box-shadow: 0 18px 48px rgba(42, 40, 34, .12); }
+.profile-wrap-compact .profile-popover p { font-size: 11px; }
+.profile-wrap-compact .profile-popover a { text-decoration: none; }
+.profile-wrap-compact .profile-popover a:hover { text-decoration: underline; }
+
 .button {
   display: inline-flex;
   min-height: 44px;
