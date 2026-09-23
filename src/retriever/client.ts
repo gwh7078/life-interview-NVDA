@@ -1,3 +1,5 @@
+import { performance } from 'node:perf_hooks';
+import { writeDiagnosticLog } from '../diagnostics/logger.js';
 import type {
   RetrieverAdapter,
   RetrieverEvidence,
@@ -20,6 +22,15 @@ const MIN_SCOPED_QUERY_TOP_K = 50;
 
 type JsonRecord = Record<string, unknown>;
 type FetchLike = typeof fetch;
+type RetrieverDiagnosticFields = Record<string, string | number | boolean | undefined>;
+type RetrieverRequestDiagnostic = (
+  phase: string,
+  fields?: RetrieverDiagnosticFields,
+) => void;
+
+function elapsedMs(startedAt: number): number {
+  return Number((performance.now() - startedAt).toFixed(2));
+}
 
 export interface RetrieverClientConfig {
   endpoint: string;
@@ -310,38 +321,88 @@ export class RetrieverClient implements RetrieverAdapter {
   }
 
   async searchTranscript(input: RetrieverSearchInput): Promise<RetrieverEvidence[]> {
-    requiredText(input.ownerId, 'ownerId');
-    requiredText(input.query, 'query');
-    if (!Number.isInteger(input.topK) || input.topK <= 0) {
-      throw new RetrieverClientError(
-        'Retriever topK must be a positive integer.',
-        'RETRIEVER_INPUT_INVALID',
-      );
-    }
-    const metadataFilter: JsonRecord = {
-      user_id: input.ownerId,
-      ...(input.storyId ? { story_id: input.storyId } : {}),
-      ...(input.sessionId ? { session_id: input.sessionId } : {}),
-      ...(input.sourceType ? { source_type: input.sourceType } : {}),
-    };
-    // Keep this filter for Retriever versions that support it, but enforce the
-    // same scope locally because older service versions may ignore the field.
-    const payload = await this.request('/v1/query', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        collection_name: this.collection,
-        query: input.query,
-        top_k: Math.max(input.topK, MIN_SCOPED_QUERY_TOP_K),
-        metadata_filter: metadataFilter,
-      }),
-    }, { signal: input.signal });
-    return evidenceRows(payload)
-      .map((row) => evidenceFrom(row, input))
-      .filter((item) => item.ownerId === input.ownerId
+    const startedAt = performance.now();
+    let failedPhase = 'validation';
+    const diagnose = (
+      phase: string,
+      fields: RetrieverDiagnosticFields = {},
+      level: 'info' | 'warn' | 'error' = 'info',
+    ): void => writeDiagnosticLog('retriever', level, 'Retriever search diagnostic.', {
+      operation: 'searchTranscript',
+      phase,
+      ...fields,
+    });
+
+    diagnose('started');
+    try {
+      requiredText(input.ownerId, 'ownerId');
+      requiredText(input.query, 'query');
+      if (!Number.isInteger(input.topK) || input.topK <= 0) {
+        throw new RetrieverClientError(
+          'Retriever topK must be a positive integer.',
+          'RETRIEVER_INPUT_INVALID',
+        );
+      }
+      const metadataFilter: JsonRecord = {
+        user_id: input.ownerId,
+        ...(input.storyId ? { story_id: input.storyId } : {}),
+        ...(input.sessionId ? { session_id: input.sessionId } : {}),
+        ...(input.sourceType ? { source_type: input.sourceType } : {}),
+      };
+      // Keep this filter for Retriever versions that support it, but enforce the
+      // same scope locally because older service versions may ignore the field.
+      failedPhase = 'request';
+      const payload = await this.request('/v1/query', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          collection_name: this.collection,
+          query: input.query,
+          top_k: Math.max(input.topK, MIN_SCOPED_QUERY_TOP_K),
+          metadata_filter: metadataFilter,
+        }),
+      }, { signal: input.signal }, (phase, fields) => {
+        failedPhase = phase;
+        diagnose(phase, fields);
+      });
+
+      failedPhase = 'response_normalization';
+      const normalizationStartedAt = performance.now();
+      const rows = evidenceRows(payload);
+      const normalized = rows.map((row) => evidenceFrom(row, input));
+      const normalizationMs = elapsedMs(normalizationStartedAt);
+
+      failedPhase = 'permission_filter';
+      const filterStartedAt = performance.now();
+      const scoped = normalized.filter((item) => item.ownerId === input.ownerId
         && (!input.storyId || item.storyId === input.storyId)
         && (!input.sessionId || item.sessionId === input.sessionId)
         && (!input.sourceType || item.sourceType === input.sourceType));
+      const permissionFilterMs = elapsedMs(filterStartedAt);
+      diagnose('scope_filtered', {
+        rawHitCount: rows.length,
+        scopedHitCount: scoped.length,
+        rejectedHitCount: rows.length - scoped.length,
+        scopeFieldCount: Object.keys(metadataFilter).length,
+        storyScopeApplied: Boolean(input.storyId),
+        sessionScopeApplied: Boolean(input.sessionId),
+        sourceTypeScopeApplied: Boolean(input.sourceType),
+        normalizationMs,
+        permissionFilterMs,
+      });
+      diagnose('completed', { totalElapsedMs: elapsedMs(startedAt) });
+      return scoped;
+    } catch (error) {
+      diagnose('failed', {
+        failedPhase,
+        totalElapsedMs: elapsedMs(startedAt),
+        errorCode: error instanceof RetrieverClientError ? error.code : 'RETRIEVER_UNEXPECTED_ERROR',
+        ...(error instanceof RetrieverClientError
+          ? { statusCode: error.statusCode, retryable: error.retryable }
+          : {}),
+      }, 'error');
+      throw error;
+    }
   }
 
   async deleteSessionTranscript(
@@ -483,6 +544,7 @@ export class RetrieverClient implements RetrieverAdapter {
     path: string,
     init: RequestInit,
     options: RetrieverRequestOptions,
+    diagnostic?: RetrieverRequestDiagnostic,
   ): Promise<unknown> {
     const fetchImpl = this.fetchImpl ?? globalThis.fetch;
     if (typeof fetchImpl !== 'function') {
@@ -508,12 +570,17 @@ export class RetrieverClient implements RetrieverAdapter {
       const headers = new Headers(this.headers);
       for (const [key, value] of new Headers(init.headers)) headers.set(key, value);
       headers.set('accept', 'application/json');
+      const requestStartedAt = performance.now();
       let response: Response;
       try {
         response = await fetchImpl(`${this.endpoint}${path}`, {
           ...init,
           headers,
           signal: controller.signal,
+        });
+        diagnostic?.('response_received', {
+          fetchMs: elapsedMs(requestStartedAt),
+          statusCode: response.status,
         });
       } catch {
         if (options.signal?.aborted) {
@@ -538,7 +605,18 @@ export class RetrieverClient implements RetrieverAdapter {
             || response.status === 429 || response.status >= 500,
         );
       }
-      if (response.status === 204) return undefined;
+      if (response.status === 204) {
+        diagnostic?.('response_parsed', {
+          statusCode: response.status,
+          responseBodyReadMs: 0,
+          responseParseMs: 0,
+          requestMs: elapsedMs(requestStartedAt),
+          emptyResponse: true,
+        });
+        return undefined;
+      }
+      diagnostic?.('response_body_read_started', { statusCode: response.status });
+      const bodyReadStartedAt = performance.now();
       let body: string;
       try {
         body = await response.text();
@@ -556,12 +634,32 @@ export class RetrieverClient implements RetrieverAdapter {
           true,
         );
       }
+      const responseBodyReadMs = elapsedMs(bodyReadStartedAt);
       if (timedOut) {
         throw new RetrieverClientError('Retriever request timed out.', 'RETRIEVER_TIMEOUT', undefined, true);
       }
-      if (!body.trim()) return undefined;
+      if (!body.trim()) {
+        diagnostic?.('response_parsed', {
+          statusCode: response.status,
+          responseBodyReadMs,
+          responseParseMs: 0,
+          requestMs: elapsedMs(requestStartedAt),
+          emptyResponse: true,
+        });
+        return undefined;
+      }
+      diagnostic?.('response_parse_started', { statusCode: response.status });
+      const responseParseStartedAt = performance.now();
       try {
-        return JSON.parse(body) as unknown;
+        const payload = JSON.parse(body) as unknown;
+        diagnostic?.('response_parsed', {
+          statusCode: response.status,
+          responseBodyReadMs,
+          responseParseMs: elapsedMs(responseParseStartedAt),
+          requestMs: elapsedMs(requestStartedAt),
+          emptyResponse: false,
+        });
+        return payload;
       } catch {
         throw new RetrieverClientError(
           'Retriever returned invalid JSON.',

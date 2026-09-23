@@ -86,6 +86,7 @@ test('realtime trace writes a timestamped metadata-only JSONL timeline', async (
     assert.equal(first.pendingSpeech, false);
     assert.equal(first.awaitingUserTranscript, false);
     assert.equal(first.awaitingAssistant, false);
+    assert.equal(first.rejectedFieldCount, 1);
     const second = JSON.parse(lines[1]) as Record<string, unknown>;
     assert.equal(second.contextState, 'running');
     assert.equal(second.sampleRate, 48000);
@@ -151,6 +152,7 @@ test('slow recall trace records result shape while keeping query and hint text o
     assert.equal(row.interviewHintCount, 2);
     assert.equal('query' in row, false);
     assert.equal('hint' in row, false);
+    assert.equal(row.rejectedFieldCount, 2);
     assert.equal((await readFile(trace.filePath, 'utf8')).includes('private returned fact'), false);
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -185,7 +187,6 @@ test('realtime trace annotates A-D milestones once and derives turn latencies wi
     now = 240;
     trace.record('provider.user_transcription_completed', tracker.mark('user_final', {
       chars: 8,
-      text: '敏感回答不应写入 trace',
     }));
     now = 275;
     trace.record('provider.response_created', tracker.mark('assistant_started', {

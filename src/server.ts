@@ -56,7 +56,9 @@ import {
   createRealtimeTraceStageTracker,
   createRealtimeTraceWriter,
   type RealtimeTraceWriter,
+  type RealtimeTraceFields,
 } from './realtime/trace.js';
+import { createRealtimeToolCycleTracker } from './realtime/tool-cycle-tracker.js';
 import type { RealtimeInterviewProvider } from './interview/session.js';
 import type { RealtimeInterviewContext } from './realtime/prompt.js';
 import type { NormalizedRealtimeEvent } from './realtime/types.js';
@@ -1866,10 +1868,40 @@ function createRealtimeHandler(
     return true;
   };
 
-  const recordTrace = (event: string, fields: Record<string, unknown> = {}): void => {
+  const recordTrace = (event: string, fields: RealtimeTraceFields = {}): void => {
     traceWriter?.record(event, fields);
   };
   const traceStageTracker = createRealtimeTraceStageTracker();
+  const toolCycleTracker = createRealtimeToolCycleTracker({ record: recordTrace });
+
+  const writeToolResultMessages = (
+    callId: string,
+    messages: Record<string, unknown>[],
+  ): { sent: boolean; outputWritten: boolean; resumeWritten: boolean; resumeExpected: boolean } => {
+    let sent = true;
+    let outputWritten = false;
+    let resumeWritten = false;
+    const resumeExpected = messages.some((message) => message.type === 'response.create');
+    for (const [messageIndex, message] of messages.entries()) {
+      const messageKind = message.type === 'response.create' ? 'resume' : 'output';
+      if (!provider || provider.readyState !== WebSocket.OPEN) {
+        toolCycleTracker.recordMessageWrite(callId, { kind: messageKind, messageIndex, sent: false });
+        sent = false;
+        break;
+      }
+      try {
+        provider.send(JSON.stringify(message));
+        toolCycleTracker.recordMessageWrite(callId, { kind: messageKind, messageIndex, sent: true });
+        if (messageKind === 'output') outputWritten = true;
+        if (messageKind === 'resume') resumeWritten = true;
+      } catch {
+        toolCycleTracker.recordMessageWrite(callId, { kind: messageKind, messageIndex, sent: false });
+        sent = false;
+        break;
+      }
+    }
+    return { sent: sent && outputWritten, outputWritten, resumeWritten, resumeExpected };
+  };
 
   const waitForResponseIdle = async (responseId: string, timeoutMs: number): Promise<boolean> => {
     const deadline = Date.now() + timeoutMs;
@@ -1880,8 +1912,23 @@ function createRealtimeHandler(
   const handleRealtimeToolCall = (
     event: Extract<NormalizedRealtimeEvent, { type: 'tool.call.requested' }>,
   ): void => {
+    const turnId = currentTurnId ?? event.itemId ?? event.callId;
+    const version = contextVersion;
+    const toolRunId = toolCycleTracker.start({
+      callId: event.callId,
+      toolName: event.name,
+      responseAId: event.responseId,
+      turnId,
+      contextVersion: version,
+    });
     if (!selectedAdapter?.handleToolResult || !interviewSession || !sessionContext) {
-      recordTrace('realtime.tool_call_ignored', { name: event.name, reason: 'adapter_or_session_unavailable' });
+      recordTrace('realtime.tool_call_ignored', {
+        name: event.name,
+        callId: event.callId,
+        responseId: event.responseId,
+        reason: 'adapter_or_session_unavailable',
+      });
+      toolCycleTracker.finish(event.callId, 'failed', 'adapter_or_session_unavailable');
       return;
     }
     const unavailableOutput = {
@@ -1893,45 +1940,59 @@ function createRealtimeHandler(
     const storyContextAllowed = sessionContext.interview_type === undefined
       || sessionContext.interview_type === 'story';
     if (event.name !== STEPFUN_CONTEXT_TOOL || !storyContextAllowed) {
-      const sent = sendProviderMessages(selectedAdapter.handleToolResult(event, unavailableOutput, { resume: true }));
+      const write = writeToolResultMessages(event.callId, selectedAdapter.handleToolResult(event, unavailableOutput, { resume: true }));
+      const errorCode = event.name !== STEPFUN_CONTEXT_TOOL
+        ? 'REALTIME_TOOL_NOT_ALLOWED'
+        : 'REALTIME_CONTEXT_NOT_ALLOWED';
+      toolCycleTracker.setExpectedOutcome(event.callId, 'failed', errorCode);
       recordTrace('realtime.tool_call_rejected', {
         callId: event.callId,
         responseId: event.responseId,
-        sent,
-        errorCode: event.name !== STEPFUN_CONTEXT_TOOL
-          ? 'REALTIME_TOOL_NOT_ALLOWED'
-          : 'REALTIME_CONTEXT_NOT_ALLOWED',
+        sent: write.sent,
+        outputWritten: write.outputWritten,
+        resumeWritten: write.resumeWritten,
+        errorCode,
       });
+      if (!write.sent || (write.resumeExpected && !write.resumeWritten)) {
+        toolCycleTracker.finish(event.callId, 'failed', 'tool_rejected', errorCode);
+      }
       return;
     }
-    const turnId = currentTurnId ?? event.itemId ?? event.callId;
-    const version = contextVersion;
     const args = record(event.arguments);
     const query = typeof args?.query === 'string' ? args.query.trim() : '';
     recordTrace('realtime.tool_call_requested', {
       provider: selectedProvider,
       name: event.name,
       callId: event.callId,
+      toolRunId,
       responseId: event.responseId,
       queryChars: query.length,
       contextVersion: version,
     });
     if (query.length < 2 || query.length > 500) {
-      const sent = sendProviderMessages(selectedAdapter.handleToolResult(event, {
+      const write = writeToolResultMessages(event.callId, selectedAdapter.handleToolResult(event, {
         ...unavailableOutput,
         errorCode: 'INVALID_RECALL_QUERY',
       }, { resume: true }));
+      toolCycleTracker.setExpectedOutcome(event.callId, 'failed', 'INVALID_RECALL_QUERY');
       recordTrace('realtime.tool_call_rejected', {
         callId: event.callId,
         responseId: event.responseId,
-        sent,
+        sent: write.sent,
+        outputWritten: write.outputWritten,
+        resumeWritten: write.resumeWritten,
         errorCode: 'INVALID_RECALL_QUERY',
         queryChars: query.length,
       });
+      if (!write.sent || (write.resumeExpected && !write.resumeWritten)) {
+        toolCycleTracker.finish(event.callId, 'failed', 'invalid_recall_query', 'INVALID_RECALL_QUERY');
+      }
       return;
     }
+    toolCycleTracker.markRecallStarted(event.callId);
     recordTrace('realtime.recall_started', {
       callId: event.callId,
+      toolRunId,
       responseId: event.responseId,
       turnId,
       contextVersion: version,
@@ -1958,6 +2019,7 @@ function createRealtimeHandler(
         && (currentTurnId === undefined || currentTurnId === turnId));
       recordTrace('realtime.slow_recall_finished', {
         callId: event.callId,
+        toolRunId,
         responseId: event.responseId,
         runId: result.runId,
         status: result.status,
@@ -1971,6 +2033,11 @@ function createRealtimeHandler(
         interviewHintCount: result.hint?.interviewHints.length ?? 0,
         contextVersion: version,
         errorCode: result.errorCode,
+      });
+      toolCycleTracker.markRecallFinished(event.callId, {
+        status: result.status,
+        latencyMs: result.latencyMs,
+        ...(result.errorCode ? { errorCode: result.errorCode } : {}),
       });
       if (diagnosticsContentEnabled()) {
         writeDiagnosticSnapshot('realtime-slow-recall', result.runId, {
@@ -1989,11 +2056,23 @@ function createRealtimeHandler(
       if (!responseIdle) {
         recordTrace('realtime.tool_result_deferred', {
           callId: event.callId,
+          toolRunId,
           responseId: event.responseId,
           reason: 'response_not_idle',
         });
       }
-      if (phase !== 'active' || !provider || provider.readyState !== WebSocket.OPEN || !selectedAdapter?.handleToolResult) return;
+      if (phase !== 'active') {
+        toolCycleTracker.finish(event.callId, 'session_ended', 'session_no_longer_active');
+        return;
+      }
+      if (!provider || provider.readyState !== WebSocket.OPEN) {
+        toolCycleTracker.finish(event.callId, 'provider_disconnected', 'provider_socket_not_open');
+        return;
+      }
+      if (!selectedAdapter?.handleToolResult) {
+        toolCycleTracker.finish(event.callId, 'failed', 'tool_result_handler_unavailable');
+        return;
+      }
 
       const current = phase === 'active'
         && contextVersion === version
@@ -2007,23 +2086,33 @@ function createRealtimeHandler(
             possibleConflicts: [],
             interviewHints: [],
           };
-      const sent = sendProviderMessages(selectedAdapter.handleToolResult(event, output, {
+      const write = writeToolResultMessages(event.callId, selectedAdapter.handleToolResult(event, output, {
         resume: effectiveStatus !== 'stale',
       }));
       recordTrace('realtime.tool_result_sent', {
         callId: event.callId,
+        toolRunId,
         responseId: event.responseId,
-        sent,
+        sent: write.sent,
+        outputWritten: write.outputWritten,
+        resumeWritten: write.resumeWritten,
         recallStatus: effectiveStatus,
         toolResultLatencyMs: performance.now() - recallStartedAt,
         stale: effectiveStatus === 'stale',
-        resumeRequested: effectiveStatus !== 'stale',
+        resumeRequested: write.resumeWritten,
       });
+      if (!write.sent || (effectiveStatus !== 'stale' && write.resumeExpected && !write.resumeWritten)) {
+        toolCycleTracker.finish(event.callId, 'failed', 'tool_result_write_failed');
+      } else if (effectiveStatus === 'stale') {
+        toolCycleTracker.finish(event.callId, 'stale', 'recall_result_stale');
+      }
     })().catch((error) => {
       recordTrace('realtime.tool_result_failed', {
         callId: event.callId,
         error: error instanceof Error ? error.name : 'unknown',
       });
+      toolCycleTracker.finish(event.callId, 'failed', 'tool_result_processing_failed',
+        error instanceof Error ? error.name : 'unknown');
     });
   };
 
@@ -2120,6 +2209,7 @@ function createRealtimeHandler(
 
   const recordProviderAudioDelta = (responseId: string, delta: string): void => {
     const now = performance.now();
+    toolCycleTracker.markFirstAudio(responseId);
     const stats = getProviderAudioTrace(responseId);
     const deltaBytes = base64ByteLength(delta);
     const interArrivalMs = stats.lastDeltaAt === undefined ? undefined : now - stats.lastDeltaAt;
@@ -2423,6 +2513,7 @@ function createRealtimeHandler(
       clearOpeningResponseWatchdog();
       clearUserTurnStallWatchdog();
       const responseId = event.responseId;
+      toolCycleTracker.markAssistantResponseStarted(responseId);
       activeResponses.add(responseId);
       if (sessionContext?.interview_type === 'onboarding'
         && awaitingOnboardingCompletionClose
@@ -2523,6 +2614,7 @@ function createRealtimeHandler(
 
     if (event.type === 'response.cancelled') {
       const responseId = event.responseId;
+      toolCycleTracker.markAssistantResponseDone(responseId, 'cancelled');
       activeResponses.delete(responseId);
       assistantResponses.delete(responseId);
       if (providerAudioTrace.has(responseId)) finishProviderAudioTrace(responseId, 'cancelled');
@@ -2543,6 +2635,7 @@ function createRealtimeHandler(
     if (event.type === 'response.done') {
       const responseId = event.responseId;
       const status = event.status;
+      toolCycleTracker.markAssistantResponseDone(responseId, status);
       const buffered = assistantResponses.get(responseId);
       activeResponses.delete(responseId);
       if (providerAudioTrace.has(responseId)) finishProviderAudioTrace(responseId, status);
@@ -2774,6 +2867,10 @@ function createRealtimeHandler(
         return;
       }
       phase = 'ending';
+      toolCycleTracker.finishAll(
+        reason === 'provider_disconnected' ? 'provider_disconnected' : 'session_ended',
+        reason,
+      );
       manualEndRequested = reason === 'user';
       if (manualEndRequested) awaitingAssistant = false;
       acceptingAudio = false;

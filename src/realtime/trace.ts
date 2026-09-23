@@ -3,8 +3,10 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { writeDiagnosticLog } from '../diagnostics/logger.js';
 
-const SAFE_TRACE_FIELDS = new Set([
+const SAFE_TRACE_FIELD_KEYS = [
   'callId',
+  'toolRunId',
+  'toolName',
   'attemptId',
   'runId',
   'contextVersion',
@@ -32,6 +34,8 @@ const SAFE_TRACE_FIELDS = new Set([
   'sent',
   'error',
   'responseId',
+  'responseAId',
+  'responseBId',
   'eventId',
   'source',
   'tracePoint',
@@ -108,7 +112,38 @@ const SAFE_TRACE_FIELDS = new Set([
   'terminalSampleAbs',
   'clippedSamples',
   'nonFiniteSamples',
-]);
+  'messageKind',
+  'messageIndex',
+  'outputWritten',
+  'resumeWritten',
+  'outcome',
+  'toolCycleLatencyMs',
+  'responseAStartedToToolCallMs',
+  'responseBLatencyMs',
+  'responseBFirstAudioMs',
+  'responseBTotalMs',
+  'rejectedFieldCount',
+  'recoveryStepCount',
+  'stepCount',
+  'drainTimedOut',
+  'attempt',
+  'retrying',
+  'timeoutMs',
+  'remainingMs',
+  'sessionId',
+  'eventType',
+  'requiresAck',
+  'endAfterPlayback',
+  'finishingCurrentUserTurn',
+  'closeGraceMs',
+  'deliverySemantics',
+] as const;
+
+export type RealtimeTraceField = typeof SAFE_TRACE_FIELD_KEYS[number];
+export type RealtimeTraceScalar = string | number | boolean | null | undefined;
+export type RealtimeTraceFields = Partial<Record<RealtimeTraceField, RealtimeTraceScalar>>;
+
+const SAFE_TRACE_FIELDS: ReadonlySet<string> = new Set(SAFE_TRACE_FIELD_KEYS);
 
 const TRACE_RETENTION_COUNT = 30;
 
@@ -121,7 +156,7 @@ export interface RealtimeTraceWriter {
 export type RealtimeTraceStage = 'speech_stopped' | 'user_final' | 'assistant_started' | 'first_audio';
 
 export interface RealtimeTraceStageTracker {
-  mark(stage: RealtimeTraceStage, fields?: Record<string, unknown>): Record<string, unknown>;
+  mark(stage: RealtimeTraceStage, fields?: RealtimeTraceFields): RealtimeTraceFields;
 }
 
 interface RealtimeTraceTurn {
@@ -168,15 +203,15 @@ export function createRealtimeTraceStageTracker(options: {
   const stageFields = (
     stage: RealtimeTraceStage,
     turn: RealtimeTraceTurn,
-    fields: Record<string, unknown>,
-  ): Record<string, unknown> => ({
+    fields: RealtimeTraceFields,
+  ): RealtimeTraceFields => ({
     ...fields,
     tracePoint: TRACE_STAGE_POINTS[stage],
     stage,
     turnId: turn.id,
   });
 
-  const mark = (stage: RealtimeTraceStage, fields: Record<string, unknown> = {}): Record<string, unknown> => {
+  const mark = (stage: RealtimeTraceStage, fields: RealtimeTraceFields = {}): RealtimeTraceFields => {
     const at = now();
     const responseId = typeof fields.responseId === 'string' && fields.responseId.trim()
       ? fields.responseId
@@ -264,10 +299,17 @@ export function createRealtimeTraceStageTracker(options: {
   return { mark };
 }
 
-function cleanFields(fields: Record<string, unknown>): Record<string, string | number | boolean | null> {
+function cleanFields(fields: Record<string, unknown>): {
+  values: Record<string, string | number | boolean | null>;
+  rejectedFieldCount: number;
+} {
   const cleaned: Record<string, string | number | boolean | null> = {};
+  let rejectedFieldCount = 0;
   for (const [key, value] of Object.entries(fields)) {
-    if (!SAFE_TRACE_FIELDS.has(key)) continue;
+    if (!SAFE_TRACE_FIELDS.has(key)) {
+      rejectedFieldCount += 1;
+      continue;
+    }
     if (typeof value === 'string') {
       cleaned[key] = value.slice(0, 100);
     } else if (typeof value === 'number' && Number.isFinite(value)) {
@@ -276,7 +318,7 @@ function cleanFields(fields: Record<string, unknown>): Record<string, string | n
       cleaned[key] = value;
     }
   }
-  return cleaned;
+  return { values: cleaned, rejectedFieldCount };
 }
 
 async function prepareTraceDirectory(directory: string): Promise<void> {
@@ -312,13 +354,15 @@ export function createRealtimeTraceWriter(options: {
   let writeFailureReported = false;
 
   const record = (event: string, fields: Record<string, unknown> = {}): void => {
+    const cleaned = cleanFields(fields);
     const entry = {
       at: new Date().toISOString(),
       elapsed_ms: Number((performance.now() - sessionStartedAt).toFixed(2)),
       session_id: options.sessionId,
       provider: options.provider,
       event: event.slice(0, 100),
-      ...cleanFields(fields),
+      ...cleaned.values,
+      ...(cleaned.rejectedFieldCount > 0 ? { rejectedFieldCount: cleaned.rejectedFieldCount } : {}),
     };
     const line = `${JSON.stringify(entry)}\n`;
     directoryReady ??= prepareTraceDirectory(directory);

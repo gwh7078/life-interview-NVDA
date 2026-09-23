@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { RetrieverClientError } from '../retriever/client.js';
 import {
   RealtimeSlowCoordinator,
   UnavailableRealtimeRecall,
@@ -58,6 +59,17 @@ test('slow coordinator times out and aborts the recall', async () => {
   assert.equal(result.status, 'timeout');
   assert.equal(result.errorCode, 'REALTIME_RECALL_TIMEOUT');
   assert.equal(aborted, true);
+});
+
+test('slow coordinator preserves stable Retriever error codes', async () => {
+  const port: RealtimeRecallPort = {
+    async recall() {
+      throw new RetrieverClientError('Retriever request failed.', 'RETRIEVER_HTTP_ERROR', 503, true);
+    },
+  };
+  const result = await new RealtimeSlowCoordinator(port, 100).run(request);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.errorCode, 'RETRIEVER_HTTP_ERROR');
 });
 
 test('a newer turn makes the older recall stale', async () => {

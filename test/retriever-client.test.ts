@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 import {
   RetrieverClient,
@@ -281,6 +284,95 @@ test('Retriever scoped search overfetches before local filtering', async () => {
 
   assert.equal(requestedTopK, 50);
   assert.equal(evidence[0]?.messageIds[0], 'message-scoped');
+});
+
+test('Retriever search diagnostics keep only safe timings, counts, and error codes', async () => {
+  const previousDiagnosticsDir = process.env.DIAGNOSTICS_DIR;
+  const diagnosticsDir = mkdtempSync(path.join(tmpdir(), 'retriever-diagnostics-'));
+  process.env.DIAGNOSTICS_DIR = diagnosticsDir;
+  const querySecret = 'query-secret-marker';
+  const transcriptSecret = 'transcript-secret-marker';
+  const tokenSecret = 'token-secret-marker';
+  let requestCount = 0;
+
+  try {
+    const client = new RetrieverClient({
+      endpoint: 'http://retriever.test',
+      collection: 'life-interview-transcripts',
+      headers: { authorization: `Bearer ${tokenSecret}` },
+      fetch: async () => {
+        requestCount += 1;
+        if (requestCount === 1) {
+          return jsonResponse({ hits: [
+            {
+              text: transcriptSecret,
+              metadata: {
+                user_id: 'user-1',
+                story_id: 'story-1',
+                session_id: 'session-1',
+                source_type: 'subject',
+              },
+            },
+            { text: transcriptSecret, metadata: { user_id: 'user-2' } },
+            { text: transcriptSecret },
+          ] });
+        }
+        return jsonResponse({ detail: 'private-error-body' }, 503);
+      },
+    });
+
+    const evidence = await client.searchTranscript({
+      ownerId: 'user-1',
+      storyId: 'story-1',
+      sessionId: 'session-1',
+      sourceType: 'subject',
+      query: querySecret,
+      topK: 5,
+    });
+    assert.equal(evidence.length, 1);
+
+    await assert.rejects(client.searchTranscript({
+      ownerId: 'user-1',
+      query: `${querySecret}-failure`,
+      topK: 5,
+    }), (error: unknown) => {
+      assert.ok(error instanceof RetrieverClientError);
+      assert.equal(error.code, 'RETRIEVER_HTTP_ERROR');
+      assert.equal(error.statusCode, 503);
+      return true;
+    });
+
+    const log = readFileSync(path.join(diagnosticsDir, 'logs', 'retriever.jsonl'), 'utf8');
+    const entries = log.trim().split('\n').map((line) => JSON.parse(line) as Record<string, unknown>);
+    const scopeFiltered = entries.find((entry) => entry.phase === 'scope_filtered');
+    assert.equal(scopeFiltered?.rawHitCount, 3);
+    assert.equal(scopeFiltered?.scopedHitCount, 1);
+    assert.equal(scopeFiltered?.rejectedHitCount, 2);
+    assert.equal(scopeFiltered?.scopeFieldCount, 4);
+    assert.equal(typeof scopeFiltered?.normalizationMs, 'number');
+    assert.equal(typeof scopeFiltered?.permissionFilterMs, 'number');
+
+    const responseReceived = entries.find((entry) => entry.phase === 'response_received');
+    assert.equal(responseReceived?.statusCode, 200);
+    assert.equal(typeof responseReceived?.fetchMs, 'number');
+    const responseParsed = entries.find((entry) => entry.phase === 'response_parsed');
+    assert.equal(typeof responseParsed?.responseParseMs, 'number');
+    assert.equal(typeof responseParsed?.requestMs, 'number');
+
+    const failed = entries.find((entry) => entry.phase === 'failed');
+    assert.equal(failed?.errorCode, 'RETRIEVER_HTTP_ERROR');
+    assert.equal(failed?.statusCode, 503);
+    assert.equal(failed?.retryable, true);
+    assert.equal(typeof failed?.totalElapsedMs, 'number');
+
+    for (const secret of [querySecret, transcriptSecret, tokenSecret, 'private-error-body']) {
+      assert.equal(log.includes(secret), false);
+    }
+  } finally {
+    if (previousDiagnosticsDir === undefined) delete process.env.DIAGNOSTICS_DIR;
+    else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDir;
+    rmSync(diagnosticsDir, { recursive: true, force: true });
+  }
 });
 
 test('Retriever exposes job/document status and deletes the indexed Session document', async () => {

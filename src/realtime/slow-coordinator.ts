@@ -93,7 +93,11 @@ function abortError(): Error {
 }
 
 function errorCode(error: unknown): string {
-  if (error instanceof Error && error.name) return error.name;
+  if (error instanceof Error) {
+    const code = 'code' in error ? error.code : undefined;
+    if (typeof code === 'string' && /^RETRIEVER_[A-Z0-9_]+$/.test(code)) return code;
+    if (error.name) return error.name;
+  }
   return 'unknown';
 }
 

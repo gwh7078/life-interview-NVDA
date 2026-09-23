@@ -12,6 +12,16 @@ Each row has a UTC `at` timestamp and a monotonic `elapsed_ms`. Browser-originat
 
 The trace records provider response/audio events and byte counts, browser audio-chunk receipt and scheduling results, AudioContext state and latency, microphone frame/byte totals in roughly one-second windows, transcript write counts and durations, and aggregated mouse-wheel activity. Browser audio scheduling entries also include per-chunk PCM peak/RMS, the sample jump at chunk boundaries, tail-sample magnitude, and counts of clipped or non-finite samples. These are scalar diagnostics only: the trace does not record transcript text, audio, microphone samples, API keys, exact sample values, or scroll coordinates.
 
+Realtime Tool Calls use `realtime.tool_cycle_started` through `realtime.tool_cycle_terminal`, correlated by `toolRunId` and provider `callId`. The trace records slow-recall status and latency, each tool output write and explicit `response.create` resume write, the resumed Response B start/first audio/completion, and one terminal outcome (`completed`, `timeout`, `failed`, `stale`, `aborted`, `session_ended`, or `provider_disconnected`). If the provider does not start Response B within 30 seconds of the local resume write, the cycle closes with a timeout; this records telemetry only and does not cancel the provider request. `written_to_local_socket` means the local WebSocket library accepted the write; it does not confirm remote receipt or model consumption. Response B timing is correlated to the next provider response after an explicit resume write. Query and result text are excluded.
+
+To summarize retained session traces without exposing session or call IDs, run:
+
+```bash
+bash scripts/codex-node.sh npm run trace:tool-cycles
+```
+
+The command reads the default `runtime/diagnostics/traces/realtime` directory (or `DIAGNOSTICS_DIR`). Pass a trace directory or one `.jsonl` trace file to summarize a different set. Output includes terminal outcome counts and nearest-rank P50/P95 latency for completed cycles, slow recall, Response B start, first audio, and Response B completion. Realtime Retriever request and scope-filter stage diagnostics are written to `logs/retriever.jsonl` beneath the same diagnostics root; they contain timings, counts, status/error codes, and scope-shape flags, not queries, evidence, or tokens.
+
 For a missing or inaudible interviewer response, inspect events in this order:
 
 1. `provider.response_created` and `provider.audio_delta` show whether the provider started a response and returned audio bytes.

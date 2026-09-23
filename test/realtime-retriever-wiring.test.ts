@@ -148,9 +148,11 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
         toolResultCount += 1;
         if (toolResultCount === 1) resolveToolResult(message);
         else resolveExternalToolResult(message);
+      } else if (message.type === 'response.create') {
+        socket.send(JSON.stringify({ type: 'response.created', response: { id: 'response-B' } }));
         socket.send(JSON.stringify({
           type: 'response.done',
-          response: { id: 'tool-response', status: 'completed' },
+          response: { id: 'response-B', status: 'completed' },
         }));
       }
     });
@@ -209,7 +211,8 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
       normalizeServerMessage: normalize,
       handleControlEvent: () => [],
       handleToolResult: (_call, output, options) => [
-        { type: 'mock.tool_result', output, resume: options?.resume !== false },
+        { type: 'mock.tool_result', output, resume: false },
+        ...(options?.resume === false ? [] : [{ type: 'response.create' }]),
       ],
     }),
   });
@@ -243,7 +246,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
       claim: '2013 年春节以后第一次到北京。',
       sourceMessageIds: ['history-message'],
     }]);
-    assert.equal(result.resume, true);
+    assert.equal(result.resume, false);
 
     const storyEnded = new Promise<void>((resolve) => {
       clientSocket?.on('message', (raw) => {
@@ -271,6 +274,18 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     assert.equal('query' in (slowRecallTrace ?? {}), false);
     assert.equal(traceText.includes('第一次去北京是什么时候'), false);
     assert.equal(traceText.includes('2013 年春节以后第一次到北京。'), false);
+    const traceRows = traceText.trim().split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const cycleEvents = traceRows.filter((row) => String(row.event).startsWith('realtime.tool_cycle_'));
+    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_started' && row.callId === 'call-1'));
+    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_message_write'
+      && row.messageKind === 'output' && row.sent === true));
+    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_message_write'
+      && row.messageKind === 'resume' && row.sent === true));
+    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_response_started'
+      && row.responseId === 'response-B'));
+    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_terminal'
+      && row.outcome === 'completed'));
     if (clientSocket.readyState === WebSocket.OPEN) {
       clientSocket.close();
       await once(clientSocket, 'close');
@@ -292,7 +307,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     const externalOutput = record(externalResult.output);
     assert.equal(externalOutput?.status, 'unavailable');
     assert.deepEqual(externalOutput?.facts, []);
-    assert.equal(externalResult.resume, true);
+    assert.equal(externalResult.resume, false);
     assert.equal(searchInput?.query, '第一次去北京是什么时候');
     assert.equal(toolResultCount, 2);
     const externalEnded = new Promise<void>((resolve) => {
