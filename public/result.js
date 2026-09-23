@@ -7,14 +7,7 @@
     pollTimer: null,
     lastPayload: null,
     isRetrying: false,
-    processingStageIndex: 0,
   };
-
-  const processingStages = [
-    '正在理解本轮访谈',
-    '正在整理故事摘要',
-    '正在更新故事完成度',
-  ];
 
   function isObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -59,18 +52,26 @@
     if (['processing', 'pending', 'running'].includes(data.status)) return 'processing';
     if (data.status === 'completed' || data.status === 'empty') return data.status;
     if (data.status === 'failed' || data.status === 'error') return 'failed';
-    if (data.session.status === 'ended' || data.session.status === 'active') return 'processing';
+    if (['ended', 'processing', 'active'].includes(data.session.status)) return 'processing';
     if (data.session.status === 'failed' || data.session.status === 'error') return 'failed';
     return 'empty';
   }
 
-  function updateProcessingStage(status) {
+  function deriveProcessingStage(data, status) {
+    if (status !== 'processing') return '';
+    if (data.status === 'completed' && data.storyCompletionPending) return '正在更新故事状态';
+    if (data.status === 'completed') return '访谈整理已完成';
+    if (['ended', 'processing', 'completed'].includes(data.session.status)
+      || ['pending', 'processing', 'running'].includes(data.status)) return '正在整理本次访谈';
+    return '正在保存访谈记录';
+  }
+
+  function updateProcessingStage(status, data) {
     const processingStage = byId('processing-stage');
     const processing = status === 'processing';
     setVisible(processingStage, processing);
     if (!processing) return;
-    byId('processing-stage-text').textContent = processingStages[state.processingStageIndex];
-    state.processingStageIndex = (state.processingStageIndex + 1) % processingStages.length;
+    byId('processing-stage-text').textContent = deriveProcessingStage(data, status);
   }
 
   function updateProcessingStep(id, markId, detailId, status, detail) {
@@ -87,7 +88,8 @@
     setVisible(byId('processing-steps'), visible);
     if (!visible) return;
 
-    const sessionSaved = data.session.status === 'ended' || data.transcript.length > 0;
+    const sessionSaved = ['ended', 'processing', 'completed'].includes(data.session.status)
+      || data.transcript.length > 0;
     const closeoutCompleted = data.status === 'completed';
     const storyCompletionPending = data.storyCompletionPending;
     const failed = status === 'failed';
@@ -96,8 +98,8 @@
       'processing-step-transcript',
       'processing-step-transcript-mark',
       'processing-step-transcript-detail',
-      failed || sessionSaved ? 'done' : 'active',
-      failed || sessionSaved ? '已保存，可以放心离开' : '正在确认最后一段字幕',
+      sessionSaved ? 'done' : 'active',
+      sessionSaved ? '已保存，可以放心离开' : '正在确认最后一段字幕',
     );
     updateProcessingStep(
       'processing-step-closeout',
@@ -122,7 +124,7 @@
     );
   }
 
-  function setStatus(status, description = '') {
+  function setStatus(status, description = '', data = resolveData(state.lastPayload)) {
     const titles = {
       loading: '正在读取访谈结果…',
       processing: '正在总结本次对话…',
@@ -140,7 +142,7 @@
     byId('status-indicator').dataset.state = status;
     byId('status-title').textContent = titles[status] || titles.loading;
     byId('status-description').textContent = description || descriptions[status] || '';
-    updateProcessingStage(status);
+    updateProcessingStage(status, data);
     setVisible(byId('processing-notice'), status === 'processing');
   }
 
@@ -290,7 +292,7 @@
     const effectiveStatus = status === 'completed' && data.storyCompletionPending
       ? 'processing'
       : status;
-    setStatus(effectiveStatus, completionDescription);
+    setStatus(effectiveStatus, completionDescription, data);
     renderProcessingSteps(data, effectiveStatus);
     if (cancelled) {
       byId('status-title').textContent = '已停止整理';

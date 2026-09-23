@@ -154,7 +154,7 @@ function processingResult() {
   };
 }
 
-test('processing shows rotating work stages, background continuation, and an early return', async () => {
+test('processing stage comes from the result DTO and stays stable across polls', async () => {
   const page = createPage([
     response(processingResult()),
     response(processingResult()),
@@ -165,7 +165,7 @@ test('processing shows rotating work stages, background continuation, and an ear
   assert.equal(page.elements.has('cancel-button'), false);
   assert.equal(page.elements.get('processing-notice').hidden, false);
   assert.equal(page.elements.get('processing-stage').hidden, false);
-  assert.equal(page.elements.get('processing-stage-text').textContent, '正在理解本轮访谈');
+  assert.equal(page.elements.get('processing-stage-text').textContent, '正在整理本次访谈');
   assert.equal(page.elements.get('status-indicator').dataset.state, 'processing');
   assert.equal(page.elements.get('finish-button').disabled, false);
   assert.equal(page.elements.get('finish-button').textContent, '先回到我的人生');
@@ -176,9 +176,9 @@ test('processing shows rotating work stages, background continuation, and an ear
   ].join(' '), /\d+%/);
 
   await page.fireNextTimer();
-  assert.equal(page.elements.get('processing-stage-text').textContent, '正在整理故事摘要');
+  assert.equal(page.elements.get('processing-stage-text').textContent, '正在整理本次访谈');
   await page.fireNextTimer();
-  assert.equal(page.elements.get('processing-stage-text').textContent, '正在更新故事完成度');
+  assert.equal(page.elements.get('processing-stage-text').textContent, '正在整理本次访谈');
   assert.equal(page.calls.length, 3);
   assert.ok(page.calls.every(({ options }) => options.method === 'GET'));
 
@@ -187,6 +187,37 @@ test('processing shows rotating work stages, background continuation, and an ear
   await page.elements.get('finish-button').click();
   assert.deepEqual(page.navigations, ['/my-life']);
   assert.equal(page.calls.length, 3, 'leaving the page does not call a closeout cancel endpoint');
+});
+
+test('result stage distinguishes transcript saving from Closeout and completion', async () => {
+  const savingPage = createPage([response({
+    status: 'processing',
+    session: { session_id: 'session-123', status: 'active' },
+    transcript: [],
+  })]);
+  await savingPage.settle();
+  assert.equal(savingPage.elements.get('processing-stage-text').textContent, '正在保存访谈记录');
+
+  const completionPage = createPage([
+    response({
+      status: 'ended', closeoutStatus: 'completed', storyCompletionPending: true,
+      session: { session_id: 'session-123', status: 'ended', closeout_status: 'completed' },
+      transcript: [],
+    }),
+    response({
+      status: 'ended', closeoutStatus: 'completed', storyCompletionPending: false,
+      session: { session_id: 'session-123', status: 'ended', closeout_status: 'completed' },
+      transcript: [],
+    }),
+  ]);
+  await completionPage.settle();
+  assert.equal(completionPage.elements.get('processing-stage-text').textContent, '正在更新故事状态');
+  assert.equal(completionPage.elements.get('status-indicator').dataset.state, 'processing');
+
+  await completionPage.fireNextTimer();
+  assert.equal(completionPage.elements.get('processing-stage').hidden, true);
+  assert.equal(completionPage.elements.get('status-indicator').dataset.state, 'completed');
+  assert.equal(completionPage.elements.get('status-title').textContent, '访谈整理已完成');
 });
 
 test('completed and ordinary failed layouts keep their existing controls without a cancel control', async () => {
