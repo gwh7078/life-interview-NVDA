@@ -121,6 +121,42 @@ test('realtime trace writes a timestamped metadata-only JSONL timeline', async (
   }
 });
 
+test('slow recall trace records result shape while keeping query and hint text out of ordinary logs', async () => {
+  const directory = await mkdtemp(path.join(testTempRoot, 'rensheng-trace-slow-result-'));
+  try {
+    const trace = createRealtimeTraceWriter({
+      directory,
+      sessionId: '03b2a5c9-1dc9-43c7-87f1-c2fae33f92cc',
+      provider: 'stepfun',
+    });
+    trace.record('realtime.slow_recall_finished', {
+      runId: 'slow-run-1',
+      status: 'completed',
+      latencyMs: 128,
+      factCount: 1,
+      factClaimChars: 24,
+      factSourceMessageIds: 'source-1',
+      possibleConflictCount: 1,
+      interviewHintCount: 2,
+      query: 'private query text',
+      hint: { facts: [{ claim: 'private returned fact' }] },
+    });
+    await trace.flush();
+
+    const row = JSON.parse((await readFile(trace.filePath, 'utf8')).trim()) as Record<string, unknown>;
+    assert.equal(row.factCount, 1);
+    assert.equal(row.factClaimChars, 24);
+    assert.equal(row.factSourceMessageIds, 'source-1');
+    assert.equal(row.possibleConflictCount, 1);
+    assert.equal(row.interviewHintCount, 2);
+    assert.equal('query' in row, false);
+    assert.equal('hint' in row, false);
+    assert.equal((await readFile(trace.filePath, 'utf8')).includes('private returned fact'), false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('realtime trace annotates A-D milestones once and derives turn latencies without content', async () => {
   const directory = await mkdtemp(path.join(testTempRoot, 'rensheng-trace-milestones-'));
   try {

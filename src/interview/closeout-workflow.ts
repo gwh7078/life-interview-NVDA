@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { and, eq, lt, or } from 'drizzle-orm';
 import { createDatabase } from '../db/client.js';
 import { interviewSessions } from '../db/schema.js';
@@ -278,6 +279,7 @@ async function processCloseout(
   dependencies: CloseoutWorkflowDependencies,
   markStoryCompletionPending: () => void,
 ): Promise<void> {
+  const startedAt = performance.now();
   const repairs: RepairAttemptLog = { count: 0, recent: [] };
   let leaseLost = false;
   let appliedStoryIds: string[] = [];
@@ -298,6 +300,21 @@ async function processCloseout(
       config,
       signal,
       repairLog: repairs,
+      onModelAttempt(event) {
+        writeDiagnosticLog(
+          'story-closeout',
+          event.phase === 'failed' || event.phase === 'validation_failed' ? 'warn' : 'info',
+          `Story closeout model call ${event.phase}.`,
+          {
+            event: `model_call.${event.phase}`,
+            sessionId,
+            attemptId,
+            modelAttempt: event.attempt,
+            provider: config.provider ?? DEFAULT_PROVIDER,
+            ...event,
+          },
+        );
+      },
       assertCurrentAttempt() {
         if (leaseLost || currentCloseoutAttempt(databasePath, sessionId, ownerUserId) !== attemptId) {
           throw new CloseoutWorkflowError('本次整理任务已失去处理权，已停止继续调用模型。', 'CLOSEOUT_ATTEMPT_STALE', 409);
@@ -327,6 +344,10 @@ async function processCloseout(
       modelMetadata,
     });
     appliedStoryIds = [...new Set([applied.storyId, ...applied.createdStoryIds])];
+    const currentStoryOutput = processed.output.mode === 'continue'
+      ? processed.output.current_story
+      : processed.output.story;
+    const totalElapsedMs = Math.max(0, Math.round(performance.now() - startedAt));
     console.info('[story-closeout] applied', {
       sessionId,
       storyId: applied.storyId,
@@ -335,30 +356,41 @@ async function processCloseout(
       completionStoryCount: appliedStoryIds.length,
     });
     writeDiagnosticLog('story-closeout', 'info', 'Story closeout applied.', {
+      event: 'closeout.completed',
       sessionId,
+      attemptId,
       storyId: applied.storyId,
       storyUpdated: applied.storyUpdated,
       createdStoryCount: applied.createdStoryIds.length,
       completionStoryCount: appliedStoryIds.length,
       repairAttemptCount: processed.repairAttemptCount,
+      totalElapsedMs,
+      outputMode: processed.output.mode,
+      summaryChars: currentStoryOutput.summary.length,
+      agentMemoryChars: currentStoryOutput.agent_memory.length,
+      sourceMessageCount: currentStoryOutput.source_message_ids.length,
+      newStoryCount: processed.output.mode === 'continue' ? processed.output.new_stories.length : 0,
       model: modelMetadata.model,
       provider: modelMetadata.provider,
       latencyMs: modelMetadata.latency_ms,
+      responseId: processed.modelResult.responseId,
     });
     writeDiagnosticSnapshot('story-closeout', sessionId, {
+      attempt_id: attemptId,
+      total_elapsed_ms: totalElapsedMs,
       status: 'completed',
       session_id: sessionId,
       story_id: applied.storyId,
       created_story_ids: applied.createdStoryIds,
       story_updated: applied.storyUpdated,
       repair_attempt_count: processed.repairAttemptCount,
+      output_mode: processed.output.mode,
+      new_story_count: processed.output.mode === 'continue' ? processed.output.new_stories.length : 0,
       model_metadata: modelMetadata,
       current_story: {
-        summary_chars: processed.output.mode === 'continue' ? processed.output.current_story.summary.length : processed.output.story.summary.length,
-        agent_memory_chars: processed.output.mode === 'continue' ? processed.output.current_story.agent_memory.length : processed.output.story.agent_memory.length,
-        source_message_count: processed.output.mode === 'continue'
-          ? processed.output.current_story.source_message_ids.length
-          : processed.output.story.source_message_ids.length,
+        summary_chars: currentStoryOutput.summary.length,
+        agent_memory_chars: currentStoryOutput.agent_memory.length,
+        source_message_count: currentStoryOutput.source_message_ids.length,
       },
       transcript_message_count: context.transcript.length,
       ...(diagnosticsContentEnabled() ? {
@@ -367,18 +399,30 @@ async function processCloseout(
           previous_summary: context.currentStory?.summary ?? null,
           previous_agent_memory: context.currentStory?.agent_memory ?? null,
           output: processed.output,
+          model_output: processed.modelResult.output,
         },
       } : {}),
     });
   } catch (error) {
     const failure = safeError(cancellationError(error), repairs);
+    const totalElapsedMs = Math.max(0, Math.round(performance.now() - startedAt));
     writeDiagnosticLog('story-closeout', 'error', 'Story closeout failed.', {
+      event: 'closeout.failed',
       sessionId,
+      attemptId,
       code: failure.code,
       retryable: failure.retryable,
       repairAttemptCount: repairs.count,
+      totalElapsedMs,
+      provider: config.provider ?? DEFAULT_PROVIDER,
+      model: config.model ?? DEFAULT_MODEL,
+      ...(typeof failure.diagnostics?.responseStatus === 'number'
+        ? { responseStatus: failure.diagnostics.responseStatus }
+        : {}),
     });
     writeDiagnosticSnapshot('story-closeout', sessionId, {
+      attempt_id: attemptId,
+      total_elapsed_ms: totalElapsedMs,
       status: 'failed',
       session_id: sessionId,
       error: {
@@ -437,9 +481,36 @@ export function beginInterviewCloseout(
   ownerUserId: string,
   dependencies: CloseoutWorkflowDependencies = {},
 ): CloseoutStartResult {
-  const claimed = claimCloseout(databasePath, sessionId, ownerUserId);
-  if (claimed.status !== 'processing' || claimed.alreadyProcessing) return claimed;
+  let claimed: CloseoutStartResult;
+  try {
+    claimed = claimCloseout(databasePath, sessionId, ownerUserId);
+  } catch (error) {
+    const failure = safeError(error);
+    writeDiagnosticLog('story-closeout', 'warn', 'Story closeout start rejected.', {
+      event: 'closeout.start_rejected',
+      sessionId,
+      code: failure.code,
+      retryable: failure.retryable,
+    });
+    throw error;
+  }
+  if (claimed.status !== 'processing' || claimed.alreadyProcessing) {
+    writeDiagnosticLog('story-closeout', 'info', 'Story closeout was not started.', {
+      event: 'closeout.not_started',
+      sessionId,
+      status: claimed.status,
+      alreadyProcessing: claimed.status === 'processing' && claimed.alreadyProcessing,
+    });
+    return claimed;
+  }
   if (!claimed.attemptId) throw new CloseoutWorkflowError('无法确认本次整理任务的归属。', 'CLOSEOUT_ATTEMPT_UNAVAILABLE', 500);
+  writeDiagnosticLog('story-closeout', 'info', 'Story closeout started.', {
+    event: 'closeout.started',
+    sessionId,
+    attemptId: claimed.attemptId,
+    provider: config.provider ?? DEFAULT_PROVIDER,
+    model: config.model ?? DEFAULT_MODEL,
+  });
   const abortController = new AbortController();
   const inFlight: InFlightCloseout = {
     promise: Promise.resolve(),

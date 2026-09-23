@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { once } from 'node:events';
 import path from 'node:path';
 import { after, test } from 'node:test';
@@ -15,6 +15,7 @@ import { createStoryInterviewCore } from '../src/interview/core.js';
 import { endRealtimeInterviewSession } from '../src/interview/session.js';
 import { createInterviewServiceServer } from '../src/server.js';
 import type { StoryCompletionService } from '../src/story/completion/service.js';
+import type { TextModelProvider } from '../src/providers/text-model-provider.js';
 
 const CHAT_ENDPOINT = 'https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions';
 const networkFetch = globalThis.fetch;
@@ -248,6 +249,118 @@ async function runCloseoutResponse(
     } finally { await closeServer(server); }
   });
 }
+
+test('closeout diagnostics correlate lifecycle and each model attempt without logging story content', async () => {
+  const scenario = prepareScenario(true, 'DIAGNOSTIC_PRIVATE_STORY_TEXT');
+  const diagnosticsDirectory = mkdtempSync(path.join(testTempRoot, 'rensheng-closeout-diagnostics-'));
+  temporaryDirectories.push(diagnosticsDirectory);
+  const previousDiagnosticsDirectory = process.env.DIAGNOSTICS_DIR;
+  const previousCaptureContent = process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+  process.env.DIAGNOSTICS_DIR = diagnosticsDirectory;
+  process.env.DIAGNOSTICS_CAPTURE_CONTENT = '0';
+  const textModelProvider: TextModelProvider = {
+    async complete() {
+      return {
+        output: modelOutput(scenario),
+        model: 'telemetry-test-model',
+        responseId: 'telemetry-response-1',
+        usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 },
+        diagnostics: {
+          responseStatus: 200,
+          choiceCount: 1,
+          finishReason: 'tool_calls',
+          responseChannel: 'tool_calls',
+          toolCallCount: 1,
+          argumentsType: 'string',
+          argumentsLength: 32,
+          requestedMaxTokens: 512,
+        },
+        latencyMs: 8,
+      };
+    },
+  };
+  try {
+    beginInterviewCloseout(
+      scenario.databasePath,
+      scenario.sessionId,
+      { apiKey: 'test-only', provider: 'telemetry-test-provider', model: 'telemetry-test-model' },
+      scenario.userId,
+      { textModelProvider },
+    );
+    const result = await waitForStoredResult(scenario.databasePath, scenario.sessionId, scenario.userId);
+    assert.equal(result.closeoutStatus, 'completed');
+
+    const logPath = path.join(diagnosticsDirectory, 'logs', 'story-closeout.jsonl');
+    let logRows: Array<Record<string, unknown>> = [];
+    for (let index = 0; index < 100; index += 1) {
+      logRows = readFileSync(logPath, 'utf8').trim().split('\n')
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+      if (logRows.some((row) => row.event === 'closeout.completed')) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const attemptIds = new Set(logRows.map((row) => row.attemptId));
+    assert.equal(attemptIds.size, 1);
+    const attemptId = [...attemptIds][0];
+    assert.ok(attemptId);
+    assert.deepEqual(logRows.map((row) => row.event), [
+      'closeout.started',
+      'model_call.started',
+      'model_call.returned',
+      'closeout.completed',
+    ]);
+    const returned = logRows.find((row) => row.event === 'model_call.returned');
+    assert.equal(returned?.responseId, 'telemetry-response-1');
+    assert.equal(returned?.responseStatus, 200);
+    assert.equal(returned?.promptTokens, 20);
+    assert.equal(returned?.completionTokens, 10);
+    assert.equal(logRows.every((row) => row.sessionId === scenario.sessionId), true);
+    assert.equal(JSON.stringify(logRows).includes(scenario.userText), false);
+
+    const snapshotDirectory = path.join(diagnosticsDirectory, 'snapshots', 'story-closeout');
+    const snapshotPath = path.join(snapshotDirectory, readdirSync(snapshotDirectory)[0]!);
+    const snapshot = JSON.parse(readFileSync(snapshotPath, 'utf8')) as Record<string, unknown>;
+    assert.equal(snapshot.attempt_id, attemptId);
+    assert.equal(snapshot.content, undefined);
+    assert.equal(snapshot.status, 'completed');
+
+    process.env.DIAGNOSTICS_CAPTURE_CONTENT = '1';
+    const captureScenario = prepareScenario(true, 'DIAGNOSTIC_CAPTURE_PRIVATE_TEXT');
+    beginInterviewCloseout(
+      captureScenario.databasePath,
+      captureScenario.sessionId,
+      { apiKey: 'test-only', provider: 'telemetry-test-provider', model: 'telemetry-test-model' },
+      captureScenario.userId,
+      {
+        textModelProvider: {
+          async complete() {
+            return {
+              output: modelOutput(captureScenario),
+              model: 'telemetry-test-model',
+              latencyMs: 3,
+            };
+          },
+        },
+      },
+    );
+    assert.equal(
+      (await waitForStoredResult(captureScenario.databasePath, captureScenario.sessionId, captureScenario.userId)).closeoutStatus,
+      'completed',
+    );
+    const capturedSnapshot = readdirSync(snapshotDirectory)
+      .map((file) => JSON.parse(readFileSync(path.join(snapshotDirectory, file), 'utf8')) as Record<string, unknown>)
+      .find((entry) => entry.id === captureScenario.sessionId);
+    assert.ok(capturedSnapshot);
+    assert.deepEqual(
+      (capturedSnapshot.content as Record<string, unknown>).model_output,
+      modelOutput(captureScenario),
+    );
+  } finally {
+    if (previousDiagnosticsDirectory === undefined) delete process.env.DIAGNOSTICS_DIR;
+    else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
+    if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+    else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
+  }
+});
 
 test('compact closeout updates the Story, directly creates independent Stories, and serves sourced results', async () => {
   const scenario = prepareScenario();

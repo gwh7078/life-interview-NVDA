@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { resolveDiagnosticsPath } from './diagnostics/paths.js';
 import { writeDiagnosticLog } from './diagnostics/logger.js';
+import { diagnosticsContentEnabled, writeDiagnosticSnapshot } from './diagnostics/snapshot.js';
 import WebSocket, { WebSocketServer, type RawData } from 'ws';
 import { createDatabase, resolveDatabasePath } from './db/client.js';
 import { resolveAiTaskConfig } from './ai/task-config.js';
@@ -1964,10 +1965,25 @@ function createRealtimeHandler(
         slowRecallLatencyMs: result.latencyMs,
         totalElapsedMs: performance.now() - recallStartedAt,
         factCount: result.hint?.facts.length ?? 0,
+        factClaimChars: result.hint?.facts.reduce((total, fact) => total + fact.claim.length, 0) ?? 0,
         factSourceMessageIds: result.hint?.facts.flatMap((fact) => fact.sourceMessageIds).join(','),
+        possibleConflictCount: result.hint?.possibleConflicts.length ?? 0,
+        interviewHintCount: result.hint?.interviewHints.length ?? 0,
         contextVersion: version,
         errorCode: result.errorCode,
       });
+      if (diagnosticsContentEnabled()) {
+        writeDiagnosticSnapshot('realtime-slow-recall', result.runId, {
+          session_id: interviewSession!.sessionId,
+          call_id: event.callId,
+          response_id: event.responseId,
+          run_id: result.runId,
+          status: result.status,
+          latency_ms: result.latencyMs,
+          ...(result.hint ? { result: result.hint } : {}),
+          ...(result.errorCode ? { error_code: result.errorCode } : {}),
+        });
+      }
 
       const responseIdle = await waitForResponseIdle(event.responseId, (config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS) + 1_000);
       if (!responseIdle) {
@@ -2811,18 +2827,37 @@ function createRealtimeHandler(
       }
       if (!endError && transcriptWriteErrors.length === 0 && drained && endedSessionId
         && sessionContext?.interview_type !== 'external_contributor') {
-        recordTrace('retriever.index_scheduled', { sessionId: endedSessionId });
-        void dependencies.retrieverIndex?.indexSessionTranscript(
-          authContext.userId,
-          endedSessionId,
-        ).then((outcome) => outcome.status === 'indexing'
-          ? dependencies.retrieverIndex?.waitForIndex(authContext.userId, endedSessionId)
-          : undefined).catch((error) => {
-            recordTrace('retriever.index_failed', {
-              sessionId: endedSessionId,
-              errorCode: error instanceof Error ? error.name : 'unknown',
+        const indexService = dependencies.retrieverIndex;
+        if (indexService) {
+          const indexStartedAt = performance.now();
+          recordTrace('retriever.index_scheduled', { sessionId: endedSessionId });
+          void (async () => {
+            const outcome = await indexService.indexSessionTranscript(authContext.userId, endedSessionId);
+            const settled = outcome.status === 'indexing'
+              ? await indexService.waitForIndex(authContext.userId, endedSessionId)
+              : outcome;
+            recordTrace('retriever.index_finished', {
+              status: settled?.status ?? outcome.status,
+              jobId: settled?.jobId ?? outcome.jobId,
+              documentId: settled?.documentId ?? outcome.documentId,
+              errorCode: settled?.errorCode ?? outcome.errorCode,
+              latencyMs: performance.now() - indexStartedAt,
             });
+            await traceWriter?.flush();
+          })().catch((error) => {
+            recordTrace('retriever.index_failed', {
+              status: 'failed',
+              errorCode: error && typeof error === 'object' && 'code' in error
+                && typeof (error as { code?: unknown }).code === 'string'
+                ? (error as { code: string }).code
+                : error instanceof Error ? error.name : 'unknown',
+              latencyMs: performance.now() - indexStartedAt,
+            });
+            void traceWriter?.flush();
           });
+        } else {
+          recordTrace('retriever.index_skipped', { reason: 'not_configured' });
+        }
       } else if (!endError && transcriptWriteErrors.length === 0 && drained && endedSessionId
         && sessionContext?.interview_type === 'external_contributor') {
         recordTrace('retriever.index_skipped', {
@@ -2869,6 +2904,7 @@ function createRealtimeHandler(
               closeout = {
                 status: started.status,
                 ...(started.status === 'processing' ? { alreadyProcessing: started.alreadyProcessing } : {}),
+                ...(started.status === 'processing' && started.attemptId ? { attemptId: started.attemptId } : {}),
                 ...(started.status === 'failed' ? { error: started.error.message, code: started.error.code } : {}),
               };
               if (started.status === 'failed') closeoutError = started.error.message;
@@ -2975,6 +3011,7 @@ function createRealtimeHandler(
             ...closeout,
             status: started.status,
             alreadyProcessing: started.status === 'processing' ? started.alreadyProcessing : undefined,
+            ...(started.status === 'processing' && started.attemptId ? { attemptId: started.attemptId } : {}),
           };
         } catch (error) {
           closeoutError = error instanceof Error ? error.message : '会后故事整理未能启动。';
@@ -2989,6 +3026,9 @@ function createRealtimeHandler(
       phase = 'ended';
       recordTrace('session.ended', {
         reason,
+        closeoutStatus: typeof closeout.status === 'string' ? closeout.status : undefined,
+        attemptId: typeof closeout.attemptId === 'string' ? closeout.attemptId : undefined,
+        closeoutErrorCode: typeof closeout.code === 'string' ? closeout.code : undefined,
         transcriptCount,
         savedTranscriptCount,
         pendingWriteCount,

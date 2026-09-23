@@ -1,5 +1,8 @@
+import { performance } from 'node:perf_hooks';
 import {
+  closeoutModelReturnedAttempt,
   CloseoutModelError,
+  type CloseoutModelAttemptEvent,
   type CloseoutModelConfig,
   type CloseoutModelResult,
 } from '../interview/llm-provider.js';
@@ -19,6 +22,7 @@ export interface ProcessOnboardingCloseoutInput {
   config: OnboardingCloseoutConfig;
   signal: AbortSignal;
   assertCurrentAttempt(): void;
+  onModelAttempt?: (event: CloseoutModelAttemptEvent) => void;
 }
 
 export interface ProcessOnboardingCloseoutResult {
@@ -28,6 +32,10 @@ export interface ProcessOnboardingCloseoutResult {
 
 export interface OnboardingCloseoutProcessor {
   process(input: ProcessOnboardingCloseoutInput): Promise<ProcessOnboardingCloseoutResult>;
+}
+
+function reportModelAttempt(input: ProcessOnboardingCloseoutInput, event: CloseoutModelAttemptEvent): void {
+  try { input.onModelAttempt?.(event); } catch { /* Diagnostics must not change closeout behavior. */ }
 }
 
 /** Direct structured model call for onboarding; it never writes user or life-map data. */
@@ -43,6 +51,12 @@ export class DirectOnboardingCloseoutProcessor implements OnboardingCloseoutProc
     input.assertCurrentAttempt();
     const built = buildOnboardingCloseoutPrompt(input.context);
     let modelResult: CloseoutModelResult;
+    const attemptStartedAt = performance.now();
+    reportModelAttempt(input, {
+      phase: 'started',
+      attempt: 1,
+      ...(input.config.model ? { model: input.config.model } : {}),
+    });
     try {
       modelResult = await this.textModel.complete(built.prompt, {
         ...input.config,
@@ -53,12 +67,38 @@ export class DirectOnboardingCloseoutProcessor implements OnboardingCloseoutProc
         },
       });
     } catch (error) {
+      reportModelAttempt(input, {
+        phase: 'failed',
+        attempt: 1,
+        latencyMs: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
+        errorCode: error instanceof CloseoutModelError ? error.code : error instanceof Error ? error.name : 'unknown',
+        retryable: error instanceof CloseoutModelError && error.retryable,
+        ...(error instanceof CloseoutModelError && error.diagnostics?.responseStatus !== undefined
+          ? { responseStatus: error.diagnostics.responseStatus }
+          : {}),
+        ...(error instanceof CloseoutModelError && error.diagnostics?.responseId
+          ? { responseId: error.diagnostics.responseId }
+          : {}),
+      });
       if (error instanceof CloseoutModelError) throw error;
       throw new OnboardingWorkflowError('首次建档整理模型调用失败。', 'ONBOARDING_MODEL_FAILED', 503);
     }
+    reportModelAttempt(input, closeoutModelReturnedAttempt(modelResult, 1));
     input.assertCurrentAttempt();
+    let output: ValidatedOnboardingCloseoutOutput;
+    try {
+      output = this.validator.validate(modelResult.output, built.references);
+    } catch (error) {
+      reportModelAttempt(input, {
+        phase: 'validation_failed',
+        attempt: 1,
+        errorCode: error instanceof OnboardingWorkflowError ? error.code : 'ONBOARDING_OUTPUT_INVALID',
+        retryable: false,
+      });
+      throw error;
+    }
     return {
-      output: this.validator.validate(modelResult.output, built.references),
+      output,
       modelResult,
     };
   }

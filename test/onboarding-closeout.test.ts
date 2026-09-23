@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, test } from 'node:test';
@@ -180,6 +180,65 @@ async function waitForTerminal(fixture: Fixture, sessionId: string) {
   }
   throw new Error('Onboarding closeout did not reach a terminal state.');
 }
+
+test('onboarding closeout diagnostics correlate its model response without recording transcript content', async () => {
+  const fixture = makeFixture('closeout-diagnostics-user');
+  const privateText = '埋点隐私验证专用文本';
+  const session = createEndedSession(
+    fixture,
+    `我叫林岚。${privateText}。小时候在南京长大。`,
+    '2026-09-14T00:30:00.000Z',
+  );
+  const diagnosticsDirectory = mkdtempSync(path.join(tempRoot, 'diagnostics-'));
+  const previousDiagnosticsDirectory = process.env.DIAGNOSTICS_DIR;
+  const previousCaptureContent = process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+  process.env.DIAGNOSTICS_DIR = diagnosticsDirectory;
+  process.env.DIAGNOSTICS_CAPTURE_CONTENT = '0';
+  try {
+    beginOnboardingCloseout(
+      fixture.databasePath,
+      session.sessionId,
+      config,
+      fixture.userId,
+      { textModelProvider: providerFor((prompt) => modelCandidate(prompt)) },
+    );
+    const result = await waitForTerminal(fixture, session.sessionId);
+    assert.equal(result.session?.closeout_status, 'completed');
+
+    const logPath = path.join(diagnosticsDirectory, 'logs', 'onboarding-closeout.jsonl');
+    const rows = readFileSync(logPath, 'utf8').trim().split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    assert.deepEqual(rows.map((row) => row.event), [
+      'closeout.started',
+      'model_call.started',
+      'model_call.returned',
+      'closeout.completed',
+    ]);
+    const attemptIds = new Set(rows.map((row) => row.attemptId));
+    assert.equal(attemptIds.size, 1);
+    assert.ok([...attemptIds][0]);
+    assert.equal(rows.every((row) => row.sessionId === session.sessionId), true);
+    const returned = rows.find((row) => row.event === 'model_call.returned');
+    assert.equal(returned?.responseId, 'onboarding-test-response');
+    assert.equal(returned?.promptTokens, 120);
+    assert.equal(returned?.completionTokens, 90);
+    assert.equal(JSON.stringify(rows).includes(privateText), false);
+
+    const snapshotDirectory = path.join(diagnosticsDirectory, 'snapshots', 'onboarding-closeout');
+    const snapshot = JSON.parse(readFileSync(
+      path.join(snapshotDirectory, readdirSync(snapshotDirectory)[0]!),
+      'utf8',
+    )) as Record<string, unknown>;
+    assert.equal(snapshot.attempt_id, [...attemptIds][0]);
+    assert.equal(snapshot.content, undefined);
+    assert.equal(JSON.stringify(snapshot).includes(privateText), false);
+  } finally {
+    if (previousDiagnosticsDirectory === undefined) delete process.env.DIAGNOSTICS_DIR;
+    else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
+    if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+    else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
+  }
+});
 
 function resolvedOutput(reference: OnboardingSourceReference): ValidatedOnboardingCloseoutOutput {
   return {

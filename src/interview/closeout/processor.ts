@@ -1,11 +1,14 @@
+import { performance } from 'node:perf_hooks';
 import {
   storyCloseoutJsonSchema,
   storyCreationCloseoutJsonSchema,
 } from '../closeout-schema.js';
 import {
+  closeoutModelReturnedAttempt,
   CloseoutModelError,
   DEFAULT_CLOSEOUT_MAX_OUTPUT_TOKENS,
   MAX_CLOSEOUT_MAX_OUTPUT_TOKENS,
+  type CloseoutModelAttemptEvent,
   type CloseoutModelConfig,
   type CloseoutModelResult,
 } from '../llm-provider.js';
@@ -27,6 +30,7 @@ export interface ProcessStoryCloseoutInput {
   signal: AbortSignal;
   assertCurrentAttempt(): void;
   repairLog?: { count: number; recent: Array<{ code: string }> };
+  onModelAttempt?: (event: CloseoutModelAttemptEvent) => void;
 }
 
 export interface ProcessStoryCloseoutResult {
@@ -43,6 +47,10 @@ export const STORY_CLOSEOUT_MAX_MODEL_CALLS = 3;
 const MAX_RECORDED_REPAIR_ATTEMPTS = 30;
 const RETRY_BACKOFF_BASE_MS = 500;
 const RETRY_BACKOFF_MAX_MS = 30_000;
+
+function reportModelAttempt(input: ProcessStoryCloseoutInput, event: CloseoutModelAttemptEvent): void {
+  try { input.onModelAttempt?.(event); } catch { /* Diagnostics must not change closeout behavior. */ }
+}
 
 function retryFeedbackFor(error: unknown): Record<string, unknown> {
   const code = error instanceof CloseoutModelError || error instanceof CloseoutWorkflowError ? error.code : 'CLOSEOUT_FAILED';
@@ -144,7 +152,16 @@ export class DirectModelCloseoutProcessor implements CloseoutProcessor {
         callCount > 0 && lastError ? retryFeedbackFor(lastError) : undefined,
       );
       const attempt = callCount;
+      const attemptNumber = attempt + 1;
       callCount += 1;
+      const attemptStartedAt = performance.now();
+      reportModelAttempt(input, {
+        phase: 'started',
+        attempt: attemptNumber,
+        ...(input.config.model ? { model: input.config.model } : {}),
+        requestedMaxTokens: maxOutputTokens,
+      });
+      let modelReturned = false;
       try {
         const config: CloseoutModelConfig = {
           ...input.config,
@@ -168,11 +185,41 @@ export class DirectModelCloseoutProcessor implements CloseoutProcessor {
               },
         };
         const currentModelResult = await this.textModel.complete(prompt.prompt, config);
+        modelReturned = true;
+        reportModelAttempt(input, closeoutModelReturnedAttempt(currentModelResult, attemptNumber));
         input.assertCurrentAttempt();
-        const currentOutput = this.validator.validate(currentModelResult.output, input.context, prompt.references);
+        let currentOutput: ValidatedStoryCloseoutOutput;
+        try {
+          currentOutput = this.validator.validate(currentModelResult.output, input.context, prompt.references);
+        } catch (error) {
+          reportModelAttempt(input, {
+            phase: 'validation_failed',
+            attempt: attemptNumber,
+            errorCode: error instanceof CloseoutWorkflowError ? error.code : 'CLOSEOUT_OUTPUT_INVALID',
+            retryable: canRetry(error),
+          });
+          throw error;
+        }
         validated = currentOutput;
         modelResult = currentModelResult;
       } catch (error) {
+        if (!modelReturned) {
+          reportModelAttempt(input, {
+            phase: 'failed',
+            attempt: attemptNumber,
+            latencyMs: Math.max(0, Math.round(performance.now() - attemptStartedAt)),
+            errorCode: error instanceof CloseoutModelError || error instanceof CloseoutWorkflowError
+              ? error.code
+              : error instanceof Error ? error.name : 'unknown',
+            retryable: canRetry(error),
+            ...(error instanceof CloseoutModelError && error.diagnostics?.responseStatus !== undefined
+              ? { responseStatus: error.diagnostics.responseStatus }
+              : {}),
+            ...(error instanceof CloseoutModelError && error.diagnostics?.responseId
+              ? { responseId: error.diagnostics.responseId }
+              : {}),
+          });
+        }
         lastError = error;
         if (!canRetry(error)) throw error;
         repairLog.count = Math.min(repairLog.count + 1, Number.MAX_SAFE_INTEGER);

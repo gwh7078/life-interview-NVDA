@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { and, eq, lt, or } from 'drizzle-orm';
 import { createDatabase } from '../db/client.js';
 import { nowUtcIso } from '../db/time.js';
@@ -216,6 +217,7 @@ async function processCloseout(
   ownerUserId: string,
   dependencies: OnboardingCloseoutDependencies,
 ): Promise<void> {
+  const startedAt = performance.now();
   let leaseLost = false;
   let appliedStoryIds: string[] = [];
   const heartbeat = setInterval(() => {
@@ -234,6 +236,21 @@ async function processCloseout(
       context,
       config,
       signal,
+      onModelAttempt(event) {
+        writeDiagnosticLog(
+          'onboarding-closeout',
+          event.phase === 'failed' || event.phase === 'validation_failed' ? 'warn' : 'info',
+          `Onboarding closeout model call ${event.phase}.`,
+          {
+            event: `model_call.${event.phase}`,
+            sessionId,
+            attemptId,
+            modelAttempt: event.attempt,
+            provider: config.provider ?? DEFAULT_PROVIDER,
+            ...event,
+          },
+        );
+      },
       assertCurrentAttempt() {
         if (leaseLost || currentCloseoutAttempt(databasePath, sessionId, ownerUserId) !== attemptId) {
           throw new OnboardingWorkflowError('本次建档整理任务已失去处理权。', 'CLOSEOUT_ATTEMPT_STALE', 409);
@@ -263,9 +280,19 @@ async function processCloseout(
       modelMetadata,
     });
     appliedStoryIds = [...new Set(applied.storyIds)];
+    const totalElapsedMs = Math.max(0, Math.round(performance.now() - startedAt));
+    const profileCandidateCount = Object.values(processed.output.profile).filter((candidate) => candidate.value !== null).length;
+    const storyCandidateCount = processed.output.life_stages
+      .reduce((count, stage) => count + stage.stories.length, 0);
     writeDiagnosticLog('onboarding-closeout', 'info', 'Onboarding closeout applied.', {
+      event: 'closeout.completed',
       sessionId,
+      attemptId,
       storyCount: appliedStoryIds.length,
+      totalElapsedMs,
+      profileCandidateCount,
+      lifeStageCount: processed.output.life_stages.length,
+      storyCandidateCount,
       model: modelMetadata.model,
       provider: modelMetadata.provider,
       latencyMs: modelMetadata.latency_ms,
@@ -273,10 +300,15 @@ async function processCloseout(
     const transcriptMessageCount = context.transcripts
       .reduce((count, transcriptSession) => count + transcriptSession.messages.length, 0);
     writeDiagnosticSnapshot('onboarding-closeout', sessionId, {
+      attempt_id: attemptId,
+      total_elapsed_ms: totalElapsedMs,
       status: 'completed',
       session_id: sessionId,
       created_story_ids: appliedStoryIds,
       story_count: appliedStoryIds.length,
+      profile_candidate_count: profileCandidateCount,
+      life_stage_count: processed.output.life_stages.length,
+      story_candidate_count: storyCandidateCount,
       model_metadata: modelMetadata,
       transcript_session_count: context.transcripts.length,
       transcript_message_count: transcriptMessageCount,
@@ -284,6 +316,7 @@ async function processCloseout(
         content: {
           transcripts: context.transcripts,
           output: processed.output,
+          model_output: processed.modelResult.output,
         },
       } : {}),
     });
@@ -292,12 +325,23 @@ async function processCloseout(
     }
   } catch (error) {
     const failure = safeError(error);
+    const totalElapsedMs = Math.max(0, Math.round(performance.now() - startedAt));
     writeDiagnosticLog('onboarding-closeout', 'error', 'Onboarding closeout failed.', {
+      event: 'closeout.failed',
       sessionId,
+      attemptId,
       code: failure.code,
       retryable: failure.retryable,
+      totalElapsedMs,
+      provider: config.provider ?? DEFAULT_PROVIDER,
+      model: config.model ?? DEFAULT_MODEL,
+      ...(error instanceof CloseoutModelError && error.diagnostics?.responseStatus !== undefined
+        ? { responseStatus: error.diagnostics.responseStatus }
+        : {}),
     });
     writeDiagnosticSnapshot('onboarding-closeout', sessionId, {
+      attempt_id: attemptId,
+      total_elapsed_ms: totalElapsedMs,
       status: 'failed',
       session_id: sessionId,
       error: failure,
@@ -386,11 +430,38 @@ export function beginOnboardingCloseout(
   ownerUserId: string,
   dependencies: OnboardingCloseoutDependencies = {},
 ): OnboardingCloseoutStartResult {
-  const claimed = claimCloseout(databasePath, sessionId, ownerUserId);
-  if (claimed.status !== 'processing' || claimed.alreadyProcessing) return claimed;
+  let claimed: OnboardingCloseoutStartResult;
+  try {
+    claimed = claimCloseout(databasePath, sessionId, ownerUserId);
+  } catch (error) {
+    const failure = safeError(error);
+    writeDiagnosticLog('onboarding-closeout', 'warn', 'Onboarding closeout start rejected.', {
+      event: 'closeout.start_rejected',
+      sessionId,
+      code: failure.code,
+      retryable: failure.retryable,
+    });
+    throw error;
+  }
+  if (claimed.status !== 'processing' || claimed.alreadyProcessing) {
+    writeDiagnosticLog('onboarding-closeout', 'info', 'Onboarding closeout was not started.', {
+      event: 'closeout.not_started',
+      sessionId,
+      status: claimed.status,
+      alreadyProcessing: claimed.status === 'processing' && claimed.alreadyProcessing,
+    });
+    return claimed;
+  }
   if (!claimed.attemptId) {
     throw new OnboardingWorkflowError('无法确认本次建档整理任务的归属。', 'CLOSEOUT_ATTEMPT_UNAVAILABLE', 500);
   }
+  writeDiagnosticLog('onboarding-closeout', 'info', 'Onboarding closeout started.', {
+    event: 'closeout.started',
+    sessionId,
+    attemptId: claimed.attemptId,
+    provider: config.provider ?? DEFAULT_PROVIDER,
+    model: config.model ?? DEFAULT_MODEL,
+  });
   const abortController = new AbortController();
   void processCloseout(databasePath, sessionId, claimed.attemptId, config, abortController.signal, ownerUserId, dependencies);
   return claimed;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { once } from 'node:events';
 import path from 'node:path';
 import { after, test } from 'node:test';
@@ -72,6 +72,11 @@ function waitFor<T>(promise: Promise<T>, timeoutMs = 2_000, label = 'Realtime wi
 test('Realtime Tool Call uses the default Retriever recall adapter when one is configured', async () => {
   const directory = mkdtempSync(path.resolve('data/test-tmp/realtime-retriever-wiring-'));
   temporaryDirectories.push(directory);
+  const diagnosticsDirectory = path.join(directory, 'diagnostics');
+  const previousDiagnosticsDirectory = process.env.DIAGNOSTICS_DIR;
+  const previousCaptureContent = process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+  process.env.DIAGNOSTICS_DIR = diagnosticsDirectory;
+  process.env.DIAGNOSTICS_CAPTURE_CONTENT = '1';
   const databasePath = path.join(directory, 'memoir.db');
   const database = createDatabase(databasePath);
   try {
@@ -247,6 +252,25 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     });
     clientSocket.send(JSON.stringify({ type: 'end', reason: 'user_confirmed' }));
     await waitFor(storyEnded, 5_000, 'story ended');
+    const recallSnapshotDirectory = path.join(diagnosticsDirectory, 'snapshots', 'realtime-slow-recall');
+    const recallSnapshot = JSON.parse(readFileSync(
+      path.join(recallSnapshotDirectory, readdirSync(recallSnapshotDirectory)[0]!),
+      'utf8',
+    )) as Record<string, unknown>;
+    assert.equal(recallSnapshot.status, 'completed');
+    assert.deepEqual(recallSnapshot.result, result.output);
+
+    const traceDirectory = path.join(diagnosticsDirectory, 'traces', 'realtime');
+    const traceText = readFileSync(path.join(traceDirectory, readdirSync(traceDirectory)[0]!), 'utf8');
+    const slowRecallTrace = traceText.trim().split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .find((row) => row.event === 'realtime.slow_recall_finished');
+    assert.equal(slowRecallTrace?.status, 'completed');
+    assert.equal(slowRecallTrace?.factCount, 1);
+    assert.equal(slowRecallTrace?.factSourceMessageIds, 'history-message');
+    assert.equal('query' in (slowRecallTrace ?? {}), false);
+    assert.equal(traceText.includes('第一次去北京是什么时候'), false);
+    assert.equal(traceText.includes('2013 年春节以后第一次到北京。'), false);
     if (clientSocket.readyState === WebSocket.OPEN) {
       clientSocket.close();
       await once(clientSocket, 'close');
@@ -289,5 +313,9 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     const providerClosed = once(providerHttp, 'close');
     providerHttp.close();
     await providerClosed;
+    if (previousDiagnosticsDirectory === undefined) delete process.env.DIAGNOSTICS_DIR;
+    else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
+    if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+    else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
   }
 });

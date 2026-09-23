@@ -31,6 +31,63 @@ export interface CloseoutModelResult {
   latencyMs: number;
 }
 
+export interface CloseoutModelAttemptEvent {
+  phase: 'started' | 'returned' | 'failed' | 'validation_failed';
+  attempt: number;
+  model?: string;
+  responseId?: string;
+  responseStatus?: number;
+  latencyMs?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  choiceCount?: number;
+  finishReason?: string;
+  contentType?: string;
+  contentLength?: number;
+  responseChannel?: string;
+  toolCallCount?: number;
+  argumentsType?: string;
+  argumentsLength?: number;
+  requestedMaxTokens?: number;
+  errorCode?: string;
+  retryable?: boolean;
+}
+
+export function closeoutModelReturnedAttempt(
+  result: CloseoutModelResult,
+  attempt: number,
+): CloseoutModelAttemptEvent {
+  const tokenCount = (key: string): number | undefined => {
+    const value = result.usage?.[key];
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+  };
+  const diagnostics = result.diagnostics;
+  const promptTokens = tokenCount('prompt_tokens');
+  const completionTokens = tokenCount('completion_tokens');
+  const totalTokens = tokenCount('total_tokens');
+  return {
+    phase: 'returned',
+    attempt,
+    model: result.model,
+    ...(result.responseId ? { responseId: result.responseId } : {}),
+    ...(diagnostics?.responseStatus !== undefined ? { responseStatus: diagnostics.responseStatus } : {}),
+    latencyMs: result.latencyMs,
+    ...(promptTokens !== undefined ? { promptTokens } : {}),
+    ...(completionTokens !== undefined ? { completionTokens } : {}),
+    ...(totalTokens !== undefined ? { totalTokens } : {}),
+    ...(diagnostics?.choiceCount !== undefined ? { choiceCount: diagnostics.choiceCount } : {}),
+    ...(diagnostics?.finishReason ? { finishReason: diagnostics.finishReason } : {}),
+    ...(diagnostics?.contentType ? { contentType: diagnostics.contentType } : {}),
+    ...(diagnostics?.contentLength !== undefined ? { contentLength: diagnostics.contentLength } : {}),
+    ...(diagnostics?.responseChannel ? { responseChannel: diagnostics.responseChannel } : {}),
+    ...(diagnostics?.toolCallCount !== undefined ? { toolCallCount: diagnostics.toolCallCount } : {}),
+    ...(diagnostics?.argumentsType ? { argumentsType: diagnostics.argumentsType } : {}),
+    ...(diagnostics?.argumentsLength !== undefined ? { argumentsLength: diagnostics.argumentsLength } : {}),
+    ...(diagnostics?.requestedMaxTokens !== undefined ? { requestedMaxTokens: diagnostics.requestedMaxTokens } : {}),
+  };
+}
+
 /** Safe response metadata only; never contains content, prompts, or reasoning text. */
 export interface CloseoutModelDiagnostics {
   responseId?: string;
