@@ -7,6 +7,7 @@ import { NemoClawAgentTaskAdapter } from './adapters/nemoclaw-agent-task-adapter
 import { StubAgentTaskAdapter } from './adapters/stub-agent-task-adapter.js';
 import { AgentTaskContractError } from './errors.js';
 import type { AgentTaskPort } from './ports/agent-task-port.js';
+import type { ObservationEvent } from '../observability/observation-event.js';
 
 export type AgentTaskRuntimeId = 'direct' | 'stub' | 'agent';
 
@@ -29,7 +30,7 @@ export function resolveAgentTaskRuntime(env: NodeJS.ProcessEnv = process.env): A
 
 export function createAgentTaskPort(
   env: NodeJS.ProcessEnv = process.env,
-  options: { databasePath?: string } = {},
+  options: { databasePath?: string; onObservationEvent?: (event: ObservationEvent) => void } = {},
 ): AgentTaskPort | null {
   const runtime = resolveAgentTaskRuntime(env);
   if (runtime === 'direct') return null;
@@ -60,6 +61,7 @@ export function createAgentTaskPort(
   });
   const runs = new AgentRunRepository(options.databasePath ?? optionalEnv(env, 'DATABASE_PATH'), {
     captureContent: env.DIAGNOSTICS_CAPTURE_CONTENT?.trim() === '1',
+    ...(options.onObservationEvent ? { onObservationEvent: options.onObservationEvent } : {}),
   });
   return new NemoClawAgentTaskAdapter(new NemoClawAgentTaskExecutor(attempts, runs));
 }

@@ -93,6 +93,10 @@ import { createRetrieverClientFromEnv, type RetrieverAdapter } from './retriever
 import { RetrieverIndexService } from './retriever/indexer.js';
 import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
 import { RetrieverRealtimeRecall } from './realtime/retriever-recall.js';
+import { ObservationBus, emitObservationEvent } from './observability/observation-bus.js';
+import { createObservationContext, type ObservationContext } from './observability/observation-event.js';
+import { adaptRealtimeTrace } from './observability/adapters/realtime-adapter.js';
+import { createObservationAnalyticsConsumer } from './observability/analytics-consumer.js';
 import { createEraContextClientFromEnv } from './era-context/client.js';
 import { EraContextScriptError, EraContextScriptGateway } from './era-context/script-gateway.js';
 
@@ -168,6 +172,7 @@ export interface InterviewServiceDependencies {
   retrieverScriptGateway?: RetrieverScriptGateway;
   eraContextScriptGateway?: EraContextScriptGateway;
   realtimeRecall?: RealtimeRecallPort;
+  observationBus?: ObservationBus;
 }
 
 interface ProviderTranscriptMessage {
@@ -532,6 +537,7 @@ const staticAssets: Record<string, { file: string; contentType: string }> = {
   '/life-model.js': { file: 'life-model.js', contentType: 'text/javascript; charset=utf-8' },
   '/http.js': { file: 'http.js', contentType: 'text/javascript; charset=utf-8' },
   '/client.js': { file: 'client.js', contentType: 'text/javascript; charset=utf-8' },
+  '/tech-observer.js': { file: 'tech-observer.js', contentType: 'text/javascript; charset=utf-8' },
   '/audio-format.js': { file: 'audio-format.js', contentType: 'text/javascript; charset=utf-8' },
   '/interview-state.js': { file: 'interview-state.js', contentType: 'text/javascript; charset=utf-8' },
   '/text-disclosure.js': { file: 'text-disclosure.js', contentType: 'text/javascript; charset=utf-8' },
@@ -564,10 +570,14 @@ const onboardingPages: Record<string, { file: string; microphone: boolean }> = {
 function createStoryWorkflowDependencies(
   config: RuntimeConfig,
   dependencies: InterviewServiceDependencies,
+  observationBus: ObservationBus,
 ): InterviewServiceDependencies {
   const textModelProvider = dependencies.closeout?.textModelProvider ?? new DirectTextModelProvider();
   const agentTasks = dependencies.agentTasks === undefined
-    ? createAgentTaskPort(process.env, { databasePath: config.databasePath })
+    ? createAgentTaskPort(process.env, {
+        databasePath: config.databasePath,
+        onObservationEvent: (event) => emitObservationEvent(event, observationBus),
+      })
     : dependencies.agentTasks;
   const storyCompletion = dependencies.storyCompletion
     ?? createStoryCompletionService(
@@ -655,7 +665,7 @@ function createStoryWorkflowDependencies(
   };
 }
 
-function createHttpHandler(config: RuntimeConfig, authService: AuthService, dependencies: InterviewServiceDependencies) {
+function createHttpHandler(config: RuntimeConfig, authService: AuthService, dependencies: InterviewServiceDependencies, observationBus: ObservationBus) {
   const textModelProvider: TextModelProvider = dependencies.closeout?.textModelProvider ?? new DirectTextModelProvider();
   const storyCompletion = dependencies.storyCompletion
     ?? createStoryCompletionService(config.databasePath, storyCompletionModelConfig(config), textModelProvider);
@@ -663,6 +673,22 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
     ?? createStoryGenerationService(config.databasePath, storyGenerationModelConfig(config), textModelProvider);
   const bookService = new BookService(config.databasePath);
   const closeoutDependencies: CloseoutWorkflowDependencies = dependencies.closeout ?? {};
+  const observationStreamsByUser = new Map<string, Set<ServerResponse>>();
+  const closeObservationStreams = (userId: string): void => {
+    const streams = observationStreamsByUser.get(userId);
+    if (!streams) return;
+    for (const stream of [...streams]) stream.end();
+  };
+  const observationTokenExpiry = (token: string): number | undefined => {
+    try {
+      const payload = token.split('.', 1)[0];
+      if (!payload) return undefined;
+      const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { expiresAt?: unknown };
+      return typeof claims.expiresAt === 'number' && Number.isSafeInteger(claims.expiresAt)
+        ? claims.expiresAt * 1_000
+        : undefined;
+    } catch { return undefined; }
+  };
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const url = new URL(request.url ?? '/', 'http://localhost');
     if (request.method === 'POST' && url.pathname === '/internal/agent-retrieval/memory-search') {
@@ -711,11 +737,101 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
       }
       return;
     }
+    const logoutRequest = request.method === 'POST' && url.pathname === '/api/auth/logout';
+    let logoutUserId: string | undefined;
+    if (logoutRequest) {
+      try { logoutUserId = authService.resolveToken(readAuthCookie(request.headers.cookie))?.userId; } catch { /* Logout remains available if stream cleanup cannot resolve the account. */ }
+    }
     if (await handleAuthRequest(request, response, authService, {
       developmentAuthEnabled: config.developmentAuthEnabled === true,
       secureCookie: config.secureCookies === true,
       authMode: config.authMode ?? 'sms',
-    })) return;
+    })) {
+      if (logoutRequest && logoutUserId && response.statusCode === 200) closeObservationStreams(logoutUserId);
+      return;
+    }
+
+    if (url.pathname === '/api/observability/events' && request.method === 'GET') {
+      const authToken = readAuthCookie(request.headers.cookie);
+      const authContext = authService.resolveToken(authToken);
+      if (!authToken || !authContext) {
+        sendJson(response, 401, { error: '请先登录。', errorCode: 'AUTH_REQUIRED' });
+        return;
+      }
+      const authExpiresAt = observationTokenExpiry(authToken);
+      if (!authExpiresAt) {
+        sendJson(response, 401, { error: '请先登录。', errorCode: 'AUTH_REQUIRED' });
+        return;
+      }
+      if (!observationBus.enabled) {
+        sendJson(response, 503, { error: 'Observation is disabled.', errorCode: 'OBSERVABILITY_DISABLED' });
+        return;
+      }
+      const sessionId = url.searchParams.get('sessionId')?.trim();
+      if (!sessionId || sessionId.length > 200) {
+        sendJson(response, 400, { error: 'Session ID is required.', errorCode: 'OBSERVABILITY_SESSION_REQUIRED' });
+        return;
+      }
+      try {
+        if (!new InterviewSessionRepository(config.databasePath).findByIdForUser(authContext.userId, sessionId)) {
+          sendJson(response, 404, { error: 'Session not found.', errorCode: 'SESSION_NOT_FOUND' });
+          return;
+        }
+      } catch {
+        sendJson(response, 503, { error: 'Observation stream is unavailable.', errorCode: 'OBSERVABILITY_UNAVAILABLE' });
+        return;
+      }
+      response.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      response.write('retry: 1500\n\n');
+      const userStreams = observationStreamsByUser.get(authContext.userId) ?? new Set<ServerResponse>();
+      userStreams.add(response);
+      observationStreamsByUser.set(authContext.userId, userStreams);
+      const sent = new Set<string>();
+      const sendEvent = (event: ReturnType<ObservationBus['recent']>[number]): void => {
+        if (Date.now() >= authExpiresAt) {
+          response.end();
+          return;
+        }
+        if (response.destroyed || response.writableEnded || response.writableLength > 64 * 1024 || sent.has(event.eventId)) return;
+        sent.add(event.eventId);
+        if (sent.size > 200) sent.delete(sent.values().next().value as string);
+        response.write(`id: ${event.eventId}\nevent: observation\ndata: ${JSON.stringify(event)}\n\n`);
+      };
+      for (const event of observationBus.recent(sessionId)) sendEvent(event);
+      const unsubscribe = observationBus.subscribe((event) => {
+        if (event.sessionId === sessionId) sendEvent(event);
+      });
+      const heartbeat = setInterval(() => {
+        let currentAuth: ReturnType<AuthService['resolveToken']> = null;
+        try { currentAuth = authService.resolveToken(authToken); } catch { /* Fail closed if auth state cannot be checked. */ }
+        if (!currentAuth || currentAuth.userId !== authContext.userId) {
+          response.end();
+          return;
+        }
+        if (!response.destroyed && !response.writableEnded && response.writableLength < 64 * 1024) response.write(': heartbeat\n\n');
+      }, 20_000);
+      const expiryTimer = setTimeout(() => response.end(), Math.max(1, authExpiresAt - Date.now()));
+      expiryTimer.unref?.();
+      const cleanup = (): void => {
+        clearInterval(heartbeat);
+        clearTimeout(expiryTimer);
+        unsubscribe();
+        userStreams.delete(response);
+        if (userStreams.size === 0 && observationStreamsByUser.get(authContext.userId) === userStreams) {
+          observationStreamsByUser.delete(authContext.userId);
+        }
+      };
+      response.once('close', cleanup);
+      response.once('error', cleanup);
+      request.once('aborted', cleanup);
+      return;
+    }
 
     const closeoutMatch = url.pathname.match(/^\/api\/interview-sessions\/([^/]+)\/(closeout|result)(?:\/(cancel))?$/);
     const onboardingCloseoutMatch = url.pathname.match(/^\/api\/onboarding\/sessions\/([^/]+)\/closeout$/);
@@ -1753,6 +1869,7 @@ function createRealtimeHandler(
   client: WebSocket,
   authContext: { userId: string },
   dependencies: InterviewServiceDependencies,
+  observationBus: ObservationBus,
   access: { externalShareId?: string } = {},
 ): void {
   const interviewCore = createInterviewRuntimeCore(config.databasePath);
@@ -1784,6 +1901,8 @@ function createRealtimeHandler(
   let manualEndRequested = false;
   let lastProviderActivityAt = Date.now();
   let traceWriter: RealtimeTraceWriter | undefined;
+  let observationContext: ObservationContext | undefined;
+  let observationProvider = 'unknown';
   let microphoneTraceWindowAt = performance.now();
   let microphoneTraceFrames = 0;
   let microphoneTraceBytes = 0;
@@ -1892,6 +2011,26 @@ function createRealtimeHandler(
 
   const recordTrace = (event: string, fields: RealtimeTraceFields = {}): void => {
     traceWriter?.record(event, fields);
+    if (!interviewSession || observationBus === undefined || !observationBus.enabled) return;
+    try {
+      observationContext ??= createObservationContext({
+        sessionId: interviewSession.sessionId,
+        rootSpanId: `session:${interviewSession.sessionId}`,
+        ...(sessionContext && 'story' in sessionContext && sessionContext.story && typeof sessionContext.story.story_id === 'string'
+          ? { storyId: sessionContext.story.story_id }
+          : {}),
+      });
+      const observation = adaptRealtimeTrace({
+        context: observationContext,
+        sessionId: interviewSession.sessionId,
+        ...(observationContext.storyId ? { storyId: observationContext.storyId } : {}),
+        provider: observationProvider,
+        environment: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
+        event,
+        fields,
+      });
+      if (observation) emitObservationEvent(observation, observationBus);
+    } catch { /* Realtime observation is an optional side channel. */ }
   };
   const traceStageTracker = createRealtimeTraceStageTracker();
   const toolCycleTracker = createRealtimeToolCycleTracker({ record: recordTrace });
@@ -3358,6 +3497,7 @@ function createRealtimeHandler(
         sessionId: interviewSession.sessionId,
         provider: providerName,
       });
+      observationProvider = providerName;
       recordTrace('session.started', { lifecycle: phase });
       recordTrace('provider.session_ready', { provider: providerName });
       if (playbackReadyTracePending) {
@@ -3595,8 +3735,11 @@ export function createInterviewServiceServer(
       ? new DevelopmentVerificationProvider()
       : new UnconfiguredSmsVerificationProvider(),
   });
-  const runtimeDependencies = createStoryWorkflowDependencies(effectiveConfig, dependencies);
-  const server = createServer(createHttpHandler(effectiveConfig, authService, runtimeDependencies));
+  const observationBus = dependencies.observationBus
+    ?? new ObservationBus({ enabled: process.env.OBSERVABILITY_ENABLED?.trim() !== 'false' });
+  const analyticsConsumer = createObservationAnalyticsConsumer(observationBus);
+  const runtimeDependencies = createStoryWorkflowDependencies(effectiveConfig, dependencies, observationBus);
+  const server = createServer(createHttpHandler(effectiveConfig, authService, runtimeDependencies, observationBus));
   const websocketServer = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
   const authBySocket = new WeakMap<WebSocket, AuthContext>();
   const shareBySocket = new WeakMap<WebSocket, { userId: string; shareId: string }>();
@@ -3656,6 +3799,7 @@ export function createInterviewServiceServer(
         client,
         { userId: shared.userId },
         runtimeDependencies,
+        observationBus,
         { externalShareId: shared.shareId },
       );
       return;
@@ -3665,9 +3809,13 @@ export function createInterviewServiceServer(
       client.close(1008, 'authentication required');
       return;
     }
-    createRealtimeHandler(effectiveConfig, client, authContext, runtimeDependencies);
+    createRealtimeHandler(effectiveConfig, client, authContext, runtimeDependencies, observationBus);
   });
-  server.on('close', () => websocketServer.close());
+  server.on('close', () => {
+    websocketServer.close();
+    analyticsConsumer.dispose();
+    observationBus.dispose();
+  });
   return server;
 }
 

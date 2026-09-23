@@ -21,12 +21,14 @@ import {
 } from './agent-eval/nat-runner-contract.js';
 import { createSyntheticBackendValidator } from './agent-eval/backend-validator.js';
 import { evaluateSyntheticSemantics } from './agent-eval/semantic-evaluators.js';
+import { adaptNatEvaluationSafely } from '../src/observability/adapters/nat-adapter.js';
 
 const RESULT_PREFIX = 'LIFE_INTERVIEW_NAT_RESULT ';
 const DEFAULT_OWNER_ID = 'nat-agent-eval-owner';
 
 interface AgentTrace {
   runId: string;
+  agentType: string;
   taskType: string;
   mode: string | null;
   runtime: string;
@@ -34,6 +36,7 @@ interface AgentTrace {
   model: string | null;
   resourceType: string;
   resourceId: string;
+  skill: string | null;
   resourceVersion: string | null;
   contextVersion: string | null;
   schemaVersion: string | null;
@@ -47,6 +50,8 @@ interface AgentTrace {
   inputHash: string | null;
   outputHash: string | null;
   status: string;
+  startedAt: string | null;
+  completedAt: string | null;
 }
 
 function readStdin(): Promise<string> {
@@ -64,6 +69,7 @@ function readTracing(databasePath: string): AgentTrace[] {
   try {
     return database.db.select().from(agentRuns).all().map((run) => ({
       runId: run.runId,
+      agentType: run.agentType,
       taskType: run.taskType,
       mode: run.mode,
       runtime: run.runtime,
@@ -71,6 +77,7 @@ function readTracing(databasePath: string): AgentTrace[] {
       model: run.model,
       resourceType: run.resourceType,
       resourceId: run.resourceId,
+      skill: run.skill,
       resourceVersion: run.resourceVersion,
       contextVersion: run.contextVersion,
       schemaVersion: run.schemaVersion,
@@ -84,6 +91,8 @@ function readTracing(databasePath: string): AgentTrace[] {
       inputHash: run.inputHash,
       outputHash: run.outputHash,
       status: run.status,
+      startedAt: run.startedAt,
+      completedAt: run.completedAt,
     }));
   } finally {
     database.close();
@@ -228,18 +237,26 @@ async function main(): Promise<void> {
     const semanticChecks = process.env.NAT_AGENT_RUNTIME?.trim() === 'stub'
       ? []
       : evaluateSyntheticSemantics(fixture.request, result.output, caseId);
+    const validation = {
+      contract_valid: true,
+      backend_validation: backendValidation,
+      semantic_valid: semanticChecks.every((item) => item.passed),
+      semantic_checks: semanticChecks,
+    };
     writeResult({
       case_id: caseId,
       ...fixtureDetails(fixture),
       status: 'succeeded',
       runtime: result.runtime,
       metrics: metricsFor(result.runtime, trace, Date.now() - started),
-      validation: {
-        contract_valid: true,
-        backend_validation: backendValidation,
-        semantic_valid: semanticChecks.every((item) => item.passed),
-        semantic_checks: semanticChecks,
-      },
+      validation,
+      observation_events: adaptNatEvaluationSafely({
+        trace,
+        caseId,
+        status: 'succeeded',
+        validation,
+        latencyMs: numberOr(trace?.latencyMs ?? result.runtime.latencyMs, Date.now() - started),
+      }),
       output: result.output,
       tracing,
       runtime_timings: readRuntimeTimings(runtimeTimingPath),
@@ -248,6 +265,12 @@ async function main(): Promise<void> {
     const tracing = tryReadTracing(databasePath);
     const trace = traceFor(tracing, fixture?.request.runId);
     const contract = errorContract(error);
+    const validation = {
+      contract_valid: false,
+      backend_validation: backendValidation,
+      semantic_valid: false,
+      semantic_checks: [],
+    };
     writeResult({
       case_id: caseId,
       ...fixtureDetails(fixture),
@@ -260,12 +283,14 @@ async function main(): Promise<void> {
         },
       } : {}),
       metrics: metricsFor(undefined, trace, Date.now() - started),
-      validation: {
-        contract_valid: false,
-        backend_validation: backendValidation,
-        semantic_valid: false,
-        semantic_checks: [],
-      },
+      validation,
+      observation_events: adaptNatEvaluationSafely({
+        trace,
+        caseId,
+        status: 'failed',
+        validation,
+        latencyMs: numberOr(trace?.latencyMs, Date.now() - started),
+      }),
       error: contract,
       ...(tracing.length ? { tracing } : {}),
       ...(runtimeTimingPath ? { runtime_timings: readRuntimeTimings(runtimeTimingPath) } : {}),

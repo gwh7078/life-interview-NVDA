@@ -1294,6 +1294,7 @@ function connectRealtime() {
           resolve(message);
         }
         state.sessionId = message.sessionId;
+        window.dispatchEvent(new CustomEvent('interview:session', { detail: { sessionId: message.sessionId } }));
         flushStartupTraceEvents();
         state.microphonePacketCount = 0;
         state.lastMicrophonePacketAt = null;
@@ -1897,6 +1898,7 @@ async function loadSharedStoryData() {
   }
 
   state.authenticatedProfile = null;
+  notifyObservationAuthChanged(null);
   state.interviewType = 'external_contributor';
   state.sharedStory = sharePayload.story;
   state.stories = [{
@@ -1947,6 +1949,7 @@ async function loadPageData() {
     elements.verificationControls.hidden = state.authMode === 'demo_phone' || !state.verificationChallengeId;
     if (!authResponse.ok || !authPayload.profile) {
       state.authenticatedProfile = null;
+      notifyObservationAuthChanged(null);
       state.onboardingStatus = null;
       state.interviewType = 'story';
       state.databaseAvailable = false;
@@ -1963,6 +1966,7 @@ async function loadPageData() {
       return;
     }
     state.authenticatedProfile = authPayload.profile;
+    notifyObservationAuthChanged(authPayload.profile.account_id);
     state.onboardingStatus = authPayload.profile.onboarding_status || null;
     const homeView = onboardingHomeView(state.onboardingStatus);
     if (homeView === 'my-life') {
@@ -2211,10 +2215,23 @@ function toggleSpeaker() {
 
 async function logout() {
   await fetch('/api/auth/logout', { method: 'POST' });
+  notifyObservationAuthChanged(null);
   state.authenticatedProfile = null;
   state.stories = [];
   state.lifeStages = [];
   await loadPageData();
+}
+
+function notifyObservationAuthChanged(userId) {
+  const detail = { userId: typeof userId === 'string' ? userId : null };
+  try { window.dispatchEvent(new CustomEvent('interview:auth-changed', { detail })); } catch { /* Observer remains optional. */ }
+  try {
+    if (typeof BroadcastChannel === 'function') {
+      const channel = new BroadcastChannel('life-interview-auth');
+      channel.postMessage(detail);
+      channel.close();
+    }
+  } catch { /* Cross-tab observer cleanup is best effort. */ }
 }
 
 elements.storySelect.addEventListener('change', () => {

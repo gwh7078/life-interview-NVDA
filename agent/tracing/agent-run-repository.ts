@@ -3,6 +3,8 @@ import { createDatabase } from '../../src/db/client.js';
 import { agentRuns, type AgentRunStatus } from '../../src/db/schema.js';
 import { nowUtcIso } from '../../src/db/time.js';
 import { diagnosticsContentEnabled } from '../../src/diagnostics/snapshot.js';
+import { adaptAgentRun, type AgentObservationSource } from '../../src/observability/adapters/agent-adapter.js';
+import type { ObservationEvent } from '../../src/observability/observation-event.js';
 import type { AgentRunRequest } from '../runtime/types.js';
 
 export interface AgentRunCreateInput extends AgentRunRequest {
@@ -36,6 +38,7 @@ export interface AgentRunSuccessMetadata {
 
 export interface AgentRunRepositoryOptions {
   captureContent?: boolean;
+  onObservationEvent?: (event: ObservationEvent) => void;
 }
 
 export interface AgentRunStore {
@@ -53,6 +56,8 @@ export interface AgentRunStore {
 }
 
 export class AgentRunRepository implements AgentRunStore {
+  private readonly observationSources = new Map<string, AgentObservationSource>();
+
   constructor(
     private readonly databasePath?: string,
     private readonly options: AgentRunRepositoryOptions = {},
@@ -83,6 +88,17 @@ export class AgentRunRepository implements AgentRunStore {
         createdAt: now,
         updatedAt: now,
       }).run();
+      this.observationSources.set(input.runId, {
+        runId: input.runId,
+        agentType: input.agentType,
+        taskType: input.taskType,
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        runtime: input.runtime,
+        ...(input.skill ? { skill: input.skill } : {}),
+        ...(input.provider ? { provider: input.provider } : {}),
+        ...(input.model ? { model: input.model } : {}),
+      });
     } finally {
       connection.close();
     }
@@ -109,6 +125,7 @@ export class AgentRunRepository implements AgentRunStore {
 
   markRunning(userId: string, runId: string): void {
     this.transition(userId, runId, 'running', { startedAt: nowUtcIso(), errorCode: null });
+    this.observe(runId, { eventType: 'agent.started', status: 'running' });
   }
 
   recordAttempt(userId: string, runId: string, metrics: AgentRunAttemptMetrics): void {
@@ -121,6 +138,19 @@ export class AgentRunRepository implements AgentRunStore {
       ...(metrics.provider !== undefined ? { provider: metrics.provider } : {}),
       ...(metrics.model !== undefined ? { model: metrics.model } : {}),
     });
+    const source = this.observationSources.get(runId);
+    if (source) this.observationSources.set(runId, {
+      ...source,
+      attemptCount: metrics.attemptCount,
+      repairCount: metrics.repairCount,
+      toolCallCount: metrics.toolCallCount,
+      scriptCallCount: metrics.scriptCallCount,
+      ...(metrics.provider ? { provider: metrics.provider } : {}),
+      ...(metrics.model ? { model: metrics.model } : {}),
+    });
+    if (metrics.attemptCount > 1 || metrics.repairCount > 0) {
+      this.observe(runId, { eventType: 'agent.retry', status: 'warning' });
+    }
   }
 
   markSucceeded(
@@ -141,6 +171,8 @@ export class AgentRunRepository implements AgentRunStore {
       ...(metadata.provider !== undefined ? { provider: metadata.provider } : {}),
       ...(metadata.model !== undefined ? { model: metadata.model } : {}),
     });
+    this.observe(runId, { eventType: 'agent.completed', status: 'success', durationMs: latencyMs });
+    this.observationSources.delete(runId);
   }
 
   markFailed(userId: string, runId: string, latencyMs: number, errorCode: string): void {
@@ -150,6 +182,18 @@ export class AgentRunRepository implements AgentRunStore {
       errorCode,
       resultJson: null,
     });
+    this.observe(runId, { eventType: 'agent.failed', status: 'error', durationMs: latencyMs });
+    this.observationSources.delete(runId);
+  }
+
+  private observe(runId: string, input: Parameters<typeof adaptAgentRun>[1]): void {
+    const source = this.observationSources.get(runId);
+    if (!source || !this.options.onObservationEvent) return;
+    try {
+      for (const event of adaptAgentRun(source, input)) {
+        try { this.options.onObservationEvent(event); } catch { /* Observation cannot affect persisted Agent work. */ }
+      }
+    } catch { /* Adapter failures cannot affect persisted Agent work. */ }
   }
 
   findByIdForUser(userId: string, runId: string) {

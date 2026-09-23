@@ -22,10 +22,14 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
   }
 
   try {
-    const repo = new AgentRunRepository(dbPath, { captureContent: true });
+    const observations: import('../../src/observability/observation-event.js').ObservationEvent[] = [];
+    const repo = new AgentRunRepository(dbPath, {
+      captureContent: true,
+      onObservationEvent: (event) => observations.push(event),
+    });
     repo.create({
       runId: 'run-a', userId: 'user-a', agentType: 'story-context-inspector',
-      taskType: 'inspect-story-context', resourceType: 'story', resourceId: 'story-a',
+      taskType: 'interview.closeout', resourceType: 'interview_session', resourceId: 'session-a',
       resourceVersion: 'story-v1',
       runtime: 'nemoclaw-openclaw', mode: 'story_continue',
       skill: 'interview-closeout', skillVersion: 'v1',
@@ -38,7 +42,7 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
     repo.recordAttempt('user-a', 'run-a', {
       attemptCount: 2,
       repairCount: 1,
-      toolCallCount: 0,
+      toolCallCount: 2,
       scriptCallCount: 0,
       formatRepairUsed: true,
       provider: 'stepfun',
@@ -61,12 +65,29 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
     assert.equal(saved?.resourceVersion, 'story-v1');
     assert.equal(saved?.attemptCount, 2);
     assert.equal(saved?.repairCount, 1);
-    assert.equal(saved?.toolCallCount, 0);
+    assert.equal(saved?.toolCallCount, 2);
     assert.equal(saved?.scriptCallCount, 0);
     assert.equal(saved?.formatRepairUsed, true);
     assert.equal(saved?.inputHash, 'input-hash');
     assert.equal(saved?.outputHash, 'output-hash');
     assert.deepEqual(JSON.parse(saved?.resultJson ?? '{}'), { title: 'A', gap_count: 1 });
+    assert.deepEqual(observations.map((event) => event.eventType), [
+      'agent.started', 'skill.started', 'agent.retry', 'agent.completed', 'skill.completed',
+    ]);
+    assert.ok(observations.every((event) => event.sessionId === 'session-a' && event.traceId === 'session-a'));
+    assert.equal(observations[3]?.durationMs, 123);
+    assert.equal(observations[3]?.metrics?.toolCallCount, 2);
+
+    repo.create({
+      runId: 'run-b', userId: 'user-a', agentType: 'interview-agent', taskType: 'interview.closeout',
+      resourceType: 'interview_session', resourceId: 'session-b', runtime: 'nemoclaw-openclaw', skill: 'interview-closeout',
+    });
+    repo.markRunning('user-a', 'run-b');
+    repo.markFailed('user-a', 'run-b', 45, 'AGENT_RUNTIME_FAILED');
+    assert.equal(observations.at(-2)?.eventType, 'agent.failed');
+    assert.equal(observations.at(-2)?.status, 'error');
+    assert.equal(observations.at(-2)?.durationMs, 45);
+    assert.equal(observations.at(-1)?.eventType, 'skill.failed');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
