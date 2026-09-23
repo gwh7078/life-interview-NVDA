@@ -42,9 +42,12 @@ if [[ ! -e .env ]]; then
       "NEMO_RETRIEVER_BASE_URL=http://127.0.0.1:7670",
       "NEMO_RETRIEVER_MCP_URL=http://127.0.0.1:7670/mcp",
       "NEMO_RETRIEVER_VECTORDB_URL=http://127.0.0.1:7671",
+      "NO_PROXY=127.0.0.1,localhost,::1",
+      "no_proxy=127.0.0.1,localhost,::1",
       "# 实时语音与会后总结密钥仅在需要真实模型联调时填写。",
       "# STEPFUN_API_KEY=",
       "# CLOSEOUT_API_KEY=",
+      "# DASHSCOPE_API_KEY=NeMo Retriever 百炼 embedding/rerank 凭证（macOS 钥匙串同步）",
       "",
     ].join("\n");
     const fd = fs.openSync(".env", "wx", 0o600);

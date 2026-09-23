@@ -302,6 +302,19 @@ nemoclaw my-assistant dashboard-url --quiet
 
 这些属于本机运行时路径，不应成为仓库代码依赖。DGX Spark 部署时通过环境变量换成 Spark 对应路径。
 
+macOS 本机 Retriever 由用户级 launchd agent `com.gwh.nemo-retriever` 管理：登录时启动，进程退出后自动重启；Retriever 前台进程同时监督本机 VectorDB。`scripts/codex-dev.sh` 会先 kickstart 该 agent 并等待两个 health endpoint 返回 HTTP 200，再启动网页。Retriever 凭证保存在登录钥匙串，并同步到 `/Users/gwh/.local/share/nemo-retriever/.env`（权限 `0600`）；新 Worktree setup 会将受管 `DASHSCOPE_API_KEY` 同步到该 Worktree 忽略的 `.env`。不要将密钥提交到 Git 或复制整份项目 `.env`。检查/重启：
+
+macOS 登录钥匙串只对当前用户账户共享；其他协作者需通过各自的安全凭据渠道配置，不要通过仓库共享密钥。
+
+```bash
+launchctl print "gui/$(id -u)/com.gwh.nemo-retriever"
+launchctl kickstart -k "gui/$(id -u)/com.gwh.nemo-retriever"
+bash scripts/ensure-local-retriever.sh
+bash scripts/check-ai-env.sh
+```
+
+`scripts/check-ai-env.sh` 对 loopback 地址禁用系统代理，避免把 `127.0.0.1` 的健康请求送到 HTTP 代理。
+
 ## 11. 凭证
 
 当前 NeMo Retriever 服务的远程 embedding / rerank 会读取：
@@ -326,7 +339,7 @@ NVIDIA_INFERENCE_API_KEY
 
 - `.env.example` 只能保留空值/变量名。
 - `.env` 不提交 Git；本机凭证通过 macOS 登录钥匙串同步到当前工作树，当前文件权限为 `0600`。
-- `scripts/codex-keychain.swift` 支持 `STEPFUN_API_KEY`、`BAILIAN_API_KEY` 与 `CLOSEOUT_API_KEY` 的安全导入和同步。
+- `scripts/codex-keychain.swift` 支持 `STEPFUN_API_KEY`、`BAILIAN_API_KEY`、`CLOSEOUT_API_KEY` 与 `DASHSCOPE_API_KEY` 的安全导入和同步。
 - AI 不得通过 `printenv`、日志、异常堆栈主动输出完整 Key。
 - 重新部署时若缺凭证，应提示开发者在本机安全环境设置，而不是写死到代码。
 

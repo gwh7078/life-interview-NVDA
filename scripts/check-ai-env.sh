@@ -24,12 +24,20 @@ import json
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 
 retriever, vectordb, openclaw = sys.argv[1:4]
+loopback_hosts = {"127.0.0.1", "localhost", "::1"}
+direct_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+def open_url(url, timeout=3):
+    if urlparse(url).hostname in loopback_hosts:
+        return direct_opener.open(url, timeout=timeout)
+    return urllib.request.urlopen(url, timeout=timeout)
 
 def check_json(name, url):
     try:
-        with urllib.request.urlopen(url, timeout=3) as response:
+        with open_url(url, timeout=3) as response:
             body = response.read().decode("utf-8", errors="replace")
             try:
                 parsed = json.loads(body)

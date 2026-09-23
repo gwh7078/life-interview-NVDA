@@ -3,7 +3,7 @@ import Foundation
 import Security
 
 private let service = "com.rensheng.codex-worktree"
-private let keys = ["CLOSEOUT_API_KEY", "BAILIAN_API_KEY", "STEPFUN_API_KEY"]
+private let keys = ["CLOSEOUT_API_KEY", "BAILIAN_API_KEY", "STEPFUN_API_KEY", "DASHSCOPE_API_KEY"]
 
 private enum Failure: Error, CustomStringConvertible {
     case usage
@@ -15,7 +15,7 @@ private enum Failure: Error, CustomStringConvertible {
     var description: String {
         switch self {
         case .usage:
-            return "用法：codex-keychain.swift import-env <私有.env路径> | sync-env .env"
+            return "用法：codex-keychain.swift import-env <私有.env路径> | sync-env .env | sync-key .env <受管凭证名>"
         case .missing(let name):
             return "指定文件缺少可导入的 \(name)，未导入。"
         case .noCredentials:
@@ -117,7 +117,7 @@ private func isManagedLine(_ line: String, key: String) -> Bool {
     return candidate[..<equals].trimmingCharacters(in: .whitespaces) == key
 }
 
-private func syncEnv(_ path: String) throws {
+private func syncEnv(_ path: String, only selectedKeys: [String] = keys) throws {
     let file = URL(fileURLWithPath: path).standardizedFileURL
     guard file.lastPathComponent == ".env" else {
         throw Failure.unsafeEnv
@@ -139,6 +139,7 @@ private func syncEnv(_ path: String) throws {
     # CLOSEOUT_API_KEY=会后文本总结模型凭证（本机钥匙串同步）
     # BAILIAN_API_KEY=阿里云百炼文本模型凭证（本机钥匙串同步）
     # STEPFUN_API_KEY=StepFun 实时语音模型凭证（本机钥匙串同步）
+    # DASHSCOPE_API_KEY=NeMo Retriever 百炼 embedding/rerank 凭证（本机钥匙串同步）
 
     """
     let contents = FileManager.default.fileExists(atPath: file.path)
@@ -150,7 +151,7 @@ private func syncEnv(_ path: String) throws {
     }
 
     var count = 0
-    for key in keys {
+    for key in selectedKeys {
         guard let value = try readSecret(key) else {
             continue
         }
@@ -190,14 +191,22 @@ private func syncEnv(_ path: String) throws {
 
 do {
     let args = Array(CommandLine.arguments.dropFirst())
-    guard args.count == 2 else {
+    guard args.count == 2 || (args.count == 3 && args[0] == "sync-key") else {
         throw Failure.usage
     }
     switch args[0] {
     case "import-env":
         try importEnv(args[1])
     case "sync-env":
+        guard args.count == 2 else {
+            throw Failure.usage
+        }
         try syncEnv(args[1])
+    case "sync-key":
+        guard args.count == 3, keys.contains(args[2]) else {
+            throw Failure.usage
+        }
+        try syncEnv(args[1], only: [args[2]])
     default:
         throw Failure.usage
     }
