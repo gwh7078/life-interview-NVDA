@@ -107,8 +107,10 @@ async function load() {
       ? `${payload.owner_name} 邀请你以「${relationship}」的视角，补充这段人生故事。`
       : `有人邀请你以「${relationship}」的视角，补充这段人生故事。`;
     title.textContent = story.title || '一段人生故事';
-    status.textContent = statusLabels[story.status] || '';
-    status.hidden = !status.textContent;
+    const normalizedStatus = ['pending', 'interviewing', 'complete'].includes(story.status) ? story.status : '';
+    status.dataset.status = normalizedStatus;
+    status.textContent = statusLabels[normalizedStatus] || '';
+    status.hidden = !normalizedStatus;
     summary.textContent = story.summary || '这段故事还没有整理出摘要，你可以从自己记得最清楚的地方开始补充。';
 
     const storyGaps = Array.isArray(story.gaps)
