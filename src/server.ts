@@ -342,7 +342,7 @@ export function readRuntimeConfig(): RuntimeConfig {
       || process.env.BAILIAN_API_KEY?.trim()
       || process.env.CLOSEOUT_API_KEY?.trim()
       || undefined,
-    closeoutBaseUrl: String(closeoutTask.parameters.baseUrl ?? 'https://ark.cn-beijing.volces.com/api/plan/v3'),
+    closeoutBaseUrl: String(closeoutTask.parameters.baseUrl ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
     closeoutApiFormat,
     closeoutModel: closeoutTask.model,
     closeoutProvider: closeoutTask.provider,
@@ -357,7 +357,7 @@ export function readRuntimeConfig(): RuntimeConfig {
     storyGenerationModel: storyGenerationTask.model,
     storyGenerationProvider: storyGenerationTask.provider,
     storyGenerationTimeoutMs,
-    onboardingCloseoutBaseUrl: String(onboardingCloseoutTask.parameters.baseUrl ?? 'https://ark.cn-beijing.volces.com/api/plan/v3'),
+    onboardingCloseoutBaseUrl: String(onboardingCloseoutTask.parameters.baseUrl ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
     onboardingCloseoutApiFormat: String(onboardingCloseoutTask.parameters.apiFormat ?? closeoutApiFormat) as RuntimeConfig['onboardingCloseoutApiFormat'],
     onboardingCloseoutModel: onboardingCloseoutTask.model,
     onboardingCloseoutProvider: onboardingCloseoutTask.provider,
@@ -477,7 +477,7 @@ function onboardingCloseoutModelConfig(config: RuntimeConfig): OnboardingCloseou
 
 function storyCompletionModelConfig(config: RuntimeConfig) {
   return {
-    provider: config.storyCompletionProvider ?? config.closeoutProvider ?? 'volcengine-agent-plan',
+    provider: config.storyCompletionProvider ?? config.closeoutProvider ?? 'openai-compatible',
     apiKey: config.closeoutApiKey ?? '',
     baseUrl: config.storyCompletionBaseUrl ?? config.closeoutBaseUrl,
     apiFormat: config.storyCompletionApiFormat ?? config.closeoutApiFormat,
@@ -488,7 +488,7 @@ function storyCompletionModelConfig(config: RuntimeConfig) {
 
 function storyGenerationModelConfig(config: RuntimeConfig) {
   return {
-    provider: config.storyGenerationProvider ?? config.closeoutProvider ?? 'volcengine-agent-plan',
+    provider: config.storyGenerationProvider ?? config.closeoutProvider ?? 'openai-compatible',
     apiKey: config.closeoutApiKey ?? '',
     baseUrl: config.storyGenerationBaseUrl ?? config.closeoutBaseUrl,
     apiFormat: config.storyGenerationApiFormat ?? config.closeoutApiFormat,
@@ -1187,8 +1187,8 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           providers: realtimeProviderHealthSummary(config),
           closeout: {
             configured: Boolean(config.closeoutApiKey),
-            provider: config.closeoutProvider ?? 'volcengine-agent-plan',
-            model: config.closeoutModel ?? 'deepseek-v4-flash',
+            provider: config.closeoutProvider ?? 'openai-compatible',
+            model: config.closeoutModel ?? 'qwen3.6-35b-a3b',
           },
           databaseAvailable: true,
           interviewLimits: {
@@ -1206,8 +1206,8 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           providers: realtimeProviderHealthSummary(config, false),
           closeout: {
             configured: Boolean(config.closeoutApiKey),
-            provider: config.closeoutProvider ?? 'volcengine-agent-plan',
-            model: config.closeoutModel ?? 'deepseek-v4-flash',
+            provider: config.closeoutProvider ?? 'openai-compatible',
+            model: config.closeoutModel ?? 'qwen3.6-35b-a3b',
           },
           databaseAvailable: false,
           error: error instanceof Error ? error.message : 'Database unavailable.',
@@ -3513,8 +3513,8 @@ function startServer(): void {
       qwenConfigured: Boolean(config.apiKey && config.workspaceId),
       stepfunConfigured: Boolean(config.stepfunApiKey),
       stepfunModel: config.stepfunModel ?? DEFAULT_STEPFUN_MODEL,
-      textProvider: config.closeoutProvider ?? 'volcengine-agent-plan',
-      textModel: config.closeoutModel ?? 'deepseek-v4-flash',
+      textProvider: config.closeoutProvider ?? 'openai-compatible',
+      textModel: config.closeoutModel ?? 'qwen3.6-35b-a3b',
       diagnosticsRoot: resolveDiagnosticsPath(),
     });
   });

@@ -46,11 +46,11 @@ export function resolveAiTaskConfig(env: NodeJS.ProcessEnv = process.env): AiTas
   if (interviewProvider !== 'doubao' && interviewProvider !== 'qwen' && interviewProvider !== 'stepfun') {
     throw new Error('STORY_INTERVIEW_PROVIDER must be doubao, qwen or stepfun.');
   }
-  const textProvider = env.TEXT_MODEL_PROVIDER?.trim() || 'volcengine-agent-plan';
+  const textProvider = env.TEXT_MODEL_PROVIDER?.trim() || 'openai-compatible';
   if (!isTextRuntimeProviderId(textProvider)) {
     throw new Error('TEXT_MODEL_PROVIDER must be volcengine-agent-plan or openai-compatible.');
   }
-  const textModel = env.TEXT_MODEL?.trim() || 'deepseek-v4-flash';
+  const textModel = env.TEXT_MODEL?.trim() || 'qwen3.6-35b-a3b';
   const textApiFormat = env.TEXT_MODEL_API_FORMAT?.trim() || 'chat-completions';
   const textBaseUrl = env.TEXT_MODEL_BASE_URL?.trim() || DEFAULT_CLOUD_TEXT_BASE_URL;
   const textTimeoutMs = Number(env.TEXT_MODEL_TIMEOUT_MS ?? 60_000);

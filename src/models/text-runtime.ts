@@ -1,6 +1,6 @@
 export type TextRuntimeProviderId = 'volcengine-agent-plan' | 'openai-compatible';
 
-export const DEFAULT_CLOUD_TEXT_BASE_URL = 'https://ark.cn-beijing.volces.com/api/plan/v3';
+export const DEFAULT_CLOUD_TEXT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
 export function isTextRuntimeProviderId(value: string): value is TextRuntimeProviderId {
   return value === 'volcengine-agent-plan' || value === 'openai-compatible';

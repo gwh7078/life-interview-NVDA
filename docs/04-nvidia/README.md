@@ -16,6 +16,8 @@
 - `Step-Audio-2-mini-Think` 仅作为专项 A/B 候选，不进入默认 Realtime 主链；
 - 最终 Production Model 仍需真实 DGX Spark Benchmark 后冻结。
 
+上述 NVIDIA `Qwen3.6-35B-A3B-NVFP4` 是 DGX Spark 本地推理候选。当前 Mac/NemoClaw 的 OpenClaw Agent 与文本任务走 Bailian Model Studio API，模型 ID 为 `qwen3.6-35b-a3b`；二者是不同 provider/runtime 的部署配置。当前实时语音与检索路由见 [AI 开发联调环境](../AI开发联调环境.md)。
+
 详细设计：
 
 - [DGX Spark 大模型选型 v1.2](MODEL_SELECTION_v1.0.md)

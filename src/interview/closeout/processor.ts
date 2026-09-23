@@ -111,8 +111,8 @@ function retryMetadata(modelResult: CloseoutModelResult, provider: string | unde
       }))
     : undefined;
   return {
-    provider: provider ?? 'volcengine-agent-plan',
-    model: modelResult.model || configuredModel || 'deepseek-v4-flash',
+    provider: provider ?? 'openai-compatible',
+    model: modelResult.model || configuredModel || 'qwen3.6-35b-a3b',
     ...(modelResult.responseId ? { response_id: modelResult.responseId } : {}),
     latency_ms: modelResult.latencyMs,
     ...(usage && Object.keys(usage).length ? { usage } : {}),

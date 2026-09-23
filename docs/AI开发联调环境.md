@@ -1,6 +1,6 @@
 # 人生采访局 NVIDIA 版｜AI 开发、对接、联调与测试环境
 
-版本：2026-09-22
+版本：2026-09-23
 适用对象：Codex、其他 AI 开发 Agent、前后端开发、Agent/Skill 开发、联调与测试人员。
 
 ## 1. 文档目的
@@ -24,6 +24,16 @@ Mac
 当前 Retriever 使用百炼 `qwen3.7-text-embedding` 与 `qwen3.7-text-rerank` 远程接口；本机配置的索引模式为 `hybrid`。服务配置通过环境变量读取凭证，不要求使用 NVIDIA 远程模型。
 
 Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不依赖 Retriever 或 RAG。Phase 3 A+B 已将 Retriever 接入 Realtime Slow Path 的条件式 recall，但不改变 Phase 1 核心用户路径；当前自动 Gate G0–G8 已通过。
+
+### 当前模型路由（2026-09-23）
+
+| 路径 | 当前配置 | 说明 |
+|---|---|---|
+| 实时语音 | StepFun `step-audio-2-mini` | `.env` 使用 `STORY_INTERVIEW_PROVIDER=stepfun`；凭证为 `STEPFUN_API_KEY`。 |
+| OpenClaw Agent 与会后文本任务 | Bailian `qwen3.6-35b-a3b` | Agent 的默认、推理、快速推理、写作 profile 共用此模型；文本任务通过 Model Studio OpenAI-compatible Chat API 调用。 |
+| Realtime 条件式慢路径 | NeMo Retriever Classic Retrieval | Retriever 启用时，Step-Audio 发起上下文工具调用后，后端做有 owner/story 范围的历史检索并返回短提示；当前此路径不额外调用文本生成模型。Retriever 未启用或不可用时返回空提示。 |
+
+Model Studio 文档确认模型 ID 为 `qwen3.6-35b-a3b`，支持文本输入、函数调用和 262,144-token context window；参见 [Qwen3.6-35B-A3B 模型说明](https://www.alibabacloud.com/help/en/model-studio/qwen3-6-35b-a3b) 与 [OpenAI-compatible Chat API](https://www.alibabacloud.com/help/en/model-studio/qwen-api-via-openai-chat-completions)。
 
 ## 2. 环境文件
 

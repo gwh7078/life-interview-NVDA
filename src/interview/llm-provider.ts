@@ -2,7 +2,7 @@ import { DEFAULT_CLOUD_TEXT_BASE_URL } from '../models/text-runtime.js';
 import { storyCloseoutJsonSchema } from './closeout-schema.js';
 
 const DEFAULT_BASE_URL = DEFAULT_CLOUD_TEXT_BASE_URL;
-const DEFAULT_MODEL = 'deepseek-v4-flash';
+const DEFAULT_MODEL = 'qwen3.6-35b-a3b';
 const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_TIMEOUT_MS = 5 * 60_000;
 export const DEFAULT_CLOSEOUT_MAX_OUTPUT_TOKENS = 8_192;

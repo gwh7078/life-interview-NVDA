@@ -84,7 +84,7 @@ async function withFetchMock<T>(mock: typeof fetch, action: () => Promise<T>): P
   }
 }
 
-test('uses strict Agent Plan function calling and returns parsed output plus safe diagnostics', async () => {
+test('uses OpenAI-compatible function calling and returns parsed output plus safe diagnostics', async () => {
   let capturedUrl = '';
   let capturedInit: RequestInit | undefined;
   const outputText = '{"summary":"整理完成"}';
@@ -114,14 +114,14 @@ test('uses strict Agent Plan function calling and returns parsed output plus saf
     assert.ok(result.latencyMs >= 0);
   });
 
-  assert.equal(capturedUrl, 'https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions');
+  assert.equal(capturedUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions');
   assert.equal(capturedInit?.method, 'POST');
   const headers = new Headers(capturedInit?.headers);
   assert.equal(headers.get('authorization'), 'Bearer test-secret');
   assert.equal(headers.get('content-type'), 'application/json');
   assert.ok(capturedInit?.signal instanceof AbortSignal);
   const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>;
-  assert.equal(body.model, 'deepseek-v4-flash');
+  assert.equal(body.model, 'qwen3.6-35b-a3b');
   assert.deepEqual(body.messages, [
     { role: 'system', content: prompt.system },
     { role: 'user', content: prompt.user },

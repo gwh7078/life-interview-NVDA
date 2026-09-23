@@ -21,8 +21,8 @@ import { onboardingCloseoutResultSchema } from './schema.js';
 export { OnboardingWorkflowError } from './errors.js';
 export type { OnboardingCloseoutConfig } from './processor.js';
 
-const DEFAULT_PROVIDER = 'volcengine-agent-plan';
-const DEFAULT_MODEL = 'deepseek-v4-flash';
+const DEFAULT_PROVIDER = 'openai-compatible';
+const DEFAULT_MODEL = 'qwen3.6-35b-a3b';
 const PROCESSING_STALE_MS = 10 * 60_000;
 const storyCompletionPendingSessions = new Set<string>();
 
