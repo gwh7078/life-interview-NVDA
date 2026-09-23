@@ -6,6 +6,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import WebSocket, { type RawData } from 'ws';
+import { startRealtimeSession } from './realtime-e2e-session.js';
 import { readRuntimeConfig, createInterviewServiceServer } from '../src/server.js';
 import { resolveDiagnosticsPath } from '../src/diagnostics/paths.js';
 import { createDatabase } from '../src/db/client.js';
@@ -788,9 +789,13 @@ async function runStoryCase(input: {
 
   try {
     await once(socket, 'open');
-    channel = listenForMessages(socket);
-    socket.send(JSON.stringify({ type: 'start', ...input.target, provider: input.provider }));
-    const ready = await channel.waitFor((message) => message.type === 'ready', `${input.name} Realtime ready`);
+    const realtimeChannel = listenForMessages(socket);
+    channel = realtimeChannel;
+    const ready = await startRealtimeSession(
+      socket,
+      { type: 'start', ...input.target, provider: input.provider },
+      () => realtimeChannel.waitFor((message) => message.type === 'ready', `${input.name} Realtime ready`),
+    );
     sessionId = String(ready.sessionId);
     input.reportCase.sessionId = sessionId;
     const startingSession = readSession(input.databasePath, sessionId);
@@ -868,7 +873,7 @@ async function runStoryCase(input: {
     const deadline = Date.now() + CLOSEOUT_TIMEOUT_MS;
     let result: Record<string, unknown> | undefined;
     while (Date.now() < deadline) {
-      const response = await fetch(`${input.baseUrl}/api/interview-sessions/${encodeURIComponent(sessionId)}/result`, {
+      const response: Response = await fetch(`${input.baseUrl}/api/interview-sessions/${encodeURIComponent(sessionId)}/result`, {
         headers: { cookie: input.cookie, accept: 'application/json' },
         cache: 'no-store',
       });

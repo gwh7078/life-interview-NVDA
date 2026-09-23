@@ -282,31 +282,25 @@ nemoclaw my-assistant dashboard-url --quiet
 
 ### 10.3 NeMo Retriever
 
-当前服务配置文件位于本机：
+默认 Retriever runtime 目录为 `$HOME/.local/share/nemo-retriever`，可通过 `NEMO_RETRIEVER_HOME` 覆盖。仓库不打包 Retriever venv 或服务配置；首次使用前需准备：
 
 ```text
-/Users/gwh/.local/share/nemo-retriever/retriever-service.yaml
-```
-
-当前数据目录：
-
-```text
-/Users/gwh/.local/share/nemo-retriever/lancedb
-```
-
-当前日志：
-
-```text
-/Users/gwh/.local/share/nemo-retriever/retriever-service.log
+$NEMO_RETRIEVER_HOME/.venv/bin/retriever
+$NEMO_RETRIEVER_HOME/retriever-service.yaml
+$NEMO_RETRIEVER_HOME/.env
+$NEMO_RETRIEVER_HOME/lancedb
 ```
 
 这些属于本机运行时路径，不应成为仓库代码依赖。DGX Spark 部署时通过环境变量换成 Spark 对应路径。
 
-macOS 本机 Retriever 由用户级 launchd agent `com.gwh.nemo-retriever` 管理：登录时启动，进程退出后自动重启；Retriever 前台进程同时监督本机 VectorDB。`scripts/codex-dev.sh` 会先 kickstart 该 agent 并等待两个 health endpoint 返回 HTTP 200，再启动网页。Retriever 凭证保存在登录钥匙串，并同步到 `/Users/gwh/.local/share/nemo-retriever/.env`（权限 `0600`）；新 Worktree setup 会将受管 `DASHSCOPE_API_KEY` 同步到该 Worktree 忽略的 `.env`。不要将密钥提交到 Git 或复制整份项目 `.env`。检查/重启：
+macOS 本机 Retriever 由用户级 launchd agent `com.gwh.nemo-retriever` 管理：登录时启动，进程退出后自动重启；Retriever 前台进程同时监督本机 VectorDB。`scripts/codex-worktree-setup.sh` 和 `scripts/codex-dev.sh` 都会调用幂等的 `scripts/install-local-retriever-service.sh`，为已准备好的 runtime 安装或更新 LaunchAgent。安装器从当前用户登录钥匙串同步 `DASHSCOPE_API_KEY` 到 runtime `.env`（权限 `0600`），不会把密钥写入 LaunchAgent plist、日志或 Git。新 Mac/协作者需先准备 Retriever venv 和配置，并在自己的登录钥匙串中配置凭据；仓库安装器不会下载或安装 NeMo Retriever 本身。
+
+`scripts/codex-dev.sh` 会等待 Retriever 和 VectorDB 的 health endpoint 都返回 HTTP 200，再启动网页。检查、安装或重启：
 
 macOS 登录钥匙串只对当前用户账户共享；其他协作者需通过各自的安全凭据渠道配置，不要通过仓库共享密钥。
 
 ```bash
+NEMO_RETRIEVER_HOME="$HOME/.local/share/nemo-retriever" bash scripts/install-local-retriever-service.sh
 launchctl print "gui/$(id -u)/com.gwh.nemo-retriever"
 launchctl kickstart -k "gui/$(id -u)/com.gwh.nemo-retriever"
 bash scripts/ensure-local-retriever.sh

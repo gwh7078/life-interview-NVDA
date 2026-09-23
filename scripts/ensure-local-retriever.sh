@@ -15,19 +15,7 @@ retriever_url="${NEMO_RETRIEVER_BASE_URL:-http://127.0.0.1:7670}"
 vectordb_url="${NEMO_RETRIEVER_VECTORDB_URL:-http://127.0.0.1:7671}"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
-  domain="gui/$(id -u)"
-  target="$domain/com.gwh.nemo-retriever"
-  plist="$HOME/Library/LaunchAgents/com.gwh.nemo-retriever.plist"
-  if [[ ! -f "$plist" ]]; then
-    echo "[FAIL] Missing local Retriever LaunchAgent: $plist" >&2
-    exit 1
-  fi
-  if launchctl print "$target" >/dev/null 2>&1; then
-    launchctl kickstart "$target"
-  else
-    launchctl enable "$target"
-    launchctl bootstrap "$domain" "$plist"
-  fi
+  bash scripts/install-local-retriever-service.sh
 fi
 
 env -i PATH="$PATH" python3 - "$retriever_url" "$vectordb_url" <<'PY'

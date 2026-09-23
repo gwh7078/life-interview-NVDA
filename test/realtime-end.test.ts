@@ -15,10 +15,35 @@ import { parseTranscript } from '../src/db/transcript.js';
 import { parseQwenServerEvent } from '../src/realtime/qwen.js';
 import type { NormalizedRealtimeEvent } from '../src/realtime/types.js';
 import { createInterviewServiceServer } from '../src/server.js';
+import { startRealtimeSession } from '../scripts/realtime-e2e-session.js';
 
 const testTempRoot = path.resolve('data/test-tmp');
 const temporaryDirectories: string[] = [];
 mkdirSync(testTempRoot, { recursive: true });
+
+test('Realtime E2E startup sends playback_ready after ready', async () => {
+  const order: string[] = [];
+  const ready = { type: 'ready', sessionId: 'session-test' };
+  const result = await startRealtimeSession(
+    { send: (raw) => order.push(`send:${String((JSON.parse(raw) as { type: string }).type)}`) },
+    { type: 'start', story_id: 'story-test' },
+    async () => { order.push('ready'); return ready; },
+  );
+
+  assert.deepEqual(order, ['send:start', 'ready', 'send:playback_ready']);
+  assert.equal(result, ready);
+});
+
+test('Realtime E2E startup does not acknowledge playback when ready fails', async () => {
+  const sent: string[] = [];
+  await assert.rejects(startRealtimeSession(
+    { send: (raw) => sent.push(raw) },
+    { type: 'start', story_id: 'story-test' },
+    async () => { throw new Error('ready timeout'); },
+  ), /ready timeout/u);
+
+  assert.deepEqual(sent.map((raw) => (JSON.parse(raw) as { type: string }).type), ['start']);
+});
 
 after(() => temporaryDirectories.forEach((directory) => rmSync(directory, { recursive: true, force: true })));
 

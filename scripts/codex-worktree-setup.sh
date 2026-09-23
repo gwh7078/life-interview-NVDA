@@ -3,6 +3,7 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
+retriever_service_status="not applicable"
 
 echo "安装本地服务依赖……"
 bash scripts/codex-node.sh npm ci
@@ -65,6 +66,15 @@ else
   echo "未检测到 macOS 钥匙串；保留当前 .env，不会从其他工作树复制密钥。"
 fi
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  if bash scripts/install-local-retriever-service.sh; then
+    retriever_service_status="installed"
+  else
+    retriever_service_status="not installed"
+    echo "[WARN] 未能安装本机 Retriever LaunchAgent；请先按 docs/AI开发联调环境.md 第 10.3 节准备 Retriever runtime。"
+  fi
+fi
+
 database_path="data/codex-worktree.db"
 if [[ ! -e "$database_path" && ! -e "$database_path-wal" && ! -e "$database_path-shm" ]]; then
   echo "为这个 Worktree 创建并填充独立的 SQLite 开发数据库……"
@@ -81,4 +91,4 @@ else
   echo "未配置真实模型凭证；本地页面、SQLite 与自动化测试可用，真实语音 E2E 需另行配置密钥并会产生模型用量。"
 fi
 
-echo "Worktree Environment 准备完成。"
+echo "Worktree Environment 准备完成；NeMo Retriever LaunchAgent: $retriever_service_status。"

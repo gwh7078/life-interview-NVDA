@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import { startRealtimeSession } from './realtime-e2e-session.js';
 import { and, eq } from 'drizzle-orm';
 import { createDatabase } from '../src/db/client.js';
 import { runMigrations } from '../src/db/migrate.js';
@@ -452,8 +453,11 @@ async function runLiveSession(
     socket = new WebSocket(`ws://127.0.0.1:${address.port}/api/realtime`, { headers: { cookie } });
     await once(socket, 'open');
     const messages = collectClientMessages(socket);
-    socket.send(JSON.stringify({ type: 'start', story_id: seedIds.firstProject, provider: 'stepfun' }));
-    const ready = await waitForMessage(messages, (message) => message.type === 'ready', providerWaitMs, 'ready');
+    const ready = await startRealtimeSession(
+      socket,
+      { type: 'start', story_id: seedIds.firstProject, provider: 'stepfun' },
+      () => waitForMessage(messages, (message) => message.type === 'ready', providerWaitMs, 'ready'),
+    );
     sessionId = typeof ready.sessionId === 'string' ? ready.sessionId : '';
     requireCondition(sessionId, 'Backend ready message did not include sessionId.');
     const traceSourcePath = path.join(diagnosticsDirectory, 'traces', 'realtime', `${sessionId}.jsonl`);
