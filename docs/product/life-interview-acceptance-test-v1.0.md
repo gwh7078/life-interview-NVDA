@@ -5,6 +5,8 @@
 > 对应产品基准：`life-interview-product-tech-data-v1.5.3.md`  
 > 用途：作为当前比赛 V1 的功能回归、人工 Smoke、真实 Doubao 语音验收和后续 Agent 开发的统一测试清单。
 
+> 历史说明（2026-09-23）：本文保留 V1.0 当时的验收计划，其中 Doubao Realtime 内容不代表当前运行时。当前实时语音默认使用 Step-Audio 2 Mini，Doubao Realtime 已从运行时代码移除。当前环境约定请查阅 `docs/AI开发联调环境.md` 和 `docs/nvidia-agent-native/FEATURE_MATRIX.md`。
+
 ---
 
 # 1. 测试目标

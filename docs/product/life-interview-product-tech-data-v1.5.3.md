@@ -6,6 +6,8 @@
 > 基于版本：V1.5.2  
 > 本版性质：**功能边界与运行时架构更新版。在 V1.5.2 基础上合并 Story Share / External Contributor，并同步 Story Agent Memory、Text Model Runtime、Realtime Voice Provider 解耦与 Interview 四场景定义。**
 
+> 历史说明（2026-09-23）：本文是 V1.5.3 历史基准，Realtime 章节记录的是当时的 Doubao/Qwen 实现。当前实时语音默认使用 Step-Audio 2 Mini，Doubao Realtime 已从运行时代码移除。当前环境约定请查阅 `docs/AI开发联调环境.md` 和 `docs/nvidia-agent-native/FEATURE_MATRIX.md`。
+
 ---
 
 # 0. 阅读约定
