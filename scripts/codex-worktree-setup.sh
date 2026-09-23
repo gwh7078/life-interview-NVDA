@@ -91,4 +91,4 @@ else
   echo "未配置真实模型凭证；本地页面、SQLite 与自动化测试可用，真实语音 E2E 需另行配置密钥并会产生模型用量。"
 fi
 
-echo "Worktree Environment 准备完成；NeMo Retriever LaunchAgent: $retriever_service_status。"
+echo "Worktree Environment 准备完成；NeMo Retriever LaunchAgent: ${retriever_service_status}。"
