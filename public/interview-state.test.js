@@ -19,7 +19,8 @@ test('Step realtime events map to the visible call states', () => {
     ['speech_stopped', 'thinking', '正在理解'],
     ['user_final', 'thinking', '正在准备回应'],
     ['assistant_started', 'responding', '采访官正在说'],
-    ['response_done', 'active', '正在听'],
+    ['response_done', 'responding', '采访官正在说'],
+    ['playback_drained', 'active', '正在听'],
   ];
   for (const [event, status, label] of cases) {
     assert.deepEqual(realtimeCallStatus(event, 'active'), { status, label });

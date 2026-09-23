@@ -3,8 +3,10 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createRealtimeInterviewProvider } from '../src/realtime/provider.js';
+import { resolveRealtimeProviderConfig } from '../src/realtime/runtime-config.js';
 import {
   buildStepfunSessionUpdate,
+  DEFAULT_STEPFUN_SILENCE_DURATION_MS,
   DEFAULT_STEPFUN_MODEL,
   STEPFUN_CONTEXT_TOOL,
 } from '../src/realtime/stepfun.js';
@@ -88,6 +90,9 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   });
   assert.equal(adapter.connectOptions().url, 'wss://api.stepfun.com/v1/realtime?model=step-audio-2-mini');
   const session = adapter.setupSession(storyContext)[0]?.session as Record<string, unknown>;
+  const turnDetection = session.turn_detection as Record<string, unknown>;
+  assert.equal(DEFAULT_STEPFUN_SILENCE_DURATION_MS, 1_400);
+  assert.equal(turnDetection.silence_duration_ms, 1_400);
   const tools = session.tools as Array<Record<string, unknown>>;
   assert.equal((tools[0]?.function as Record<string, unknown>).name, STEPFUN_CONTEXT_TOOL);
   assert.equal(adapter.appendAudioMessages(Buffer.from([0, 1]))[0]?.type, 'input_audio_buffer.append');
@@ -120,6 +125,30 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   assert.equal((toolMessages?.[0]?.item as Record<string, unknown>).call_id, 'call-1');
   assert.equal(toolMessages?.[1]?.type, 'response.create');
   assert.equal(adapter.handleToolResult?.(toolCall, { status: 'stale' }, { resume: false })?.length, 1);
+});
+
+test('StepFun VAD silence duration is configurable while Qwen keeps its own setting', () => {
+  const stepfunConfig = resolveRealtimeProviderConfig('stepfun', {
+    stepfunSilenceDurationMs: 2_100,
+    region: 'cn-beijing',
+    model: DEFAULT_STEPFUN_MODEL,
+    stepfunApiKey: 'test-only-key',
+  });
+  const stepfun = createRealtimeInterviewProvider('stepfun', stepfunConfig);
+  const stepfunSession = stepfun.setupSession(storyContext)[0]?.session as Record<string, unknown>;
+  assert.equal((stepfunSession.turn_detection as Record<string, unknown>).silence_duration_ms, 2_100);
+
+  const qwenConfig = resolveRealtimeProviderConfig('qwen', {
+    apiKey: 'test-only-key',
+    workspaceId: 'workspace-123',
+    region: 'cn-beijing',
+    model: 'qwen-audio-3.0-realtime-plus',
+    stepfunSilenceDurationMs: 2_100,
+  });
+  assert.equal(qwenConfig.stepfunSilenceDurationMs, undefined);
+  const qwen = createRealtimeInterviewProvider('qwen', qwenConfig);
+  const qwenSession = qwen.setupSession(storyContext)[0]?.session as Record<string, unknown>;
+  assert.equal((qwenSession.turn_detection as Record<string, unknown>).silence_duration_ms, 800);
 });
 
 test('Step-Audio does not expose owner history context to external contributors', () => {
@@ -181,6 +210,26 @@ test('NORMALIZE contract maps Step-Audio and Qwen speech, transcript and audio e
   if (qwenAudioDelta?.type === 'assistant.audio.delta') {
     assert.equal(qwenAudioDelta.encoding, 'pcm_s16le');
   }
+});
+
+test('StepFun emits one speech stop per speech cycle and uses committed as fallback', () => {
+  const stepfun = createRealtimeInterviewProvider('stepfun', {
+    stepfunApiKey: 'test-only-key',
+    region: 'cn-beijing',
+    model: DEFAULT_STEPFUN_MODEL,
+  });
+  const normalize = (type: string) => stepfun.normalizeServerMessage(JSON.stringify({ type }));
+
+  assert.deepEqual(normalize('input_audio_buffer.speech_started'), [{ type: 'speech.started' }]);
+  assert.deepEqual(normalize('input_audio_buffer.speech_stopped'), [{ type: 'speech.stopped', source: 'speech_stopped' }]);
+  assert.deepEqual(normalize('input_audio_buffer.committed'), []);
+
+  assert.deepEqual(normalize('input_audio_buffer.speech_started'), [{ type: 'speech.started' }]);
+  assert.deepEqual(normalize('input_audio_buffer.committed'), [{ type: 'speech.stopped', source: 'committed' }]);
+  assert.deepEqual(normalize('input_audio_buffer.speech_stopped'), []);
+
+  assert.deepEqual(normalize('input_audio_buffer.speech_started'), [{ type: 'speech.started' }]);
+  assert.deepEqual(normalize('input_audio_buffer.speech_stopped'), [{ type: 'speech.stopped', source: 'speech_stopped' }]);
 });
 
 test('NORMALIZE maps the retained Qwen onboarding completion tool to the shared event', () => {

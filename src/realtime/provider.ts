@@ -33,6 +33,7 @@ const QWEN_OUTPUT_ENCODING = 'pcm_s16le';
 
 export interface RealtimeProviderConfig {
   stepfunApiKey?: string;
+  stepfunSilenceDurationMs?: number;
   apiKey?: string;
   workspaceId?: string;
   region: QwenRealtimeRegion;

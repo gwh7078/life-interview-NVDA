@@ -119,6 +119,7 @@ export interface RuntimeConfig {
   qwenModel?: string;
   stepfunModel?: string;
   stepfunApiKey?: string;
+  stepfunSilenceDurationMs?: number;
   closeoutApiKey?: string;
   closeoutBaseUrl?: string;
   closeoutApiFormat?: 'chat-completions' | 'chat-json-schema' | 'responses';
@@ -195,6 +196,13 @@ interface ProviderAudioTrace {
 }
 
 const CLIENT_TRACE_EVENTS = new Set([
+  'start_clicked',
+  'microphone_ready',
+  'websocket_connected',
+  'provider_session_ready',
+  'playback_ready_sent',
+  'microphone_stream_paused',
+  'microphone_stream_resumed',
   'session_ready',
   'audio_context_state',
   'audio_context_ready',
@@ -212,6 +220,10 @@ const CLIENT_TRACE_EVENTS = new Set([
   'assistant_transcript_final_received',
   'assistant_transcript_final_rendered',
   'playback_interruption',
+  'playback_response_started',
+  'playback_response_draining',
+  'playback_response_drained',
+  'playback_response_drain_timeout',
   'output_audio_started',
   'output_audio_chunk',
   'output_audio_scheduled',
@@ -221,6 +233,7 @@ const CLIENT_TRACE_EVENTS = new Set([
   'output_audio_summary',
   'manual_end_interrupted_playback',
   'auto_end_after_playback',
+  'auto_end_cancelled',
   'audio_decode_error',
   'audio_playback_error',
   'scroll_activity',
@@ -254,6 +267,7 @@ export function readRuntimeConfig(): RuntimeConfig {
   const openingResponseTimeoutMs = Number(process.env.REALTIME_OPENING_RESPONSE_TIMEOUT_MS ?? DEFAULT_OPENING_RESPONSE_TIMEOUT_MS);
   const userTurnStallTimeoutMs = Number(process.env.REALTIME_USER_TURN_STALL_TIMEOUT_MS ?? DEFAULT_USER_TURN_STALL_TIMEOUT_MS);
   const realtimeSlowDeadlineMs = Number(process.env.REALTIME_SLOW_DEADLINE_MS ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS);
+  const stepfunSilenceDurationMs = Number(process.env.STEPFUN_REALTIME_SILENCE_DURATION_MS ?? 1_400);
   const closeoutTimeoutMs = Number(closeoutTask.parameters.timeoutMs ?? 60_000);
   const closeoutApiFormat = String(closeoutTask.parameters.apiFormat ?? 'chat-completions');
   const storyCompletionTimeoutMs = Number(storyCompletionTask.parameters.timeoutMs ?? closeoutTimeoutMs);
@@ -286,6 +300,9 @@ export function readRuntimeConfig(): RuntimeConfig {
   }
   if (!Number.isInteger(realtimeSlowDeadlineMs) || realtimeSlowDeadlineMs <= 0 || realtimeSlowDeadlineMs > 60_000) {
     throw new Error('REALTIME_SLOW_DEADLINE_MS must be an integer between 1 and 60000.');
+  }
+  if (!Number.isInteger(stepfunSilenceDurationMs) || stepfunSilenceDurationMs <= 0 || stepfunSilenceDurationMs > 10_000) {
+    throw new Error('STEPFUN_REALTIME_SILENCE_DURATION_MS must be an integer between 1 and 10000.');
   }
   if (!Number.isInteger(closeoutTimeoutMs) || closeoutTimeoutMs <= 0 || closeoutTimeoutMs > 300_000) {
     throw new Error('CLOSEOUT_TIMEOUT_MS must be an integer between 1 and 300000.');
@@ -323,6 +340,7 @@ export function readRuntimeConfig(): RuntimeConfig {
       ? interviewTask.model
       : process.env.STEPFUN_REALTIME_MODEL?.trim() || DEFAULT_STEPFUN_MODEL,
     stepfunApiKey: process.env.STEPFUN_API_KEY?.trim() || undefined,
+    stepfunSilenceDurationMs,
     closeoutApiKey: process.env.TEXT_MODEL_API_KEY?.trim()
       || process.env.BAILIAN_API_KEY?.trim()
       || process.env.CLOSEOUT_API_KEY?.trim()
@@ -1745,6 +1763,7 @@ function createRealtimeHandler(
   let selectedAdapter: RealtimeVoiceProvider | undefined;
   let interviewSession: RealtimeInterviewSession | undefined;
   let pendingProviderSessionId: string | undefined;
+  let providerSessionReadyAt: number | undefined;
   let sessionContext: RealtimeInterviewContext | undefined;
   let startupResolve: (() => void) | undefined;
   let startupReject: ((error: Error) => void) | undefined;
@@ -1753,6 +1772,9 @@ function createRealtimeHandler(
   let userTurnStallTimer: NodeJS.Timeout | undefined;
   let userTurnRecoveryAttempted = false;
   let openingRequest: Record<string, unknown> | undefined;
+  let clientPlaybackReady = false;
+  let clientPlaybackReadyAt: number | undefined;
+  let playbackReadyTracePending = false;
   let openingAttemptCount = 0;
   let endingPromise: Promise<void> | undefined;
   let sessionClosedResolver: ((received: boolean) => void) | undefined;
@@ -2180,6 +2202,8 @@ function createRealtimeHandler(
         frames: microphoneTraceFrames,
         bytes: microphoneTraceBytes,
         intervalMs: now - microphoneTraceWindowAt,
+        microphoneStreaming: microphoneTraceFrames > 0,
+        responseActive: activeResponses.size > 0,
       });
     }
     microphoneTraceWindowAt = now;
@@ -2215,7 +2239,15 @@ function createRealtimeHandler(
     const interArrivalMs = stats.lastDeltaAt === undefined ? undefined : now - stats.lastDeltaAt;
     stats.chunks += 1;
     stats.bytes += deltaBytes;
-    stats.firstDeltaAt ??= now;
+    if (stats.firstDeltaAt === undefined) {
+      stats.firstDeltaAt = now;
+      recordTrace('provider.first_audio_received', {
+        responseId,
+        chunks: 1,
+        deltaBytes,
+        elapsedMs: now - stats.responseStartedAt,
+      });
+    }
     if (interArrivalMs !== undefined) stats.maxGapMs = Math.max(stats.maxGapMs, interArrivalMs);
     stats.lastDeltaAt = now;
     recordTrace('provider.audio_delta', {
@@ -2352,6 +2384,7 @@ function createRealtimeHandler(
 
   const handleNormalizedRealtimeEvent = (event: NormalizedRealtimeEvent): void => {
     if (event.type === 'session.ready') {
+      providerSessionReadyAt = performance.now();
       persistProviderSessionId(event.providerSessionId);
       if (phase === 'connecting') startupResolve?.();
       return;
@@ -3168,7 +3201,7 @@ function createRealtimeHandler(
   };
 
   const sendOpeningWithWatchdog = (): void => {
-    if (!openingRequest || !provider || provider.readyState !== WebSocket.OPEN || phase !== 'active') return;
+    if (!clientPlaybackReady || !openingRequest || !provider || provider.readyState !== WebSocket.OPEN || phase !== 'active') return;
     openingAttemptCount += 1;
     provider.send(JSON.stringify(openingRequest));
     recordTrace('opening.sent', { attempt: openingAttemptCount });
@@ -3326,6 +3359,15 @@ function createRealtimeHandler(
         provider: providerName,
       });
       recordTrace('session.started', { lifecycle: phase });
+      recordTrace('provider.session_ready', { provider: providerName });
+      if (playbackReadyTracePending) {
+        recordTrace('client.playback_ready', {
+          providerReadyBeforePlaybackReady: providerSessionReadyAt !== undefined
+            && clientPlaybackReadyAt !== undefined
+            && providerSessionReadyAt <= clientPlaybackReadyAt,
+        });
+        playbackReadyTracePending = false;
+      }
       phase = 'active';
       acceptingAudio = true;
       const wrapUpMs = config.wrapUpMs ?? DEFAULT_WRAPUP_MS;
@@ -3434,6 +3476,22 @@ function createRealtimeHandler(
         ? command.clientElapsedMs
         : undefined;
       recordTrace(`client.${event}`, { ...details, clientElapsedMs });
+      return;
+    }
+
+    if (command.type === 'playback_ready') {
+      if (phase !== 'connecting' && phase !== 'active') return;
+      if (!clientPlaybackReady) {
+        clientPlaybackReady = true;
+        clientPlaybackReadyAt = performance.now();
+        if (traceWriter) {
+          recordTrace('client.playback_ready', {
+            providerReadyBeforePlaybackReady: providerSessionReadyAt !== undefined
+              && providerSessionReadyAt <= clientPlaybackReadyAt,
+          });
+        } else playbackReadyTracePending = true;
+      }
+      if (phase === 'active') sendOpeningWithWatchdog();
       return;
     }
 

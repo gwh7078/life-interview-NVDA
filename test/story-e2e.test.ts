@@ -286,6 +286,7 @@ test('mock Story E2E creates a Story, links the Session, preserves Transcript, a
       provider: 'qwen',
     }));
     const ready = await waitForMessage(socket, (message) => message.type === 'ready', messages);
+    socket.send(JSON.stringify({ type: 'playback_ready' }));
     assert.equal(ready.story, null);
     assert.ok(interviewContext);
     if (interviewContext.interview_type === 'onboarding'

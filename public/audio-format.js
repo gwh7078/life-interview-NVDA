@@ -2,6 +2,16 @@ export function decodePcmSamples(bytes, encoding = 'pcm_s16le') {
   return decodePcmSamplesWithMetrics(bytes, encoding).samples;
 }
 
+export function pcm16MonoDurationMs(byteLength, sampleRate) {
+  if (!Number.isInteger(byteLength) || byteLength < 0) {
+    throw new RangeError('PCM byte length must be a non-negative integer.');
+  }
+  if (!Number.isInteger(sampleRate) || sampleRate <= 0) {
+    throw new RangeError('PCM sample rate must be a positive integer.');
+  }
+  return byteLength / 2 / sampleRate * 1000;
+}
+
 export function isOutputAudioPlaybackPending({
   contextState = 'missing',
   currentTime = 0,
@@ -20,6 +30,65 @@ export function shouldInterruptOutputAudioOnEnd({
   outputAudioPending = false,
 } = {}) {
   return reason === 'user' && (lifecycle === 'responding' || outputAudioPending);
+}
+
+export function canResumeRealtimeListening({
+  lifecycle = 'idle',
+  status = 'unknown',
+  playbackPending = true,
+  responseMatches = false,
+} = {}) {
+  return lifecycle === 'responding'
+    && status === 'completed'
+    && responseMatches
+    && !playbackPending;
+}
+
+export function canSchedulePlaybackSegment({
+  currentTime = 0,
+  playbackCursor = 0,
+  segmentDurationSeconds = 0,
+  startLeadSeconds = 0,
+  maxAheadSeconds = 0,
+} = {}) {
+  const scheduledStart = Math.max(currentTime + startLeadSeconds, playbackCursor);
+  return scheduledStart + segmentDurationSeconds <= currentTime + maxAheadSeconds;
+}
+
+export function createPlaybackScheduleQueue() {
+  let generation = 0;
+  const tails = new Map();
+  const responseGenerations = new Map();
+
+  return {
+    enqueue(responseId, schedule) {
+      const queuedGeneration = generation;
+      const queuedResponseGeneration = responseGenerations.get(responseId) ?? 0;
+      const isCurrent = () => generation === queuedGeneration
+        && (responseGenerations.get(responseId) ?? 0) === queuedResponseGeneration;
+      const previous = tails.get(responseId) ?? Promise.resolve();
+      const task = previous.catch(() => undefined).then(() => {
+        if (!isCurrent()) return { scheduled: false, reason: 'response_interrupted' };
+        return schedule(isCurrent);
+      });
+      let tail;
+      tail = task.catch(() => undefined).finally(() => {
+        if (tails.get(responseId) === tail) tails.delete(responseId);
+      });
+      tails.set(responseId, tail);
+      return task;
+    },
+    invalidate(responseId) {
+      if (responseId) {
+        responseGenerations.set(responseId, (responseGenerations.get(responseId) ?? 0) + 1);
+        tails.delete(responseId);
+      } else {
+        generation += 1;
+        tails.clear();
+        responseGenerations.clear();
+      }
+    },
+  };
 }
 
 export function decodePcmSamplesWithMetrics(bytes, encoding = 'pcm_s16le') {

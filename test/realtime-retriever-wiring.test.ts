@@ -235,6 +235,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
         if (record(JSON.parse(raw.toString()))?.type === 'ready') resolve();
       });
     }), 2_000, 'story ready');
+    clientSocket.send(JSON.stringify({ type: 'playback_ready' }));
 
     const result = await waitFor(toolResult, 2_000, 'story tool result');
     const output = record(result.output);
@@ -303,6 +304,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
         if (record(JSON.parse(raw.toString()))?.type === 'ready') resolve();
       });
     }), 2_000, 'external ready');
+    externalSocket.send(JSON.stringify({ type: 'playback_ready' }));
     const externalResult = await waitFor(externalToolResult, 2_000, 'external tool result');
     const externalOutput = record(externalResult.output);
     assert.equal(externalOutput?.status, 'unavailable');

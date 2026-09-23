@@ -16,6 +16,7 @@ export interface RealtimeProviderRuntimeSource {
   qwenModel?: string;
   stepfunApiKey?: string;
   stepfunModel?: string;
+  stepfunSilenceDurationMs?: number;
 }
 
 export function isRealtimeProviderId(value: unknown): value is RealtimeProviderId {
@@ -30,6 +31,7 @@ export function resolveRealtimeProviderConfig(
   if (id === 'stepfun') {
     return {
       stepfunApiKey: source.stepfunApiKey,
+      stepfunSilenceDurationMs: source.stepfunSilenceDurationMs,
       region: source.region,
       model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL,
     };

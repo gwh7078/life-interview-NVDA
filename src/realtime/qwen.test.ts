@@ -100,6 +100,12 @@ test('Onboarding Qwen setup adds only its internal completion control and full-h
   assert.match(String(tool.description), /静默调用.*等待服务器 ACK/);
   assert.match(instructions, /继续建档访谈/);
   assert.match(instructions, /4～8 个/);
+  assert.match(instructions, /第一阶段先从较早经历一路梳理到当前状态/);
+  assert.match(instructions, /每条正常采访回复都必须继续推进.*恰好一个自然、具体、容易回答且只有一个焦点的新问题/);
+  assert.match(instructions, /首轮问候也要带一个问题/);
+  assert.match(instructions, /不得只复述、总结、称赞、鼓励或共情而不提新问题/);
+  assert.match(instructions, /用户明确主动结束时，简短尊重并停止追问/);
+  assert.match(instructions, /不触发下方固定完成话术/);
   assert.match(instructions, /南京长大/);
   assert.ok(instructions.includes(ONBOARDING_COMPLETION_UTTERANCE));
   assert.match(instructions, /必须且只能逐字说出这一句/);

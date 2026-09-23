@@ -12,7 +12,8 @@ const realtimeCallStatuses = {
   speech_stopped: { status: 'thinking', label: '正在理解' },
   user_final: { status: 'thinking', label: '正在准备回应' },
   assistant_started: { status: 'responding', label: '采访官正在说' },
-  response_done: { status: 'active', label: '正在听' },
+  response_done: { status: 'responding', label: '采访官正在说' },
+  playback_drained: { status: 'active', label: '正在听' },
 };
 
 export function resolveRealtimeProvider(value) {

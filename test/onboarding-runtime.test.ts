@@ -271,6 +271,7 @@ test('Qwen completion tool is internal; closeout waits for final assistant Trans
   try {
     harness.clientSocket.send(JSON.stringify({ type: 'start', interview_type: 'onboarding', provider: 'qwen' }));
     const ready = await harness.clientMessages.waitFor((message) => message.type === 'ready');
+    harness.clientSocket.send(JSON.stringify({ type: 'playback_ready' }));
     assert.equal(ready.session_type, 'onboarding');
     assert.equal(ready.onboarding_mode, 'new');
     assert.equal((ready.profile as Record<string, unknown>).name, '周明');
@@ -390,6 +391,7 @@ test('manual Onboarding end saves the Transcript but skips Closeout and returns 
   try {
     harness.clientSocket.send(JSON.stringify({ type: 'start', interview_type: 'onboarding', provider: 'qwen' }));
     const ready = await harness.clientMessages.waitFor((message) => message.type === 'ready');
+    harness.clientSocket.send(JSON.stringify({ type: 'playback_ready' }));
     assert.equal(ready.session_type, 'onboarding');
     assert.equal(ready.onboarding_mode, 'new');
     assert.ok(harness.providerSocket);

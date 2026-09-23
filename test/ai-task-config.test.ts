@@ -157,6 +157,18 @@ test('runtime auth mode defaults to SMS and rejects unknown modes', () => {
   });
 });
 
+test('StepFun server VAD silence duration defaults to 1400ms and accepts a runtime override', () => {
+  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', STEPFUN_REALTIME_SILENCE_DURATION_MS: undefined }, () => {
+    assert.equal(readRuntimeConfig().stepfunSilenceDurationMs, 1_400);
+  });
+  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', STEPFUN_REALTIME_SILENCE_DURATION_MS: '2100' }, () => {
+    assert.equal(readRuntimeConfig().stepfunSilenceDurationMs, 2_100);
+  });
+  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', STEPFUN_REALTIME_SILENCE_DURATION_MS: '0' }, () => {
+    assert.throws(() => readRuntimeConfig(), /STEPFUN_REALTIME_SILENCE_DURATION_MS/);
+  });
+});
+
 test('Step-Audio 2 Mini is the default realtime provider and legacy Doubao config is rejected', () => {
   const taskConfig = resolveAiTaskConfig({} as NodeJS.ProcessEnv);
   assert.equal(taskConfig['interview.story'].provider, 'stepfun');

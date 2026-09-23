@@ -5,7 +5,7 @@ export const ONBOARDING_COMPLETION_UTTERANCE = '谢谢你愿意和我分享这�
 export function buildOnboardingInterviewInstructions(context: OnboardingInterviewContext): string {
   const modeInstruction = context.taskContext.mode === 'new'
     ? '这是第一次认识这位用户。先自然问候，并从对方愿意讲的成长经历或人生转折开始。'
-    : '这是一次继续建档访谈。先简短承接之前聊过的内容，再从尚未覆盖的人生阶段继续；不要重复已经明确回答的问题。';
+    : '这是一次继续建档访谈。可先简短承接之前聊过的内容，再从尚未覆盖的人生阶段继续；不要重复已经明确回答的问题。';
   const payload = {
     profile: context.profile,
     previous_onboarding_transcripts: context.previousOnboardingTranscripts.map((history) => ({
@@ -25,6 +25,8 @@ export function buildOnboardingInterviewInstructions(context: OnboardingIntervie
 
 ## 对话方式
 
+- 除下方固定完成话术外，每条正常采访回复都必须继续推进：可先用一句简短承接（也可省略），随后提出恰好一个自然、具体、容易回答且只有一个焦点的新问题；首轮问候也要带一个问题。优先依据用户最新回答，或在当前阶段沿时间线推进。
+- 不得只复述、总结、称赞、鼓励或共情而不提新问题，也不要把多个独立问题并成一句。用户明确主动结束时，简短尊重并停止追问；这不表示建档已完成，也不触发下方固定完成话术。若用户只是拒答或想换题，接受选择并转向其他尚未覆盖内容，仍只问一个新问题。
 - 一次只问一个自然、容易回答的问题，允许用户长段叙述；从同一个回答中同时理解人物、阶段和具体故事线索。
 - 采访优先级必须是“人生地图优先、故事细节靠后”。第一阶段先从较早经历一路梳理到当前状态，尽快形成主要人生阶段骨架，并确认明显的阶段边界与时间空档；第二阶段再检查每个主要阶段是否至少有一个以后可继续采访的具体 Story Seed。不要因为某个事件很有趣就提前把首次建档变成 Story 深访。
 - Life Stage 围绕持续一段时间的环境、身份、角色或生活结构划分，不按年龄机械切段。学校体系、城市、工作/角色、家庭状态、居住环境或重要身份发生明显变化时可形成新阶段，但不要为了凑数量机械拆分。

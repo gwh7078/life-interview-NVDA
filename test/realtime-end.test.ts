@@ -234,6 +234,7 @@ test('manual end preserves a late user transcript and ignores the provider follo
     }));
     const ready = await clientMessages.waitFor((message) => message.type === 'ready');
     assert.ok(ready.sessionId);
+    clientSocket.send(JSON.stringify({ type: 'playback_ready' }));
     assert.ok(providerSocket);
     clientSocket.send(JSON.stringify({
       type: 'diagnostic_trace',
@@ -329,9 +330,126 @@ test('opening response watchdog retries once then ends explicitly when provider 
   try {
     const login=await fetch(`${baseUrl}/api/auth/development/legacy-session`,{method:'POST'}); const cookie=login.headers.get('set-cookie')?.split(';',1)[0]; assert.ok(cookie);
     clientSocket=new WebSocket(`ws://127.0.0.1:${appAddress.port}/api/realtime`,{headers:{cookie}}); await once(clientSocket,'open'); const messages=collectMessages(clientSocket);
-    clientSocket.send(JSON.stringify({type:'start',stage_id:seedIds.work,story_title:'开场 watchdog 测试',provider:'qwen'})); await messages.waitFor((m)=>m.type==='ready');
+    clientSocket.send(JSON.stringify({type:'start',stage_id:seedIds.work,story_title:'开场 watchdog 测试',provider:'qwen'})); await messages.waitFor((m)=>m.type==='ready'); clientSocket.send(JSON.stringify({type:'playback_ready'}));
     const failure=await messages.waitFor((m)=>m.type==='error' && /首轮回应/u.test(String(m.message??'')),2_000); assert.match(String(failure.message),/重新开始采访/); await messages.waitFor((m)=>m.type==='ended',2_000); assert.equal(openingRequests,2);
   } finally { if(clientSocket?.readyState===WebSocket.OPEN)clientSocket.close(); const ca=once(appServer,'close'); appServer.close(); appServer.closeAllConnections(); await ca; providerServer.close(); const cp=once(providerHttp,'close'); providerHttp.close(); await cp; }
+});
+
+
+test('opening waits for playback readiness whether it arrives before or after the provider session', async () => {
+  const directory = mkdtempSync(path.join(testTempRoot, `rensheng-playback-ready-${randomUUID()}-`));
+  temporaryDirectories.push(directory);
+  const diagnosticsDirectory = path.join(directory, 'diagnostics');
+  const previousDiagnosticsDir = process.env.DIAGNOSTICS_DIR;
+  process.env.DIAGNOSTICS_DIR = diagnosticsDirectory;
+  const databasePath = path.join(directory, 'session.db');
+  const database = createDatabase(databasePath);
+  try { runMigrations(database); seedDatabase(database); } finally { database.close(); }
+
+  const providerHttp = createServer();
+  const providerServer = new WebSocketServer({ server: providerHttp });
+  let providerConnections = 0;
+  let openingRequests = 0;
+  providerHttp.listen(0, '127.0.0.1');
+  await once(providerHttp, 'listening');
+  const providerAddress = providerHttp.address();
+  assert.ok(providerAddress && typeof providerAddress === 'object');
+  const providerUrl = `ws://127.0.0.1:${providerAddress.port}`;
+  providerServer.on('connection', (socket) => {
+    const connectionNumber = ++providerConnections;
+    socket.on('message', (raw) => {
+      const message = parseQwenServerEvent(raw);
+      if (!message) return;
+      if (message.type === 'mock.setup') {
+        setTimeout(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'session.updated', session: { id: `mock-playback-${connectionNumber}` } }));
+          }
+        }, connectionNumber === 2 ? 60 : 0);
+      } else if (message.type === 'mock.opening') {
+        openingRequests += 1;
+        socket.send(JSON.stringify({ type: 'response.created', response: { id: `mock-opening-${connectionNumber}` } }));
+        socket.send(JSON.stringify({ type: 'response.done', response: { id: `mock-opening-${connectionNumber}`, status: 'completed' } }));
+      }
+    });
+  });
+
+  const appServer = createInterviewServiceServer({
+    host: '127.0.0.1', port: 0, databasePath, region: 'cn-beijing', model: 'mock-realtime-model',
+    apiKey: 'mock-realtime-key', workspaceId: 'mock-workspace', developmentAuthEnabled: true,
+    openingResponseTimeoutMs: 1_000, wrapUpMs: 100_000, maxSessionMs: 200_000, closeGraceMs: 5_000,
+  }, {
+    realtimeProviderFactory: (id) => ({
+      id,
+      capabilities: { fullDuplex: true, supportsInterrupt: true, supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false },
+      audio: { input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
+      connectOptions: () => ({ url: providerUrl, headers: {} }),
+      setupSession: () => [{ type: 'mock.setup' }],
+      normalizeServerMessage: normalizeMockRealtime,
+      appendAudioMessages: (audio) => [{ type: 'mock.audio', bytes: audio.byteLength }],
+      requestAssistantTurnMessages: () => [{ type: 'mock.noop' }],
+      stopInputAfterCurrentTurn: () => [],
+      beginInputShutdown: () => [],
+      closePlan: () => null,
+      connectionFailureMessage: () => 'mock realtime failure',
+      handleControlEvent: () => [],
+      initialResponsePlan: () => ({ steps: [{ message: { type: 'mock.opening' } }] }),
+    }),
+  });
+  appServer.listen(0, '127.0.0.1');
+  await once(appServer, 'listening');
+  const appAddress = appServer.address();
+  assert.ok(appAddress && typeof appAddress === 'object');
+  const baseUrl = `http://127.0.0.1:${appAddress.port}`;
+  const clients: WebSocket[] = [];
+
+  const waitForOpenings = async (expected: number) => {
+    const deadline = Date.now() + 2_000;
+    while (openingRequests < expected && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.equal(openingRequests, expected);
+  };
+
+  try {
+    const login = await fetch(`${baseUrl}/api/auth/development/legacy-session`, { method: 'POST' });
+    const cookie = login.headers.get('set-cookie')?.split(';', 1)[0];
+    assert.ok(cookie);
+
+    const lateReady = new WebSocket(`ws://127.0.0.1:${appAddress.port}/api/realtime`, { headers: { cookie } });
+    clients.push(lateReady);
+    await once(lateReady, 'open');
+    const lateMessages = collectMessages(lateReady);
+    lateReady.send(JSON.stringify({ type: 'start', stage_id: seedIds.work, provider: 'qwen' }));
+    await lateMessages.waitFor((message) => message.type === 'ready');
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(openingRequests, 0, 'provider readiness alone must not open the first response');
+    lateReady.send(JSON.stringify({ type: 'playback_ready' }));
+    await waitForOpenings(1);
+    lateReady.close();
+    await once(lateReady, 'close');
+
+    const earlyReady = new WebSocket(`ws://127.0.0.1:${appAddress.port}/api/realtime`, { headers: { cookie } });
+    clients.push(earlyReady);
+    await once(earlyReady, 'open');
+    const earlyMessages = collectMessages(earlyReady);
+    earlyReady.send(JSON.stringify({ type: 'start', stage_id: seedIds.work, provider: 'qwen' }));
+    earlyReady.send(JSON.stringify({ type: 'playback_ready' }));
+    await earlyMessages.waitFor((message) => message.type === 'ready');
+    await waitForOpenings(2);
+  } finally {
+    for (const socket of clients) if (socket.readyState === WebSocket.OPEN) socket.close();
+    const appClosed = once(appServer, 'close');
+    appServer.close();
+    appServer.closeAllConnections();
+    await appClosed;
+    providerServer.close();
+    const providerClosed = once(providerHttp, 'close');
+    providerHttp.close();
+    await providerClosed;
+    if (previousDiagnosticsDir === undefined) delete process.env.DIAGNOSTICS_DIR;
+    else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDir;
+  }
 });
 
 
@@ -434,6 +552,7 @@ test('user turn stall watchdog requests provider recovery after ASR is idle past
     const messages = collectMessages(clientSocket);
     clientSocket.send(JSON.stringify({ type: 'start', stage_id: seedIds.work, story_title: 'User turn stall 测试', provider: 'qwen' }));
     await messages.waitFor((m) => m.type === 'ready');
+    clientSocket.send(JSON.stringify({ type: 'playback_ready' }));
     const final = await messages.waitFor((m) => m.type === 'user_final' && m.itemId === 'stalled-user-turn', 2_000);
     assert.match(String(final.text), /迟迟不结束/);
     assert.equal(recoveryRequests, 1);

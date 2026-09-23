@@ -1,6 +1,10 @@
 import {
+  canResumeRealtimeListening,
+  canSchedulePlaybackSegment,
+  createPlaybackScheduleQueue,
   decodePcmSamplesWithMetrics,
   isOutputAudioPlaybackPending,
+  pcm16MonoDurationMs,
   shouldInterruptOutputAudioOnEnd,
 } from '/audio-format.js';
 import { automaticEndReason, realtimeCallStatus, resolveRealtimeProvider, shouldIgnoreAssistantResponseMessage } from '/interview-state.js';
@@ -95,10 +99,14 @@ const state = {
   playbackGain: null,
   playbackCursor: 0,
   playbackNodes: new Set(),
-  audioRemainder: new Uint8Array(0),
-  audioEncoding: null,
+  playbackScheduleQueue: createPlaybackScheduleQueue(),
+  audioRemainders: new Map(),
   audioResumePromise: null,
   audioContextInfo: {},
+  audioSetupGeneration: 0,
+  startupTraceEvents: [],
+  playbackReadySent: false,
+  microphoneStreaming: false,
   sessionId: null,
   traceStartedAt: 0,
   activeResponseId: null,
@@ -124,8 +132,7 @@ const state = {
   pendingAssistantRow: null,
   endTimer: null,
   endResolve: null,
-  autoEndTimer: null,
-  autoEndDeadline: 0,
+  autoEndGeneration: 0,
   maxSessionMs: 20 * 60 * 1000,
   providerConfigured: false,
   realtimeProvider: 'stepfun',
@@ -156,6 +163,21 @@ const realtimeProviderLabels = {
 };
 
 const PLAYBACK_SCHEDULE_AHEAD_SECONDS = 0.12;
+const MAX_PLAYBACK_SCHEDULE_AHEAD_SECONDS = 0.85;
+const PLAYBACK_SEGMENT_SAMPLES = 6_000;
+
+function sendDiagnosticTrace(event, clientElapsedMs, details) {
+  if (state.websocket?.readyState !== WebSocket.OPEN || !state.sessionId) return false;
+  state.websocket.send(JSON.stringify({ type: 'diagnostic_trace', event, clientElapsedMs, details }));
+  return true;
+}
+
+function flushStartupTraceEvents() {
+  const pending = state.startupTraceEvents.splice(0);
+  for (const entry of pending) {
+    sendDiagnosticTrace(entry.event, entry.clientElapsedMs, entry.details);
+  }
+}
 
 function traceClient(event, details = {}) {
   const now = performance.now();
@@ -169,13 +191,9 @@ function traceClient(event, details = {}) {
     ...details,
   };
   console.info('[interview-trace]', JSON.stringify(entry));
-  if (state.websocket?.readyState === WebSocket.OPEN && state.sessionId) {
-    state.websocket.send(JSON.stringify({
-      type: 'diagnostic_trace',
-      event,
-      clientElapsedMs,
-      details,
-    }));
+  if (sendDiagnosticTrace(event, clientElapsedMs, details)) return;
+  if (!state.sessionId && state.lifecycle === 'connecting' && state.startupTraceEvents.length < 100) {
+    state.startupTraceEvents.push({ event, clientElapsedMs, details });
   }
 }
 
@@ -313,6 +331,11 @@ function responseAudioStats(responseId = state.activeResponseId) {
       scheduledChunks: 0,
       droppedChunks: 0,
       pendingScheduleCount: 0,
+      queuedAudioMs: 0,
+      maxQueuedAudioMs: 0,
+      pcmDurationMs: 0,
+      playbackStartedAt: null,
+      responseDoneAt: null,
       maxArrivalGapMs: 0,
       maxScheduleGapMs: 0,
       maxPlaybackDelayMs: 0,
@@ -337,6 +360,8 @@ function writeResponseAudioSummary(responseId, stats) {
     status: stats.completedStatus || 'unknown',
     chunks: stats.chunks,
     bytes: stats.bytes,
+    pcmDurationMs: stats.pcmDurationMs,
+    maxQueuedAudioMs: stats.maxQueuedAudioMs,
     scheduledChunks: stats.scheduledChunks,
     droppedChunks: stats.droppedChunks,
     firstAudioMs: stats.firstReceivedAt === null
@@ -355,6 +380,7 @@ function writeResponseAudioSummary(responseId, stats) {
     pendingNodes: state.playbackNodes.size,
   });
   state.responseAudioStats.delete(key);
+  state.audioRemainders.delete(key);
 }
 
 function finishResponseAudioTrace(responseId, status) {
@@ -539,6 +565,15 @@ function updateCallStatusFromEvent(message) {
 
 function setLifecycle(lifecycle) {
   state.lifecycle = lifecycle;
+  const microphoneStreaming = lifecycle === 'active' || lifecycle === 'responding';
+  if (state.microphoneStreaming !== microphoneStreaming) {
+    state.microphoneStreaming = microphoneStreaming;
+    traceClient(microphoneStreaming ? 'microphone_stream_resumed' : 'microphone_stream_paused', {
+      lifecycle,
+      microphoneStreaming,
+      mode: lifecycle === 'responding' ? 'barge_in_monitoring' : microphoneStreaming ? 'listening' : 'paused',
+    });
+  }
   if (elements.callControls) elements.callControls.hidden = !['active', 'responding'].includes(lifecycle);
   if (lifecycle === 'idle') {
     elements.startButton.disabled = !canStartInterview();
@@ -668,16 +703,21 @@ function markRowSavedById(role, providerMessageId, messageId) {
   }
 }
 
-function stopPlayback() {
-  for (const node of state.playbackNodes) {
+function stopPlayback(responseId) {
+  state.playbackScheduleQueue.invalidate(responseId);
+  const stoppedNodes = [...state.playbackNodes].filter((node) => !responseId || node.__interviewResponseId === responseId);
+  for (const node of stoppedNodes) {
+    state.playbackNodes.delete(node);
     try { node.stop(); } catch { /* already stopped */ }
   }
-  state.playbackNodes.clear();
   state.playbackCursor = state.audioContext
-    ? state.audioContext.currentTime + PLAYBACK_SCHEDULE_AHEAD_SECONDS
+    ? Math.max(
+        state.audioContext.currentTime + PLAYBACK_SCHEDULE_AHEAD_SECONDS,
+        ...[...state.playbackNodes].map((node) => node.__scheduledEndTime || 0),
+      )
     : 0;
-  state.audioRemainder = new Uint8Array(0);
-  state.audioEncoding = null;
+  if (responseId) state.audioRemainders.delete(responseId);
+  else state.audioRemainders.clear();
 }
 
 function outputPlaybackState() {
@@ -716,27 +756,26 @@ function base64ToBytes(value) {
   return bytes;
 }
 
-function completePcmSamples(bytes, encoding) {
+function completePcmSamples(bytes, encoding, responseId) {
   const bytesPerSample = encoding === 'pcm_s16le' ? 2 : 0;
   if (!bytesPerSample) throw new Error(`不支持的语音音频格式：${encoding}`);
-  if (state.audioEncoding !== encoding) {
-    state.audioEncoding = encoding;
-    state.audioRemainder = new Uint8Array(0);
-  }
+  let audioState = state.audioRemainders.get(responseId) || { encoding, remainder: new Uint8Array(0) };
+  if (audioState.encoding !== encoding) audioState = { encoding, remainder: new Uint8Array(0) };
 
   let combined = bytes;
-  if (state.audioRemainder.byteLength > 0) {
-    combined = new Uint8Array(state.audioRemainder.byteLength + bytes.byteLength);
-    combined.set(state.audioRemainder);
-    combined.set(bytes, state.audioRemainder.byteLength);
+  if (audioState.remainder.byteLength > 0) {
+    combined = new Uint8Array(audioState.remainder.byteLength + bytes.byteLength);
+    combined.set(audioState.remainder);
+    combined.set(bytes, audioState.remainder.byteLength);
   }
   const completeByteLength = combined.byteLength - (combined.byteLength % bytesPerSample);
-  state.audioRemainder = combined.slice(completeByteLength);
+  audioState.remainder = combined.slice(completeByteLength);
+  state.audioRemainders.set(responseId, audioState);
   return combined.subarray(0, completeByteLength);
 }
 
-async function playPcmChunk(base64, encoding = 'pcm_s16le', responseId = 'unknown', chunk = 0) {
-  if (state.suppressedResponseIds.has(responseId)) {
+async function playPcmChunk(base64, encoding = 'pcm_s16le', responseId = 'unknown', chunk = 0, isCurrent = () => true) {
+  if (!isCurrent() || state.suppressedResponseIds.has(responseId)) {
     return { scheduled: false, reason: 'response_interrupted' };
   }
   const context = state.audioContext;
@@ -744,7 +783,7 @@ async function playPcmChunk(base64, encoding = 'pcm_s16le', responseId = 'unknow
   let decoded;
   let bytes;
   try {
-    bytes = completePcmSamples(base64ToBytes(base64), encoding);
+    bytes = completePcmSamples(base64ToBytes(base64), encoding, responseId);
     if (bytes.byteLength === 0) return { scheduled: false, reason: 'incomplete_sample' };
     decoded = decodePcmSamplesWithMetrics(bytes, encoding);
   } catch (error) {
@@ -787,50 +826,112 @@ async function playPcmChunk(base64, encoding = 'pcm_s16le', responseId = 'unknow
       return { scheduled: false, reason: 'context_not_running' };
     }
   }
-  if (state.suppressedResponseIds.has(responseId)) {
+  if (!isCurrent() || state.suppressedResponseIds.has(responseId)) {
     return { scheduled: false, reason: 'response_interrupted' };
   }
-  const audioBuffer = context.createBuffer(1, samples.length, 24000);
-  audioBuffer.copyToChannel(samples, 0);
-
-  const source = context.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(state.playbackGain || context.destination);
-  const previousCursor = state.playbackCursor;
-  const when = Math.max(context.currentTime + PLAYBACK_SCHEDULE_AHEAD_SECONDS, previousCursor);
-  const scheduleGapMs = previousCursor > 0 ? Math.max(0, (when - previousCursor) * 1000) : 0;
-  state.playbackCursor = when + audioBuffer.duration;
-  state.playbackNodes.add(source);
-  const startCalledAt = performance.now();
-  source.addEventListener('ended', () => {
-    const endedAt = performance.now();
-    state.playbackNodes.delete(source);
-    traceClient('output_audio_node_ended', {
+  let scheduledSegments = 0;
+  let maxScheduleGapMs = 0;
+  let maxPlaybackDelayMs = 0;
+  for (let offset = 0, segment = 0; offset < samples.length; offset += PLAYBACK_SEGMENT_SAMPLES, segment += 1) {
+    const segmentSamples = samples.subarray(offset, Math.min(samples.length, offset + PLAYBACK_SEGMENT_SAMPLES));
+    while (context.state === 'running'
+      && !canSchedulePlaybackSegment({
+        currentTime: context.currentTime,
+        playbackCursor: state.playbackCursor,
+        segmentDurationSeconds: segmentSamples.length / 24_000,
+        startLeadSeconds: PLAYBACK_SCHEDULE_AHEAD_SECONDS,
+        maxAheadSeconds: MAX_PLAYBACK_SCHEDULE_AHEAD_SECONDS,
+      })
+      && isCurrent()
+      && !state.suppressedResponseIds.has(responseId)) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    if (!isCurrent() || context !== state.audioContext || state.suppressedResponseIds.has(responseId)) {
+      return {
+        scheduled: scheduledSegments > 0,
+        reason: 'response_interrupted',
+        bytes: bytes.byteLength,
+        samples: samples.length,
+        segmentCount: scheduledSegments,
+        maxScheduleGapMs,
+        maxPlaybackDelayMs,
+        boundaryJump,
+      };
+    }
+    if (context.state !== 'running') {
+      return {
+        scheduled: scheduledSegments > 0,
+        reason: 'context_not_running',
+        bytes: bytes.byteLength,
+        samples: samples.length,
+        segmentCount: scheduledSegments,
+        maxScheduleGapMs,
+        maxPlaybackDelayMs,
+        boundaryJump,
+      };
+    }
+    const audioBuffer = context.createBuffer(1, segmentSamples.length, 24_000);
+    audioBuffer.copyToChannel(segmentSamples, 0);
+    const source = context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(state.playbackGain || context.destination);
+    const previousCursor = state.playbackCursor;
+    const when = Math.max(context.currentTime + PLAYBACK_SCHEDULE_AHEAD_SECONDS, previousCursor);
+    const scheduleGapMs = previousCursor > 0 ? Math.max(0, (when - previousCursor) * 1000) : 0;
+    const playbackDelayMs = Math.max(0, (when - context.currentTime) * 1000);
+    maxScheduleGapMs = Math.max(maxScheduleGapMs, scheduleGapMs);
+    maxPlaybackDelayMs = Math.max(maxPlaybackDelayMs, playbackDelayMs);
+    state.playbackCursor = when + audioBuffer.duration;
+    source.__interviewResponseId = responseId;
+    source.__scheduledEndTime = state.playbackCursor;
+    state.playbackNodes.add(source);
+    const startCalledAt = performance.now();
+    source.addEventListener('ended', () => {
+      const endedAt = performance.now();
+      state.playbackNodes.delete(source);
+      traceClient('output_audio_node_ended', {
+        responseId,
+        chunk,
+        segment,
+        contextTimeMs: context.currentTime * 1000,
+        scheduledContextTimeMs: when * 1000,
+        contextElapsedSinceScheduledStartMs: Math.max(0, context.currentTime - when) * 1000,
+        nodeLifetimeMs: endedAt - startCalledAt,
+        contextState: context.state,
+        pendingNodes: state.playbackNodes.size,
+      });
+    }, { once: true });
+    source.start(when);
+    if (stats.playbackStartedAt === null) {
+      stats.playbackStartedAt = performance.now();
+      traceClient('playback_response_started', {
+        responseId,
+        chunk,
+        segment,
+        scheduledContextTimeMs: when * 1000,
+        contextTimeMs: context.currentTime * 1000,
+        pcmDurationMs: samples.length / 24_000 * 1000,
+      });
+    }
+    traceClient('output_audio_node_start_called', {
       responseId,
       chunk,
+      segment,
       contextTimeMs: context.currentTime * 1000,
       scheduledContextTimeMs: when * 1000,
-      contextElapsedSinceScheduledStartMs: Math.max(0, context.currentTime - when) * 1000,
-      nodeLifetimeMs: endedAt - startCalledAt,
       contextState: context.state,
       pendingNodes: state.playbackNodes.size,
     });
-  }, { once: true });
-  source.start(when);
-  traceClient('output_audio_node_start_called', {
-    responseId,
-    chunk,
-    contextTimeMs: context.currentTime * 1000,
-    scheduledContextTimeMs: when * 1000,
-    contextState: context.state,
-    pendingNodes: state.playbackNodes.size,
-  });
+    scheduledSegments += 1;
+  }
   return {
-    scheduled: true,
+    scheduled: scheduledSegments > 0,
     bytes: bytes.byteLength,
     samples: samples.length,
-    scheduleGapMs,
-    playbackDelayMs: Math.max(0, (when - context.currentTime) * 1000),
+    segmentCount: scheduledSegments,
+    pcmDurationMs: samples.length / 24_000 * 1000,
+    scheduleGapMs: maxScheduleGapMs,
+    playbackDelayMs: maxPlaybackDelayMs,
     contextState: context.state,
     boundaryJump,
     peak: decoded.peak,
@@ -872,6 +973,9 @@ function stopMicrophone() {
 }
 
 function cleanupAudio() {
+  state.audioSetupGeneration += 1;
+  state.autoEndGeneration += 1;
+  state.playbackScheduleQueue.invalidate();
   stopMicrophone();
   if (state.audioContext) {
     void state.audioContext.close();
@@ -880,43 +984,19 @@ function cleanupAudio() {
   state.playbackGain = null;
   state.playbackNodes.clear();
   state.playbackCursor = 0;
-  state.audioRemainder = new Uint8Array(0);
-  state.audioEncoding = null;
+  state.audioRemainders.clear();
   state.suppressedResponseIds.clear();
+  state.microphoneStreaming = false;
   if (state.timer) clearInterval(state.timer);
   state.timer = null;
-  if (state.autoEndTimer) clearTimeout(state.autoEndTimer);
-  state.autoEndTimer = null;
-  state.autoEndDeadline = 0;
 }
 
-function scheduleAutomaticEnd(reason) {
+function scheduleAutomaticEnd(reason, responseId, stats) {
   if (!['active', 'responding', 'ending'].includes(state.lifecycle)) return;
-  setLifecycle('ending');
-  setStatus('ending', reason === 'timeout' ? '已到时间上限，正在结束' : '告别语播放完将自动结束');
-  state.autoEndDeadline = performance.now() + 25_000;
-
-  const finishWhenPlaybackEnds = () => {
-    const context = state.audioContext;
-    const schedulesPending = [...state.responseAudioStats.values()]
-      .some((stats) => stats.pendingScheduleCount > 0);
-    const playbackPending = state.playbackNodes.size > 0
-      || (context && state.playbackCursor > context.currentTime + 0.01);
-    if ((schedulesPending || playbackPending) && performance.now() < state.autoEndDeadline) {
-      state.autoEndTimer = setTimeout(finishWhenPlaybackEnds, 50);
-      return;
-    }
-    state.autoEndTimer = null;
-    traceClient('auto_end_after_playback', {
-      reason,
-      schedulesPending,
-      playbackPending,
-    });
-    void endInterview(reason);
-  };
-
-  if (state.autoEndTimer) clearTimeout(state.autoEndTimer);
-  state.autoEndTimer = setTimeout(finishWhenPlaybackEnds, 50);
+  if (state.lifecycle === 'active') setLifecycle('responding');
+  setStatus('responding', reason === 'timeout' ? '正在播放收尾语音' : '告别语播放完将自动结束');
+  const endGeneration = ++state.autoEndGeneration;
+  void drainResponsePlayback(responseId, stats, { endReason: reason, endGeneration });
 }
 
 function waitForEnd(timeoutMs = 32_000) {
@@ -956,6 +1036,67 @@ async function waitForOutputAudioDrain(timeoutMs = 30_000) {
   return !isOutputAudioPlaybackPending(outputAudioState());
 }
 
+async function drainResponsePlayback(responseId, stats, { endReason, endGeneration } = {}) {
+  const responseDoneAt = stats.responseDoneAt ?? performance.now();
+  const timeoutMs = endReason ? 25_000 : 30_000;
+  traceClient('playback_response_draining', {
+    responseId,
+    lifecycle: state.lifecycle,
+    chunks: stats.chunks,
+    bytes: stats.bytes,
+    pendingScheduleCount: outputAudioState().pendingScheduleCount,
+    playbackNodes: state.playbackNodes.size,
+    playbackCursorAheadMs: Math.max(0, (state.playbackCursor - (state.audioContext?.currentTime || 0)) * 1000),
+    microphoneStreaming: state.microphoneStreaming,
+  });
+  const drained = await waitForOutputAudioDrain(timeoutMs);
+  if (!drained) {
+    state.suppressedResponseIds.add(responseId);
+    if (state.activeResponseId === responseId) stopPlayback(responseId);
+  }
+  const playback = outputAudioState();
+  const responseDoneToPlaybackDrainMs = performance.now() - responseDoneAt;
+  traceClient(drained ? 'playback_response_drained' : 'playback_response_drain_timeout', {
+    responseId,
+    lifecycle: state.lifecycle,
+    status: stats.completedStatus || 'unknown',
+    drained,
+    chunks: stats.chunks,
+    bytes: stats.bytes,
+    pcmDurationMs: stats.pcmDurationMs,
+    maxQueuedAudioMs: stats.maxQueuedAudioMs,
+    pendingScheduleCount: playback.pendingScheduleCount,
+    playbackNodes: playback.playbackNodeCount,
+    playbackCursorAheadMs: Math.max(0, (playback.playbackCursor - playback.currentTime) * 1000),
+    responseDoneToPlaybackDrainMs,
+    microphoneStreaming: state.microphoneStreaming,
+  });
+
+  if (state.activeResponseId === responseId) state.activeResponseId = null;
+  if (endReason) {
+    if (state.autoEndGeneration !== endGeneration || state.lifecycle === 'ending') {
+      traceClient('auto_end_cancelled', { reason: endReason, responseId, lifecycle: state.lifecycle });
+      return;
+    }
+    traceClient('auto_end_after_playback', {
+      reason: endReason,
+      drained,
+      playbackPending: isOutputAudioPlaybackPending(playback),
+    });
+    void endInterview(endReason);
+    return;
+  }
+  if (canResumeRealtimeListening({
+    lifecycle: state.lifecycle,
+    status: stats.completedStatus,
+    playbackPending: isOutputAudioPlaybackPending(playback),
+    responseMatches: state.activeResponseId === null,
+  })) {
+    setLifecycle('active');
+    updateCallStatusFromEvent({ type: 'playback_drained' });
+  }
+}
+
 function finishUi(message, hasError = false) {
   cleanupAudio();
   if (state.websocket && state.websocket.readyState <= WebSocket.OPEN) {
@@ -984,6 +1125,7 @@ async function setupMicrophone() {
   // before the permission prompt yields control to the browser.
   state.audioContext = new AudioContext();
   const context = state.audioContext;
+  const setupGeneration = ++state.audioSetupGeneration;
   context.addEventListener('statechange', () => {
     traceClient('audio_context_state', { contextState: context.state });
   });
@@ -1003,10 +1145,23 @@ async function setupMicrophone() {
       autoGainControl: false,
     },
     video: false,
+  }).then((mediaStream) => {
+    if (setupGeneration !== state.audioSetupGeneration || context !== state.audioContext) {
+      for (const track of mediaStream.getTracks()) track.stop();
+    } else {
+      state.mediaStream = mediaStream;
+    }
+    return mediaStream;
   });
   const [mediaStream] = await Promise.all([mediaPromise, workletPromise]);
-  state.mediaStream = mediaStream;
-  await resumePromise;
+  if (setupGeneration !== state.audioSetupGeneration || context !== state.audioContext) {
+    for (const track of mediaStream.getTracks()) track.stop();
+    throw new Error('麦克风初始化已取消，请重新开始采访。');
+  }
+  const resumed = await resumePromise;
+  if (!resumed || context.state !== 'running') {
+    throw new Error('浏览器音频尚未就绪，请重新点击开始聊天。');
+  }
   state.audioSettings = mediaStream.getAudioTracks()[0]?.getSettings?.() || {};
 
   state.audioSource = context.createMediaStreamSource(state.mediaStream);
@@ -1027,7 +1182,7 @@ async function setupMicrophone() {
   state.workletNode.connect(state.muteNode);
   state.muteNode.connect(state.audioContext.destination);
   state.workletNode.port.onmessage = (event) => {
-    const streamMicrophone = state.lifecycle === 'active';
+    const streamMicrophone = state.microphoneStreaming;
     if (state.websocket?.readyState === WebSocket.OPEN && streamMicrophone) {
       state.websocket.send(event.data);
       state.microphonePacketCount += 1;
@@ -1044,6 +1199,11 @@ async function setupMicrophone() {
     autoGainControl: state.audioSettings.autoGainControl ?? null,
   };
   traceClient('audio_context_ready', state.audioContextInfo);
+  traceClient('microphone_ready', {
+    contextState: context.state,
+    sampleRate: context.sampleRate,
+    microphoneStreaming: state.microphoneStreaming,
+  });
 }
 
 function flushScrollTrace() {
@@ -1089,6 +1249,7 @@ function connectRealtime() {
     }, 20_000);
 
     socket.addEventListener('open', () => {
+      traceClient('websocket_connected', { contextState: state.audioContext?.state || 'missing' });
       const startMessage = state.interviewType === 'onboarding'
         ? createOnboardingStartMessage(state.realtimeProvider)
         : state.interviewType === 'external_contributor'
@@ -1132,14 +1293,15 @@ function connectRealtime() {
           clearTimeout(timeout);
           resolve(message);
         }
-        state.startedAt = Date.now();
         state.sessionId = message.sessionId;
+        flushStartupTraceEvents();
         state.microphonePacketCount = 0;
         state.lastMicrophonePacketAt = null;
         state.maxSessionMs = Number(message.maxSessionMs) || 20 * 60 * 1000;
-        state.timer = setInterval(updateDuration, 500);
-        setLifecycle('active');
-        setStatus('active');
+        traceClient('provider_session_ready', {
+          contextState: state.audioContext?.state || 'missing',
+          sampleRate: state.audioContext?.sampleRate,
+        });
         if (state.interviewType === 'story') {
           const currentTitle = message.story?.title || state.stories.find((story) => story.story_id === elements.storySelect?.value)?.title || '当前故事';
           elements.storyHeading.textContent = currentTitle;
@@ -1179,8 +1341,10 @@ function connectRealtime() {
       if (message.type === 'speech_started') {
         const responseActive = state.lifecycle === 'responding';
         const playback = outputPlaybackState();
+        const interruptedResponseId = state.activeResponseId;
         traceClient('speech_started', {
           responseActive,
+          microphoneStreaming: state.microphoneStreaming,
           outputAudioPending: playback.outputAudioPending,
           pendingScheduleCount: playback.pendingScheduleCount,
           playbackCursorAheadMs: Math.max(0, playback.playbackCursor - playback.currentTime) * 1000,
@@ -1190,7 +1354,19 @@ function connectRealtime() {
           ...microphoneTimingDetails(),
         });
         if (state.lifecycle === 'ending') return;
-        stopPlayback();
+        if (responseActive || playback.outputAudioPending) {
+          if (interruptedResponseId) state.suppressedResponseIds.add(interruptedResponseId);
+          traceClient('playback_interruption', {
+            responseId: interruptedResponseId || 'unknown',
+            pendingNodes: playback.playbackNodeCount,
+            pendingScheduleCount: playback.pendingScheduleCount,
+            playbackCursorAheadMs: Math.max(0, playback.playbackCursor - playback.currentTime) * 1000,
+            microphoneStreaming: state.microphoneStreaming,
+          });
+          stopPlayback(interruptedResponseId);
+          if (state.activeResponseId === interruptedResponseId) state.activeResponseId = null;
+          state.autoEndGeneration += 1;
+        }
         hideLive();
         if (responseActive) setLifecycle('active');
         updateCallStatusFromEvent(message);
@@ -1300,23 +1476,32 @@ function connectRealtime() {
           ? undefined
           : receivedAt - stats.lastReceivedAt;
         const deltaBytes = typeof message.delta === 'string' ? base64ByteLength(message.delta) : 0;
+        const pcmDurationMs = pcm16MonoDurationMs(deltaBytes, 24_000);
         if (interArrivalMs !== undefined) stats.maxArrivalGapMs = Math.max(stats.maxArrivalGapMs, interArrivalMs);
         stats.firstReceivedAt ??= receivedAt;
         stats.lastReceivedAt = receivedAt;
         stats.chunks += 1;
         const chunkIndex = stats.chunks;
         stats.bytes += deltaBytes;
+        stats.queuedAudioMs += pcmDurationMs;
+        stats.maxQueuedAudioMs = Math.max(stats.maxQueuedAudioMs, stats.queuedAudioMs);
+        stats.pcmDurationMs += pcmDurationMs;
         traceClient('output_audio_chunk', {
           responseId,
           chunk: chunkIndex,
           bytes: deltaBytes,
+          pcmDurationMs,
+          queuedAudioMs: stats.queuedAudioMs,
           interArrivalMs,
           contextState: state.audioContext?.state || 'missing',
           pendingNodes: state.playbackNodes.size,
           ...markTraceStage('first_audio', { responseId, chunk: chunkIndex, bytes: deltaBytes }),
         });
         stats.pendingScheduleCount += 1;
-        void playPcmChunk(message.delta, message.encoding || 'pcm_s16le', responseId, chunkIndex).then((result) => {
+        void state.playbackScheduleQueue.enqueue(responseId, (isCurrent) => (
+          playPcmChunk(message.delta, message.encoding || 'pcm_s16le', responseId, chunkIndex, isCurrent)
+        )).then((result) => {
+          stats.queuedAudioMs = Math.max(0, stats.queuedAudioMs - pcmDurationMs);
           if (result?.scheduled) {
             stats.scheduledChunks += 1;
             stats.maxScheduleGapMs = Math.max(stats.maxScheduleGapMs, result.scheduleGapMs || 0);
@@ -1330,6 +1515,10 @@ function connectRealtime() {
             scheduled: Boolean(result?.scheduled),
             reason: result?.reason,
             bytes: result?.bytes ?? deltaBytes,
+            pcmDurationMs: result?.pcmDurationMs ?? pcmDurationMs,
+            segmentCount: result?.segmentCount,
+            queuedAudioMs: stats.queuedAudioMs,
+            maxQueuedAudioMs: stats.maxQueuedAudioMs,
             scheduleGapMs: result?.scheduleGapMs,
             playbackDelayMs: result?.playbackDelayMs,
             contextState: result?.contextState || state.audioContext?.state || 'missing',
@@ -1342,6 +1531,7 @@ function connectRealtime() {
             nonFiniteSamples: result?.nonFiniteSamples,
           });
         }).catch((error) => {
+          stats.queuedAudioMs = Math.max(0, stats.queuedAudioMs - pcmDurationMs);
           stats.droppedChunks += 1;
           traceClient('audio_playback_error', {
             responseId,
@@ -1409,19 +1599,32 @@ function connectRealtime() {
         const responseId = typeof message.responseId === 'string'
           ? message.responseId
           : state.activeResponseId;
+        if (!responseId) return;
+        const stats = responseAudioStats(responseId);
+        stats.responseDoneAt ??= performance.now();
         if (responseId) finishResponseAudioTrace(responseId, message.status);
-        if (state.activeResponseId === responseId) state.activeResponseId = null;
-        state.audioRemainder = new Uint8Array(0);
-        state.audioEncoding = null;
         if (state.lifecycle === 'ending') return;
-        if (message.status === 'completed' && message.endAfterPlayback) {
-          scheduleAutomaticEnd(automaticEndReason(message.endReason, state.interviewType));
-        } else if (message.status === 'completed' && state.lifecycle === 'responding') {
-          setLifecycle('active');
-          updateCallStatusFromEvent(message);
-        } else if (message.status === 'cancelled' && state.lifecycle === 'responding') {
-          setLifecycle('active');
-          updateCallStatusFromEvent(message);
+        if (message.status === 'cancelled') {
+          state.suppressedResponseIds.add(responseId);
+          stopPlayback(responseId);
+          if (state.activeResponseId === responseId) {
+            state.activeResponseId = null;
+            if (state.lifecycle === 'responding') {
+              setLifecycle('active');
+              updateCallStatusFromEvent({ type: 'playback_drained' });
+            }
+          }
+          return;
+        }
+        if (message.status !== 'completed' || state.suppressedResponseIds.has(responseId)) return;
+        if (message.endAfterPlayback) {
+          scheduleAutomaticEnd(
+            automaticEndReason(message.endReason, state.interviewType),
+            responseId,
+            stats,
+          );
+        } else if (state.lifecycle === 'responding') {
+          void drainResponsePlayback(responseId, stats);
         }
         return;
       }
@@ -1557,11 +1760,16 @@ async function startInterview() {
         : (selected?.stage_title || '这次聊天会保存到你的故事里');
   }
   state.traceStartedAt = performance.now();
+  state.startupTraceEvents = [];
+  state.playbackReadySent = false;
   resetTraceTurnState();
   state.sessionId = null;
   state.activeResponseId = null;
   state.responseAudioStats.clear();
+  state.playbackScheduleQueue.invalidate();
   state.suppressedResponseIds.clear();
+  state.microphoneStreaming = false;
+  state.autoEndGeneration += 1;
   state.audioContextInfo = {};
   state.isMuted = false;
   state.isSpeakerOn = true;
@@ -1570,10 +1778,29 @@ async function startInterview() {
   setLifecycle('connecting');
   setStatus('connecting', '正在请求麦克风');
   elements.connectionNote.textContent = '请在浏览器弹窗中允许麦克风访问。';
+  traceClient('start_clicked', { provider: state.realtimeProvider, interviewType: state.interviewType });
   try {
-    await setupMicrophone();
+    const microphoneReady = setupMicrophone();
     setStatus('connecting', `正在连接${realtimeProviderLabels[state.realtimeProvider]}`);
-    await connectRealtime();
+    const providerReady = connectRealtime();
+    await Promise.all([microphoneReady, providerReady]);
+    if (state.lifecycle !== 'connecting' || !state.sessionId) {
+      throw new Error('Realtime 启动状态已取消，请重试。');
+    }
+    state.startedAt = Date.now();
+    state.timer = setInterval(updateDuration, 500);
+    setLifecycle('active');
+    setStatus('active');
+    if (!state.playbackReadySent && state.websocket?.readyState === WebSocket.OPEN) {
+      state.websocket.send(JSON.stringify({ type: 'playback_ready' }));
+      state.playbackReadySent = true;
+      traceClient('playback_ready_sent', {
+        contextState: state.audioContext?.state || 'missing',
+        microphoneStreaming: state.microphoneStreaming,
+      });
+    } else if (!state.playbackReadySent) {
+      throw new Error('语音连接在播放系统就绪前关闭。');
+    }
   } catch (error) {
     cleanupAudio();
     if (state.websocket) state.websocket.close();
@@ -1589,6 +1816,7 @@ async function startInterview() {
 
 async function endInterview(reason = 'user') {
   if (!['active', 'responding', 'ending'].includes(state.lifecycle)) return;
+  state.autoEndGeneration += 1;
   const lifecycleAtEnd = state.lifecycle;
   const outputAudioBeforeEnd = outputAudioState();
   const outputAudioPending = isOutputAudioPlaybackPending(outputAudioBeforeEnd);

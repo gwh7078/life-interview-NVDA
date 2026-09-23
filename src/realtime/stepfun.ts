@@ -14,6 +14,7 @@ export const DEFAULT_STEPFUN_VOICE = 'wenrounansheng';
 export const STEPFUN_REALTIME_URL = 'wss://api.stepfun.com/v1/realtime';
 export const STEPFUN_INPUT_SAMPLE_RATE = 24_000;
 export const STEPFUN_OUTPUT_SAMPLE_RATE = 24_000;
+export const DEFAULT_STEPFUN_SILENCE_DURATION_MS = 1_400;
 export const STEPFUN_PCM_FRAME_BYTES = 960;
 export const STEPFUN_CONTEXT_TOOL = 'get_interview_context';
 
@@ -91,6 +92,7 @@ export function buildStepfunContextTool(): Record<string, unknown> {
 export function buildStepfunSessionUpdate(
   context: RealtimeInterviewContext,
   voice = DEFAULT_STEPFUN_VOICE,
+  silenceDurationMs = DEFAULT_STEPFUN_SILENCE_DURATION_MS,
 ): Record<string, unknown> {
   const allowsContextTool = context.interview_type === undefined || context.interview_type === 'story';
   const toolInstructions = `\n\n## 历史上下文工具\n当当前轮需要确认用户以前讲过的人物、时间、关系或原话时，先静默调用 ${STEPFUN_CONTEXT_TOOL}，只传递需要确认的信息；不要假装记得，也不要把工具调用过程说给用户听。收到工具结果后再继续回答。当前信息足够时不要调用工具。`;
@@ -105,7 +107,7 @@ export function buildStepfunSessionUpdate(
       turn_detection: {
         type: 'server_vad',
         prefix_padding_ms: 300,
-        silence_duration_ms: 700,
+        silence_duration_ms: silenceDurationMs,
       },
       ...(allowsContextTool ? { tools: [buildStepfunContextTool()] } : {}),
     },
@@ -205,6 +207,7 @@ export function createStepfunRealtimeProvider(
   config: RealtimeProviderConfig,
 ): RealtimeVoiceProvider {
   let activeResponseId: string | undefined;
+  let speechStopEmitted = false;
   const audioStartedResponses = new Set<string>();
   const toolArgumentsByCall = new Map<string, string>();
   const emittedToolCalls = new Set<string>();
@@ -235,9 +238,12 @@ export function createStepfunRealtimeProvider(
     if (type === 'session.closed') return [{ type: 'session.closed' }];
     if (type === 'error') return [{ type: 'provider.error', message: sanitizedProviderError(event, config.stepfunApiKey), phase: 'stream' }];
     if (type === 'input_audio_buffer.speech_started') {
+      speechStopEmitted = false;
       return [{ type: 'speech.started', ...(eventId ? { eventId } : {}) }];
     }
     if (type === 'input_audio_buffer.speech_stopped' || type === 'input_audio_buffer.committed') {
+      if (speechStopEmitted) return [];
+      speechStopEmitted = true;
       return [{
         type: 'speech.stopped',
         source: type === 'input_audio_buffer.committed' ? 'committed' : 'speech_stopped',
@@ -354,7 +360,11 @@ export function createStepfunRealtimeProvider(
         headers: { Authorization: `Bearer ${config.stepfunApiKey}` },
       };
     },
-    setupSession: (context) => [buildStepfunSessionUpdate(context)],
+    setupSession: (context) => [buildStepfunSessionUpdate(
+      context,
+      DEFAULT_STEPFUN_VOICE,
+      config.stepfunSilenceDurationMs ?? DEFAULT_STEPFUN_SILENCE_DURATION_MS,
+    )],
     initialResponsePlan: () => ({
       steps: [{ message: { type: 'response.create', response: { modalities: ['text', 'audio'] } } }],
     }),
