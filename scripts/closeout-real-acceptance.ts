@@ -346,7 +346,7 @@ function createScenario(databasePath: string): Scenario {
   const core = createStoryInterviewCore(databasePath);
   const transcripts = new TranscriptRepository(databasePath);
   const context = core.prepare(userId, { mode: 'continue', storyId });
-  const interview = core.start(userId, context, 'doubao');
+  const interview = core.start(userId, context, 'stepfun');
   const transcriptEntries: Array<{ role: 'user' | 'assistant'; text: string }> = [
     {
       role: 'user',

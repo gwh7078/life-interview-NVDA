@@ -17,7 +17,6 @@
   "include": [
     "src/**/*.ts",
     "test/**/*.ts",
-    "scripts/voice-closeout-e2e.ts",
     "scripts/closeout-real-acceptance.ts",
     "scripts/phase3-ab-integration.ts",
     "scripts/phase3-backend-stepfun-e2e.ts",

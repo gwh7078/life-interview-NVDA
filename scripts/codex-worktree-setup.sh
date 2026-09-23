@@ -43,7 +43,7 @@ if [[ ! -e .env ]]; then
       "NEMO_RETRIEVER_MCP_URL=http://127.0.0.1:7670/mcp",
       "NEMO_RETRIEVER_VECTORDB_URL=http://127.0.0.1:7671",
       "# 实时语音与会后总结密钥仅在需要真实模型联调时填写。",
-      "# VOLCENGINE_API_KEY=",
+      "# STEPFUN_API_KEY=",
       "# CLOSEOUT_API_KEY=",
       "",
     ].join("\n");
@@ -71,7 +71,7 @@ else
 fi
 
 if bash scripts/codex-node.sh node --env-file-if-exists=.env --eval '
-  process.exit(process.env.VOLCENGINE_API_KEY?.trim() && process.env.CLOSEOUT_API_KEY?.trim() ? 0 : 1);
+  process.exit(process.env.STEPFUN_API_KEY?.trim() && process.env.CLOSEOUT_API_KEY?.trim() ? 0 : 1);
 '; then
   echo "检测到实时语音与会后总结凭证；只确认是否存在，不显示其内容。"
 else

@@ -1,26 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import {
-  buildDoubaoAudioAppend,
-  buildDoubaoAudioCommit,
-  buildDoubaoMuteInput,
-  buildDoubaoOpeningGreetingText,
-  buildDoubaoRealtimeHeaders,
-  buildDoubaoSessionClose,
-  buildDoubaoSessionCreate,
-  buildDoubaoTextCommit,
-  DEFAULT_DOUBAO_MODEL,
-  DOUBAO_INPUT_SAMPLE_RATE,
-  DOUBAO_OUTPUT_ENCODING,
-  DOUBAO_OUTPUT_SAMPLE_RATE,
-  DOUBAO_PCM_FRAME_BYTES,
-  DOUBAO_REALTIME_URL,
-  filterDoubaoOnboardingTranscript,
-  filterDoubaoOnboardingTranscriptPartial,
-  normalizeDoubaoAssistantTranscriptEvent,
-  parseDoubaoServerEvent,
-  readDoubaoTranscriptionText,
-} from './doubao.js';
-import {
   buildQwenAudioAppend,
   buildQwenOnboardingCompletionAcknowledgement,
   buildQwenRealtimeUrl,
@@ -53,8 +32,6 @@ const QWEN_PCM_FRAME_BYTES = 640;
 const QWEN_OUTPUT_ENCODING = 'pcm_s16le';
 
 export interface RealtimeProviderConfig {
-  doubaoApiKey?: string;
-  doubaoVoice?: string;
   stepfunApiKey?: string;
   apiKey?: string;
   workspaceId?: string;
@@ -133,27 +110,6 @@ function redactSecret(value: string, secret?: string): string {
   return secret ? value.split(secret).join('[redacted]') : value;
 }
 
-function doubaoConnectionFailureMessage(
-  failure: RealtimeConnectionFailure,
-  secret?: string,
-): string {
-  if (failure.kind === 'timeout') {
-    return '连接豆包 Realtime 超时，请检查火山 API Key、服务开通状态与网络。';
-  }
-  if (failure.kind === 'unexpected-response') {
-    const status = failure.statusCode;
-    if (status === 401 || status === 403) return '豆包 Realtime 鉴权失败。请检查 VOLCENGINE_API_KEY 与服务开通状态。';
-    if (status === 404) return '豆包 Realtime 地址未找到，请检查是否已开通端到端实时语音服务。';
-    return `豆包 Realtime 握手失败（HTTP ${status ?? 'unknown'}）。`;
-  }
-  if (failure.kind === 'socket-error') {
-    return `豆包 Realtime 连接失败：${redactSecret(failure.message, secret)}`;
-  }
-  return failure.phase === 'connect'
-    ? `豆包 Realtime 在初始化时断开（${failure.code}）。`
-    : `豆包 Realtime 连接中断（${failure.code}），本次 Transcript 将保留。`;
-}
-
 function qwenConnectionFailureMessage(
   failure: RealtimeConnectionFailure,
   secret?: string,
@@ -175,16 +131,6 @@ function qwenConnectionFailureMessage(
     : `Qwen Realtime 连接中断（${failure.code}），本次 Transcript 将保留。`;
 }
 
-function doubaoCapabilities(): RealtimeProviderCapabilities {
-  return {
-    fullDuplex: true,
-    supportsInterrupt: true,
-    supportsExplicitTurnRequest: true,
-    supportsPlaybackAck: false,
-    supportsExplicitSessionClose: true,
-  };
-}
-
 function qwenCapabilities(): RealtimeProviderCapabilities {
   return {
     fullDuplex: true,
@@ -192,13 +138,6 @@ function qwenCapabilities(): RealtimeProviderCapabilities {
     supportsExplicitTurnRequest: true,
     supportsPlaybackAck: false,
     supportsExplicitSessionClose: false,
-  };
-}
-
-function doubaoAudio(): RealtimeAudioSpec {
-  return {
-    input: { encoding: 'pcm_s16le', sampleRate: DOUBAO_INPUT_SAMPLE_RATE, frameBytes: DOUBAO_PCM_FRAME_BYTES },
-    output: { encoding: DOUBAO_OUTPUT_ENCODING, sampleRate: DOUBAO_OUTPUT_SAMPLE_RATE },
   };
 }
 
@@ -214,261 +153,6 @@ export function createRealtimeInterviewProvider(
   id: RealtimeProviderId,
   config: RealtimeProviderConfig,
 ): RealtimeVoiceProvider {
-  if (id === 'doubao') {
-    let activeResponseId: string | undefined;
-    let openingFallbackText: string | undefined;
-    let onboardingSession = false;
-    const startedResponses = new Set<string>();
-    const partialTextByResponse = new Map<string, string>();
-    const visiblePartialByResponse = new Map<string, string>();
-
-    const resolveResponseId = (event: Record<string, unknown>): string => {
-      const response = record(event.response);
-      const responseId = typeof event.response_id === 'string'
-        ? event.response_id
-        : typeof response?.id === 'string'
-          ? response.id
-          : activeResponseId;
-      const resolved = responseId ?? randomUUID();
-      activeResponseId = resolved;
-      return resolved;
-    };
-
-    const ensureStarted = (
-      events: NormalizedRealtimeEvent[],
-      responseId: string,
-      event: Record<string, unknown>,
-    ): void => {
-      if (activeResponseId !== responseId) activeResponseId = responseId;
-      if (!startedResponses.has(responseId)) {
-        startedResponses.add(responseId);
-        events.push({
-          type: 'assistant.started',
-          responseId,
-          ...(typeof event.event_id === 'string' ? { eventId: event.event_id } : {}),
-          ...(openingFallbackText ? { openingFallbackText } : {}),
-        });
-        openingFallbackText = undefined;
-      }
-    };
-
-    const normalize = (raw: unknown): NormalizedRealtimeEvent[] => {
-      const event = parseDoubaoServerEvent(raw);
-      if (!event) return [];
-      const type = String(event.type ?? '');
-      const eventId = typeof event.event_id === 'string' ? event.event_id : undefined;
-      if (type === 'session.created' || type === 'session.updated') {
-        const session = record(event.session);
-        return [{
-          type: 'session.ready',
-          ...(typeof session?.id === 'string'
-            ? { providerSessionId: session.id }
-            : typeof event.session_id === 'string'
-              ? { providerSessionId: event.session_id }
-              : {}),
-        }];
-      }
-      if (type === 'session.closed') return [{ type: 'session.closed' }];
-      if (type === 'error') {
-        return [{
-          type: 'provider.error',
-          message: sanitizedProviderError(event, '豆包 Realtime', config.doubaoApiKey),
-          phase: 'stream',
-        }];
-      }
-      if (type === 'conversation.item.input_audio_transcription.started') {
-        return [{ type: 'speech.started', ...(eventId ? { eventId } : {}) }];
-      }
-      if (type === 'conversation.item.input_audio_transcription.delta') {
-        const text = typeof event.delta === 'string'
-          ? event.delta
-          : typeof event.text === 'string' ? event.text : '';
-        const stash = typeof event.stash === 'string' ? event.stash : '';
-        return [{
-          type: 'user.transcript.delta',
-          text,
-          stash,
-          deltaChars: text.length,
-          ...(eventId ? { eventId } : {}),
-          ...(typeof event.item_id === 'string' ? { itemId: event.item_id } : {}),
-        }];
-      }
-      if (type === 'conversation.item.input_audio_transcription.completed') {
-        return [{
-          type: 'user.transcript.final',
-          text: readDoubaoTranscriptionText(event),
-          ...(eventId ? { eventId } : {}),
-          ...(typeof event.item_id === 'string' ? { itemId: event.item_id } : {}),
-        }];
-      }
-      if (type === 'input_audio_buffer.committed') {
-        return [{ type: 'speech.stopped', source: 'committed', ...(eventId ? { eventId } : {}) }];
-      }
-      if (type === 'input_audio_buffer.speech_stopped') {
-        return [{ type: 'speech.stopped', source: 'speech_stopped', ...(eventId ? { eventId } : {}) }];
-      }
-      if (type === 'response.created') {
-        const responseId = resolveResponseId(event);
-        startedResponses.add(responseId);
-        const started: NormalizedRealtimeEvent = {
-          type: 'assistant.started',
-          responseId,
-          ...(eventId ? { eventId } : {}),
-          ...(openingFallbackText ? { openingFallbackText } : {}),
-        };
-        openingFallbackText = undefined;
-        return [started];
-      }
-
-      const responseId = resolveResponseId(event);
-      if (type === 'response.output_audio.started') {
-        const events: NormalizedRealtimeEvent[] = [];
-        ensureStarted(events, responseId, event);
-        events.push({
-          type: 'assistant.audio.started',
-          responseId,
-          ...(typeof event.tts_type === 'string' ? { ttsType: event.tts_type } : {}),
-        });
-        return events;
-      }
-
-      const transcript = normalizeDoubaoAssistantTranscriptEvent(event, responseId);
-      if (transcript) {
-        const events: NormalizedRealtimeEvent[] = [];
-        ensureStarted(events, responseId, event);
-        if (transcript.type === 'response.audio_transcript.delta') {
-          const delta = typeof transcript.delta === 'string' ? transcript.delta : '';
-          const previous = partialTextByResponse.get(responseId) ?? '';
-          const cumulative = previous + delta;
-          partialTextByResponse.set(responseId, cumulative);
-          const visible = onboardingSession ? filterDoubaoOnboardingTranscriptPartial(cumulative) : cumulative;
-          const priorVisible = visiblePartialByResponse.get(responseId) ?? '';
-          visiblePartialByResponse.set(responseId, visible);
-          const visibleDelta = visible.startsWith(priorVisible) ? visible.slice(priorVisible.length) : visible;
-          events.push({
-            type: 'assistant.transcript.delta',
-            responseId,
-            delta: visibleDelta,
-            ...(eventId ? { eventId } : {}),
-            ...(typeof transcript.item_id === 'string' ? { itemId: transcript.item_id } : {}),
-          });
-          return events;
-        }
-
-        const rawText = typeof transcript.transcript === 'string'
-          ? transcript.transcript
-          : typeof transcript.text === 'string' ? transcript.text : '';
-        const filtered = onboardingSession
-          ? filterDoubaoOnboardingTranscript(rawText)
-          : { text: rawText, completionSignal: false };
-        partialTextByResponse.delete(responseId);
-        visiblePartialByResponse.delete(responseId);
-        if (filtered.text) {
-          events.push({
-            type: 'assistant.transcript.final',
-            responseId,
-            text: filtered.text,
-            ...(eventId ? { eventId } : {}),
-            ...(typeof transcript.item_id === 'string' ? { itemId: transcript.item_id } : {}),
-          });
-        }
-        if (filtered.completionSignal) {
-          events.push({ type: 'onboarding.completion.requested', responseId, requiresAck: false });
-        }
-        return events;
-      }
-
-      if (type === 'response.output_audio.delta' || type === 'response.audio.delta') {
-        const audio = typeof event.delta === 'string'
-          ? event.delta
-          : typeof event.audio === 'string' ? event.audio : '';
-        if (!audio) return [];
-        const events: NormalizedRealtimeEvent[] = [];
-        ensureStarted(events, responseId, event);
-        events.push({ type: 'assistant.audio.delta', responseId, audio, encoding: DOUBAO_OUTPUT_ENCODING });
-        return events;
-      }
-      if (type === 'response.output_audio.done') {
-        return [{
-          type: 'assistant.audio.done',
-          responseId,
-          ...(typeof event.status_code === 'string' ? { statusCode: event.status_code } : {}),
-        }];
-      }
-      if (type === 'response.done' || type === 'response.canceled') {
-        const response = record(event.response);
-        const status = type === 'response.canceled'
-          ? 'cancelled'
-          : typeof response?.status === 'string'
-            ? response.status
-            : typeof event.status === 'string' ? event.status : 'completed';
-        if (activeResponseId === responseId) activeResponseId = undefined;
-        startedResponses.delete(responseId);
-        partialTextByResponse.delete(responseId);
-        visiblePartialByResponse.delete(responseId);
-        if (type === 'response.canceled' || status === 'cancelled') {
-          return [{ type: 'response.cancelled', responseId }];
-        }
-        const fallback = responseOutputText(response);
-        const filteredFallback = fallback.text && onboardingSession
-          ? filterDoubaoOnboardingTranscript(fallback.text)
-          : { text: fallback.text ?? '', completionSignal: false };
-        const events: NormalizedRealtimeEvent[] = [];
-        if (filteredFallback.completionSignal) {
-          events.push({ type: 'onboarding.completion.requested', responseId, requiresAck: false });
-        }
-        events.push({
-          type: 'response.done',
-          responseId,
-          status,
-          ...(filteredFallback.text ? { finalText: filteredFallback.text } : {}),
-          ...(fallback.itemId ? { finalItemId: fallback.itemId } : {}),
-        });
-        return events;
-      }
-      return [];
-    };
-
-    const adapter: RealtimeVoiceProvider = {
-      id,
-      capabilities: doubaoCapabilities(),
-      audio: doubaoAudio(),
-      connectOptions() {
-        if (!config.doubaoApiKey) {
-          throw new Error('尚未配置豆包 Realtime。请在项目 .env 中填写 VOLCENGINE_API_KEY 后重启服务。');
-        }
-        return { url: DOUBAO_REALTIME_URL, headers: buildDoubaoRealtimeHeaders({ apiKey: config.doubaoApiKey }) };
-      },
-      setupSession(context) {
-        onboardingSession = context.interview_type === 'onboarding';
-        return [buildDoubaoSessionCreate(context, {
-          model: config.model?.trim() || DEFAULT_DOUBAO_MODEL,
-          voice: config.doubaoVoice,
-        })];
-      },
-      normalizeServerMessage: normalize,
-      appendAudioMessages: (audio) => [buildDoubaoAudioAppend(audio)],
-      recoverStalledUserTurn: () => [{ message: buildDoubaoAudioCommit() }],
-      stopInputAfterCurrentTurn: () => [{ message: buildDoubaoMuteInput() }],
-      beginInputShutdown: () => [{ message: buildDoubaoMuteInput() }],
-      closePlan: () => ({
-        steps: [{ message: buildDoubaoSessionClose() }],
-        waitFor: 'session.closed',
-        timeoutMs: 5_000,
-      }),
-      connectionFailureMessage: (failure) => doubaoConnectionFailureMessage(failure, config.doubaoApiKey),
-      requestAssistantTurnMessages: (instruction) => [buildDoubaoTextCommit(instruction)],
-      handleControlEvent: () => [],
-      initialResponsePlan(context) {
-        onboardingSession = context.interview_type === 'onboarding';
-        const greetingText = buildDoubaoOpeningGreetingText(context);
-        openingFallbackText = greetingText;
-        return { steps: [{ message: buildDoubaoTextCommit(greetingText) }], fallbackText: greetingText };
-      },
-    };
-    return adapter;
-  }
-
   if (id === 'stepfun') return createStepfunRealtimeProvider(config);
 
   const audioStartedResponses = new Set<string>();

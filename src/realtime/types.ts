@@ -1,6 +1,6 @@
-export type RealtimeProviderId = 'doubao' | 'qwen' | 'stepfun';
+export type RealtimeProviderId = 'qwen' | 'stepfun';
 
-export type RealtimeAudioEncoding = 'pcm_s16le' | 'pcm_f32le' | string;
+export type RealtimeAudioEncoding = 'pcm_s16le';
 
 export interface RealtimeAudioSpec {
   input: {

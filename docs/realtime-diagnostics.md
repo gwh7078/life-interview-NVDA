@@ -27,4 +27,4 @@ Provider speech/ASR markers also carry `micPacketCount` and `micPacketAgeMs`, wh
 
 This trace diagnoses software delivery and scheduling. It cannot confirm the selected physical output device or whether sound was audible in the room.
 
-Seeduplex 1.0's full-duplex endpoint currently returns `audio.output.format.type: "pcm"` as 24 kHz mono Float32 little-endian samples. A generic integration guide also describes a PCM16 TTS extension, but a live byte-distribution probe showed that this endpoint ignores that override and continues to return Float32. The browser therefore decodes Doubao audio as `pcm_f32le`; Qwen keeps its separate PCM16 path.
+Step-Audio 2 Mini Realtime uses 24 kHz mono PCM16 audio. The browser resamples microphone input to 24 kHz and decodes provider audio as `pcm_s16le`. Qwen Realtime remains a separate PCM16 adapter for explicitly configured server-side use.

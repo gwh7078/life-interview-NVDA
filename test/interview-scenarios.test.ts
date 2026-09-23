@@ -95,10 +95,10 @@ test('Interview Core keeps four product scenarios distinct while Story create/co
   assert.equal(external.story.story_id, seedIds.firstProject);
   assert.equal(external.contributor_summary, '');
 
-  const onboardingSession = core.start(seedIds.user, onboarding, 'doubao');
-  const createSession = core.start(seedIds.user, createStory, 'doubao');
-  const continueSession = core.start(seedIds.user, continueStory, 'doubao');
-  const externalSession = core.start(seedIds.user, external, 'doubao');
+  const onboardingSession = core.start(seedIds.user, onboarding, 'stepfun');
+  const createSession = core.start(seedIds.user, createStory, 'stepfun');
+  const continueSession = core.start(seedIds.user, continueStory, 'stepfun');
+  const externalSession = core.start(seedIds.user, external, 'stepfun');
 
   const database = createDatabase(databasePath);
   try {

@@ -69,12 +69,12 @@ function createEndedSession(
   startedAt: string,
   options: { completionEligible?: boolean; transcriptComplete?: boolean } = {},
 ): EndedSession {
-  const session = new OnboardingRepository(fixture.databasePath).createInterviewSessionForUser(fixture.userId, 'doubao');
+  const session = new OnboardingRepository(fixture.databasePath).createInterviewSessionForUser(fixture.userId, 'stepfun');
   const userMessage = new TranscriptRepository(fixture.databasePath).appendForSession(fixture.userId, session.sessionId, {
-    role: 'user', text, provider: 'doubao',
+    role: 'user', text, provider: 'stepfun',
   });
   new TranscriptRepository(fixture.databasePath).appendForSession(fixture.userId, session.sessionId, {
-    role: 'assistant', text: '谢谢你分享。', provider: 'doubao',
+    role: 'assistant', text: '谢谢你分享。', provider: 'stepfun',
   });
   const endedAt = new Date(Date.parse(startedAt) + 60_000).toISOString();
   const connection = createDatabase(fixture.databasePath);
@@ -481,7 +481,7 @@ test('apply transaction rechecks owner, onboarding session type, and persisted u
             role: 'assistant',
             text: '我叫林岚。',
             timestamp: '2026-09-14T00:00:00.000Z',
-            provider: 'doubao',
+            provider: 'stepfun',
           }]),
         }).where(eq(interviewSessions.sessionId, contextSessionId)).run();
       } finally { connection.close(); }

@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveAiTaskConfig } from '../src/ai/task-config.js';
-import { createRealtimeInterviewProvider } from '../src/realtime/provider.js';
-import { DEFAULT_DOUBAO_MODEL, DEFAULT_DOUBAO_VOICE } from '../src/realtime/doubao.js';
 import { readRuntimeConfig } from '../src/server.js';
 
 function withEnvironment(values: Record<string, string | undefined>, callback: () => void): void {
@@ -25,6 +23,7 @@ test('AI task configuration keeps realtime and closeout model routing independen
   const env = {
     STORY_INTERVIEW_PROVIDER: 'qwen',
     STORY_INTERVIEW_MODEL: 'qwen-interview-test',
+    STEPFUN_REALTIME_MODEL: undefined,
     DASHSCOPE_REGION: 'ap-southeast-1',
     DASHSCOPE_WORKSPACE_ID: 'test-workspace',
     DASHSCOPE_API_KEY: 'qwen-secret-not-config',
@@ -72,7 +71,7 @@ test('AI task configuration keeps realtime and closeout model routing independen
     assert.equal(runtime.region, 'ap-southeast-1');
     assert.equal(runtime.qwenModel, 'qwen-interview-test');
     assert.equal(runtime.model, 'qwen-interview-test');
-    assert.equal(runtime.doubaoModel, '1.2.6.1');
+    assert.equal(runtime.stepfunModel, 'step-audio-2-mini');
     assert.equal(runtime.closeoutProvider, 'volcengine-agent-plan');
     assert.equal(runtime.closeoutModel, 'closeout-text-test');
     assert.equal(runtime.closeoutApiFormat, 'responses');
@@ -104,7 +103,7 @@ test('one shared text runtime profile routes all text tasks without changing bus
     assert.equal(taskConfig[taskName].parameters.apiFormat, 'chat-completions');
     assert.equal(taskConfig[taskName].parameters.timeoutMs, 45_678);
   }
-  assert.equal(taskConfig['interview.story'].provider, 'doubao',
+  assert.equal(taskConfig['interview.story'].provider, 'stepfun',
     'text runtime routing must not implicitly change realtime voice');
 });
 
@@ -125,7 +124,7 @@ test('runtime config accepts a loopback local text runtime without requiring a m
     assert.equal(runtime.storyCompletionProvider, 'openai-compatible');
     assert.equal(runtime.storyGenerationProvider, 'openai-compatible');
     assert.equal(runtime.closeoutApiKey, undefined);
-    assert.equal(runtime.defaultRealtimeProvider, 'doubao',
+    assert.equal(runtime.defaultRealtimeProvider, 'stepfun',
       'text runtime changes must not switch the realtime voice provider');
   });
 });
@@ -158,53 +157,15 @@ test('runtime auth mode defaults to SMS and rejects unknown modes', () => {
   });
 });
 
-test('DOUBAO_VOICE is allowlisted and reaches the generated Seeduplex session without a provider call', () => {
-  const candidateVoice = 'zh_female_meilinvyou_uranus_bigtts';
+test('Step-Audio 2 Mini is the default realtime provider and legacy Doubao config is rejected', () => {
+  const taskConfig = resolveAiTaskConfig({} as NodeJS.ProcessEnv);
+  assert.equal(taskConfig['interview.story'].provider, 'stepfun');
+  assert.equal(taskConfig['interview.story'].model, 'step-audio-2-mini');
   withEnvironment({
     NODE_ENV: 'test',
     STORY_INTERVIEW_PROVIDER: 'doubao',
-    STORY_INTERVIEW_MODEL: DEFAULT_DOUBAO_MODEL,
-    DOUBAO_VOICE: candidateVoice,
   }, () => {
-    const runtime = readRuntimeConfig();
-    assert.equal(runtime.doubaoVoice, candidateVoice);
-
-    const adapter = createRealtimeInterviewProvider('doubao', {
-      doubaoApiKey: 'test-only-key',
-      region: runtime.region,
-      model: runtime.doubaoModel ?? DEFAULT_DOUBAO_MODEL,
-      doubaoVoice: runtime.doubaoVoice,
-    });
-    const request = adapter.setupSession({
-      user: { user_id: 'test-user', name: '测试用户' },
-      life_stage: { stage_id: 'test-stage', title: '工作阶段' },
-      story: null,
-      task_context: { mode: 'create' },
-    })[0]!;
-    const session = request.session as Record<string, unknown>;
-    const audio = session.audio as Record<string, unknown>;
-    const output = audio.output as Record<string, unknown>;
-    assert.equal(output.voice, candidateVoice);
-  });
-
-  withEnvironment({
-    NODE_ENV: 'test',
-    STORY_INTERVIEW_PROVIDER: 'doubao',
-    STORY_INTERVIEW_MODEL: DEFAULT_DOUBAO_MODEL,
-    DOUBAO_VOICE: undefined,
-  }, () => {
-    const runtime = readRuntimeConfig();
-    assert.equal(runtime.doubaoVoice, undefined);
-    assert.equal(DEFAULT_DOUBAO_VOICE, 'zh_female_vv_jupiter_bigtts');
-  });
-
-  withEnvironment({
-    NODE_ENV: 'test',
-    STORY_INTERVIEW_PROVIDER: 'doubao',
-    STORY_INTERVIEW_MODEL: DEFAULT_DOUBAO_MODEL,
-    DOUBAO_VOICE: 'not-an-allowed-voice',
-  }, () => {
-    assert.throws(() => readRuntimeConfig(), /DOUBAO_VOICE must be one of/);
+    assert.throws(() => readRuntimeConfig(), /STORY_INTERVIEW_PROVIDER must be qwen or stepfun/);
   });
 });
 

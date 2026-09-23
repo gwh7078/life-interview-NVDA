@@ -40,17 +40,17 @@ test('Existing Story Context opens provider-tagged Sessions and persists final T
   assert.match(session.sessionId, /^[0-9a-f-]{36}$/i);
   assert.equal(session.provider, 'qwen');
 
-  const doubaoSession = core.start(seedIds.user, context, 'doubao');
-  assert.equal(doubaoSession.provider, 'doubao');
+  const stepfunSession = core.start(seedIds.user, context, 'stepfun');
+  assert.equal(stepfunSession.provider, 'stepfun');
   const transcripts = new TranscriptRepository(databasePath);
-  const doubaoMessage = transcripts.appendForSession(seedIds.user, doubaoSession.sessionId, {
+  const stepfunMessage = transcripts.appendForSession(seedIds.user, stepfunSession.sessionId, {
     role: 'user',
-    text: '豆包实时识别出的最终字幕。',
-    provider: 'doubao',
-    providerMessageId: 'doubao-question-1',
+    text: 'Step 实时识别出的最终字幕。',
+    provider: 'stepfun',
+    providerMessageId: 'stepfun-question-1',
   });
-  assert.equal(doubaoMessage.provider, 'doubao');
-  assert.equal(endRealtimeInterviewSession(databasePath, seedIds.user, doubaoSession.sessionId), 1);
+  assert.equal(stepfunMessage.provider, 'stepfun');
+  assert.equal(endRealtimeInterviewSession(databasePath, seedIds.user, stepfunSession.sessionId), 1);
 
   const userMessage = transcripts.appendForSession(seedIds.user, session.sessionId, {
     role: 'user',

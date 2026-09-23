@@ -45,11 +45,6 @@ import {
   DEFAULT_QWEN_MODEL,
   type QwenRealtimeRegion,
 } from './realtime/qwen.js';
-import {
-  DEFAULT_DOUBAO_MODEL,
-  DOUBAO_CONFIGURABLE_VOICE_IDS,
-  DOUBAO_MODEL_NAME,
-} from './realtime/doubao.js';
 import { DEFAULT_STEPFUN_MODEL, STEPFUN_CONTEXT_TOOL } from './realtime/stepfun.js';
 import {
   RealtimeSlowCoordinator,
@@ -118,11 +113,8 @@ export interface RuntimeConfig {
   region: QwenRealtimeRegion;
   model: string;
   defaultRealtimeProvider?: RealtimeProviderId;
-  doubaoModel?: string;
-  doubaoVoice?: string;
   qwenModel?: string;
   stepfunModel?: string;
-  doubaoApiKey?: string;
   stepfunApiKey?: string;
   closeoutApiKey?: string;
   closeoutBaseUrl?: string;
@@ -248,11 +240,6 @@ export function readRuntimeConfig(): RuntimeConfig {
     throw new Error('PORT must be an integer between 0 and 65535.');
   }
 
-  const doubaoVoice = process.env.DOUBAO_VOICE?.trim() || undefined;
-  if (doubaoVoice && !DOUBAO_CONFIGURABLE_VOICE_IDS.some((voice) => voice === doubaoVoice)) {
-    throw new Error(`DOUBAO_VOICE must be one of: ${DOUBAO_CONFIGURABLE_VOICE_IDS.join(', ')}.`);
-  }
-
   const rawRegion = String(interviewTask.parameters.region ?? 'cn-beijing');
   if (rawRegion !== 'cn-beijing' && rawRegion !== 'ap-southeast-1') {
     throw new Error('DASHSCOPE_REGION must be cn-beijing or ap-southeast-1.');
@@ -325,18 +312,13 @@ export function readRuntimeConfig(): RuntimeConfig {
     model: interviewTask.provider === 'qwen' || interviewTask.provider === 'stepfun'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
-    defaultRealtimeProvider: interviewTask.provider === 'qwen'
-      ? 'qwen'
-      : interviewTask.provider === 'stepfun' ? 'stepfun' : 'doubao',
-    doubaoModel: interviewTask.provider === 'doubao' ? interviewTask.model : DEFAULT_DOUBAO_MODEL,
-    doubaoVoice,
+    defaultRealtimeProvider: interviewTask.provider === 'qwen' ? 'qwen' : 'stepfun',
     qwenModel: interviewTask.provider === 'qwen'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
     stepfunModel: interviewTask.provider === 'stepfun'
       ? interviewTask.model
       : process.env.STEPFUN_REALTIME_MODEL?.trim() || DEFAULT_STEPFUN_MODEL,
-    doubaoApiKey: process.env.VOLCENGINE_API_KEY?.trim() || undefined,
     stepfunApiKey: process.env.STEPFUN_API_KEY?.trim() || undefined,
     closeoutApiKey: process.env.TEXT_MODEL_API_KEY?.trim()
       || process.env.BAILIAN_API_KEY?.trim()
@@ -1183,7 +1165,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
         try { databaseConnection.sqlite.prepare('SELECT 1').get(); } finally { databaseConnection.close(); }
         sendJson(response, 200, {
           ok: true,
-          defaultProvider: config.defaultRealtimeProvider ?? 'doubao',
+          defaultProvider: config.defaultRealtimeProvider ?? 'stepfun',
           providers: realtimeProviderHealthSummary(config),
           closeout: {
             configured: Boolean(config.closeoutApiKey),
@@ -1202,7 +1184,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
       } catch (error) {
         sendJson(response, 503, {
           ok: false,
-          defaultProvider: config.defaultRealtimeProvider ?? 'doubao',
+          defaultProvider: config.defaultRealtimeProvider ?? 'stepfun',
           providers: realtimeProviderHealthSummary(config, false),
           closeout: {
             configured: Boolean(config.closeoutApiKey),
@@ -2209,7 +2191,7 @@ function createRealtimeHandler(
           const persistedMessage = transcriptRepository.appendForSession(authContext.userId, interviewSession.sessionId, {
             role: message.role,
             text: message.text,
-            provider: selectedProvider ?? 'doubao',
+            provider: selectedProvider ?? 'stepfun',
             providerMessageId: message.providerMessageId,
           });
           savedTranscriptCount += 1;
@@ -3078,11 +3060,11 @@ function createRealtimeHandler(
       return;
     }
     const requestedId = requestedProvider === undefined
-      ? config.defaultRealtimeProvider ?? 'doubao'
+      ? config.defaultRealtimeProvider ?? 'stepfun'
       : requestedProvider;
     if (!isRealtimeProviderId(requestedId)) {
       phase = 'failed';
-      send({ type: 'error', message: '不支持的语音 Provider；请选择豆包、Qwen 或 StepFun。' });
+      send({ type: 'error', message: '不支持的语音 Provider；请选择 Qwen 或 StepFun。' });
       return;
     }
     const providerName: RealtimeInterviewProvider = requestedId;
@@ -3501,15 +3483,13 @@ function startServer(): void {
     const address = server.address();
     const port = typeof address === 'object' && address ? address.port : config.port;
     console.log(`人生采访局本机语音服务已启动：http://${config.host}:${port}/interview`);
-    console.log(`豆包 ${DOUBAO_MODEL_NAME} API Key：${config.doubaoApiKey ? '已配置' : '未配置'}`);
     console.log(`Qwen Realtime 凭据：${config.apiKey && config.workspaceId ? '已配置' : '未配置'}`);
     console.log(`StepFun ${config.stepfunModel ?? DEFAULT_STEPFUN_MODEL} API Key：${config.stepfunApiKey ? '已配置' : '未配置'}`);
     writeDiagnosticLog('server', 'info', 'Interview service started.', {
       host: config.host,
       port,
       databasePath: resolveDatabasePath(config.databasePath),
-      realtimeProvider: config.defaultRealtimeProvider ?? 'doubao',
-      doubaoConfigured: Boolean(config.doubaoApiKey),
+      realtimeProvider: config.defaultRealtimeProvider ?? 'stepfun',
       qwenConfigured: Boolean(config.apiKey && config.workspaceId),
       stepfunConfigured: Boolean(config.stepfunApiKey),
       stepfunModel: config.stepfunModel ?? DEFAULT_STEPFUN_MODEL,

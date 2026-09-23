@@ -118,7 +118,7 @@ test('onboarding pages use dedicated assets and expose only Done as the result-p
   assert.match(client, /requestedMode === 'create' \|\| requestedStageId/);
   assert.match(client, /requestedMode === 'continue' \|\| requestedStoryId/);
   assert.match(client, /elements\.startButton\.addEventListener\('click', \(\) => void startInterview\(\)\)/);
-  assert.match(client, /createOnboardingStartMessage\(elements\.providerSelect\.value\)/);
+  assert.match(client, /createOnboardingStartMessage\(state\.realtimeProvider\)/);
   assert.doesNotMatch(client, /interview_type:\s*['"]story/);
   assert.match(pages['onboarding-processing.html'], /onboarding-processing\.js/);
   assert.match(pages['onboarding-result.html'], /onboarding-result\.js/);

@@ -19,7 +19,7 @@ after(() => {
   for (const directory of temporaryDirectories) rmSync(directory, { recursive: true, force: true });
 });
 
-test('Local interview service exposes both provider states without exposing secrets', async () => {
+test('Local interview service exposes current realtime provider states without exposing secrets', async () => {
   const directory = mkdtempSync(path.join(testTempRoot, 'rensheng-server-test-'));
   temporaryDirectories.push(directory);
   const databasePath = path.join(directory, 'memoir.db');
@@ -40,7 +40,7 @@ test('Local interview service exposes both provider states without exposing secr
     workspaceId: 'workspace-test',
     region: 'cn-beijing',
     model: 'qwen-audio-3.0-realtime-plus',
-    doubaoApiKey: 'doubao-secret-test-value',
+    stepfunApiKey: 'stepfun-secret-test-value',
     wrapUpMs: 1_080_000,
     maxSessionMs: 1_200_000,
     closeGraceMs: 45_000,
@@ -72,7 +72,7 @@ test('Local interview service exposes both provider states without exposing secr
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const health = await healthResponse.json() as Record<string, unknown>;
     assert.equal(healthResponse.status, 200);
-    assert.equal(health.defaultProvider, 'doubao');
+    assert.equal(health.defaultProvider, 'stepfun');
     assert.equal(health.databaseAvailable, true);
     assert.deepEqual(health.interviewLimits, {
       wrapUpMs: 1_080_000,
@@ -82,12 +82,13 @@ test('Local interview service exposes both provider states without exposing secr
       userTurnStallTimeoutMs: 4_000,
     });
     const providers = health.providers as Record<string, Record<string, unknown>>;
-    assert.equal(providers.doubao?.configured, true);
-    assert.equal(providers.doubao?.model, 'Seeduplex 1.0 (1.2.6.1)');
+    assert.equal(providers.doubao, undefined);
+    assert.equal(providers.stepfun?.configured, true);
+    assert.equal(providers.stepfun?.model, 'step-audio-2-mini');
     assert.equal(providers.qwen?.configured, true);
     const healthText = JSON.stringify(health);
     assert.equal(healthText.includes('qwen-secret-test-value'), false);
-    assert.equal(healthText.includes('doubao-secret-test-value'), false);
+    assert.equal(healthText.includes('stepfun-secret-test-value'), false);
 
     const unauthorizedStories = await fetch(`${baseUrl}/api/stories`);
     assert.equal(unauthorizedStories.status, 401);
@@ -221,10 +222,10 @@ test('Local interview service exposes both provider states without exposing secr
     const page = await fetch(`${baseUrl}/interview`);
     const pageText = await page.text();
     assert.equal(page.status, 200);
-    assert.match(pageText, /id="provider-select"/);
+    assert.doesNotMatch(pageText, /provider-select/);
     assert.match(pageText, /id="auth-card"/);
     assert.match(pageText, /value="create"/);
-    assert.match(pageText, /豆包火山引擎 · Seeduplex 1\.0 全双工/);
+    assert.match(pageText, /Step-Audio 2 Mini Realtime/);
     assert.doesNotMatch(pageText, /Qwen Realtime/);
 
     const onboardingPage = await fetch(`${baseUrl}/onboarding`);

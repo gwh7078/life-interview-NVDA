@@ -1,6 +1,32 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { automaticEndReason, shouldIgnoreAssistantResponseMessage } from './interview-state.js';
+import {
+  automaticEndReason,
+  realtimeCallStatus,
+  resolveRealtimeProvider,
+  shouldIgnoreAssistantResponseMessage,
+} from './interview-state.js';
+
+test('configured Realtime provider defaults to Step-Audio and preserves explicit Qwen routing', () => {
+  assert.equal(resolveRealtimeProvider('stepfun'), 'stepfun');
+  assert.equal(resolveRealtimeProvider('qwen'), 'qwen');
+  assert.equal(resolveRealtimeProvider('unknown'), 'stepfun');
+});
+
+test('Step realtime events map to the visible call states', () => {
+  const cases = [
+    ['speech_started', 'user-speaking', '正在听你说'],
+    ['speech_stopped', 'thinking', '正在理解'],
+    ['user_final', 'thinking', '正在准备回应'],
+    ['assistant_started', 'responding', '采访官正在说'],
+    ['response_done', 'active', '正在听'],
+  ];
+  for (const [event, status, label] of cases) {
+    assert.deepEqual(realtimeCallStatus(event, 'active'), { status, label });
+  }
+  assert.equal(realtimeCallStatus('tool_call_started', 'thinking'), null);
+  assert.equal(realtimeCallStatus('assistant_started', 'ending'), null);
+});
 
 test('assistant output cannot restart a manually ending interview', () => {
   for (const messageType of [

@@ -11,25 +11,34 @@ test('user-facing pages keep provider, model, token, session, and debug metadata
   const interview = read('index.html');
   const result = read('result.html');
   assert.doesNotMatch(interview, /LOCAL TEST|本机测试|本地数据库|继续使用本机旧档案/);
-  assert.match(interview, /id="provider-select"[^>]*class="[^"]*debug-only|class="[^"]*debug-only[^"]*"[^>]*id="provider-select"/);
+  assert.doesNotMatch(interview, /provider-select|<option value="doubao"/);
+  assert.match(interview, /Step-Audio 2 Mini Realtime/);
   assert.match(interview, /id="call-controls"[^>]*hidden/);
   assert.match(result, /id="session-id"[^>]*class="[^"]*debug-only|class="[^"]*debug-only[^"]*"[^>]*id="session-id"/);
   assert.match(result, /id="model-metadata-block"[^>]*class="[^"]*debug-only|class="[^"]*debug-only[^"]*"[^>]*id="model-metadata-block"/);
   assert.doesNotMatch(`${interview}\n${result}`, /(?:api[_ -]?key|access[_ -]?token)\s*[:=]/i);
 });
 
-test('current profile and realtime provider UI match the V1.5.2 product surface', () => {
+test('realtime UI defaults to Step-Audio and follows an explicitly configured server provider', () => {
   const interview = read('index.html');
   const interviewScript = read('client.js');
   const life = read('life.html');
   const lifeScript = read('life.js');
-  assert.doesNotMatch(interview, /<option value="qwen"/);
-  assert.match(interview, /<option value="doubao" selected>/);
-  assert.match(interview, /<option value="stepfun">/);
+  assert.doesNotMatch(interview, /<option value="(?:qwen|doubao|stepfun)"/);
+  assert.match(interview, /id="provider-label">Step-Audio 2 Mini Realtime/);
+  assert.match(interviewScript, /resolveRealtimeProvider\(health\.defaultProvider\)/);
+  assert.match(interviewScript, /provider: state\.realtimeProvider/);
+  assert.match(interviewScript, /targetSampleRate = state\.realtimeProvider === 'qwen' \? 16000 : 24000/);
   assert.match(interviewScript, /noiseSuppression:\s*true/);
   assert.match(interviewScript, /autoGainControl:\s*false/);
   assert.match(life, /id="profile-popover-phone"/);
   assert.match(lifeScript, /手机号：/);
+});
+
+test('call speech state is announced through one dedicated live region', () => {
+  const interview = read('index.html');
+  assert.match(interview, /id="call-stage"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+  assert.match(interview, /id="call-status"[^>]*data-state="idle"(?![^>]*(?:role="status"|aria-live))/);
 });
 
 test('Story precall puts the latest gap under the primary prompt and keeps later gaps secondary', () => {

@@ -101,12 +101,12 @@ test('same share_id keeps contributor memory across sessions while owner evidenc
   assert.equal(instructions.includes(seedIds.user), false);
   assert.equal(instructions.includes(created.link.shareId), false);
 
-  const session = core.start(seedIds.user, firstContext, 'doubao');
+  const session = core.start(seedIds.user, firstContext, 'stepfun');
   const transcripts = new TranscriptRepository(databasePath);
   transcripts.appendForSession(seedIds.user, session.sessionId, {
     role: 'user',
     text: '我记得那时候他每天很晚回家，家里其实很担心。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'external-user-1',
   });
   endRealtimeInterviewSession(databasePath, seedIds.user, session.sessionId);
@@ -140,11 +140,11 @@ test('same share_id keeps contributor memory across sessions while owner evidenc
   if (secondContext.interview_type !== 'external_contributor') throw new Error('wrong context');
   assert.match(secondContext.contributor_summary, /很晚回家/);
 
-  const secondSession = core.start(seedIds.user, secondContext, 'doubao');
+  const secondSession = core.start(seedIds.user, secondContext, 'stepfun');
   transcripts.appendForSession(seedIds.user, secondSession.sessionId, {
     role: 'user',
     text: '后来项目上线那天，他回来得很早，我们全家一起吃了饭。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'external-user-2',
   });
   endRealtimeInterviewSession(databasePath, seedIds.user, secondSession.sessionId);
@@ -261,11 +261,11 @@ test('different share ids keep contributor memory and relationship isolated', as
     interview_type: 'external_contributor',
     shareId: daughter.link.shareId,
   });
-  const daughterSession = core.start(seedIds.user, daughterContext, 'doubao');
+  const daughterSession = core.start(seedIds.user, daughterContext, 'stepfun');
   new TranscriptRepository(databasePath).appendForSession(seedIds.user, daughterSession.sessionId, {
     role: 'user',
     text: '我记得他那段时间常常很晚回家。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'daughter-isolation',
   });
   endRealtimeInterviewSession(databasePath, seedIds.user, daughterSession.sessionId);
@@ -316,11 +316,11 @@ test('contributor closeout retries transient failures and rejects summaries over
     interview_type: 'external_contributor',
     shareId: created.link.shareId,
   });
-  const session = core.start(seedIds.user, context, 'doubao');
+  const session = core.start(seedIds.user, context, 'stepfun');
   transcripts.appendForSession(seedIds.user, session.sessionId, {
     role: 'user',
     text: '这是一次需要自动重试的补充。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'retry-success',
   });
   endRealtimeInterviewSession(databasePath, seedIds.user, session.sessionId);
@@ -350,11 +350,11 @@ test('contributor closeout retries transient failures and rejects summaries over
     interview_type: 'external_contributor',
     shareId: created.link.shareId,
   });
-  const secondSession = core.start(seedIds.user, secondContext, 'doubao');
+  const secondSession = core.start(seedIds.user, secondContext, 'stepfun');
   transcripts.appendForSession(seedIds.user, secondSession.sessionId, {
     role: 'user',
     text: '这次模型始终返回过长摘要。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'retry-too-long',
   });
   endRealtimeInterviewSession(databasePath, seedIds.user, secondSession.sessionId);
@@ -395,11 +395,11 @@ test('concurrent closeouts merge against the latest contributor summary instead 
       interview_type: 'external_contributor' as const,
       shareId: created.link.shareId,
     });
-    const session = core.start(seedIds.user, context, 'doubao');
+    const session = core.start(seedIds.user, context, 'stepfun');
     transcripts.appendForSession(seedIds.user, session.sessionId, {
       role: 'user',
       text: `补充内容${label}`,
-      provider: 'doubao',
+      provider: 'stepfun',
       providerMessageId: `concurrent-${label}`,
     });
     endRealtimeInterviewSession(databasePath, seedIds.user, session.sessionId);
@@ -466,11 +466,11 @@ test('external contributor sessions are rejected by the normal Story Closeout pi
     interview_type: 'external_contributor',
     shareId: created.link.shareId,
   });
-  const session = core.start(seedIds.user, context, 'doubao');
+  const session = core.start(seedIds.user, context, 'stepfun');
   new TranscriptRepository(databasePath).appendForSession(seedIds.user, session.sessionId, {
     role: 'user',
     text: '这条外部证词绝不能进入主人公 Story Closeout。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'external-closeout-guard',
   });
   endRealtimeInterviewSession(databasePath, seedIds.user, session.sessionId);
@@ -498,7 +498,7 @@ test('empty contributor interview completes without calling the model or advanci
     interview_type: 'external_contributor',
     shareId: created.link.shareId,
   });
-  const session = core.start(seedIds.user, context, 'doubao');
+  const session = core.start(seedIds.user, context, 'stepfun');
   endRealtimeInterviewSession(databasePath, seedIds.user, session.sessionId);
 
   let modelCalls = 0;
@@ -546,12 +546,12 @@ test('deleting a Story invalidates its share link but preserves historical contr
     interview_type: 'external_contributor',
     shareId: created.link.shareId,
   });
-  const session = core.start(seedIds.user, context, 'doubao');
+  const session = core.start(seedIds.user, context, 'stepfun');
   const transcripts = new TranscriptRepository(databasePath);
   transcripts.appendForSession(seedIds.user, session.sessionId, {
     role: 'user',
     text: '这是删除 Story 之后仍然必须保留的历史口述。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'external-delete-history',
   });
   endRealtimeInterviewSession(databasePath, seedIds.user, session.sessionId);

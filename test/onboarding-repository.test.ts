@@ -76,7 +76,7 @@ test('Onboarding session creation is owner-scoped and flips not_started to in_pr
   }
 
   assert.throws(
-    () => repository.createInterviewSessionForUser(userId, 'doubao'),
+    () => repository.createInterviewSessionForUser(userId, 'stepfun'),
     (error: unknown) => error instanceof OnboardingRepositoryError && error.code === 'ONBOARDING_SESSION_ALREADY_ACTIVE',
   );
   const stateConnection = createDatabase(databasePath);
@@ -89,7 +89,7 @@ test('Onboarding session creation is owner-scoped and flips not_started to in_pr
     stateConnection.close();
   }
   assert.throws(
-    () => repository.createInterviewSessionForUser(userId, 'doubao'),
+    () => repository.createInterviewSessionForUser(userId, 'stepfun'),
     (error: unknown) => error instanceof OnboardingRepositoryError && error.code === 'ONBOARDING_CLOSEOUT_IN_PROGRESS',
   );
   assert.deepEqual(repository.getInterviewContextData('missing-user'), {
@@ -102,10 +102,10 @@ test('Onboarding session creation is owner-scoped and flips not_started to in_pr
 test('interview context contains all owner-owned Onboarding transcripts and excludes other session types', () => {
   const { databasePath, userId } = makeDatabase('context-user');
   const repository = new OnboardingRepository(databasePath);
-  const first = repository.createInterviewSessionForUser(userId, 'doubao');
+  const first = repository.createInterviewSessionForUser(userId, 'stepfun');
   const transcripts = new TranscriptRepository(databasePath);
   const firstMessage = transcripts.appendForSession(userId, first.sessionId, {
-    role: 'user', text: '我小时候在南京长大。', provider: 'doubao',
+    role: 'user', text: '我小时候在南京长大。', provider: 'stepfun',
   });
   const connection = createDatabase(databasePath);
   try {

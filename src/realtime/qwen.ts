@@ -16,7 +16,7 @@ export const DEFAULT_QWEN_MODEL = 'qwen-audio-3.0-realtime-plus';
 export const DEFAULT_QWEN_VOICE = 'longanqian';
 export const QWEN_ONBOARDING_COMPLETION_TOOL = 'complete_onboarding';
 
-const QWEN_ONBOARDING_COMPLETION_INSTRUCTIONS = `\n\n## Qwen 建档完成协议\n\n达到首次建档完成条件时，立即静默调用 complete_onboarding 工具；调用时不得伴随任何用户可见文字或语音，也不要输出 Doubao 专用内部完成标记。调用后保持静默并等待服务器 ACK。只有收到服务器 ACK 后，才逐字说出唯一固定收尾语“${ONBOARDING_COMPLETION_UTTERANCE}”，然后结束回复；收到 ACK 前严禁说出或播放收尾语。`;
+const QWEN_ONBOARDING_COMPLETION_INSTRUCTIONS = `\n\n## Qwen 建档完成协议\n\n达到首次建档完成条件时，立即静默调用 complete_onboarding 工具；调用时不得伴随任何用户可见文字或语音，也不要输出内部完成标记。调用后保持静默并等待服务器 ACK。只有收到服务器 ACK 后，才逐字说出唯一固定收尾语“${ONBOARDING_COMPLETION_UTTERANCE}”，然后结束回复；收到 ACK 前严禁说出或播放收尾语。`;
 
 export function buildQwenRealtimeUrl(options: QwenRealtimeOptions): string {
   const workspaceId = options.workspaceId.trim();

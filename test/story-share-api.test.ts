@@ -71,7 +71,6 @@ test('Story Share HTTP and websocket boundaries support public access without ex
     model: 'test-qwen-model',
     apiKey: 'test-qwen-key',
     workspaceId: 'test-workspace',
-    doubaoApiKey: 'test-doubao-key',
     wrapUpMs: 60_000,
     maxSessionMs: 120_000,
     closeGraceMs: 5_000,
@@ -202,11 +201,11 @@ test('Story Share HTTP and websocket boundaries support public access without ex
       interview_type: 'external_contributor',
       shareId: created.share_id,
     });
-    const retrySession = core.start(seedIds.user, retryContext, 'doubao');
+    const retrySession = core.start(seedIds.user, retryContext, 'stepfun');
     new TranscriptRepository(databasePath).appendForSession(seedIds.user, retrySession.sessionId, {
       role: 'user',
       text: '这条内容第一次整理失败，但不应该要求受访者重新讲。',
-      provider: 'doubao',
+      provider: 'stepfun',
       providerMessageId: 'public-retry-user',
     });
     endRealtimeInterviewSession(databasePath, seedIds.user, retrySession.sessionId);

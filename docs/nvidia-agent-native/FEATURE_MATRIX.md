@@ -15,7 +15,7 @@
 | story generation | versioned memoir document | KEEP |
 | book preview/export | existing product path | KEEP |
 | auth | owner-scoped demo phone baseline | KEEP |
-| realtime | Doubao/Qwen abstraction + recovery | KEEP |
+| realtime | Step-Audio default with optional server-side Qwen adapter | KEEP |
 | health | server health endpoint | KEEP |
 | Agent runtime | not in legacy product | ADD in Phase 1 |
 | Agent Tool API | not in legacy product | ADD read-only in Phase 1 |

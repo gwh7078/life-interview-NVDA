@@ -60,17 +60,17 @@ function prepareScenario(
   }
   const core = createStoryInterviewCore(databasePath);
   const context = core.prepare(seedIds.user, { mode: 'continue', storyId });
-  const session = core.start(seedIds.user, context, 'doubao');
+  const session = core.start(seedIds.user, context, 'stepfun');
   let userMessageId = '';
   let assistantMessageId = '';
   if (withTranscript) {
     const transcripts = new TranscriptRepository(databasePath);
     const user = transcripts.appendForSession(seedIds.user, session.sessionId, {
-      role: 'user', text: userText, provider: 'doubao', providerMessageId: 'workflow-user-1',
+      role: 'user', text: userText, provider: 'stepfun', providerMessageId: 'workflow-user-1',
     });
     const assistant = transcripts.appendForSession(seedIds.user, session.sessionId, {
       role: 'assistant', text: '当时是什么让你意识到需要先听听其他团队的意见？',
-      provider: 'doubao', providerMessageId: 'workflow-assistant-1',
+      provider: 'stepfun', providerMessageId: 'workflow-assistant-1',
     });
     userMessageId = user.message_id;
     assistantMessageId = assistant.message_id;
@@ -296,7 +296,7 @@ test('compact closeout updates the Story, directly creates independent Stories, 
       }
       const story = result.story as Record<string, unknown>;
       assert.match(String(story.summary), /信息没有对齐/);
-      assert.equal((result.session as Record<string, unknown>).provider, 'doubao');
+      assert.equal((result.session as Record<string, unknown>).provider, 'stepfun');
       const created = result.newStories as Array<Record<string, unknown>>;
       assert.equal(created.length, 1);
       assert.equal(created[0]?.title, newStory.title);
@@ -691,11 +691,11 @@ test('invalid source IDs and unsupported years trigger repairs before any persis
   const scenario = prepareScenario();
   const otherCore = createStoryInterviewCore(scenario.databasePath);
   const otherContext = otherCore.prepare(seedIds.user, { mode: 'continue', storyId: scenario.storyId });
-  const otherSession = otherCore.start(seedIds.user, otherContext, 'doubao');
+  const otherSession = otherCore.start(seedIds.user, otherContext, 'stepfun');
   const otherMessage = new TranscriptRepository(scenario.databasePath).appendForSession(scenario.userId, otherSession.sessionId, {
     role: 'user',
     text: '这是另一次访谈里的来源，不应被当前会话引用。',
-    provider: 'doubao',
+    provider: 'stepfun',
     providerMessageId: 'other-session-user-1',
   });
   const otherSessionMessageId = otherMessage.message_id;

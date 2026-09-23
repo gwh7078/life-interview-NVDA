@@ -90,11 +90,8 @@
         </div>
 
         <div id="story-interview-controls" class="debug-only interview-debug-controls">
-          <label class="field-label" for="provider-select">实时语音 Provider</label>
-          <select id="provider-select" class="text-field debug-only">
-            <option value="doubao" selected>豆包火山引擎 · Seeduplex 1.0 全双工</option>
-            <option value="stepfun">阶跃星辰 · Step-Audio 2 Mini Realtime</option>
-          </select>
+          <p class="field-label">实时语音 Provider</p>
+          <p class="provider-label" id="provider-label">Step-Audio 2 Mini Realtime</p>
           <label class="field-label" for="interview-mode">采访目标</label>
           <select id="interview-mode" class="text-field">
             <option value="continue">继续已有 Story</option>
@@ -145,7 +142,7 @@
             <p id="call-story-title" class="call-story-title"></p>
             <p id="call-context-copy" class="call-context-copy"></p>
           </div>
-          <span class="status-pill status-pill-call" id="call-status" data-state="idle" role="status" aria-live="polite">准备开始</span>
+          <span class="status-pill status-pill-call" id="call-status" data-state="idle">准备开始</span>
         </div>
 
         <div class="call-stage" id="call-stage" aria-live="polite" aria-atomic="true">
@@ -192,7 +189,7 @@
       </section>
 
       <footer class="page-footer debug-only">
-        <span>本地页面 → 本机服务 → 所选实时语音 Provider</span>
+        <span>本地页面 → 本机服务 → 服务端配置的实时语音模型</span>
         <span id="connection-note">正在检查服务…</span>
       </footer>
     </main>

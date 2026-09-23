@@ -129,7 +129,6 @@ test('Onboarding context is discriminated and carries profile plus prior user/as
 async function startOnboardingHarness(
   databasePath: string,
   onboardingCloseout?: OnboardingCloseoutDependencies,
-  providerId: 'qwen' | 'doubao' = 'qwen',
 ) {
   const providerHttp = createServer();
   const providerServer = new WebSocketServer({ server: providerHttp });
@@ -153,9 +152,9 @@ async function startOnboardingHarness(
         providerWaiters.splice(index, 1);
         waiter.resolve(message);
       }
-      if (message.type === 'session.update' || message.type === 'session.create') {
+      if (message.type === 'session.update') {
         socket.send(JSON.stringify({
-          type: providerId === 'doubao' ? 'session.created' : 'session.updated',
+          type: 'session.updated',
           session: { id: 'mock-onboarding-provider-session' },
         }));
       }
@@ -174,7 +173,7 @@ async function startOnboardingHarness(
     databasePath,
     region: 'cn-beijing',
     model: 'mock-realtime-model',
-    ...(providerId === 'qwen' ? { apiKey: 'mock-realtime-key' } : { doubaoApiKey: 'mock-doubao-key' }),
+    apiKey: 'mock-realtime-key',
     workspaceId: 'mock-workspace',
     developmentAuthEnabled: true,
     wrapUpMs: 100_000,
@@ -443,77 +442,6 @@ test('manual Onboarding end saves the Transcript but skips Closeout and returns 
     for (const route of ['/onboarding', '/onboarding/processing', '/onboarding/result']) {
       assert.equal((await fetch(`${harness.baseUrl}${route}`)).status, 200);
     }
-  } finally {
-    await harness.close();
-  }
-});
-
-test('Doubao streaming sentinels stay hidden when split across transcript deltas', async () => {
-  const { databasePath } = createFixture('doubao-sentinel');
-  const harness = await startOnboardingHarness(databasePath, undefined, 'doubao');
-  try {
-    harness.clientSocket.send(JSON.stringify({ type: 'start', interview_type: 'onboarding', provider: 'doubao' }));
-    const ready = await harness.clientMessages.waitFor((message) => message.type === 'ready');
-    assert.equal(ready.session_type, 'onboarding');
-    assert.ok(harness.providerSocket);
-    await harness.waitForProvider((message) => message.type === 'speech_text_buffer.commit');
-    harness.providerSocket!.send(JSON.stringify({
-      type: 'conversation.item.input_audio_transcription.completed',
-      item_id: 'doubao-user-turn',
-      text: '我叫周明。',
-    }));
-    await harness.clientMessages.waitFor((message) => message.type === 'transcript_saved' && message.role === 'user');
-
-    const responseId = 'doubao-onboarding-final';
-    harness.providerSocket!.send(JSON.stringify({ type: 'response.created', response: { id: responseId } }));
-    harness.providerSocket!.send(JSON.stringify({
-      type: 'response.output_text.delta',
-      response_id: responseId,
-      delta: '谢谢你愿意分享。\n[',
-    }));
-    const firstPartial = await harness.clientMessages.waitFor((message) => message.type === 'assistant_partial'
-      && message.responseId === responseId);
-    assert.equal(firstPartial.text, '谢谢你愿意分享。');
-    const previousMessageCount = harness.clientMessages.messages.length;
-    harness.providerSocket!.send(JSON.stringify({
-      type: 'response.output_text.delta',
-      response_id: responseId,
-      delta: '[ONBOARDING_COMPLETE]]',
-    }));
-    const finalPartial = await harness.clientMessages.waitFor((message) => message.type === 'assistant_partial'
-      && message.responseId === responseId && message.text === '谢谢你愿意分享。', 5_000, previousMessageCount);
-    assert.equal(finalPartial.text, '谢谢你愿意分享。');
-    assert.equal(JSON.stringify(harness.clientMessages.messages).includes('ONBOARDING_COMPLETE'), false);
-
-    const finalText = '谢谢你愿意分享。\n[[ONBOARDING_COMPLETE]]';
-    harness.providerSocket!.send(JSON.stringify({
-      type: 'response.output_text.done',
-      response_id: responseId,
-      text: finalText,
-    }));
-    harness.providerSocket!.send(JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } }));
-    const finalMessage = await harness.clientMessages.waitFor((message) => message.type === 'assistant_final'
-      && message.responseId === responseId);
-    assert.equal(finalMessage.text, '谢谢你愿意分享。');
-    const responseDone = await harness.clientMessages.waitFor((message) => message.type === 'response_done'
-      && message.responseId === responseId);
-    assert.equal(responseDone.endReason, 'model_complete');
-    await harness.clientMessages.waitFor((message) => message.type === 'transcript_saved' && message.role === 'assistant');
-
-    harness.clientSocket.send(JSON.stringify({ type: 'end', reason: 'model_complete' }));
-    const ended = await harness.clientMessages.waitFor((message) => message.type === 'ended');
-    assert.equal(ended.end_reason, 'model_complete');
-    assert.match(String(ended.resultUrl), /^\/onboarding\/processing\?session_id=/);
-    assert.equal(JSON.stringify(harness.clientMessages.messages).includes('ONBOARDING_COMPLETE'), false);
-    const verify = createDatabase(databasePath);
-    try {
-      const session = verify.db.select().from(interviewSessions)
-        .where(eq(interviewSessions.sessionId, String(ready.sessionId))).get();
-      assert.deepEqual(parseTranscript(session?.transcriptJson).map(({ role, text }) => ({ role, text })), [
-        { role: 'user', text: '我叫周明。' },
-        { role: 'assistant', text: '谢谢你愿意分享。' },
-      ]);
-    } finally { verify.close(); }
   } finally {
     await harness.close();
   }

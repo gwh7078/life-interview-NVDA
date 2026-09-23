@@ -17,7 +17,7 @@ Important state:
 - onboarding: `not_started | in_progress | completed`
 - life stage: `active | pending | merged`
 - story: `pending | interviewing | complete`
-- session provider: `doubao | qwen | openclaw`
+- session provider: `stepfun | qwen | openclaw`; legacy persisted Doubao values remain readable
 - session: `active | ended | processing | completed`
 - closeout: `pending | processing | completed | failed`
 - interview source: `subject | external_contributor`

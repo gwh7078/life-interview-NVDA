@@ -297,15 +297,15 @@ test('mock Story E2E creates a Story, links the Session, preserves Transcript, a
     assert.equal(interviewContext.life_stage.title, '进入职场');
     assert.deepEqual(interviewContext.task_context, { mode: 'create', target_title: '合成经历的转折' });
 
-    const doubao = createRealtimeInterviewProvider('doubao', {
-      doubaoApiKey: 'test-only-key',
+    const stepfun = createRealtimeInterviewProvider('stepfun', {
+      stepfunApiKey: 'test-only-key',
       region: 'cn-beijing',
-      model: 'test-doubao-model',
+      model: 'step-audio-2-mini',
     });
-    const doubaoSetup = doubao.setupSession(interviewContext)[0]!;
-    const doubaoSession = doubaoSetup.session as Record<string, unknown>;
-    assert.match(String(doubaoSession.instructions), /进入职场/);
-    assert.match(String(doubao.initialResponsePlan(interviewContext).fallbackText), /合成经历的转折/);
+    const stepfunSetup = stepfun.setupSession(interviewContext)[0]!;
+    const stepfunSession = stepfunSetup.session as Record<string, unknown>;
+    assert.match(String(stepfunSession.instructions), /进入职场/);
+    assert.match(String(stepfunSession.instructions), /合成经历的转折/);
 
     const userSaved = await waitForMessage(socket, (message) => message.type === 'transcript_saved' && message.role === 'user', messages);
     const assistantSaved = await waitForMessage(socket, (message) => message.type === 'transcript_saved' && message.role === 'assistant', messages);

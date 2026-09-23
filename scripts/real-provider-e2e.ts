@@ -32,7 +32,6 @@ import {
 
 const E2E_ROOT = resolveDiagnosticsPath('test-artifacts', 'real-provider');
 const FINAL_REPORT_PATH = resolveDiagnosticsPath('reports', 'REAL_PROVIDER_E2E_REPORT.md');
-const AUDIO_FRAME_BYTES = 640;
 const SILENCE_TAIL_MS = 1_500;
 const PROVIDER_TIMEOUT_MS = 90_000;
 const CLOSEOUT_TIMEOUT_MS = 240_000;
@@ -135,6 +134,7 @@ interface IsolationFixtureIds {
 
 interface AudioClip {
   pcm: Buffer;
+  sampleRate: number;
   speechBytes: number;
 }
 
@@ -148,7 +148,7 @@ function sleep(ms: number): Promise<void> {
 
 function cleanError(error: unknown): string {
   let value = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-  for (const secret of [process.env.VOLCENGINE_API_KEY, process.env.CLOSEOUT_API_KEY, process.env.DASHSCOPE_API_KEY]) {
+  for (const secret of [process.env.STEPFUN_API_KEY, process.env.CLOSEOUT_API_KEY, process.env.DASHSCOPE_API_KEY]) {
     if (secret?.trim()) value = value.split(secret.trim()).join('[redacted]');
   }
   return value
@@ -156,7 +156,7 @@ function cleanError(error: unknown): string {
     .replace(/Bearer\s+[^\s"']+/gi, 'Bearer [redacted]');
 }
 
-function getWavPcm(wav: Buffer): Buffer {
+function getWavPcm(wav: Buffer, expectedSampleRate: number): Buffer {
   assert.equal(wav.toString('ascii', 0, 4), 'RIFF', 'TTS conversion did not produce a RIFF WAV');
   assert.equal(wav.toString('ascii', 8, 12), 'WAVE', 'TTS conversion did not produce a WAVE file');
   let offset = 12;
@@ -177,7 +177,7 @@ function getWavPcm(wav: Buffer): Buffer {
     }
     if (id === 'data') {
       assert.equal(channels, 1, 'Expected mono TTS audio');
-      assert.equal(sampleRate, 16_000, 'Expected 16 kHz TTS audio');
+      assert.equal(sampleRate, expectedSampleRate, `Expected ${expectedSampleRate} Hz TTS audio`);
       assert.equal(bitsPerSample, 16, 'Expected 16-bit TTS audio');
       const pcm = wav.subarray(payload, payload + size);
       assert.ok(pcm.length > 0, 'TTS audio is empty');
@@ -188,13 +188,13 @@ function getWavPcm(wav: Buffer): Buffer {
   throw new Error('WAV audio data chunk was not found.');
 }
 
-function synthesizeClip(text: string, voice: string, fileStem: string, directory: string): AudioClip {
+function synthesizeClip(text: string, voice: string, fileStem: string, directory: string, sampleRate: number): AudioClip {
   const aiffPath = path.join(directory, `${fileStem}.aiff`);
-  const wavPath = path.join(directory, `${fileStem}-16k-mono.wav`);
+  const wavPath = path.join(directory, `${fileStem}-${sampleRate}-mono.wav`);
   execFileSync('say', ['-v', voice, '-o', aiffPath, text], { stdio: 'ignore' });
-  execFileSync('afconvert', ['-f', 'WAVE', '-d', 'LEI16@16000', '-c', '1', aiffPath, wavPath], { stdio: 'ignore' });
-  const pcm = getWavPcm(readFileSync(wavPath));
-  return { pcm, speechBytes: pcm.length };
+  execFileSync('afconvert', ['-f', 'WAVE', '-d', `LEI16@${sampleRate}`, '-c', '1', aiffPath, wavPath], { stdio: 'ignore' });
+  const pcm = getWavPcm(readFileSync(wavPath), sampleRate);
+  return { pcm, sampleRate, speechBytes: pcm.length };
 }
 
 function listenForMessages(socket: WebSocket): {
@@ -297,7 +297,7 @@ function createIsolationFixtures(databasePath: string, userOneId: string, userTw
     role: 'user',
     text: '仅属于第二个虚构参测档案的隔离测试记录。',
     timestamp,
-    provider: 'doubao',
+    provider: 'stepfun',
     provider_message_id: `fixture-provider-${randomUUID()}`,
   }];
   const connection = createDatabase(databasePath);
@@ -343,7 +343,7 @@ function createIsolationFixtures(databasePath: string, userOneId: string, userTw
       }).run();
       tx.insert(interviewSessions).values({
         sessionId: ids.otherSessionId,
-        provider: 'doubao',
+        provider: 'stepfun',
         userId: userTwoId,
         storyId: ids.otherStoryId,
         sessionType: 'story',
@@ -567,7 +567,7 @@ function createCloseoutEndpoint(baseUrl: string, apiFormat: string): string {
 async function testForeignInterviewTarget(
   baseUrl: string,
   cookie: string,
-  provider: 'doubao' | 'qwen',
+  provider: 'stepfun' | 'qwen',
   target: { story_id?: string; stage_id?: string },
   expectedText: string,
 ): Promise<void> {
@@ -592,7 +592,7 @@ async function testForeignInterviewTarget(
 async function runIsolationChecks(
   baseUrl: string,
   databasePath: string,
-  provider: 'doubao' | 'qwen',
+  provider: 'stepfun' | 'qwen',
   userOne: AuthenticatedDemoUser,
   userTwo: AuthenticatedDemoUser,
   ids: IsolationFixtureIds,
@@ -676,17 +676,18 @@ async function sendAudioTurn(
   },
   label: string,
 ): Promise<{ userTextCharacters: number; assistantTextCharacters: number; userMessageId: string; assistantResponseId: string }> {
-  const silenceTail = Buffer.alloc(16_000 * 2 * reportAudio.silenceTailMs / 1_000);
+  const frameBytes = clip.sampleRate / 50 * 2;
+  const silenceTail = Buffer.alloc(clip.sampleRate * 2 * reportAudio.silenceTailMs / 1_000);
   const audio = Buffer.concat([clip.pcm, silenceTail]);
-  for (let offset = 0; offset < audio.length; offset += AUDIO_FRAME_BYTES) {
-    const frame = audio.subarray(offset, Math.min(offset + AUDIO_FRAME_BYTES, audio.length));
+  for (let offset = 0; offset < audio.length; offset += frameBytes) {
+    const frame = audio.subarray(offset, Math.min(offset + frameBytes, audio.length));
     socket.send(frame, { binary: true });
     reportAudio.totalBytes += frame.length;
     reportAudio.frames += 1;
     await sleep(20);
   }
 
-  const silenceFrame = Buffer.alloc(AUDIO_FRAME_BYTES);
+  const silenceFrame = Buffer.alloc(frameBytes);
   const keepalive = setInterval(() => {
     if (socket.readyState !== WebSocket.OPEN) return;
     socket.send(silenceFrame, { binary: true });
@@ -754,7 +755,7 @@ async function runStoryCase(input: {
   baseUrl: string;
   databasePath: string;
   cookie: string;
-  provider: 'doubao' | 'qwen';
+  provider: 'stepfun' | 'qwen';
   target: { story_id?: string; stage_id?: string; story_title?: string };
   expectedStoryId?: string;
   expectedStageId: string;
@@ -811,14 +812,7 @@ async function runStoryCase(input: {
       && typeof message.responseId === 'string', `${input.name} AI opening response`);
     const openingText = String(opening.text ?? '').trim();
     assert.ok(openingText.length > 0, `${input.name} should receive the provider's AI opening response`);
-    if (input.provider === 'doubao') {
-      const storyTitle = input.target.story_title ?? input.expectedStoryTitle ?? input.reportCase.title ?? '';
-      const fallback = input.mode === 'create' ? '你好，今天我们聊聊' : '你好，今天我们继续聊聊';
-      const configuredPrompt = `${fallback}“${storyTitle}”。关于这段经历，你最先想起的是哪个具体场景？`;
-      input.reportCase.openingTranscriptSource = openingText === configuredPrompt
-        ? 'configured opening prompt fallback (live Provider audio verified)'
-        : 'Realtime Provider transcript';
-    }
+    input.reportCase.openingTranscriptSource = 'Realtime Provider transcript';
     const openingResponseId = String(opening.responseId);
     knownResponseIds.add(openingResponseId);
     await channel.waitFor((message) => message.type === 'transcript_saved'
@@ -1124,11 +1118,11 @@ async function main(): Promise<void> {
 
   try {
     runtime = readRuntimeConfig();
-    const realtimeProvider = runtime.defaultRealtimeProvider ?? 'doubao';
-    const realtimeConfigured = realtimeProvider === 'doubao'
-      ? Boolean(runtime.doubaoApiKey)
+    const realtimeProvider = runtime.defaultRealtimeProvider ?? 'stepfun';
+    const realtimeConfigured = realtimeProvider === 'stepfun'
+      ? Boolean(runtime.stepfunApiKey)
       : Boolean(runtime.apiKey && runtime.workspaceId);
-    const realtimeModel = realtimeProvider === 'doubao' ? runtime.doubaoModel : runtime.qwenModel;
+    const realtimeModel = realtimeProvider === 'stepfun' ? runtime.stepfunModel : runtime.qwenModel;
     const closeoutApiFormat = runtime.closeoutApiFormat ?? 'chat-completions';
     const closeoutEndpoint = createCloseoutEndpoint(runtime.closeoutBaseUrl ?? 'https://ark.cn-beijing.volces.com/api/plan/v3', closeoutApiFormat);
     report.providers = {
@@ -1150,8 +1144,9 @@ async function main(): Promise<void> {
     try { runMigrations(migrationDb); } finally { migrationDb.close(); }
 
     const voice = process.env.E2E_TTS_VOICE?.trim() || 'Tingting';
-    const createClips = createStoryAnswers.map((answer, index) => synthesizeClip(answer, voice, `case-a-answer-${index + 1}`, runDirectory));
-    const continueClips = continueStoryAnswers.map((answer, index) => synthesizeClip(answer, voice, `case-b-answer-${index + 1}`, runDirectory));
+    const sampleRate = realtimeProvider === 'stepfun' ? 24_000 : 16_000;
+    const createClips = createStoryAnswers.map((answer, index) => synthesizeClip(answer, voice, `case-a-answer-${index + 1}`, runDirectory, sampleRate));
+    const continueClips = continueStoryAnswers.map((answer, index) => synthesizeClip(answer, voice, `case-b-answer-${index + 1}`, runDirectory, sampleRate));
     report.providers = { ...report.providers, syntheticSpeechVoice: voice, syntheticUserAnswersPerCase: 5 };
 
     server = createInterviewServiceServer({

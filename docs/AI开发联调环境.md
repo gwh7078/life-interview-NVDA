@@ -326,7 +326,7 @@ NVIDIA_INFERENCE_API_KEY
 
 - `.env.example` 只能保留空值/变量名。
 - `.env` 不提交 Git；本机凭证通过 macOS 登录钥匙串同步到当前工作树，当前文件权限为 `0600`。
-- `scripts/codex-keychain.swift` 支持 `VOLCENGINE_API_KEY`、`STEPFUN_API_KEY` 与 `CLOSEOUT_API_KEY` 的安全导入和同步。
+- `scripts/codex-keychain.swift` 支持 `STEPFUN_API_KEY`、`BAILIAN_API_KEY` 与 `CLOSEOUT_API_KEY` 的安全导入和同步。
 - AI 不得通过 `printenv`、日志、异常堆栈主动输出完整 Key。
 - 重新部署时若缺凭证，应提示开发者在本机安全环境设置，而不是写死到代码。
 

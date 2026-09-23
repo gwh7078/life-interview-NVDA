@@ -4,10 +4,6 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createRealtimeInterviewProvider } from '../src/realtime/provider.js';
 import {
-  DEFAULT_DOUBAO_MODEL,
-  DOUBAO_END_SMOOTH_WINDOW_MS,
-} from '../src/realtime/doubao.js';
-import {
   buildStepfunSessionUpdate,
   DEFAULT_STEPFUN_MODEL,
   STEPFUN_CONTEXT_TOOL,
@@ -47,43 +43,6 @@ const externalContributorContext = {
     gaps: [],
   },
 };
-
-test('PROVIDER-CONTRACT-01 Doubao exposes generic capabilities, audio and lifecycle plans without changing wire parameters', () => {
-  const adapter = createRealtimeInterviewProvider('doubao', {
-    doubaoApiKey: 'test-only-key',
-    region: 'cn-beijing',
-    model: DEFAULT_DOUBAO_MODEL,
-  });
-
-  assert.equal(adapter.id, 'doubao');
-  assert.deepEqual(adapter.capabilities, {
-    fullDuplex: true,
-    supportsInterrupt: true,
-    supportsExplicitTurnRequest: true,
-    supportsPlaybackAck: false,
-    supportsExplicitSessionClose: true,
-  });
-  assert.deepEqual(adapter.audio, {
-    input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 },
-    output: { encoding: 'pcm_f32le', sampleRate: 24_000 },
-  });
-  assert.match(adapter.connectOptions().url, /^wss:\/\/openspeech\.bytedance\.com\//);
-  const setup = adapter.setupSession(storyContext);
-  assert.equal(setup.length, 1);
-  const session = setup[0]?.session as Record<string, unknown>;
-  const asr = ((session.extension as Record<string, unknown>).asr as Record<string, unknown>).extra as Record<string, unknown>;
-  assert.equal(asr.end_smooth_window_ms, DOUBAO_END_SMOOTH_WINDOW_MS);
-  assert.equal(DOUBAO_END_SMOOTH_WINDOW_MS, 1_500);
-  const opening = adapter.initialResponsePlan(storyContext);
-  assert.equal(opening.steps.length, 1);
-  assert.equal(opening.steps[0]?.message.type, 'speech_text_buffer.commit');
-  assert.match(String(opening.fallbackText), /项目为什么会启动/);
-  assert.equal(adapter.appendAudioMessages(Buffer.from([0, 1]))[0]?.type, 'input_audio_buffer.append');
-  assert.equal(adapter.recoverStalledUserTurn?.()[0]?.message.type, 'input_audio_buffer.commit');
-  assert.equal(adapter.beginInputShutdown()[0]?.message.type, 'input_audio_mute.commit');
-  assert.equal(adapter.closePlan()?.steps[0]?.message.type, 'session.close');
-  assert.equal(adapter.closePlan()?.waitFor, 'session.closed');
-});
 
 test('PROVIDER-CONTRACT-02 Qwen satisfies the same generic contract with its legacy wire protocol', () => {
   const adapter = createRealtimeInterviewProvider('qwen', {
@@ -169,11 +128,11 @@ test('Step-Audio does not expose owner history context to external contributors'
   assert.equal(String(session.instructions).includes(STEPFUN_CONTEXT_TOOL), false);
 });
 
-test('NORMALIZE contract maps Doubao and Qwen speech, transcript, audio and response events to the same event vocabulary', () => {
-  const doubao = createRealtimeInterviewProvider('doubao', {
-    doubaoApiKey: 'test-only-key',
+test('NORMALIZE contract maps Step-Audio and Qwen speech, transcript and audio events', () => {
+  const stepfun = createRealtimeInterviewProvider('stepfun', {
+    stepfunApiKey: 'test-only-key',
     region: 'cn-beijing',
-    model: DEFAULT_DOUBAO_MODEL,
+    model: DEFAULT_STEPFUN_MODEL,
   });
   const qwen = createRealtimeInterviewProvider('qwen', {
     apiKey: 'test-only-key',
@@ -182,8 +141,8 @@ test('NORMALIZE contract maps Doubao and Qwen speech, transcript, audio and resp
     model: 'qwen-audio-3.0-realtime-plus',
   });
 
-  assert.deepEqual(doubao.normalizeServerMessage(JSON.stringify({
-    type: 'conversation.item.input_audio_transcription.started',
+  assert.deepEqual(stepfun.normalizeServerMessage(JSON.stringify({
+    type: 'input_audio_buffer.speech_started',
     event_id: 'speech-1',
   })), [{ type: 'speech.started', eventId: 'speech-1' }]);
   assert.deepEqual(qwen.normalizeServerMessage(JSON.stringify({
@@ -191,10 +150,10 @@ test('NORMALIZE contract maps Doubao and Qwen speech, transcript, audio and resp
     event_id: 'speech-1',
   })), [{ type: 'speech.started', eventId: 'speech-1' }]);
 
-  assert.deepEqual(doubao.normalizeServerMessage(JSON.stringify({
+  assert.deepEqual(stepfun.normalizeServerMessage(JSON.stringify({
     type: 'conversation.item.input_audio_transcription.completed',
     item_id: 'user-1',
-    text: '最终用户原话',
+    transcript: '最终用户原话',
   })), [{ type: 'user.transcript.final', itemId: 'user-1', text: '最终用户原话' }]);
   assert.deepEqual(qwen.normalizeServerMessage(JSON.stringify({
     type: 'conversation.item.input_audio_transcription.completed',
@@ -202,15 +161,15 @@ test('NORMALIZE contract maps Doubao and Qwen speech, transcript, audio and resp
     transcript: '最终用户原话',
   })), [{ type: 'user.transcript.final', itemId: 'user-1', text: '最终用户原话' }]);
 
-  const doubaoAudio = doubao.normalizeServerMessage(JSON.stringify({
-    type: 'response.output_audio.delta',
+  const stepAudio = stepfun.normalizeServerMessage(JSON.stringify({
+    type: 'response.audio.delta',
     response_id: 'resp-1',
     delta: 'AAAA',
   }));
-  const doubaoAudioDelta = doubaoAudio.at(-1);
-  assert.equal(doubaoAudioDelta?.type, 'assistant.audio.delta');
-  if (doubaoAudioDelta?.type === 'assistant.audio.delta') {
-    assert.equal(doubaoAudioDelta.encoding, 'pcm_f32le');
+  const stepAudioDelta = stepAudio.at(-1);
+  assert.equal(stepAudioDelta?.type, 'assistant.audio.delta');
+  if (stepAudioDelta?.type === 'assistant.audio.delta') {
+    assert.equal(stepAudioDelta.encoding, 'pcm_s16le');
   }
   const qwenAudio = qwen.normalizeServerMessage(JSON.stringify({
     type: 'response.audio.delta',
@@ -224,28 +183,14 @@ test('NORMALIZE contract maps Doubao and Qwen speech, transcript, audio and resp
   }
 });
 
-test('NORMALIZE-06 hides Doubao onboarding sentinel and maps both completion protocols to onboarding.completion.requested', () => {
-  const doubao = createRealtimeInterviewProvider('doubao', {
-    doubaoApiKey: 'test-only-key',
-    region: 'cn-beijing',
-    model: DEFAULT_DOUBAO_MODEL,
-  });
+test('NORMALIZE maps the retained Qwen onboarding completion tool to the shared event', () => {
   const qwen = createRealtimeInterviewProvider('qwen', {
     apiKey: 'test-only-key',
     workspaceId: 'workspace-123',
     region: 'cn-beijing',
     model: 'qwen-audio-3.0-realtime-plus',
   });
-  doubao.setupSession(onboardingContext);
   qwen.setupSession(onboardingContext);
-
-  const doubaoEvents = doubao.normalizeServerMessage(JSON.stringify({
-    type: 'response.output_text.done',
-    response_id: 'resp-d',
-    text: '感谢你愿意分享。\n[[ONBOARDING_COMPLETE]]',
-  }));
-  assert.ok(doubaoEvents.some((event) => event.type === 'onboarding.completion.requested'));
-  assert.ok(doubaoEvents.every((event) => JSON.stringify(event).includes('ONBOARDING_COMPLETE') === false));
 
   const qwenEvents = qwen.normalizeServerMessage(JSON.stringify({
     type: 'response.function_call_arguments.done',
@@ -267,19 +212,11 @@ test('NORMALIZE-06 hides Doubao onboarding sentinel and maps both completion pro
 test('ARCH-REALTIME-01 server lifecycle contains no provider wire protocol or provider-name branching', () => {
   const source = readFileSync(path.resolve('src/server.ts'), 'utf8');
   for (const forbidden of [
-    'parseDoubaoServerEvent',
-    'normalizeDoubaoAssistantTranscriptEvent',
-    'readDoubaoTranscriptionText',
-    'doubaoResponseId',
-    'ensureDoubaoResponseStarted',
-    'handleDoubaoServerEvent',
-    'finishDoubaoProviderSession',
+    "from './realtime/doubao.js'",
+    "=== 'doubao'",
+    'VOLCENGINE_API_KEY',
     'QWEN_END_SILENCE_FRAMES',
-    'DOUBAO_PCM_FRAME_BYTES',
-    'DOUBAO_OUTPUT_ENCODING',
-    "selectedProvider === 'doubao'",
     "selectedProvider === 'qwen'",
-    "providerName === 'doubao'",
     "providerName === 'qwen'",
     'response.function_call_arguments.done',
     '[[ONBOARDING_COMPLETE]]',
@@ -290,12 +227,12 @@ test('ARCH-REALTIME-01 server lifecycle contains no provider wire protocol or pr
 
 test('PROVIDER-CONTRACT-03 connection failures are sanitized and owned by adapters', () => {
   const secret = 'top-secret-key';
-  const doubao = createRealtimeInterviewProvider('doubao', {
-    doubaoApiKey: secret,
+  const stepfun = createRealtimeInterviewProvider('stepfun', {
+    stepfunApiKey: secret,
     region: 'cn-beijing',
-    model: DEFAULT_DOUBAO_MODEL,
+    model: DEFAULT_STEPFUN_MODEL,
   });
-  const message = doubao.connectionFailureMessage({
+  const message = stepfun.connectionFailureMessage({
     kind: 'socket-error',
     message: `socket failed with ${secret}`,
   });

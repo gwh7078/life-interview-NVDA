@@ -14,7 +14,7 @@ test('realtime trace writes a timestamped metadata-only JSONL timeline', async (
     const trace = createRealtimeTraceWriter({
       directory,
       sessionId: '2c68b0e0-9c6f-4c09-b568-26e691c7d608',
-      provider: 'doubao',
+      provider: 'stepfun',
     });
     trace.record('provider.audio.delta', {
       responseId: 'resp_test_1',

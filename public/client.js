@@ -1,10 +1,9 @@
 import {
   decodePcmSamplesWithMetrics,
   isOutputAudioPlaybackPending,
-  shouldDeferDoubaoSpeechInterruption,
   shouldInterruptOutputAudioOnEnd,
 } from '/audio-format.js';
-import { automaticEndReason, shouldIgnoreAssistantResponseMessage } from '/interview-state.js';
+import { automaticEndReason, realtimeCallStatus, resolveRealtimeProvider, shouldIgnoreAssistantResponseMessage } from '/interview-state.js';
 import {
   createOnboardingStartMessage,
   isStoryInterviewRoute,
@@ -47,13 +46,12 @@ const elements = {
   onboardingCopy: document.querySelector('#onboarding-copy'),
   onboardingReassurance: document.querySelector('#onboarding-reassurance'),
   storyInterviewControls: document.querySelector('#story-interview-controls'),
+  providerLabel: document.querySelector('#provider-label'),
   targetMode: document.querySelector('#interview-mode'),
   existingStoryControls: document.querySelector('#existing-story-controls'),
   newStoryControls: document.querySelector('#new-story-controls'),
   stageSelect: document.querySelector('#stage-select'),
   storyTitleInput: document.querySelector('#story-title-input'),
-  providerSelect: document.querySelector('#provider-select'),
-  providerLabel: document.querySelector('#provider-label'),
   privacyNote: document.querySelector('#privacy-note'),
   storySelect: document.querySelector('#story-select'),
   storyHeading: document.querySelector('#story-heading'),
@@ -115,7 +113,6 @@ const state = {
   microphonePacketCount: 0,
   lastMicrophonePacketAt: null,
   suppressedResponseIds: new Set(),
-  doubaoSpeechPending: false,
   pendingScrollEvents: 0,
   scrollTraceTimer: null,
   audioSettings: {},
@@ -131,6 +128,7 @@ const state = {
   autoEndDeadline: 0,
   maxSessionMs: 20 * 60 * 1000,
   providerConfigured: false,
+  realtimeProvider: 'stepfun',
   providers: {},
   databaseAvailable: false,
   stories: [],
@@ -152,10 +150,9 @@ const precallLastDisclosure = createTextDisclosure({
   toggle: elements.precallLastToggle,
 });
 
-const providerNames = {
-  doubao: '豆包火山引擎 Seeduplex 1.0',
-  qwen: '千问 Qwen Realtime',
-  stepfun: '阶跃星辰 Step-Audio 2 Mini',
+const realtimeProviderLabels = {
+  qwen: 'Qwen Realtime',
+  stepfun: 'Step-Audio 2 Mini Realtime',
 };
 
 const PLAYBACK_SCHEDULE_AHEAD_SECONDS = 0.12;
@@ -367,18 +364,13 @@ function finishResponseAudioTrace(responseId, status) {
   if (stats.pendingScheduleCount === 0) writeResponseAudioSummary(key, stats);
 }
 
-function updateProviderSelection() {
-  const provider = elements.providerSelect?.value || 'doubao';
+function updateRealtimeAvailability() {
+  const provider = state.realtimeProvider;
   const providerState = state.providers[provider] || {};
-  const label = providerNames[provider] || provider;
+  const config = providerState;
+  const label = realtimeProviderLabels[provider];
+  if (elements.providerLabel) elements.providerLabel.textContent = label;
   state.providerConfigured = Boolean(providerState.configured);
-  if (elements.providerLabel) {
-    const wave = document.createElement('span');
-    wave.className = 'provider-wave';
-    wave.setAttribute('aria-hidden', 'true');
-    wave.textContent = '〰';
-    elements.providerLabel.replaceChildren(wave, document.createTextNode(` ${label}`));
-  }
   if (elements.privacyNote) {
     elements.privacyNote.textContent = state.interviewType === 'onboarding'
       ? `点击开始后会通过麦克风与${label}开始人生建档对话；仅最终字幕写入 Transcript，不保存音频文件。`
@@ -393,15 +385,9 @@ function updateProviderSelection() {
     setStatus('idle', `待配置${label}`);
     return;
   }
-  if (provider === 'doubao') {
-    elements.connectionNote.textContent = '数据库已连接 · 豆包 Seeduplex 1.0 Realtime';
-  } else if (provider === 'stepfun') {
-    const config = state.providers.stepfun || {};
-    elements.connectionNote.textContent = `数据库已连接 · StepFun ${config.model || 'step-audio-2-mini'} Realtime`;
-  } else {
-    const config = state.providers.qwen || {};
-    elements.connectionNote.textContent = `数据库已连接 · Qwen ${config.region || ''} · ${config.model || ''}`;
-  }
+  elements.connectionNote.textContent = provider === 'qwen'
+    ? `数据库已连接 · Qwen ${config.region || 'Realtime'}${config.model ? ` · ${config.model}` : ''}`
+    : `数据库已连接 · StepFun ${config.model || 'step-audio-2-mini'} Realtime`;
   setStatus('idle', '未开始');
 }
 
@@ -546,13 +532,17 @@ function setStatus(status, label = statusLabels[status] || status) {
   }
 }
 
+function updateCallStatusFromEvent(message) {
+  const nextStatus = realtimeCallStatus(message.type, state.lifecycle);
+  if (nextStatus) setStatus(nextStatus.status, nextStatus.label);
+}
+
 function setLifecycle(lifecycle) {
   state.lifecycle = lifecycle;
   if (elements.callControls) elements.callControls.hidden = !['active', 'responding'].includes(lifecycle);
   if (lifecycle === 'idle') {
     elements.startButton.disabled = !canStartInterview();
     elements.endButton.disabled = true;
-    elements.providerSelect.disabled = false;
     elements.targetMode.disabled = false;
     elements.storySelect.disabled = elements.targetMode.value === 'create' || state.stories.length === 0;
     elements.stageSelect.disabled = elements.targetMode.value !== 'create' || state.lifeStages.length === 0;
@@ -564,7 +554,6 @@ function setLifecycle(lifecycle) {
   } else if (lifecycle === 'connecting') {
     elements.startButton.disabled = true;
     elements.endButton.disabled = true;
-    elements.providerSelect.disabled = true;
     elements.targetMode.disabled = true;
     elements.storySelect.disabled = true;
     elements.stageSelect.disabled = true;
@@ -576,7 +565,6 @@ function setLifecycle(lifecycle) {
   } else if (lifecycle === 'active' || lifecycle === 'responding') {
     elements.startButton.disabled = true;
     elements.endButton.disabled = false;
-    elements.providerSelect.disabled = true;
     elements.targetMode.disabled = true;
     elements.storySelect.disabled = true;
     elements.stageSelect.disabled = true;
@@ -588,7 +576,6 @@ function setLifecycle(lifecycle) {
   } else {
     elements.startButton.disabled = true;
     elements.endButton.disabled = true;
-    elements.providerSelect.disabled = true;
     elements.targetMode.disabled = true;
     elements.storySelect.disabled = true;
     elements.stageSelect.disabled = true;
@@ -730,7 +717,7 @@ function base64ToBytes(value) {
 }
 
 function completePcmSamples(bytes, encoding) {
-  const bytesPerSample = encoding === 'pcm_f32le' ? 4 : encoding === 'pcm_s16le' ? 2 : 0;
+  const bytesPerSample = encoding === 'pcm_s16le' ? 2 : 0;
   if (!bytesPerSample) throw new Error(`不支持的语音音频格式：${encoding}`);
   if (state.audioEncoding !== encoding) {
     state.audioEncoding = encoding;
@@ -1023,8 +1010,8 @@ async function setupMicrophone() {
   state.audioSettings = mediaStream.getAudioTracks()[0]?.getSettings?.() || {};
 
   state.audioSource = context.createMediaStreamSource(state.mediaStream);
-  const targetSampleRate = elements.providerSelect?.value === 'stepfun' ? 24000 : 16000;
-  const frameSamples = targetSampleRate === 24000 ? 480 : 320;
+  const targetSampleRate = state.realtimeProvider === 'qwen' ? 16000 : 24000;
+  const frameSamples = targetSampleRate / 50;
   state.workletNode = new AudioWorkletNode(context, 'interview-pcm-resampler', {
     numberOfInputs: 1,
     numberOfOutputs: 1,
@@ -1040,11 +1027,7 @@ async function setupMicrophone() {
   state.workletNode.connect(state.muteNode);
   state.muteNode.connect(state.audioContext.destination);
   state.workletNode.port.onmessage = (event) => {
-    // Seeduplex is full duplex and requires continuous uplink audio for keepalive.
-    // Keep forwarding processed mic frames while it speaks so its response can
-    // finish and user barge-in can still be detected.
-    const streamMicrophone = state.lifecycle === 'active'
-      || (state.lifecycle === 'responding' && elements.providerSelect.value === 'doubao');
+    const streamMicrophone = state.lifecycle === 'active';
     if (state.websocket?.readyState === WebSocket.OPEN && streamMicrophone) {
       state.websocket.send(event.data);
       state.microphonePacketCount += 1;
@@ -1107,12 +1090,12 @@ function connectRealtime() {
 
     socket.addEventListener('open', () => {
       const startMessage = state.interviewType === 'onboarding'
-        ? createOnboardingStartMessage(elements.providerSelect.value)
+        ? createOnboardingStartMessage(state.realtimeProvider)
         : state.interviewType === 'external_contributor'
           ? {
               type: 'start',
               interview_type: 'external_contributor',
-              provider: elements.providerSelect.value,
+              provider: state.realtimeProvider,
             }
           : {
               type: 'start',
@@ -1124,7 +1107,7 @@ function connectRealtime() {
                       : {}),
                   }
                 : { story_id: elements.storySelect.value }),
-              provider: elements.providerSelect.value,
+              provider: state.realtimeProvider,
             };
       socket.send(JSON.stringify(startMessage));
     });
@@ -1154,10 +1137,6 @@ function connectRealtime() {
         state.microphonePacketCount = 0;
         state.lastMicrophonePacketAt = null;
         state.maxSessionMs = Number(message.maxSessionMs) || 20 * 60 * 1000;
-        if (message.provider && elements.providerSelect.value !== message.provider) {
-          elements.providerSelect.value = message.provider;
-          updateProviderSelection();
-        }
         state.timer = setInterval(updateDuration, 500);
         setLifecycle('active');
         setStatus('active');
@@ -1200,11 +1179,6 @@ function connectRealtime() {
       if (message.type === 'speech_started') {
         const responseActive = state.lifecycle === 'responding';
         const playback = outputPlaybackState();
-        const deferDoubaoInterruption = elements.providerSelect.value === 'doubao'
-          && shouldDeferDoubaoSpeechInterruption({
-            responseActive,
-            outputAudioPending: playback.outputAudioPending,
-          });
         traceClient('speech_started', {
           responseActive,
           outputAudioPending: playback.outputAudioPending,
@@ -1216,13 +1190,10 @@ function connectRealtime() {
           ...microphoneTimingDetails(),
         });
         if (state.lifecycle === 'ending') return;
-        state.doubaoSpeechPending = deferDoubaoInterruption;
-        if (!deferDoubaoInterruption) stopPlayback();
+        stopPlayback();
         hideLive();
-        if (responseActive && !deferDoubaoInterruption) {
-          setLifecycle('active');
-        }
-        setStatus('user-speaking');
+        if (responseActive) setLifecycle('active');
+        updateCallStatusFromEvent(message);
         return;
       }
       if (message.type === 'speech_stopped') {
@@ -1239,7 +1210,7 @@ function connectRealtime() {
           ...markTraceStage('speech_stopped', stageDetails),
         });
         hideLive();
-        if (state.lifecycle !== 'ending') setStatus('thinking');
+        updateCallStatusFromEvent(message);
         return;
       }
       if (message.type === 'user_partial') {
@@ -1253,16 +1224,6 @@ function connectRealtime() {
           ...microphoneTimingDetails(),
         });
         if (state.lifecycle === 'ending') return;
-        if (state.doubaoSpeechPending && partialText.trim()) {
-          state.doubaoSpeechPending = false;
-          traceClient('playback_interruption', {
-            responseId: state.activeResponseId || 'unknown',
-            chars: partialText.length,
-            pendingNodes: state.playbackNodes.size,
-          });
-          stopPlayback();
-          setLifecycle('active');
-        }
         setStatus('user-speaking');
         hideLive();
         traceClient('user_partial_rendered', {
@@ -1284,20 +1245,7 @@ function connectRealtime() {
           ...traceDetails,
           ...markTraceStage('user_final', traceDetails),
         });
-        if (state.lifecycle !== 'ending'
-          && state.doubaoSpeechPending
-          && typeof message.text === 'string'
-          && message.text.trim()) {
-          state.doubaoSpeechPending = false;
-          traceClient('playback_interruption', {
-            responseId: state.activeResponseId || 'unknown',
-            chars: message.text.length,
-            pendingNodes: state.playbackNodes.size,
-          });
-          stopPlayback();
-          setLifecycle('active');
-        }
-        if (state.lifecycle !== 'ending') setStatus('thinking', '正在准备回应');
+        updateCallStatusFromEvent(message);
         hideLive();
         traceClient('user_final_rendered', {
           ...traceDetails,
@@ -1311,11 +1259,10 @@ function connectRealtime() {
         traceClient('assistant_started', markTraceStage('assistant_started', { responseId }));
         state.activeResponseId = responseId;
         responseAudioStats(responseId);
-        state.doubaoSpeechPending = false;
         removeAssistantQuestion();
         clearEmptyState();
         setLifecycle('responding');
-        setStatus('responding');
+        updateCallStatusFromEvent(message);
         hideLive();
         return;
       }
@@ -1464,7 +1411,6 @@ function connectRealtime() {
           : state.activeResponseId;
         if (responseId) finishResponseAudioTrace(responseId, message.status);
         if (state.activeResponseId === responseId) state.activeResponseId = null;
-        state.doubaoSpeechPending = false;
         state.audioRemainder = new Uint8Array(0);
         state.audioEncoding = null;
         if (state.lifecycle === 'ending') return;
@@ -1472,10 +1418,10 @@ function connectRealtime() {
           scheduleAutomaticEnd(automaticEndReason(message.endReason, state.interviewType));
         } else if (message.status === 'completed' && state.lifecycle === 'responding') {
           setLifecycle('active');
-          setStatus('active');
+          updateCallStatusFromEvent(message);
         } else if (message.status === 'cancelled' && state.lifecycle === 'responding') {
           setLifecycle('active');
-          setStatus('active');
+          updateCallStatusFromEvent(message);
         }
         return;
       }
@@ -1616,7 +1562,6 @@ async function startInterview() {
   state.activeResponseId = null;
   state.responseAudioStats.clear();
   state.suppressedResponseIds.clear();
-  state.doubaoSpeechPending = false;
   state.audioContextInfo = {};
   state.isMuted = false;
   state.isSpeakerOn = true;
@@ -1627,7 +1572,7 @@ async function startInterview() {
   elements.connectionNote.textContent = '请在浏览器弹窗中允许麦克风访问。';
   try {
     await setupMicrophone();
-    setStatus('connecting', `正在连接${providerNames[elements.providerSelect.value] || 'Realtime'}`);
+    setStatus('connecting', `正在连接${realtimeProviderLabels[state.realtimeProvider]}`);
     await connectRealtime();
   } catch (error) {
     cleanupAudio();
@@ -1736,6 +1681,7 @@ async function loadSharedStoryData() {
   }];
   state.lifeStages = [];
   state.providers = health.providers || {};
+  state.realtimeProvider = resolveRealtimeProvider(health.defaultProvider);
   state.databaseAvailable = true;
 
   elements.authCard.hidden = true;
@@ -1752,11 +1698,8 @@ async function loadSharedStoryData() {
   elements.storyMeta.textContent = '你的内容会作为独立视角保存，不会自动覆盖主人公自己的讲述。';
   elements.emptyStateTitle.textContent = '准备好后，点击“开始聊天”。';
 
-  if (health.defaultProvider && elements.providerSelect.querySelector(`option[value="${health.defaultProvider}"]`)) {
-    elements.providerSelect.value = health.defaultProvider;
-  }
   renderPrecall();
-  updateProviderSelection();
+  updateRealtimeAvailability();
 }
 
 async function loadPageData() {
@@ -1850,13 +1793,11 @@ async function loadPageData() {
       throw new Error(health.error || '无法读取本机数据库。');
     }
     state.providers = health.providers || {};
+    state.realtimeProvider = resolveRealtimeProvider(health.defaultProvider);
     state.databaseAvailable = true;
-    if (health.defaultProvider && elements.providerSelect.querySelector(`option[value="${health.defaultProvider}"]`)) {
-      elements.providerSelect.value = health.defaultProvider;
-    }
 
     if (interviewView !== 'main') {
-      updateProviderSelection();
+      updateRealtimeAvailability();
       return;
     }
 
@@ -1921,7 +1862,7 @@ async function loadPageData() {
     }
 
     updateInterviewTargetMode();
-    updateProviderSelection();
+    updateRealtimeAvailability();
     renderPrecall();
   } catch (error) {
     const message = error instanceof Error ? error.message : '读取本机服务失败。';
@@ -2052,7 +1993,6 @@ elements.storySelect.addEventListener('change', () => {
   updateInterviewTargetMode();
 });
 elements.targetMode.addEventListener('change', updateInterviewTargetMode);
-elements.providerSelect.addEventListener('change', updateProviderSelection);
 elements.startButton.addEventListener('click', () => void startInterview());
 elements.externalCloseoutRetryButton?.addEventListener('click', () => void retryExternalContributorCloseout());
 elements.endButton.addEventListener('click', () => void endInterview());

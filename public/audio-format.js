@@ -14,13 +14,6 @@ export function isOutputAudioPlaybackPending({
     || (contextState === 'running' && playbackCursor > currentTime + 0.01);
 }
 
-export function shouldDeferDoubaoSpeechInterruption({
-  responseActive = false,
-  outputAudioPending = false,
-} = {}) {
-  return responseActive || outputAudioPending;
-}
-
 export function shouldInterruptOutputAudioOnEnd({
   reason = 'user',
   lifecycle = 'idle',
@@ -30,8 +23,8 @@ export function shouldInterruptOutputAudioOnEnd({
 }
 
 export function decodePcmSamplesWithMetrics(bytes, encoding = 'pcm_s16le') {
-  const bytesPerSample = encoding === 'pcm_f32le' ? 4 : encoding === 'pcm_s16le' ? 2 : 0;
-  if (!bytesPerSample) throw new Error(`Unsupported PCM encoding: ${encoding}`);
+  if (encoding !== 'pcm_s16le') throw new Error(`Unsupported PCM encoding: ${encoding}`);
+  const bytesPerSample = 2;
   if (!(bytes instanceof Uint8Array)) throw new TypeError('PCM audio must be a Uint8Array.');
   if (bytes.byteLength % bytesPerSample !== 0) {
     throw new RangeError(`${encoding} audio length must be aligned to ${bytesPerSample}-byte samples.`);
@@ -44,9 +37,7 @@ export function decodePcmSamplesWithMetrics(bytes, encoding = 'pcm_s16le') {
   let clippedSamples = 0;
   let nonFiniteSamples = 0;
   for (let index = 0; index < samples.length; index += 1) {
-    const rawValue = encoding === 'pcm_f32le'
-      ? view.getFloat32(index * 4, true)
-      : view.getInt16(index * 2, true) / 32768;
+    const rawValue = view.getInt16(index * 2, true) / 32768;
     if (!Number.isFinite(rawValue)) nonFiniteSamples += 1;
     else if (rawValue < -1 || rawValue > 1) clippedSamples += 1;
     const value = Number.isFinite(rawValue) ? Math.max(-1, Math.min(1, rawValue)) : 0;

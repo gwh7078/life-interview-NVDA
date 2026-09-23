@@ -5,8 +5,9 @@ import { interviewSessions } from '../db/schema.js';
 import { nowUtcIso } from '../db/time.js';
 import { closeoutResultSchema, serializeJsonColumn } from '../db/transcript.js';
 import type { ExternalContributorInterviewContext, RealtimeInterviewContext, StoryInterviewContext } from '../realtime/prompt.js';
+import type { RealtimeProviderId } from '../realtime/types.js';
 
-export type RealtimeInterviewProvider = 'doubao' | 'qwen' | 'stepfun';
+export type RealtimeInterviewProvider = RealtimeProviderId;
 
 export class InterviewSessionError extends Error {
   constructor(message: string, readonly code: string) {
@@ -34,7 +35,7 @@ export function createRealtimeInterviewSession(
   databasePath: string | undefined,
   userId: string,
   context: StoryInterviewContext,
-  provider: RealtimeInterviewProvider = 'qwen',
+  provider: RealtimeInterviewProvider = 'stepfun',
 ): RealtimeInterviewSession {
   const sessionId = randomUUID();
   const startedAt = nowUtcIso();
@@ -77,7 +78,7 @@ export function createExternalContributorInterviewSession(
   databasePath: string | undefined,
   userId: string,
   context: ExternalContributorInterviewContext,
-  provider: RealtimeInterviewProvider = 'qwen',
+  provider: RealtimeInterviewProvider = 'stepfun',
 ): RealtimeInterviewSession {
   const sessionId = randomUUID();
   const startedAt = nowUtcIso();
