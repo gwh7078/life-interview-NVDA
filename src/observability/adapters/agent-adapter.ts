@@ -4,6 +4,7 @@ import {
   type ObservationEvent,
   type ObservationStatus,
 } from '../observation-event.js';
+import type { AgentTaskTraceContext } from '../../agent-tasks/contracts/common.js';
 
 export interface AgentObservationSource {
   runId: string;
@@ -11,6 +12,7 @@ export interface AgentObservationSource {
   taskType: string;
   resourceType: string;
   resourceId: string;
+  traceContext?: AgentTaskTraceContext;
   runtime: string;
   skill?: string | null;
   provider?: string | null;
@@ -26,21 +28,24 @@ export function adaptAgentRun(source: AgentObservationSource, input: {
   status: ObservationStatus;
   durationMs?: number;
   timestamp?: string;
+  errorCode?: string;
 }): ObservationEvent[] {
-  const sessionId = source.resourceType === 'interview_session' ? source.resourceId : undefined;
-  const storyId = source.resourceType === 'story' ? source.resourceId : undefined;
+  const sessionId = source.traceContext?.sessionId
+    ?? (source.resourceType === 'interview_session' ? source.resourceId : undefined);
+  const storyId = source.traceContext?.storyId
+    ?? (source.resourceType === 'story' ? source.resourceId : undefined);
   const context = createObservationContext({
-    traceId: sessionId ?? source.runId,
-    rootSpanId: sessionId ? `session:${sessionId}` : `agent:${source.runId}`,
+    traceId: source.traceContext?.traceId ?? sessionId ?? source.runId,
+    rootSpanId: source.traceContext?.parentSpanId ?? (sessionId ? `session:${sessionId}` : `agent:${source.runId}`),
     ...(sessionId ? { sessionId } : {}),
     ...(storyId ? { storyId } : {}),
   });
   const base = {
     spanId: `agent:${source.runId}`,
-    ...(sessionId ? { parentSpanId: context.rootSpanId } : {}),
+    ...(sessionId ? { parentSpanId: source.traceContext?.parentSpanId ?? context.rootSpanId } : {}),
     ...(input.timestamp ? { timestamp: input.timestamp } : {}),
     status: input.status,
-    component: source.runtime,
+    component: source.taskType === 'interview.context_hint' ? 'realtime-context-agent' : source.runtime,
     summary: source.taskType,
     ...(input.durationMs === undefined ? {} : { durationMs: input.durationMs }),
     metrics: {
@@ -48,6 +53,9 @@ export function adaptAgentRun(source: AgentObservationSource, input: {
       ...(source.repairCount === undefined ? {} : { repairCount: source.repairCount }),
       ...(source.toolCallCount === undefined ? {} : { toolCallCount: source.toolCallCount }),
       ...(source.scriptCallCount === undefined ? {} : { scriptCallCount: source.scriptCallCount }),
+      ...(source.model ? { model: source.model } : {}),
+      ...(source.skill ? { skill: source.skill } : {}),
+      ...(input.errorCode && /^[A-Z][A-Z0-9_]{0,63}$/u.test(input.errorCode) ? { errorCode: input.errorCode } : {}),
     },
     metadata: {
       agent: source.agentType,

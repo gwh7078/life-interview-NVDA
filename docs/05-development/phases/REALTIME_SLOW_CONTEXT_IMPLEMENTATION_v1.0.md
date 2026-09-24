@@ -32,7 +32,7 @@ Step-Audio 2 Mini
 - The Tool is exposed only for an existing `story_continue` Story. The backend checks the same conditions again and safely resumes unexpected or out-of-scope calls.
 - Retriever requests require the current owner, current story and `sourceType=subject`. Missing story scope fails closed. Owner-wide, cross-Story, contributor, era and Agentic Retrieval are excluded.
 - The index stores Q+A units. The assistant question is context only; only the user answer can become a fact. Source provenance points to the user answer message.
-- The Agent receives at most five evidence units, each bounded to 450 characters, with a 2,000-character evidence budget; query is 2–500 characters, Story summary at most 1,000 characters, and at most four recent final messages with 1,000 characters total.
+- The Agent input, Agent-selected facts and direct-retrieval fallbacks share one evidence set: at most five units, each at most 450 characters, with a 2,000-character total budget. Query is 2–500 characters, Story summary at most 1,000 characters, and at most four recent final messages with 1,000 characters total.
 - The Agent can select at most three input evidence IDs. Backend rejects any ID that was not in the exact Agent input and rebuilds each fact from that answer. Model-generated text never replaces or rewrites evidence.
 - No evidence skips the Agent and returns an empty hint. Disabled/unavailable/failed Agent uses direct scoped Retriever evidence with `fallbackUsed=true` and `fallbackType=direct_retrieval`. A coordinator timeout or cancellation does not wait for fallback; it follows the existing safe Resume path.
 
@@ -60,15 +60,15 @@ The installer validates the OpenClaw config change before setting `agents.list[]
 
 Realtime traces contain only allowlisted stage names, counts, latencies, model/Skill labels, token counts when reported, fallback state and safe error codes. They do not contain query text, Transcript, Story summary, recent context, evidence text or source message IDs. The SSE Tech Observer is opened independently with `?demo=tech`; it renders fixed event labels and allowlisted metrics, shows missing values as `暂无数据`, and does not display call/session/story identifiers. The competition WebSocket panel remains gated only by `COMPETITION_TECH_PANEL=1`. DGX Spark/GPU utilization shows `暂无数据` unless a real telemetry source exists.
 
-The SSE adapter reuses the existing trace stream and its tool-cycle span; `realtime.tool_cycle_recall_finished` is suppressed in the timeline because `realtime.slow_recall_finished` already reports the same terminal result.
+The SSE adapter uses `realtime.recall_started` as the single Retriever start event; tracker and retrieval-stage start aliases are suppressed. The native AgentRun event is the sole Agent lifecycle source, with its Skill span below the Agent and the Agent below the Tool Cycle. Slow-path completion contributes a separate metrics event; the duplicate tracker recall-finished event remains suppressed.
 
 | Existing trace event | Tech Observer state | Safe values shown when present |
 |---|---|---|
 | `realtime.tool_call_requested`, `realtime.tool_cycle_started` | Tool Call → HOLD | Tool label, lifecycle state |
-| `realtime.slow_path.retrieval.started/finished` | Retriever running → complete | Stage duration, candidate count, evidence count |
-| `realtime.slow_path.slow_agent.started/finished` | Context Hint Agent running → complete | Agent duration, model/Skill labels, token counts, selected evidence count |
+| `realtime.recall_started`, `realtime.slow_path.retrieval.finished` | Retriever running → complete | Stage duration, candidate count, evidence count; duplicate start aliases are suppressed |
+| `agent.started/completed/failed`, `skill.started/completed/failed` | Native Context Hint Agent → Skill lifecycle | Agent duration, model/Skill labels, safe error code; Agent parent is the Tool Cycle span |
+| `realtime.slow_path.slow_agent.finished` | Context Hint Agent metrics | Model/Skill labels, token counts, selected evidence count and duration; no second lifecycle event |
 | `realtime.slow_path.slow_agent.skipped` | Agent skipped | Safe skip reason: no evidence, explicitly disabled, or unavailable runtime |
-| `realtime.slow_path.slow_agent.failed` | Agent failed or timed out | Safe error code; fallback type/state when emitted |
 | `realtime.slow_path.context_hint.ready` | Context Hint ready | Selected evidence count and fallback state/type; this remains success after a handled Agent failure |
 | `realtime.slow_recall_finished` | Slow Path result | Final status and measured latency; timeout/failed/aborted/stale are distinct from completed |
 | `realtime.tool_result_sent`, `realtime.tool_cycle_message_write` (`resume`), `realtime.tool_cycle_response_started`, `realtime.tool_cycle_response_first_audio` | Tool Result → Resume → AI resumed → First audio | Tool-result timing, Resume-to-response timing, Tool-to-first-audio and response-to-first-audio timings |
@@ -92,12 +92,15 @@ The summary reports outcome counts, fallback/no-evidence rates, retrieval/Agent/
 
 ## 6. Validation status
 
+Reproduce the real Context Hint Agent smoke with `bash scripts/codex-node.sh npm run test:realtime:agent:smoke`. A pass requires `status=PASS`, valid selected evidence IDs, exactly one attempt, and zero script calls. The 2026-09-24 rerun returned `AGENT_RUNTIME_TIMEOUT` at the configured 4.8-second task deadline.
+
 | Check | Status | Evidence |
 |---|---|---|
 | TypeScript typecheck | PASS | `bash scripts/codex-node.sh npm run typecheck` |
-| Full deterministic local verification | PASS | `bash scripts/codex-verify.sh`: typecheck; fast 224/224; integration 62/62; Agent 39/39; NAT unit 8/8. The Agent contract cases are included in the fast suite. |
+| Audit regressions | PASS | Targeted observability, slow-context pipeline, Agent Task adapter and AgentRun repository tests: 22/22. |
+| Full deterministic local verification | Historical PASS; not rerun for this patch | The prior `bash scripts/codex-verify.sh` record covered typecheck; fast 224/224; integration 62/62; Agent 39/39; NAT unit 8/8. Current patch evidence is the targeted 22/22 row above. |
 | OpenClaw agent and no-tools policy config | PASS, config only | `configure-realtime-context-agent.sh` dry-run and read-back returned `[*]`; Skill reports Ready in its dedicated workspace |
-| Real context-hint Agent smoke | FAIL | First run hit `AGENT_RUNTIME_TIMEOUT`; after task-level thinking-off and timeout adjustment, a run exited with `AGENT_RUNTIME_EXEC_FAILED` |
+| Real context-hint Agent smoke | FAIL | Earlier run exited with `AGENT_RUNTIME_EXEC_FAILED`; the repeat command above returned `AGENT_RUNTIME_TIMEOUT` on 2026-09-24. |
 | Full Step-Audio voice E2E with Agent enabled | NOT TESTED | Agent runtime smoke is not passing |
 | P50/P95 latency or token benchmark | NOT TESTED | No successful slow-path trace samples |
 | DGX Spark/GPU telemetry | NOT TESTED | Local sandbox status reported no GPU |

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
+import type { AgentTaskTraceContext } from '../agent-tasks/contracts/common.js';
 
 export interface RealtimeRecallRequest {
   ownerId: string;
@@ -10,6 +11,7 @@ export interface RealtimeRecallRequest {
   query: string;
   storySummary?: string;
   recentContext?: Array<{ role: 'user' | 'assistant'; text: string }>;
+  traceContext?: AgentTaskTraceContext;
   onProgress?: (event: RealtimeSlowPathProgress) => void;
 }
 
@@ -32,6 +34,7 @@ export interface RealtimeSlowPathProgress {
   evidenceInputChars?: number;
   model?: string;
   skill?: string;
+  runId?: string;
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;

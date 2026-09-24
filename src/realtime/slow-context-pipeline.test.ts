@@ -103,6 +103,59 @@ test('Agent receives bounded context and can select only exact retrieved user an
   assert.deepEqual(hint.interviewHints, ['可追问具体年份']);
 });
 
+test('Agent Task receives the Realtime trace context for the Tool Cycle', async () => {
+  let received: unknown;
+  const traceContext = {
+    traceId: 'trace-session-current',
+    sessionId: 'session-current',
+    storyId: 'story-1',
+    parentSpanId: 'tool-cycle-1',
+  };
+  const pipeline = new RealtimeSlowContextPipeline(retriever(), agent({
+    selected_evidence_ids: ['e1'], possible_conflicts: [], interview_hints: [],
+  }, (taskRequest) => { received = taskRequest; }));
+
+  const tracedRequest = Object.assign({}, request, { traceContext });
+  await pipeline.recall(tracedRequest);
+
+  assert.deepEqual((received as { traceContext?: unknown }).traceContext, traceContext);
+});
+
+test('normal and fallback Context Hints share the five-item, 450-character, 2,000-character evidence budget', async () => {
+  const oversizedEvidence = Array.from({ length: 7 }, (_, index) => ({
+    ...evidence('答'.repeat(700))[0]!,
+    text: `[segment_id=segment-${index}][message_id=answer-${index}][Q+A]\nQuestion (context only):${'问'.repeat(100)}\nAnswer (user-provided fact):${'答'.repeat(700)}`,
+    messageIds: [`answer-${index}`],
+    segmentIds: [`segment-${index}`],
+  }));
+  const assertBudget = (facts: Awaited<ReturnType<RealtimeSlowContextPipeline['recall']>>['facts']) => {
+    assert.ok(facts.length <= 5);
+    assert.ok(facts.every((fact) => (fact.question?.length ?? 0) + fact.claim.length <= 450));
+    assert.ok(facts.reduce((total, fact) => total + (fact.question?.length ?? 0) + fact.claim.length, 0) <= 2_000);
+  };
+
+  const disabledHint = await new RealtimeSlowContextPipeline(retriever(oversizedEvidence))
+    .recall(request);
+  assertBudget(disabledHint.facts);
+
+  const failedTasks: AgentTaskPort = {
+    async run() { throw new Error('AGENT_RUNTIME_FAILED'); },
+  };
+  const failedHint = await new RealtimeSlowContextPipeline(retriever(oversizedEvidence), failedTasks)
+    .recall(request);
+  assertBudget(failedHint.facts);
+
+  let agentInput: unknown;
+  const successHint = await new RealtimeSlowContextPipeline(retriever(oversizedEvidence), agent({
+    selected_evidence_ids: ['e1'], possible_conflicts: [], interview_hints: [],
+  }, (taskRequest) => { agentInput = taskRequest; })).recall(request);
+  assertBudget(successHint.facts);
+  const submittedEvidence = (agentInput as { payload: { evidence: Array<{ question: string; answer: string }> } }).payload.evidence;
+  assert.ok(submittedEvidence.length <= 5);
+  assert.ok(submittedEvidence.every((item) => item.question.length + item.answer.length <= 450));
+  assert.ok(submittedEvidence.reduce((total, item) => total + item.question.length + item.answer.length, 0) <= 2_000);
+});
+
 test('an ID omitted from the Agent input fails validation and falls back to direct evidence', async () => {
   const progress: Array<{ stage: string; status: string; errorCode?: string; fallbackUsed?: boolean }> = [];
   const pipeline = new RealtimeSlowContextPipeline(retriever(), agent({

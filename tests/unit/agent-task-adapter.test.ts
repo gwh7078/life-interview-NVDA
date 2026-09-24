@@ -78,7 +78,7 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
   );
 });
 
-test('NemoClawAgentTaskAdapter routes realtime context hints through the bounded observer policy', async () => {
+test('NemoClawAgentTaskAdapter routes realtime context hints and preserves their trace context', async () => {
   const executor = new FakeExecutor({
     output: {
       selected_evidence_ids: ['e1'],
@@ -88,12 +88,17 @@ test('NemoClawAgentTaskAdapter routes realtime context hints through the bounded
     runtime: { runtime: 'nemoclaw-openclaw', latencyMs: 20 },
   });
   const adapter = new NemoClawAgentTaskAdapter(executor);
-  const request: InterviewContextHintTaskRequest = {
+  const request: InterviewContextHintTaskRequest & { traceContext: {
+    traceId: string; sessionId: string; storyId: string; parentSpanId: string;
+  } } = {
     runId: 'run-context-hint',
     taskType: 'interview.context_hint',
     ownerId: 'owner-1',
     resource: { type: 'interview_turn', id: 'turn-1' },
     schemaVersion: 'v1',
+    traceContext: {
+      traceId: 'trace-session-1', sessionId: 'session-1', storyId: 'story-1', parentSpanId: 'tool-cycle-1',
+    },
     payload: {
       query: '那次是谁先提出的？',
       story_summary: '第一次参加社区活动。',
@@ -104,6 +109,7 @@ test('NemoClawAgentTaskAdapter routes realtime context hints through the bounded
 
   const result = await adapter.run(request);
   const routed = executor.requests[0];
+  assert.deepEqual((routed as AgentTaskExecutionRequest & { traceContext?: unknown })?.traceContext, request.traceContext);
   assert.equal(routed?.skill, 'interview-observer');
   assert.equal(routed?.executionPolicy.agentId, 'realtime-context');
   assert.equal(routed?.modelProfile, 'realtime-context');

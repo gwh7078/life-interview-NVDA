@@ -54,7 +54,7 @@ function slowPathMapping(event: string, fields: SafeFields): Mapping | undefined
   const status = fields.status === 'finished' ? 'completed' : fields.status ?? suffix;
 
   if (stage === 'retrieval') {
-    if (status === 'started') return { category: 'retriever', eventType: 'retriever.started', status: 'start', title: 'RETRIEVER STARTED', component: 'nemo-retriever' };
+    if (status === 'started') return undefined;
     if (status === 'completed') return { category: 'retriever', eventType: 'retriever.completed', status: 'success', title: 'RETRIEVER COMPLETE', component: 'nemo-retriever' };
     if (status === 'failed') return { category: 'retriever', eventType: 'retriever.failed', status: 'error', title: 'RETRIEVER FAILED', component: 'nemo-retriever' };
     if (status === 'skipped') return { category: 'retriever', eventType: 'retriever.skipped', status: 'skip', title: 'RETRIEVER SKIPPED', component: 'nemo-retriever' };
@@ -62,19 +62,9 @@ function slowPathMapping(event: string, fields: SafeFields): Mapping | undefined
   }
 
   if (stage === 'slow_agent') {
-    if (status === 'started') return { category: 'agent', eventType: 'agent.started', status: 'start', title: 'CONTEXT HINT AGENT STARTED', component: 'realtime-context-agent' };
-    if (status === 'completed') return { category: 'agent', eventType: 'agent.completed', status: 'success', title: 'CONTEXT HINT AGENT COMPLETE', component: 'realtime-context-agent' };
+    if (status === 'started') return undefined;
+    if (status === 'completed') return { category: 'agent', eventType: 'agent.metrics', status: 'success', title: 'CONTEXT HINT AGENT METRICS', component: 'realtime-context-agent' };
     if (status === 'skipped') return { category: 'agent', eventType: 'agent.skipped', status: 'skip', title: 'CONTEXT HINT AGENT SKIPPED', component: 'realtime-context-agent' };
-    if (status === 'failed') {
-      const timeout = typeof fields.errorCode === 'string' && fields.errorCode.includes('TIMEOUT');
-      const fallback = fields.fallbackUsed === true;
-      return {
-        category: 'agent', eventType: timeout ? 'agent.timeout' : 'agent.failed',
-        status: fallback ? 'warning' : 'error',
-        title: `${timeout ? 'CONTEXT HINT AGENT TIMEOUT' : 'CONTEXT HINT AGENT FAILED'}${fallback ? ' · FALLBACK' : ''}`,
-        component: 'realtime-context-agent',
-      };
-    }
     return undefined;
   }
 
@@ -112,10 +102,10 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
     const outcome = fields.outcome;
     return { category: 'tool', eventType: outcome === 'completed' ? 'tool.completed' : 'tool.failed', status: normalizedStatus(outcome), title: 'TOOL CYCLE', component: 'realtime-tool' };
   }
-  // The preceding slow_recall_finished event carries the same terminal result;
-  // suppress this duplicate tracker summary from the live timeline.
-  if (event === 'realtime.tool_cycle_recall_finished') return undefined;
-  if (event === 'realtime.recall_started' || event === 'realtime.tool_cycle_recall_started') return { category: 'retriever', eventType: 'retriever.started', status: 'start', title: 'NeMo RETRIEVER', component: 'nemo-retriever' };
+  // Keep realtime.recall_started and retrieval.finished as the Retriever lifecycle;
+  // suppress the corresponding tracker and stage-start aliases.
+  if (event === 'realtime.tool_cycle_recall_finished' || event === 'realtime.tool_cycle_recall_started') return undefined;
+  if (event === 'realtime.recall_started') return { category: 'retriever', eventType: 'retriever.started', status: 'start', title: 'NeMo RETRIEVER', component: 'nemo-retriever' };
   if (event === 'realtime.slow_recall_finished') {
     const sourceStatus = fields.status;
     const status = sourceStatus === 'completed' ? 'success'
@@ -159,7 +149,11 @@ export function adaptRealtimeTrace(input: {
   const mapping = mapTrace(input.event, fields);
   if (!mapping) return undefined;
   const context = input.context ?? createObservationContext({ sessionId: input.sessionId, storyId: input.storyId });
-  const operationSpan = safeLabel(fields.toolRunId) ?? safeLabel(fields.responseId) ?? safeLabel(fields.runId);
+  const toolRunId = safeLabel(fields.toolRunId);
+  const runId = safeLabel(fields.runId);
+  const operationSpan = mapping.eventType === 'agent.metrics' && runId
+    ? `agent:${runId}`
+    : toolRunId ?? safeLabel(fields.responseId) ?? runId;
   const metrics: Record<string, number | string | boolean> = {};
   for (const key of numericMetrics) {
     const value = numberField(fields, key);
@@ -201,7 +195,10 @@ export function adaptRealtimeTrace(input: {
 
   return createObservationEvent(context, {
     ...(input.timestamp ? { timestamp: input.timestamp } : {}),
-    ...(operationSpan ? { spanId: operationSpan, parentSpanId: context.rootSpanId } : { spanId: context.rootSpanId }),
+    ...(operationSpan ? {
+      spanId: operationSpan,
+      parentSpanId: mapping.eventType === 'agent.metrics' ? toolRunId ?? context.rootSpanId : context.rootSpanId,
+    } : { spanId: context.rootSpanId }),
     category: mapping.category,
     eventType: mapping.eventType,
     status: mapping.status,
