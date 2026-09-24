@@ -3,10 +3,16 @@ import { mkdirSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { test } from 'node:test';
-import { createRealtimeTraceStageTracker, createRealtimeTraceWriter } from './trace.js';
+import { createRealtimeTraceStageTracker, createRealtimeTraceWriter, pcm16Rms } from './trace.js';
 
 const testTempRoot = path.resolve('data/test-tmp');
 mkdirSync(testTempRoot, { recursive: true });
+
+test('PCM16 microphone level distinguishes silence from signal', () => {
+  assert.equal(pcm16Rms(Buffer.alloc(4)), 0);
+  assert.equal(pcm16Rms(Buffer.from([0, 192, 0, 64])), 0.5);
+  assert.equal(pcm16Rms(Buffer.from([0])), 0);
+});
 
 test('realtime trace writes a timestamped metadata-only JSONL timeline', async () => {
   const directory = await mkdtemp(path.join(testTempRoot, 'rensheng-trace-'));

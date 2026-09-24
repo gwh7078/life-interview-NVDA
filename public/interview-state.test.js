@@ -4,13 +4,18 @@ import {
   automaticEndReason,
   realtimeCallStatus,
   resolveRealtimeProvider,
+  realtimeInputSampleRate,
   shouldIgnoreAssistantResponseMessage,
 } from './interview-state.js';
 
 test('configured Realtime provider defaults to Step-Audio and preserves explicit Qwen routing', () => {
   assert.equal(resolveRealtimeProvider('stepfun'), 'stepfun');
   assert.equal(resolveRealtimeProvider('qwen'), 'qwen');
+  assert.equal(resolveRealtimeProvider('modelbest'), 'modelbest');
   assert.equal(resolveRealtimeProvider('unknown'), 'stepfun');
+  assert.equal(realtimeInputSampleRate('qwen'), 16000);
+  assert.equal(realtimeInputSampleRate('modelbest'), 16000);
+  assert.equal(realtimeInputSampleRate('stepfun'), 24000);
 });
 
 test('Step realtime events map to the visible call states', () => {

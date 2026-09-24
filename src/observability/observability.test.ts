@@ -85,6 +85,15 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
   })).filter((item) => item?.category === 'retriever');
   assert.deepEqual(retrieverLifecycle.map((item) => item?.eventType), ['retriever.started', 'retriever.completed']);
   assert.equal(adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'client.microphone_uplink' }), undefined);
+  const vadRequest = adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'provider.turn_detection_requested', fields: { turnDetectionMode: 'manual' } });
+  const vadAcknowledgement = adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'provider.turn_detection_acknowledged', fields: { turnDetectionMode: 'manual', instructions: 'private prompt' } });
+  const vadCommit = adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'client.local_vad_commit_triggered', fields: { silenceObservedMs: 2_000, silenceThresholdMs: 2_000 } });
+  assert.equal(vadRequest?.eventType, 'realtime.turn_detection_requested');
+  assert.equal(vadAcknowledgement?.eventType, 'realtime.turn_detection_acknowledged');
+  assert.deepEqual([vadRequest?.status, vadAcknowledgement?.status], ['start', 'success']);
+  assert.equal(vadCommit?.eventType, 'realtime.turn_committed');
+  assert.deepEqual([vadCommit?.metrics?.silenceObservedMs, vadCommit?.metrics?.silenceThresholdMs], [2_000, 2_000]);
+  assert.equal(JSON.stringify(vadAcknowledgement).includes('private prompt'), false);
   assert.deepEqual([
     adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'provider.speech_started' })?.eventType,
     adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'realtime.tool_cycle_started' })?.eventType,

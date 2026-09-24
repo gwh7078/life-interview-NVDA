@@ -7,7 +7,13 @@ import {
   pcm16MonoDurationMs,
   shouldInterruptOutputAudioOnEnd,
 } from '/audio-format.js';
-import { automaticEndReason, realtimeCallStatus, resolveRealtimeProvider, shouldIgnoreAssistantResponseMessage } from '/interview-state.js';
+import {
+  automaticEndReason,
+  realtimeCallStatus,
+  realtimeInputSampleRate,
+  resolveRealtimeProvider,
+  shouldIgnoreAssistantResponseMessage,
+} from '/interview-state.js';
 import {
   createOnboardingStartMessage,
   isStoryInterviewRoute,
@@ -15,10 +21,12 @@ import {
   onboardingHomeView,
 } from '/onboarding-ui.js';
 import { createTextDisclosure } from '/text-disclosure.js';
+import { createLocalVadTurnController } from '/local-vad-turn-controller.js';
 
 const pageParams = new URLSearchParams(window.location.search);
 const debugMode = pageParams.get('debug') === '1';
 const shareToken = pageParams.get('share_token')?.trim() || '';
+const MANUAL_AUDIO_PRE_ROLL_FRAME_LIMIT = 10;
 if (debugMode) document.body.classList.add('debug-mode');
 
 const elements = {
@@ -121,6 +129,15 @@ const state = {
   startupTraceEvents: [],
   playbackReadySent: false,
   microphoneStreaming: false,
+  manualTurnControl: false,
+  manualSpeechActive: false,
+  manualTurnAwaitingAssistant: false,
+  manualTurnCommitSent: false,
+  manualAudioPreRoll: [],
+  localVadSilenceTimeoutMs: 2_000,
+  localVadController: null,
+  localVad: null,
+  localVadSyncPromise: null,
   sessionId: null,
   traceStartedAt: 0,
   activeResponseId: null,
@@ -174,6 +191,7 @@ const precallLastDisclosure = createTextDisclosure({
 const realtimeProviderLabels = {
   qwen: 'Qwen Realtime',
   stepfun: 'Step-Audio 2 Mini Realtime',
+  modelbest: 'MiniCPM-o 4.5 Realtime',
 };
 
 const TECH_STAGES = [
@@ -497,7 +515,7 @@ function updateRealtimeAvailability() {
   }
   elements.connectionNote.textContent = provider === 'qwen'
     ? `数据库已连接 · Qwen ${config.region || 'Realtime'}${config.model ? ` · ${config.model}` : ''}`
-    : `数据库已连接 · StepFun ${config.model || 'step-audio-2-mini'} Realtime`;
+    : `数据库已连接 · ${label} · ${config.model || (provider === 'modelbest' ? 'MiniCPM-o-4.5-Realtime' : 'step-audio-2-mini')}`;
   setStatus('idle', '未开始');
 }
 
@@ -647,17 +665,110 @@ function updateCallStatusFromEvent(message) {
   if (nextStatus) setStatus(nextStatus.status, nextStatus.label);
 }
 
-function setLifecycle(lifecycle) {
-  state.lifecycle = lifecycle;
-  const microphoneStreaming = lifecycle === 'active' || lifecycle === 'responding';
+function syncMicrophoneStreaming(lifecycle = state.lifecycle) {
+  const microphoneStreaming = state.manualTurnControl
+    ? lifecycle === 'active' && state.manualSpeechActive && !state.manualTurnAwaitingAssistant
+    : lifecycle === 'active' || lifecycle === 'responding';
   if (state.microphoneStreaming !== microphoneStreaming) {
     state.microphoneStreaming = microphoneStreaming;
     traceClient(microphoneStreaming ? 'microphone_stream_resumed' : 'microphone_stream_paused', {
       lifecycle,
       microphoneStreaming,
-      mode: lifecycle === 'responding' ? 'barge_in_monitoring' : microphoneStreaming ? 'listening' : 'paused',
+      mode: state.manualTurnControl
+        ? microphoneStreaming ? 'user_turn_audio' : lifecycle === 'active' ? 'local_vad_listening' : 'paused'
+        : lifecycle === 'responding' ? 'barge_in_monitoring' : microphoneStreaming ? 'listening' : 'paused',
     });
   }
+}
+
+function syncLocalVad() {
+  const vad = state.localVad;
+  if (!state.manualTurnControl || !vad || state.localVadSyncPromise) return;
+  state.localVadSyncPromise = (async () => {
+    while (state.localVad === vad) {
+      const shouldListen = state.lifecycle === 'active' && !state.manualTurnAwaitingAssistant;
+      if (vad.listening === shouldListen) break;
+      if (shouldListen) await vad.start();
+      else await vad.pause();
+    }
+  })().catch((error) => {
+    traceClient('local_vad_error', {
+      reason: error instanceof Error ? error.name : 'unknown',
+    });
+    setLifecycle('failed');
+    showError('本地语音检测未能正常运行，请重新开始采访。');
+    cleanupAudio();
+    state.websocket?.close();
+  }).finally(() => {
+    state.localVadSyncPromise = null;
+    if (state.localVad === vad && vad.listening !== (state.lifecycle === 'active' && !state.manualTurnAwaitingAssistant)) {
+      syncLocalVad();
+    }
+  });
+}
+
+async function destroyLocalVad(vad) {
+  try {
+    await vad.destroy();
+    return;
+  } catch {
+    try { await vad.model?.release?.(); } catch {}
+  }
+}
+
+function forwardMicrophonePacket(packet) {
+  if (state.websocket?.readyState !== WebSocket.OPEN) return false;
+  state.websocket.send(packet);
+  state.microphonePacketCount += 1;
+  state.lastMicrophonePacketAt = performance.now();
+  return true;
+}
+
+function handleLocalVadEvent(event) {
+  if (event.type === 'speech_started') {
+    if (state.lifecycle !== 'active' || state.manualSpeechActive || state.manualTurnAwaitingAssistant) return;
+    state.manualSpeechActive = true;
+    state.manualTurnCommitSent = false;
+    traceClient('local_vad_speech_started', { turnState: 'speaking' });
+    if (state.websocket?.readyState !== WebSocket.OPEN) return;
+    state.websocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    syncMicrophoneStreaming();
+    for (const packet of state.manualAudioPreRoll.splice(0)) forwardMicrophonePacket(packet);
+    return;
+  }
+  if (event.type === 'silence_started') {
+    traceClient('local_vad_silence_started', { turnState: 'silence' });
+    return;
+  }
+  if (event.type === 'speech_resumed') {
+    traceClient('local_vad_speech_resumed', { turnState: 'speaking' });
+    return;
+  }
+  if (event.type === 'commit_triggered') {
+    if (!state.manualSpeechActive || state.manualTurnCommitSent || state.websocket?.readyState !== WebSocket.OPEN) return;
+    state.manualTurnCommitSent = true;
+    state.manualSpeechActive = false;
+    state.manualTurnAwaitingAssistant = true;
+    state.manualAudioPreRoll.length = 0;
+    state.localVadController?.setEnabled(false);
+    syncMicrophoneStreaming();
+    traceClient('local_vad_commit_triggered', {
+      silenceObservedMs: event.silenceObservedMs,
+      silenceThresholdMs: event.silenceThresholdMs,
+      turnState: 'committing',
+    });
+    state.websocket.send(JSON.stringify({
+      type: 'manual_turn_commit',
+      silenceObservedMs: event.silenceObservedMs,
+    }));
+    setLifecycle('responding');
+  }
+}
+
+function setLifecycle(lifecycle) {
+  state.lifecycle = lifecycle;
+  syncMicrophoneStreaming(lifecycle);
+  syncLocalVad();
   if (elements.callControls) elements.callControls.hidden = !['active', 'responding'].includes(lifecycle);
   if (lifecycle === 'idle') {
     elements.startButton.disabled = !canStartInterview();
@@ -1060,6 +1171,19 @@ function cleanupAudio() {
   state.audioSetupGeneration += 1;
   state.autoEndGeneration += 1;
   state.playbackScheduleQueue.invalidate();
+  const localVad = state.localVad;
+  state.localVad = null;
+  if (localVad) {
+    void Promise.resolve(state.localVadSyncPromise)
+      .catch(() => {})
+      .then(() => destroyLocalVad(localVad));
+  }
+  state.localVadController = null;
+  state.localVadSyncPromise = null;
+  state.manualTurnControl = false;
+  state.manualSpeechActive = false;
+  state.manualTurnAwaitingAssistant = false;
+  state.manualAudioPreRoll.length = 0;
   stopMicrophone();
   if (state.audioContext) {
     void state.audioContext.close();
@@ -1120,6 +1244,30 @@ async function waitForOutputAudioDrain(timeoutMs = 30_000) {
   return !isOutputAudioPlaybackPending(outputAudioState());
 }
 
+function recoverManualTurnAfterFailedResponse(responseId) {
+  if (!state.manualTurnControl || !['active', 'responding'].includes(state.lifecycle)) return;
+  const stats = responseAudioStats(responseId);
+  if (stats.manualInputReady === false) return;
+  void (async () => {
+    const drained = await waitForOutputAudioDrain();
+    if (!['active', 'responding'].includes(state.lifecycle)) return;
+    if (state.activeResponseId && state.activeResponseId !== responseId) return;
+    if (!drained) {
+      state.suppressedResponseIds.add(responseId);
+      stopPlayback(responseId);
+    }
+    if (state.activeResponseId === responseId) state.activeResponseId = null;
+    state.manualTurnAwaitingAssistant = false;
+    state.manualSpeechActive = false;
+    state.manualTurnCommitSent = false;
+    state.localVadController?.reset();
+    state.localVadController?.setEnabled(true);
+    traceClient('manual_turn_recovered_after_response_failure', { responseId, drained });
+    setLifecycle('active');
+    updateCallStatusFromEvent({ type: 'playback_drained' });
+  })();
+}
+
 async function drainResponsePlayback(responseId, stats, { endReason, endGeneration } = {}) {
   const responseDoneAt = stats.responseDoneAt ?? performance.now();
   const timeoutMs = endReason ? 25_000 : 30_000;
@@ -1176,6 +1324,13 @@ async function drainResponsePlayback(responseId, stats, { endReason, endGenerati
     playbackPending: isOutputAudioPlaybackPending(playback),
     responseMatches: state.activeResponseId === null,
   })) {
+    if (state.manualTurnControl && state.manualTurnAwaitingAssistant && stats.manualInputReady === false) return;
+    if (state.manualTurnControl && state.manualTurnAwaitingAssistant) {
+      state.manualTurnAwaitingAssistant = false;
+      state.manualTurnCommitSent = false;
+      state.localVadController?.reset();
+      state.localVadController?.setEnabled(true);
+    }
     setLifecycle('active');
     updateCallStatusFromEvent({ type: 'playback_drained' });
   }
@@ -1225,8 +1380,8 @@ async function setupMicrophone() {
     audio: {
       channelCount: { ideal: 1 },
       echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: false,
+      noiseSuppression: false,
+      autoGainControl: true,
     },
     video: false,
   }).then((mediaStream) => {
@@ -1247,9 +1402,12 @@ async function setupMicrophone() {
     throw new Error('浏览器音频尚未就绪，请重新点击开始聊天。');
   }
   state.audioSettings = mediaStream.getAudioTracks()[0]?.getSettings?.() || {};
+  state.manualSpeechActive = false;
+  state.manualTurnCommitSent = false;
+  state.manualAudioPreRoll.length = 0;
 
   state.audioSource = context.createMediaStreamSource(state.mediaStream);
-  const targetSampleRate = state.realtimeProvider === 'qwen' ? 16000 : 24000;
+  const targetSampleRate = realtimeInputSampleRate(state.realtimeProvider);
   const frameSamples = targetSampleRate / 50;
   state.workletNode = new AudioWorkletNode(context, 'interview-pcm-resampler', {
     numberOfInputs: 1,
@@ -1266,13 +1424,18 @@ async function setupMicrophone() {
   state.workletNode.connect(state.muteNode);
   state.muteNode.connect(state.audioContext.destination);
   state.workletNode.port.onmessage = (event) => {
-    const streamMicrophone = state.microphoneStreaming;
-    if (state.websocket?.readyState === WebSocket.OPEN && streamMicrophone) {
-      state.websocket.send(event.data);
-      state.microphonePacketCount += 1;
-      state.lastMicrophonePacketAt = performance.now();
+    if (state.manualTurnControl) {
+      if (state.microphoneStreaming) {
+        forwardMicrophonePacket(event.data);
+      } else if (state.lifecycle === 'active' && !state.manualTurnAwaitingAssistant) {
+        state.manualAudioPreRoll.push(event.data instanceof ArrayBuffer ? event.data.slice(0) : event.data);
+        if (state.manualAudioPreRoll.length > MANUAL_AUDIO_PRE_ROLL_FRAME_LIMIT) state.manualAudioPreRoll.shift();
+      }
+    } else if (state.microphoneStreaming) {
+      forwardMicrophonePacket(event.data);
     }
   };
+
   state.audioContextInfo = {
     contextState: context.state,
     sampleRate: context.sampleRate,
@@ -1288,6 +1451,54 @@ async function setupMicrophone() {
     sampleRate: context.sampleRate,
     microphoneStreaming: state.microphoneStreaming,
   });
+}
+
+async function setupLocalVad() {
+  if (!state.manualTurnControl || state.realtimeProvider !== 'stepfun') return;
+  const context = state.audioContext;
+  const mediaStream = state.mediaStream;
+  const setupGeneration = state.audioSetupGeneration;
+  const vadApi = window.vad;
+  if (!context || !mediaStream) throw new Error('麦克风音频尚未就绪，无法启动本地语音检测。');
+  if (!vadApi?.MicVAD) throw new Error('本地语音检测组件未加载，请刷新页面后重试。');
+  const localVad = await vadApi.MicVAD.new({
+    audioContext: context,
+    model: 'v6',
+    baseAssetPath: '/vad/',
+    onnxWASMBasePath: '/vad/',
+    startOnLoad: false,
+    getStream: async () => state.mediaStream ?? mediaStream,
+    pauseStream: async () => {},
+    resumeStream: async (stream) => stream,
+    ortConfig: (ort) => {
+      ort.env.logLevel = 'error';
+      ort.env.wasm.numThreads = 1;
+    },
+    onFrameProcessed: (probabilities) => {
+      if (state.lifecycle !== 'active' || state.manualTurnAwaitingAssistant) return;
+      const events = state.localVadController?.update(probabilities?.isSpeech, performance.now()) ?? [];
+      for (const vadEvent of events) handleLocalVadEvent(vadEvent);
+    },
+  });
+  if (setupGeneration !== state.audioSetupGeneration || context !== state.audioContext || mediaStream !== state.mediaStream) {
+    await destroyLocalVad(localVad);
+    throw new Error('本地语音检测初始化已取消，请重新开始采访。');
+  }
+  state.localVad = localVad;
+  const startPromise = localVad.start();
+  state.localVadSyncPromise = startPromise;
+  try {
+    await startPromise;
+  } finally {
+    if (state.localVadSyncPromise === startPromise) state.localVadSyncPromise = null;
+  }
+  if (setupGeneration !== state.audioSetupGeneration || context !== state.audioContext || mediaStream !== state.mediaStream) {
+    if (state.localVad === localVad) {
+      state.localVad = null;
+      await destroyLocalVad(localVad);
+    }
+    throw new Error('本地语音检测初始化已取消，请重新开始采访。');
+  }
 }
 
 function flushScrollTrace() {
@@ -1383,6 +1594,19 @@ function connectRealtime() {
           resolve(message);
         }
         state.sessionId = message.sessionId;
+        state.manualTurnControl = message.manualTurnControl === true;
+        state.localVadSilenceTimeoutMs = Number.isInteger(message.localVadSilenceTimeoutMs)
+          && message.localVadSilenceTimeoutMs > 0
+          ? message.localVadSilenceTimeoutMs
+          : 2_000;
+        state.manualSpeechActive = false;
+        state.manualTurnAwaitingAssistant = state.manualTurnControl;
+        state.manualTurnCommitSent = false;
+        state.localVadController = state.manualTurnControl
+          ? createLocalVadTurnController({ silenceTimeoutMs: state.localVadSilenceTimeoutMs })
+          : null;
+        syncMicrophoneStreaming();
+        syncLocalVad();
         window.dispatchEvent(new CustomEvent('interview:session', { detail: { sessionId: message.sessionId } }));
         flushStartupTraceEvents();
         state.microphonePacketCount = 0;
@@ -1691,6 +1915,7 @@ function connectRealtime() {
           : state.activeResponseId;
         if (!responseId) return;
         const stats = responseAudioStats(responseId);
+        stats.manualInputReady = message.manualInputReady !== false;
         stats.responseDoneAt ??= performance.now();
         if (responseId) finishResponseAudioTrace(responseId, message.status);
         if (state.lifecycle === 'ending') return;
@@ -1699,14 +1924,24 @@ function connectRealtime() {
           stopPlayback(responseId);
           if (state.activeResponseId === responseId) {
             state.activeResponseId = null;
-            if (state.lifecycle === 'responding') {
+            if (state.lifecycle === 'responding'
+              && (!state.manualTurnControl || stats.manualInputReady !== false)) {
+              state.manualTurnAwaitingAssistant = false;
+              state.manualSpeechActive = false;
+              state.manualTurnCommitSent = false;
+              state.localVadController?.reset();
+              state.localVadController?.setEnabled(true);
               setLifecycle('active');
               updateCallStatusFromEvent({ type: 'playback_drained' });
             }
           }
           return;
         }
-        if (message.status !== 'completed' || state.suppressedResponseIds.has(responseId)) return;
+        if (message.status !== 'completed') {
+          if (!state.suppressedResponseIds.has(responseId)) recoverManualTurnAfterFailedResponse(responseId);
+          return;
+        }
+        if (state.suppressedResponseIds.has(responseId)) return;
         if (message.endAfterPlayback) {
           scheduleAutomaticEnd(
             automaticEndReason(message.endReason, state.interviewType),
@@ -1874,6 +2109,7 @@ async function startInterview() {
     setStatus('connecting', `正在连接${realtimeProviderLabels[state.realtimeProvider]}`);
     const providerReady = connectRealtime();
     await Promise.all([microphoneReady, providerReady]);
+    await setupLocalVad();
     if (state.lifecycle !== 'connecting' || !state.sessionId) {
       throw new Error('Realtime 启动状态已取消，请重试。');
     }

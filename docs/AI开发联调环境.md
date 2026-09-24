@@ -30,6 +30,7 @@ Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不�
 | 路径 | 当前配置 | 说明 |
 |---|---|---|
 | 实时语音 | StepFun `step-audio-2-mini` | `.env` 使用 `STORY_INTERVIEW_PROVIDER=stepfun`；凭证为 `STEPFUN_API_KEY`。 |
+| 实时语音（可选） | ModelBest `MiniCPM-o-4.5-Realtime` | 设置 `STORY_INTERVIEW_PROVIDER=modelbest`；凭证 `MODELBEST_API_KEY` 放在本机忽略的 `.env` 中。 |
 | OpenClaw Agent 与会后文本任务 | Bailian `qwen3.6-35b-a3b` | Agent 的默认、推理、快速推理、写作 profile 共用此模型；文本任务通过 Model Studio OpenAI-compatible Chat API 调用。 |
 | Realtime 条件式慢路径 | NeMo Retriever + 可选 `interview.context_hint` | 只在现有 `story_continue` Story 中使用；Retriever 按 owner/story/subject 检索，之后最多执行一次无工具/无脚本的 Context Hint Agent。`NEMO_RETRIEVER_ENABLED=true` 控制 Retriever/Pipeline；`REALTIME_CONTEXT_AGENT_ENABLED=1` 控制可选 Agent（显式 `0` 关闭；未设置时仅在 Agent Task runtime 可用时默认启用）。两者互不代替。Agent smoke 为 FAIL；完整 Step-Audio 语音 E2E 为 NOT TESTED。 |
 
@@ -324,6 +325,8 @@ DASHSCOPE_API_KEY
 ```text
 STEPFUN_API_KEY
 ```
+
+ModelBest Realtime 联调读取 `MODELBEST_API_KEY`。输入为 16 kHz 单声道 Float32 PCM，输出为 24 kHz 单声道 Float32 PCM；服务器端完成 Bearer 鉴权和音频格式转换。协议参考 [ModelBest Realtime WebSocket API](https://platform.modelbest.cn/console/docs/api/realtime)。
 
 切换到 NVIDIA endpoint 时才需要相应的 NVIDIA credential，例如：
 

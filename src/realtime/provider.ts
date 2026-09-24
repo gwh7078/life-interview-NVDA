@@ -10,6 +10,7 @@ import {
   type QwenRealtimeRegion,
 } from './qwen.js';
 import { createStepfunRealtimeProvider } from './stepfun.js';
+import { createModelBestRealtimeProvider } from './modelbest.js';
 import type { RealtimeInterviewContext } from './prompt.js';
 import type {
   NormalizedRealtimeEvent,
@@ -33,7 +34,7 @@ const QWEN_OUTPUT_ENCODING = 'pcm_s16le';
 
 export interface RealtimeProviderConfig {
   stepfunApiKey?: string;
-  stepfunSilenceDurationMs?: number;
+  modelbestApiKey?: string;
   apiKey?: string;
   workspaceId?: string;
   region: QwenRealtimeRegion;
@@ -80,6 +81,7 @@ function sanitizedProviderError(
 }
 
 export interface RealtimeVoiceProvider extends RealtimeProviderContract {
+  readonly requiresQueueBeforeSessionInit?: boolean;
   connectOptions(): { url: string; headers: Record<string, string> };
   setupSession(context: RealtimeInterviewContext): Record<string, unknown>[];
   initialResponsePlan(context: RealtimeInterviewContext): {
@@ -87,12 +89,13 @@ export interface RealtimeVoiceProvider extends RealtimeProviderContract {
     fallbackText?: string;
   };
   appendAudioMessages(audio: Uint8Array): Record<string, unknown>[];
+  commitAndRespondToInputTurn?(): RealtimeOutboundStep[];
   requestAssistantTurnMessages(instruction: string): Record<string, unknown>[];
   /** Provider-specific recovery for a user turn that has stopped producing ASR activity. */
   recoverStalledUserTurn?(): RealtimeOutboundStep[];
   /** Preserve the provider's current hard-limit turn-finalization semantics. */
   stopInputAfterCurrentTurn(): RealtimeOutboundStep[];
-  beginInputShutdown(): RealtimeOutboundStep[];
+  beginInputShutdown(options?: { commitPendingInput?: boolean }): RealtimeOutboundStep[];
   closePlan(): RealtimeClosePlan | null;
   connectionFailureMessage(failure: RealtimeConnectionFailure): string;
   normalizeServerMessage(raw: unknown): NormalizedRealtimeEvent[];
@@ -155,6 +158,7 @@ export function createRealtimeInterviewProvider(
   config: RealtimeProviderConfig,
 ): RealtimeVoiceProvider {
   if (id === 'stepfun') return createStepfunRealtimeProvider(config);
+  if (id === 'modelbest') return createModelBestRealtimeProvider(config);
 
   const audioStartedResponses = new Set<string>();
   const normalize = (raw: unknown): NormalizedRealtimeEvent[] => {

@@ -7,7 +7,6 @@ import { buildInterviewContextPayload, buildInterviewInstructions, type Realtime
 import { buildQwenOnboardingCompletionAcknowledgement, buildQwenRealtimeUrl, buildQwenSessionUpdate, parseQwenServerEvent, parseQwenOnboardingCompletionCall, QWEN_ONBOARDING_COMPLETION_TOOL } from '../src/realtime/qwen.js';
 import {
   buildStepfunSessionUpdate,
-  DEFAULT_STEPFUN_SILENCE_DURATION_MS,
   DEFAULT_STEPFUN_MODEL,
   STEPFUN_CONTEXT_TOOL,
 } from '../src/realtime/stepfun.js';
@@ -105,9 +104,7 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   });
   assert.equal(adapter.connectOptions().url, 'wss://api.stepfun.com/v1/realtime?model=step-audio-2-mini');
   const session = adapter.setupSession(storyContext)[0]?.session as Record<string, unknown>;
-  const turnDetection = session.turn_detection as Record<string, unknown>;
-  assert.equal(DEFAULT_STEPFUN_SILENCE_DURATION_MS, 1_400);
-  assert.equal(turnDetection.silence_duration_ms, 1_400);
+  assert.equal(session.turn_detection, null);
   const tools = session.tools as Array<Record<string, unknown>>;
   assert.equal((tools[0]?.function as Record<string, unknown>).name, STEPFUN_CONTEXT_TOOL);
   assert.equal(adapter.appendAudioMessages(Buffer.from([0, 1]))[0]?.type, 'input_audio_buffer.append');
@@ -290,28 +287,51 @@ test('Step-Audio opening response explicitly asks the selected first question', 
   assert.match(firstResponseInstructions(externalContributorContext), /亲历或观察/);
 });
 
-test('StepFun VAD silence duration is configurable while Qwen keeps its own setting', () => {
-  const stepfunConfig = resolveRealtimeProviderConfig('stepfun', {
-    stepfunSilenceDurationMs: 2_100,
-    region: 'cn-beijing',
-    model: DEFAULT_STEPFUN_MODEL,
-    stepfunApiKey: 'test-only-key',
-  });
-  const stepfun = createRealtimeInterviewProvider('stepfun', stepfunConfig);
-  const stepfunSession = stepfun.setupSession(storyContext)[0]?.session as Record<string, unknown>;
-  assert.equal((stepfunSession.turn_detection as Record<string, unknown>).silence_duration_ms, 2_100);
-
+test('StepFun manual turn control leaves Qwen server VAD configuration unchanged', () => {
   const qwenConfig = resolveRealtimeProviderConfig('qwen', {
     apiKey: 'test-only-key',
     workspaceId: 'workspace-123',
     region: 'cn-beijing',
     model: 'qwen-audio-3.0-realtime-plus',
-    stepfunSilenceDurationMs: 2_100,
   });
-  assert.equal(qwenConfig.stepfunSilenceDurationMs, undefined);
+  assert.equal('stepfunSilenceDurationMs' in qwenConfig, false);
   const qwen = createRealtimeInterviewProvider('qwen', qwenConfig);
   const qwenSession = qwen.setupSession(storyContext)[0]?.session as Record<string, unknown>;
   assert.equal((qwenSession.turn_detection as Record<string, unknown>).silence_duration_ms, 800);
+});
+
+test('StepFun reports manual turn detection acknowledgement without exposing session instructions', () => {
+  const stepfun = createRealtimeInterviewProvider('stepfun', {
+    stepfunApiKey: 'test-only-key',
+    region: 'cn-beijing',
+    model: DEFAULT_STEPFUN_MODEL,
+  });
+  assert.equal(stepfun.capabilities.manualTurnControl, true);
+  assert.deepEqual(stepfun.normalizeServerMessage(JSON.stringify({
+    type: 'session.updated',
+    session: {
+      id: 'provider-session',
+      turn_detection: null,
+      instructions: 'private interview context',
+    },
+  })), [
+    { type: 'session.ready', providerSessionId: 'provider-session' },
+    { type: 'session.configured', turnDetectionMode: 'manual' },
+  ]);
+  assert.deepEqual(stepfun.normalizeServerMessage(JSON.stringify({
+    type: 'session.updated',
+    session: { id: 'provider-session' },
+  })), [
+    { type: 'session.ready', providerSessionId: 'provider-session' },
+    { type: 'session.configured', turnDetectionMode: 'unknown' },
+  ]);
+  assert.deepEqual(stepfun.normalizeServerMessage(JSON.stringify({
+    type: 'session.updated',
+    session: { id: 'provider-session', turn_detection: { type: '' } },
+  })), [
+    { type: 'session.ready', providerSessionId: 'provider-session' },
+    { type: 'session.configured', turnDetectionMode: 'manual' },
+  ]);
 });
 
 test('Step-Audio does not expose owner history context to external contributors', () => {

@@ -47,6 +47,7 @@ import {
   type QwenRealtimeRegion,
 } from './realtime/qwen.js';
 import { DEFAULT_STEPFUN_MODEL, STEPFUN_CONTEXT_TOOL } from './realtime/stepfun.js';
+import { DEFAULT_MODELBEST_MODEL } from './realtime/modelbest.js';
 import {
   RealtimeSlowCoordinator,
   UnavailableRealtimeRecall,
@@ -56,6 +57,7 @@ import {
 import {
   createRealtimeTraceStageTracker,
   createRealtimeTraceWriter,
+  pcm16Rms,
   type RealtimeTraceWriter,
   type RealtimeTraceFields,
 } from './realtime/trace.js';
@@ -104,12 +106,14 @@ const DEFAULT_PORT = 4174;
 const DEFAULT_HOST = '127.0.0.1';
 const END_QUIET_MS = 1_500;
 const END_DRAIN_MAX_MS = 20_000;
+const MANUAL_END_QUIET_MS = 500;
 const DEFAULT_WRAPUP_MS = 18 * 60 * 1_000;
 const DEFAULT_MAX_SESSION_MS = 20 * 60 * 1_000;
 const DEFAULT_CLOSE_GRACE_MS = 45_000;
 const DEFAULT_OPENING_RESPONSE_TIMEOUT_MS = 8_000;
 const DEFAULT_USER_TURN_STALL_TIMEOUT_MS = 4_000;
 const DEFAULT_REALTIME_SLOW_DEADLINE_MS = 5_500;
+const DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS = 2_000;
 
 export interface RuntimeConfig {
   host: string;
@@ -123,7 +127,9 @@ export interface RuntimeConfig {
   qwenModel?: string;
   stepfunModel?: string;
   stepfunApiKey?: string;
-  stepfunSilenceDurationMs?: number;
+  modelbestModel?: string;
+  modelbestApiKey?: string;
+  realtimeLocalSilenceTimeoutMs?: number;
   closeoutApiKey?: string;
   closeoutBaseUrl?: string;
   closeoutApiFormat?: 'chat-completions' | 'chat-json-schema' | 'responses';
@@ -215,6 +221,12 @@ const CLIENT_TRACE_EVENTS = new Set([
   'audio_context_resume',
   'audio_context_resume_failed',
   'speech_started',
+  'local_vad_error',
+  'local_vad_speech_started',
+  'local_vad_silence_started',
+  'local_vad_speech_resumed',
+  'local_vad_commit_triggered',
+  'manual_turn_recovered_after_response_failure',
   'speech_stopped_received',
   'assistant_started',
   'user_partial',
@@ -273,7 +285,7 @@ export function readRuntimeConfig(): RuntimeConfig {
   const openingResponseTimeoutMs = Number(process.env.REALTIME_OPENING_RESPONSE_TIMEOUT_MS ?? DEFAULT_OPENING_RESPONSE_TIMEOUT_MS);
   const userTurnStallTimeoutMs = Number(process.env.REALTIME_USER_TURN_STALL_TIMEOUT_MS ?? DEFAULT_USER_TURN_STALL_TIMEOUT_MS);
   const realtimeSlowDeadlineMs = Number(process.env.REALTIME_SLOW_DEADLINE_MS ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS);
-  const stepfunSilenceDurationMs = Number(process.env.STEPFUN_REALTIME_SILENCE_DURATION_MS ?? 1_400);
+  const realtimeLocalSilenceTimeoutMs = Number(process.env.REALTIME_LOCAL_SILENCE_TIMEOUT_MS ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS);
   const closeoutTimeoutMs = Number(closeoutTask.parameters.timeoutMs ?? 60_000);
   const closeoutApiFormat = String(closeoutTask.parameters.apiFormat ?? 'chat-completions');
   const storyCompletionTimeoutMs = Number(storyCompletionTask.parameters.timeoutMs ?? closeoutTimeoutMs);
@@ -307,8 +319,8 @@ export function readRuntimeConfig(): RuntimeConfig {
   if (!Number.isInteger(realtimeSlowDeadlineMs) || realtimeSlowDeadlineMs <= 0 || realtimeSlowDeadlineMs > 60_000) {
     throw new Error('REALTIME_SLOW_DEADLINE_MS must be an integer between 1 and 60000.');
   }
-  if (!Number.isInteger(stepfunSilenceDurationMs) || stepfunSilenceDurationMs <= 0 || stepfunSilenceDurationMs > 10_000) {
-    throw new Error('STEPFUN_REALTIME_SILENCE_DURATION_MS must be an integer between 1 and 10000.');
+  if (!Number.isInteger(realtimeLocalSilenceTimeoutMs) || realtimeLocalSilenceTimeoutMs <= 0 || realtimeLocalSilenceTimeoutMs > 10_000) {
+    throw new Error('REALTIME_LOCAL_SILENCE_TIMEOUT_MS must be an integer between 1 and 10000.');
   }
   if (!Number.isInteger(closeoutTimeoutMs) || closeoutTimeoutMs <= 0 || closeoutTimeoutMs > 300_000) {
     throw new Error('CLOSEOUT_TIMEOUT_MS must be an integer between 1 and 300000.');
@@ -335,10 +347,10 @@ export function readRuntimeConfig(): RuntimeConfig {
     apiKey: process.env.DASHSCOPE_API_KEY?.trim() || undefined,
     workspaceId: process.env.DASHSCOPE_WORKSPACE_ID?.trim() || undefined,
     region: rawRegion,
-    model: interviewTask.provider === 'qwen' || interviewTask.provider === 'stepfun'
+    model: interviewTask.provider === 'qwen' || interviewTask.provider === 'stepfun' || interviewTask.provider === 'modelbest'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
-    defaultRealtimeProvider: interviewTask.provider === 'qwen' ? 'qwen' : 'stepfun',
+    defaultRealtimeProvider: isRealtimeProviderId(interviewTask.provider) ? interviewTask.provider : 'stepfun',
     qwenModel: interviewTask.provider === 'qwen'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
@@ -346,7 +358,11 @@ export function readRuntimeConfig(): RuntimeConfig {
       ? interviewTask.model
       : process.env.STEPFUN_REALTIME_MODEL?.trim() || DEFAULT_STEPFUN_MODEL,
     stepfunApiKey: process.env.STEPFUN_API_KEY?.trim() || undefined,
-    stepfunSilenceDurationMs,
+    modelbestModel: interviewTask.provider === 'modelbest'
+      ? interviewTask.model
+      : process.env.MODELBEST_REALTIME_MODEL?.trim() || DEFAULT_MODELBEST_MODEL,
+    modelbestApiKey: process.env.MODELBEST_API_KEY?.trim() || undefined,
+    realtimeLocalSilenceTimeoutMs,
     closeoutApiKey: process.env.TEXT_MODEL_API_KEY?.trim()
       || process.env.BAILIAN_API_KEY?.trim()
       || process.env.CLOSEOUT_API_KEY?.trim()
@@ -532,6 +548,21 @@ function loadLifeStages(databasePath: string | undefined, userId: string) {
 }
 
 const publicRoot = fileURLToPath(new URL('../public/', import.meta.url));
+const localVadRoot = fileURLToPath(new URL('../node_modules/', import.meta.url));
+const localVadAssets: Record<string, { file: string; contentType: string }> = {
+  '/vad/ort.wasm.min.js': { file: 'onnxruntime-web/dist/ort.wasm.min.js', contentType: 'text/javascript; charset=utf-8' },
+  '/vad/ort-wasm-simd-threaded.mjs': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.mjs', contentType: 'text/javascript; charset=utf-8' },
+  '/vad/ort-wasm-simd-threaded.asyncify.mjs': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs', contentType: 'text/javascript; charset=utf-8' },
+  '/vad/ort-wasm-simd-threaded.jspi.mjs': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.jspi.mjs', contentType: 'text/javascript; charset=utf-8' },
+  '/vad/ort-wasm-simd-threaded.jsep.mjs': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs', contentType: 'text/javascript; charset=utf-8' },
+  '/vad/bundle.min.js': { file: '@ricky0123/vad-web/dist/bundle.min.js', contentType: 'text/javascript; charset=utf-8' },
+  '/vad/vad.worklet.bundle.min.js': { file: '@ricky0123/vad-web/dist/vad.worklet.bundle.min.js', contentType: 'text/javascript; charset=utf-8' },
+  '/vad/silero_vad_v6.onnx': { file: '@ricky0123/vad-web/dist/silero_vad_v6.onnx', contentType: 'application/octet-stream' },
+  '/vad/ort-wasm-simd-threaded.wasm': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.wasm', contentType: 'application/wasm' },
+  '/vad/ort-wasm-simd-threaded.asyncify.wasm': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm', contentType: 'application/wasm' },
+  '/vad/ort-wasm-simd-threaded.jspi.wasm': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.jspi.wasm', contentType: 'application/wasm' },
+  '/vad/ort-wasm-simd-threaded.jsep.wasm': { file: 'onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm', contentType: 'application/wasm' },
+};
 const staticAssets: Record<string, { file: string; contentType: string }> = {
   '/life.js': { file: 'life.js', contentType: 'text/javascript; charset=utf-8' },
   '/life.css': { file: 'life.css', contentType: 'text/css; charset=utf-8' },
@@ -543,6 +574,7 @@ const staticAssets: Record<string, { file: string; contentType: string }> = {
   '/interview-state.js': { file: 'interview-state.js', contentType: 'text/javascript; charset=utf-8' },
   '/text-disclosure.js': { file: 'text-disclosure.js', contentType: 'text/javascript; charset=utf-8' },
   '/audio-worklet.js': { file: 'audio-worklet.js', contentType: 'text/javascript; charset=utf-8' },
+  '/local-vad-turn-controller.js': { file: 'local-vad-turn-controller.js', contentType: 'text/javascript; charset=utf-8' },
   '/styles.css': { file: 'styles.css', contentType: 'text/css; charset=utf-8' },
   '/ui.css': { file: 'ui.css', contentType: 'text/css; charset=utf-8' },
   '/onboarding-ui.js': { file: 'onboarding-ui.js', contentType: 'text/javascript; charset=utf-8' },
@@ -1733,6 +1765,22 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
       return;
     }
 
+    const localVadAsset = localVadAssets[url.pathname];
+    if (localVadAsset && (request.method === 'GET' || request.method === 'HEAD')) {
+      try {
+        const contents = readFileSync(path.join(localVadRoot, localVadAsset.file));
+        response.writeHead(200, {
+          'Content-Type': localVadAsset.contentType,
+          'Cache-Control': 'no-cache',
+          'X-Content-Type-Options': 'nosniff',
+        });
+        response.end(request.method === 'HEAD' ? undefined : contents);
+      } catch {
+        sendJson(response, 404, { error: 'Local VAD asset not found.' });
+      }
+      return;
+    }
+
     const storyDocumentPage = url.pathname.match(/^\/stories\/([^/]+)\/documents\/([^/]+)\/?$/);
     const storyDocumentsPage = url.pathname.match(/^\/stories\/([^/]+)\/documents\/?$/);
     const storyPage = url.pathname.match(/^\/stories\/([^/]+)\/?$/);
@@ -1779,7 +1827,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-cache',
           'Content-Security-Policy': onboardingPage.microphone
-            ? "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws: wss:; media-src 'self' blob:"
+            ? "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' ws: wss:; media-src 'self' blob:"
             : "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:",
           ...(onboardingPage.microphone ? { 'Permissions-Policy': 'microphone=(self)' } : {}),
           'X-Content-Type-Options': 'nosniff',
@@ -1845,7 +1893,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
         response.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-cache',
-          'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws: wss:; media-src 'self' blob:",
+          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' ws: wss:; media-src 'self' blob:",
           'Permissions-Policy': 'microphone=(self)',
           'X-Content-Type-Options': 'nosniff',
         });
@@ -1891,8 +1939,10 @@ function createRealtimeHandler(
   let provider: WebSocket | undefined;
   let selectedProvider: RealtimeInterviewProvider | undefined;
   let selectedAdapter: RealtimeVoiceProvider | undefined;
+  let providerSessionInitSent = false;
   let interviewSession: RealtimeInterviewSession | undefined;
   let pendingProviderSessionId: string | undefined;
+  let pendingTurnDetectionMode: 'manual' | 'server_vad' | 'unknown' | undefined;
   let providerSessionReadyAt: number | undefined;
   let sessionContext: RealtimeInterviewContext | undefined;
   let startupResolve: (() => void) | undefined;
@@ -1909,6 +1959,9 @@ function createRealtimeHandler(
   let endingPromise: Promise<void> | undefined;
   let sessionClosedResolver: ((received: boolean) => void) | undefined;
   let pendingSpeech = false;
+  let manualTurnCommitPending = false;
+  let manualTurnCommitSent = false;
+  let manualInputReadyForTurn = true;
   let awaitingUserTranscript = false;
   let awaitingAssistant = false;
   let manualEndRequested = false;
@@ -1919,6 +1972,9 @@ function createRealtimeHandler(
   let microphoneTraceWindowAt = performance.now();
   let microphoneTraceFrames = 0;
   let microphoneTraceBytes = 0;
+  let microphoneTracePower = 0;
+  let microphoneTraceSamples = 0;
+  let microphoneTraceMaxRms = 0;
   let microphonePacketCount = 0;
   let lastMicrophonePacketAt: number | undefined;
   let userTranscriptDeltaCount = 0;
@@ -1946,6 +2002,7 @@ function createRealtimeHandler(
   const seenProviderMessages = new Set<string>();
   const recentFinalMessages: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   const activeResponses = new Set<string>();
+  const manualToolCallResponseIds = new Set<string>();
   const assistantResponses = new Map<string, AssistantResponse>();
   const providerAudioTrace = new Map<string, ProviderAudioTrace>();
   const slowCoordinator = new RealtimeSlowCoordinator(
@@ -2110,6 +2167,9 @@ function createRealtimeHandler(
   const handleRealtimeToolCall = (
     event: Extract<NormalizedRealtimeEvent, { type: 'tool.call.requested' }>,
   ): void => {
+    if (selectedAdapter?.capabilities.manualTurnControl && event.responseId) {
+      manualToolCallResponseIds.add(event.responseId);
+    }
     const turnId = currentTurnId ?? event.itemId ?? event.callId;
     const version = contextVersion;
     const toolRunId = toolCycleTracker.start({
@@ -2506,12 +2566,18 @@ function createRealtimeHandler(
         bytes: microphoneTraceBytes,
         intervalMs: now - microphoneTraceWindowAt,
         microphoneStreaming: microphoneTraceFrames > 0,
+        pendingSpeech,
+        rms: microphoneTraceSamples > 0 ? Math.sqrt(microphoneTracePower / microphoneTraceSamples) : 0,
+        maxRms: microphoneTraceMaxRms,
         responseActive: activeResponses.size > 0,
       });
     }
     microphoneTraceWindowAt = now;
     microphoneTraceFrames = 0;
     microphoneTraceBytes = 0;
+    microphoneTracePower = 0;
+    microphoneTraceSamples = 0;
+    microphoneTraceMaxRms = 0;
   };
 
   const microphoneTiming = (): Record<string, number | null> => ({
@@ -2690,11 +2756,44 @@ function createRealtimeHandler(
     recordTrace('onboarding.completion_acknowledged', { provider: selectedProvider });
   };
 
+  const resolveStartupAfterProviderSession = (): void => {
+    if (phase !== 'connecting') return;
+    if (selectedAdapter?.capabilities.manualTurnControl
+      && (providerSessionReadyAt === undefined || pendingTurnDetectionMode !== 'manual')) return;
+    startupResolve?.();
+  };
+
   const handleNormalizedRealtimeEvent = (event: NormalizedRealtimeEvent): void => {
+    if (event.type === 'session.queue.ready') {
+      if (phase !== 'connecting' || !selectedAdapter || !sessionContext || providerSessionInitSent) return;
+      providerSessionInitSent = true;
+      try {
+        if (!sendProviderMessages(selectedAdapter.setupSession(sessionContext))) {
+          startupReject?.(new Error('面壁 Realtime 会话初始化消息发送失败。'));
+        }
+      } catch (error) {
+        startupReject?.(error instanceof Error ? error : new Error('面壁 Realtime 会话初始化失败。'));
+      }
+      return;
+    }
+    if (event.type === 'session.configured') {
+      if (traceWriter) recordTrace('provider.turn_detection_acknowledged', {
+        provider: selectedProvider,
+        turnDetectionMode: event.turnDetectionMode,
+      });
+      else pendingTurnDetectionMode = event.turnDetectionMode;
+      if (phase === 'connecting' && selectedAdapter?.capabilities.manualTurnControl) {
+        if (event.turnDetectionMode === 'manual') {
+          resolveStartupAfterProviderSession();
+        }
+        else startupReject?.(new Error('StepFun Realtime 未确认手动回合模式，无法安全启动本地语音停顿检测。'));
+      }
+      return;
+    }
     if (event.type === 'session.ready') {
       providerSessionReadyAt = performance.now();
       persistProviderSessionId(event.providerSessionId);
-      if (phase === 'connecting') startupResolve?.();
+      resolveStartupAfterProviderSession();
       return;
     }
     if (event.type === 'session.closed') {
@@ -2734,6 +2833,8 @@ function createRealtimeHandler(
       clearUserTurnStallWatchdog();
       userTurnRecoveryAttempted = false;
       pendingSpeech = true;
+      manualTurnCommitPending = false;
+      manualTurnCommitSent = false;
       awaitingUserTranscript = true;
       userTranscriptDeltaCount = 0;
       recordTrace('provider.speech_started', {
@@ -2955,13 +3056,18 @@ function createRealtimeHandler(
 
     if (event.type === 'response.cancelled') {
       const responseId = event.responseId;
+      const manualInputReady = !manualToolCallResponseIds.delete(responseId);
+      manualInputReadyForTurn = manualInputReady;
       toolCycleTracker.markAssistantResponseDone(responseId, 'cancelled');
       activeResponses.delete(responseId);
       assistantResponses.delete(responseId);
       if (providerAudioTrace.has(responseId)) finishProviderAudioTrace(responseId, 'cancelled');
       awaitingAssistant = activeResponses.size > 0;
       send({ type: 'assistant_cancelled', responseId });
-      send({ type: 'response_done', responseId, status: 'cancelled' });
+      send({
+        type: 'response_done', responseId, status: 'cancelled',
+        ...(selectedAdapter?.capabilities.manualTurnControl ? { manualInputReady } : {}),
+      });
       if (onboardingCompletionCloseResponseId === responseId) {
         awaitingOnboardingCompletionClose = false;
         onboardingCompletionCloseResponseId = undefined;
@@ -2976,6 +3082,8 @@ function createRealtimeHandler(
     if (event.type === 'response.done') {
       const responseId = event.responseId;
       const status = event.status;
+      const manualInputReady = !manualToolCallResponseIds.delete(responseId);
+      manualInputReadyForTurn = manualInputReady;
       toolCycleTracker.markAssistantResponseDone(responseId, status);
       const buffered = assistantResponses.get(responseId);
       activeResponses.delete(responseId);
@@ -2995,7 +3103,11 @@ function createRealtimeHandler(
       if (completionMatches && pendingCompletion?.requiresAck) {
         assistantResponses.delete(responseId);
         awaitingAssistant = status === 'completed';
-        send({ type: 'response_done', responseId, status });
+        manualInputReadyForTurn = status !== 'completed';
+        send({
+          type: 'response_done', responseId, status,
+          ...(selectedAdapter?.capabilities.manualTurnControl ? { manualInputReady: status !== 'completed' } : {}),
+        });
         if (status === 'completed') requestOnboardingCompletionClose(pendingCompletion);
         else {
           pendingOnboardingCompletionRequest = undefined;
@@ -3078,6 +3190,7 @@ function createRealtimeHandler(
           status,
           endAfterPlayback,
           endReason,
+          ...(selectedAdapter?.capabilities.manualTurnControl ? { manualInputReady } : {}),
         });
         if (closingResponse && !modelComplete && onboarding && !hardLimitReached && !userConfirmedEnding && !text.trim()) {
           if (onboardingCloseResponseRetries < 1) {
@@ -3123,6 +3236,7 @@ function createRealtimeHandler(
           responseId,
           status,
           message: event.message ?? 'Realtime 回复未完成。',
+          ...(selectedAdapter?.capabilities.manualTurnControl ? { manualInputReady } : {}),
         });
       }
       assistantResponses.delete(responseId);
@@ -3171,13 +3285,14 @@ function createRealtimeHandler(
 
   const waitForProviderDrain = async (): Promise<boolean> => {
     const startedAt = Date.now();
+    const quietThresholdMs = manualEndRequested ? MANUAL_END_QUIET_MS : END_QUIET_MS;
     let observedEventAfterEnd = false;
     while (Date.now() - startedAt < END_DRAIN_MAX_MS) {
       const waitingForAssistant = !manualEndRequested && (awaitingAssistant || activeResponses.size > 0);
       const busy = pendingSpeech || awaitingUserTranscript || waitingForAssistant;
       const quietFor = Date.now() - lastProviderActivityAt;
-      if (quietFor < END_QUIET_MS) observedEventAfterEnd = true;
-      if (!busy && quietFor >= END_QUIET_MS && (observedEventAfterEnd || Date.now() - startedAt >= END_QUIET_MS)) {
+      if (quietFor < quietThresholdMs) observedEventAfterEnd = true;
+      if (!busy && quietFor >= quietThresholdMs && (observedEventAfterEnd || Date.now() - startedAt >= quietThresholdMs)) {
         return true;
       }
       await delay(100);
@@ -3221,7 +3336,11 @@ function createRealtimeHandler(
       send({ type: 'status', status: 'ending', reason });
 
       if (provider?.readyState === WebSocket.OPEN) {
-        await executeProviderSteps(selectedAdapter?.beginInputShutdown() ?? []);
+        await executeProviderSteps(selectedAdapter?.beginInputShutdown({
+          commitPendingInput: manualEndRequested
+            && (pendingSpeech || awaitingUserTranscript)
+            && !manualTurnCommitSent,
+        }) ?? []);
       }
 
       let drained = reason === 'provider_disconnected' ? false : await waitForProviderDrain();
@@ -3542,7 +3661,7 @@ function createRealtimeHandler(
       : requestedProvider;
     if (!isRealtimeProviderId(requestedId)) {
       phase = 'failed';
-      send({ type: 'error', message: '不支持的语音 Provider；请选择 Qwen 或 StepFun。' });
+      send({ type: 'error', message: '不支持的语音 Provider；请选择 Qwen、StepFun 或 MiniCPM-o。' });
       return;
     }
     const providerName: RealtimeInterviewProvider = requestedId;
@@ -3600,6 +3719,8 @@ function createRealtimeHandler(
 
     provider.on('open', () => {
       if (!provider || provider.readyState !== WebSocket.OPEN) return;
+      if (selectedAdapter?.requiresQueueBeforeSessionInit) return;
+      providerSessionInitSent = true;
       sendProviderMessages(selectedAdapter?.setupSession(context) ?? []);
     });
     provider.on('message', (raw) => {
@@ -3669,6 +3790,15 @@ function createRealtimeHandler(
       observationProvider = providerName;
       recordTrace('session.started', { lifecycle: phase });
       recordTrace('provider.session_ready', { provider: providerName });
+      if (providerName === 'stepfun') {
+        recordTrace('provider.turn_detection_requested', { turnDetectionMode: 'manual' });
+        if (pendingTurnDetectionMode !== undefined) {
+          recordTrace('provider.turn_detection_acknowledged', {
+            turnDetectionMode: pendingTurnDetectionMode,
+          });
+          pendingTurnDetectionMode = undefined;
+        }
+      }
       if (playbackReadyTracePending) {
         recordTrace('client.playback_ready', {
           providerReadyBeforePlaybackReady: providerSessionReadyAt !== undefined
@@ -3734,19 +3864,25 @@ function createRealtimeHandler(
         startedAt: interviewSession.startedAt,
         wrapUpMs,
         maxSessionMs,
+        ...(selectedAdapter?.capabilities.manualTurnControl ? {
+          manualTurnControl: true,
+          localVadSilenceTimeoutMs: config.realtimeLocalSilenceTimeoutMs ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS,
+        } : {}),
       });
       sendTechStatus({
         stage: 'fast_voice',
         status: 'completed',
         model: providerName === 'stepfun'
           ? config.stepfunModel ?? DEFAULT_STEPFUN_MODEL
-          : config.qwenModel ?? DEFAULT_QWEN_MODEL,
+          : providerName === 'modelbest'
+            ? config.modelbestModel ?? DEFAULT_MODELBEST_MODEL
+            : config.qwenModel ?? DEFAULT_QWEN_MODEL,
       });
-      if (provider?.readyState === WebSocket.OPEN && selectedAdapter) {
+      if (provider?.readyState === WebSocket.OPEN && selectedAdapter?.capabilities.supportsExplicitTurnRequest) {
         const opening = selectedAdapter.initialResponsePlan(context);
         openingRequest = opening.steps[0]?.message;
         openingAttemptCount = 0;
-        sendOpeningWithWatchdog();
+        if (openingRequest) sendOpeningWithWatchdog();
       }
     } catch (error) {
       if (startupTimeout) clearTimeout(startupTimeout);
@@ -3758,12 +3894,19 @@ function createRealtimeHandler(
 
   client.on('message', (data, isBinary) => {
     if (isBinary) {
-      if (phase === 'active' && acceptingAudio && provider?.readyState === WebSocket.OPEN) {
+      const manualAudioAllowed = !selectedAdapter?.capabilities.manualTurnControl
+        || (pendingSpeech && !awaitingAssistant && activeResponses.size === 0);
+      if (phase === 'active' && acceptingAudio && manualAudioAllowed && provider?.readyState === WebSocket.OPEN) {
         const audio = asBuffer(data);
         if (audio.length > 0 && audio.length <= 64 * 1024) {
           sendProviderMessages(selectedAdapter?.appendAudioMessages(audio) ?? []);
           microphoneTraceFrames += 1;
           microphoneTraceBytes += audio.byteLength;
+          const samples = Math.floor(audio.byteLength / 2);
+          const packetRms = pcm16Rms(audio);
+          microphoneTracePower += packetRms * packetRms * samples;
+          microphoneTraceSamples += samples;
+          microphoneTraceMaxRms = Math.max(microphoneTraceMaxRms, packetRms);
           const now = performance.now();
           microphonePacketCount += 1;
           lastMicrophonePacketAt = now;
@@ -3792,6 +3935,34 @@ function createRealtimeHandler(
         ? command.clientElapsedMs
         : undefined;
       recordTrace(`client.${event}`, { ...details, clientElapsedMs });
+      return;
+    }
+
+    if (command.type === 'manual_turn_started') {
+      if (phase !== 'active' || !selectedAdapter?.capabilities.manualTurnControl
+        || !manualInputReadyForTurn || pendingSpeech || awaitingUserTranscript || awaitingAssistant || activeResponses.size > 0) return;
+      manualInputReadyForTurn = false;
+      handleNormalizedRealtimeEvent({ type: 'speech.started' });
+      return;
+    }
+
+    if (command.type === 'manual_turn_commit') {
+      const silenceObservedMs = typeof command.silenceObservedMs === 'number'
+        ? command.silenceObservedMs
+        : Number.NaN;
+      const minimumSilenceMs = config.realtimeLocalSilenceTimeoutMs ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS;
+      if (phase !== 'active' || !selectedAdapter?.capabilities.manualTurnControl
+        || !selectedAdapter.commitAndRespondToInputTurn || !pendingSpeech || !awaitingUserTranscript
+        || manualTurnCommitPending || !Number.isFinite(silenceObservedMs) || silenceObservedMs < minimumSilenceMs) return;
+      manualTurnCommitPending = true;
+      recordTrace('realtime.local_vad_commit_accepted', {
+        silenceObservedMs: Math.round(silenceObservedMs),
+        silenceThresholdMs: minimumSilenceMs,
+      });
+      void executeProviderSteps(selectedAdapter.commitAndRespondToInputTurn()).then((sent) => {
+        manualTurnCommitSent = sent;
+        recordTrace('realtime.local_vad_commit_sent', { sent });
+      });
       return;
     }
 

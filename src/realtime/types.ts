@@ -1,4 +1,4 @@
-export type RealtimeProviderId = 'qwen' | 'stepfun';
+export type RealtimeProviderId = 'qwen' | 'stepfun' | 'modelbest';
 
 export type RealtimeAudioEncoding = 'pcm_s16le';
 
@@ -20,6 +20,7 @@ export interface RealtimeProviderCapabilities {
   supportsExplicitTurnRequest: boolean;
   supportsPlaybackAck: boolean;
   supportsExplicitSessionClose: boolean;
+  manualTurnControl?: boolean;
 }
 
 export type RealtimeOutboundMessage = Record<string, unknown>;
@@ -42,7 +43,9 @@ export type RealtimeConnectionFailure =
   | { kind: 'socket-close'; code: number; phase: 'connect' | 'stream' };
 
 export type NormalizedRealtimeEvent =
+  | { type: 'session.queue.ready' }
   | { type: 'session.ready'; providerSessionId?: string }
+  | { type: 'session.configured'; turnDetectionMode: 'manual' | 'server_vad' | 'unknown' }
   | { type: 'session.closed' }
   | { type: 'speech.started'; eventId?: string }
   | { type: 'speech.stopped'; eventId?: string; source?: 'speech_stopped' | 'committed' | 'transcription' }

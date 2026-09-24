@@ -82,6 +82,10 @@ const SAFE_TRACE_FIELD_KEYS = [
   'forwarded',
   'micPacketCount',
   'micPacketAgeMs',
+  'turnDetectionMode',
+  'silenceObservedMs',
+  'silenceThresholdMs',
+  'turnState',
   'liveLineVisible',
   'sampleRate',
   'pcmDurationMs',
@@ -177,6 +181,18 @@ const SAFE_TRACE_FIELD_KEYS = [
 export type RealtimeTraceField = typeof SAFE_TRACE_FIELD_KEYS[number];
 export type RealtimeTraceScalar = string | number | boolean | null | undefined;
 export type RealtimeTraceFields = Partial<Record<RealtimeTraceField, RealtimeTraceScalar>>;
+
+export function pcm16Rms(audio: Uint8Array): number {
+  const samples = Math.floor(audio.byteLength / 2);
+  if (samples === 0) return 0;
+  const view = new DataView(audio.buffer, audio.byteOffset, audio.byteLength);
+  let power = 0;
+  for (let index = 0; index < samples; index += 1) {
+    const value = view.getInt16(index * 2, true) / 32768;
+    power += value * value;
+  }
+  return Math.sqrt(power / samples);
+}
 
 const SAFE_TRACE_FIELDS: ReadonlySet<string> = new Set(SAFE_TRACE_FIELD_KEYS);
 

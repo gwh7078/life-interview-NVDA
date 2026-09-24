@@ -51,17 +51,51 @@ function normalizeMockRealtime(raw: unknown): NormalizedRealtimeEvent[] {
   const event = parseQwenServerEvent(raw);
   if (!event) return [];
   const type = String(event.type ?? '');
-  if (type === 'session.updated') {
+  if (type === 'session.created') {
     const session = event.session && typeof event.session === 'object' && !Array.isArray(event.session)
       ? event.session as Record<string, unknown>
       : undefined;
     return [{ type: 'session.ready', ...(typeof session?.id === 'string' ? { providerSessionId: session.id } : {}) }];
+  }
+  if (type === 'session.updated') {
+    const session = event.session && typeof event.session === 'object' && !Array.isArray(event.session)
+      ? event.session as Record<string, unknown>
+      : undefined;
+    const turnDetection = session?.turn_detection;
+    const manual = turnDetection === null || (typeof turnDetection === 'object'
+      && turnDetection !== null && 'type' in turnDetection && turnDetection.type === '');
+    const serverVad = typeof turnDetection === 'object' && turnDetection !== null
+      && 'type' in turnDetection && turnDetection.type === 'server_vad';
+    return [
+      { type: 'session.ready', ...(typeof session?.id === 'string' ? { providerSessionId: session.id } : {}) },
+      { type: 'session.configured', turnDetectionMode: manual ? 'manual' : serverVad ? 'server_vad' : 'unknown' },
+    ];
   }
   if (type === 'input_audio_buffer.speech_started') {
     return [{ type: 'speech.started' }];
   }
   if (type === 'input_audio_buffer.speech_stopped') {
     return [{ type: 'speech.stopped', source: 'speech_stopped' }];
+  }
+  if (type === 'mock.tool') {
+    return [{
+      type: 'tool.call.requested',
+      responseId: typeof event.responseId === 'string' ? event.responseId : 'mock-tool-response',
+      callId: typeof event.callId === 'string' ? event.callId : 'mock-tool-call',
+      name: 'get_interview_context',
+      arguments: { query: '已有经历' },
+    }];
+  }
+  if (type === 'response.cancelled') {
+    const response = event.response && typeof event.response === 'object' && !Array.isArray(event.response)
+      ? event.response as Record<string, unknown>
+      : undefined;
+    return [{
+      type: 'response.cancelled',
+      responseId: typeof event.response_id === 'string'
+        ? event.response_id
+        : typeof response?.id === 'string' ? response.id : 'response',
+    }];
   }
   if (type === 'conversation.item.input_audio_transcription.delta') {
     return [{
@@ -591,5 +625,187 @@ test('user turn stall watchdog requests provider recovery after ASR is idle past
     const closedProvider = once(providerHttp, 'close');
     providerHttp.close();
     await closedProvider;
+  }
+});
+
+test('StepFun manual turn commits once after local VAD and ignores microphone audio while responding', async () => {
+  const directory = mkdtempSync(path.join(testTempRoot, `rensheng-manual-turn-${randomUUID()}-`));
+  temporaryDirectories.push(directory);
+  const databasePath = path.join(directory, 'session.db');
+  const database = createDatabase(databasePath);
+  try { runMigrations(database); seedDatabase(database); } finally { database.close(); }
+
+  const providerHttp = createServer();
+  const providerServer = new WebSocketServer({ server: providerHttp });
+  let providerSocket: WebSocket | undefined;
+  let resolveSessionCreated!: () => void;
+  const sessionCreated = new Promise<void>((resolve) => { resolveSessionCreated = resolve; });
+  let manualResponseCount = 0;
+  const providerMessages: Array<Record<string, unknown>> = [];
+  const waitForProviderMessage = async (predicate: (message: Record<string, unknown>) => boolean) => {
+    const deadline = Date.now() + 2_000;
+    while (Date.now() < deadline) {
+      const found = providerMessages.find(predicate);
+      if (found) return found;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error(`Timed out waiting for provider message; received ${providerMessages.map((message) => String(message.type)).join(', ')}`);
+  };
+  providerHttp.listen(0, '127.0.0.1');
+  await once(providerHttp, 'listening');
+  const providerAddress = providerHttp.address();
+  assert.ok(providerAddress && typeof providerAddress === 'object');
+  const providerUrl = `ws://127.0.0.1:${providerAddress.port}`;
+
+  providerServer.on('connection', (socket) => {
+    providerSocket = socket;
+    socket.on('message', (raw) => {
+      const message = parseQwenServerEvent(raw);
+      if (!message) return;
+      providerMessages.push(message);
+      if (message.type === 'mock.setup') {
+        socket.send(JSON.stringify({ type: 'session.created', session: { id: 'mock-manual-turn' } }));
+        resolveSessionCreated();
+      } else if (message.type === 'mock.opening') {
+        socket.send(JSON.stringify({ type: 'response.created', response: { id: 'mock-opening' } }));
+        socket.send(JSON.stringify({ type: 'response.done', response: { id: 'mock-opening', status: 'completed' } }));
+      } else if (message.type === 'mock.commit') {
+        socket.send(JSON.stringify({ type: 'input_audio_buffer.speech_stopped' }));
+        socket.send(JSON.stringify({
+          type: 'conversation.item.input_audio_transcription.completed',
+          item_id: 'mock-manual-user',
+          transcript: '本地 VAD 控制的测试语句',
+        }));
+      } else if (message.type === 'response.create') {
+        const responseId = manualResponseCount++ === 0 ? 'mock-manual-response' : 'mock-tool-response';
+        socket.send(JSON.stringify({ type: 'response.created', response: { id: responseId } }));
+      }
+    });
+  });
+
+  const appServer = createInterviewServiceServer({
+    host: '127.0.0.1', port: 0, databasePath, region: 'cn-beijing', model: 'mock-realtime-model',
+    apiKey: 'mock-realtime-key', workspaceId: 'mock-workspace', developmentAuthEnabled: true,
+    wrapUpMs: 100_000, maxSessionMs: 200_000, closeGraceMs: 5_000,
+  }, {
+    realtimeProviderFactory: (id) => ({
+      id,
+      capabilities: {
+        fullDuplex: true, supportsInterrupt: false, supportsExplicitTurnRequest: true,
+        supportsPlaybackAck: false, supportsExplicitSessionClose: false, manualTurnControl: true,
+      },
+      audio: { input: { encoding: 'pcm_s16le', sampleRate: 24_000, frameBytes: 960 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
+      connectOptions: () => ({ url: providerUrl, headers: {} }),
+      setupSession: () => [{ type: 'mock.setup' }],
+      normalizeServerMessage: normalizeMockRealtime,
+      appendAudioMessages: (audio) => [{ type: 'mock.audio', bytes: audio.byteLength }],
+      commitAndRespondToInputTurn: () => [
+        { message: { type: 'mock.commit' } },
+        { message: { type: 'response.create' } },
+      ],
+      requestAssistantTurnMessages: () => [{ type: 'mock.noop' }],
+      stopInputAfterCurrentTurn: () => [],
+      beginInputShutdown: () => [],
+      closePlan: () => null,
+      connectionFailureMessage: () => 'mock realtime failure',
+      handleControlEvent: () => [],
+      initialResponsePlan: () => ({ steps: [{ message: { type: 'mock.opening' } }] }),
+    }),
+  });
+  appServer.listen(0, '127.0.0.1');
+  await once(appServer, 'listening');
+  const appAddress = appServer.address();
+  assert.ok(appAddress && typeof appAddress === 'object');
+  const baseUrl = `http://127.0.0.1:${appAddress.port}`;
+  let clientSocket: WebSocket | undefined;
+
+  try {
+    const interviewPage = await fetch(`${baseUrl}/interview`);
+    assert.match(interviewPage.headers.get('content-security-policy') ?? '', /'wasm-unsafe-eval'/u);
+    for (const asset of [
+      'ort-wasm-simd-threaded.mjs',
+      'ort-wasm-simd-threaded.asyncify.mjs',
+      'ort-wasm-simd-threaded.jspi.mjs',
+      'ort-wasm-simd-threaded.jsep.mjs',
+    ]) {
+      const response = await fetch(`${baseUrl}/vad/${asset}`, { method: 'HEAD' });
+      assert.equal(response.status, 200, `${asset} must be served for ONNX runtime loading`);
+      assert.match(response.headers.get('content-type') ?? '', /javascript/u);
+    }
+    const login = await fetch(`${baseUrl}/api/auth/development/legacy-session`, { method: 'POST' });
+    const cookie = login.headers.get('set-cookie')?.split(';', 1)[0];
+    assert.ok(cookie);
+    clientSocket = new WebSocket(`ws://127.0.0.1:${appAddress.port}/api/realtime`, { headers: { cookie } });
+    await once(clientSocket, 'open');
+    const messages = collectMessages(clientSocket);
+    clientSocket.send(JSON.stringify({ type: 'start', stage_id: seedIds.work, provider: 'stepfun' }));
+    await sessionCreated;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(messages.messages.some((message) => message.type === 'ready'), false,
+      'manual turn control must wait for the session.updated turn_detection acknowledgement');
+    providerSocket?.send(JSON.stringify({
+      type: 'session.updated',
+      session: { id: 'mock-manual-turn', turn_detection: null },
+    }));
+    await messages.waitFor((message) => message.type === 'ready');
+    clientSocket.send(JSON.stringify({ type: 'playback_ready' }));
+    await messages.waitFor((message) => message.type === 'response_done' && message.responseId === 'mock-opening');
+
+    clientSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await messages.waitFor((message) => message.type === 'speech_started');
+    clientSocket.send(Buffer.from([0, 0]));
+    await waitForProviderMessage((message) => message.type === 'mock.audio');
+    clientSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
+    await waitForProviderMessage((message) => message.type === 'response.create');
+    await messages.waitFor((message) => message.type === 'assistant_started' && message.responseId === 'mock-manual-response');
+
+    clientSocket.send(Buffer.from([0, 0]));
+    clientSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_100 }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(providerMessages.filter((message) => message.type === 'mock.audio').length, 1);
+    assert.equal(providerMessages.filter((message) => message.type === 'mock.commit').length, 1);
+    assert.equal(providerMessages.filter((message) => message.type === 'response.create').length, 1);
+
+    assert.ok(providerMessages.findIndex((message) => message.type === 'mock.commit')
+      < providerMessages.findIndex((message) => message.type === 'response.create'));
+    providerSocket?.send(JSON.stringify({ type: 'response.done', response: { id: 'mock-manual-response', status: 'completed' } }));
+    await messages.waitFor((message) => message.type === 'response_done' && message.responseId === 'mock-manual-response');
+
+    clientSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await messages.waitFor((message) => message.type === 'speech_started'
+      && messages.messages.filter((item) => item.type === 'speech_started').length === 2);
+    clientSocket.send(Buffer.from([0, 0]));
+    await waitForProviderMessage((message) => message.type === 'mock.audio');
+    clientSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
+    await waitForProviderMessage((message) => message.type === 'response.create'
+      && providerMessages.filter((item) => item.type === 'response.create').length >= 2);
+    await messages.waitFor((message) => message.type === 'assistant_started' && message.responseId === 'mock-tool-response');
+    providerSocket?.send(JSON.stringify({ type: 'mock.tool', responseId: 'mock-tool-response' }));
+    providerSocket?.send(JSON.stringify({ type: 'response.cancelled', response_id: 'mock-tool-response' }));
+    const cancelledResponse = await messages.waitFor((message) => message.type === 'response_done' && message.responseId === 'mock-tool-response');
+    assert.equal(cancelledResponse.manualInputReady, false,
+      'a cancelled tool response must keep manual input held until the tool cycle completes');
+    const speechStartedCount = messages.messages.filter((message) => message.type === 'speech_started').length;
+    clientSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(messages.messages.filter((message) => message.type === 'speech_started').length, speechStartedCount,
+      'the server must reject a new user turn while tool output is still held');
+    providerSocket?.send(JSON.stringify({ type: 'response.created', response: { id: 'mock-tool-resume' } }));
+    providerSocket?.send(JSON.stringify({ type: 'response.done', response: { id: 'mock-tool-resume', status: 'completed' } }));
+    await messages.waitFor((message) => message.type === 'response_done' && message.responseId === 'mock-tool-resume');
+    clientSocket.send(JSON.stringify({ type: 'end', reason: 'user' }));
+    const ended = await messages.waitFor((message) => message.type === 'ended', 5_000);
+    assert.equal(ended.drainTimedOut, false);
+  } finally {
+    if (clientSocket?.readyState === WebSocket.OPEN) clientSocket.close();
+    if (providerSocket?.readyState === WebSocket.OPEN) providerSocket.close();
+    const appClosed = once(appServer, 'close');
+    appServer.close();
+    appServer.closeAllConnections();
+    await appClosed;
+    providerServer.close();
+    const providerClosed = once(providerHttp, 'close');
+    providerHttp.close();
+    await providerClosed;
   }
 });

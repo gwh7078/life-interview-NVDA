@@ -16,6 +16,7 @@ const numericMetrics = [
   'promptTokens', 'completionTokens', 'totalTokens', 'selectedEvidenceCount',
   'toolToFirstAudioMs', 'responseBFirstAudioMs', 'responseBLatencyMs',
   'toolResultWriteLatencyMs', 'toolCycleLatencyMs',
+  'silenceObservedMs', 'silenceThresholdMs',
 ] as const;
 
 const SAFE_FALLBACK_TYPES = new Set(['direct_retrieval']);
@@ -85,6 +86,11 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
   if (slowPath) return slowPath;
   if (event === 'session.started') return { category: 'runtime', eventType: 'runtime.started', status: 'start', title: 'Session started', component: 'interview-runtime' };
   if (event === 'provider.session_ready') return { category: 'realtime', eventType: 'realtime.connected', status: 'success', title: 'CONNECTED', component: 'realtime-provider' };
+  if (event === 'provider.turn_detection_requested') return { category: 'realtime', eventType: 'realtime.turn_detection_requested', status: 'start', title: 'LOCAL TURN CONTROL', component: 'realtime-provider' };
+  if (event === 'provider.turn_detection_acknowledged') return { category: 'realtime', eventType: 'realtime.turn_detection_acknowledged', status: fields.turnDetectionMode === 'manual' ? 'success' : 'warning', title: fields.turnDetectionMode === 'manual' ? 'MANUAL TURN CONFIRMED' : 'TURN MODE UNKNOWN', component: 'realtime-provider' };
+  if (event === 'client.local_vad_silence_started') return { category: 'realtime', eventType: 'realtime.local_silence_started', status: 'running', title: 'LOCAL VAD SILENCE', component: 'local-silero-vad' };
+  if (event === 'client.local_vad_speech_resumed') return { category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', title: 'USER SPEAKING', component: 'local-silero-vad' };
+  if (event === 'client.local_vad_commit_triggered') return { category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', title: 'USER TURN COMMITTED', component: 'local-silero-vad' };
   if (event === 'provider.speech_started') return { category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', title: 'USER SPEAKING', component: 'realtime-provider' };
   if (event === 'provider.speech_stopped_received' || event === 'provider.speech_stopped_forwarded') return { category: 'realtime', eventType: 'realtime.listening', status: 'running', title: 'LISTENING', component: 'realtime-provider' };
   if (event === 'provider.response_created') return { category: 'realtime', eventType: 'realtime.model_thinking', status: 'running', title: 'AI THINKING', component: 'realtime-provider' };

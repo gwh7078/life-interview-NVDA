@@ -117,15 +117,15 @@ test('runtime auth mode defaults to SMS and rejects unknown modes', () => {
   });
 });
 
-test('StepFun server VAD silence duration defaults to 1400ms and accepts a runtime override', () => {
-  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', STEPFUN_REALTIME_SILENCE_DURATION_MS: undefined }, () => {
-    assert.equal(readRuntimeConfig().stepfunSilenceDurationMs, 1_400);
+test('local VAD silence timeout defaults to 2000ms and accepts a runtime override', () => {
+  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', REALTIME_LOCAL_SILENCE_TIMEOUT_MS: undefined }, () => {
+    assert.equal(readRuntimeConfig().realtimeLocalSilenceTimeoutMs, 2_000);
   });
-  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', STEPFUN_REALTIME_SILENCE_DURATION_MS: '2100' }, () => {
-    assert.equal(readRuntimeConfig().stepfunSilenceDurationMs, 2_100);
+  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', REALTIME_LOCAL_SILENCE_TIMEOUT_MS: '5100' }, () => {
+    assert.equal(readRuntimeConfig().realtimeLocalSilenceTimeoutMs, 5_100);
   });
-  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', STEPFUN_REALTIME_SILENCE_DURATION_MS: '0' }, () => {
-    assert.throws(() => readRuntimeConfig(), /STEPFUN_REALTIME_SILENCE_DURATION_MS/);
+  withEnvironment({ NODE_ENV: 'test', AUTH_MODE: 'demo_phone', REALTIME_LOCAL_SILENCE_TIMEOUT_MS: '0' }, () => {
+    assert.throws(() => readRuntimeConfig(), /REALTIME_LOCAL_SILENCE_TIMEOUT_MS/);
   });
 });
 
@@ -137,7 +137,7 @@ test('Step-Audio 2 Mini is the default realtime provider and legacy Doubao confi
     NODE_ENV: 'test',
     STORY_INTERVIEW_PROVIDER: 'doubao',
   }, () => {
-    assert.throws(() => readRuntimeConfig(), /STORY_INTERVIEW_PROVIDER must be qwen or stepfun/);
+    assert.throws(() => readRuntimeConfig(), /STORY_INTERVIEW_PROVIDER must be qwen, stepfun or modelbest/);
   });
 });
 

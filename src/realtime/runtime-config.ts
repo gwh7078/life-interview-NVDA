@@ -3,10 +3,11 @@ import {
   type QwenRealtimeRegion,
 } from './qwen.js';
 import { DEFAULT_STEPFUN_MODEL } from './stepfun.js';
+import { DEFAULT_MODELBEST_MODEL } from './modelbest.js';
 import type { RealtimeProviderConfig } from './provider.js';
 import type { RealtimeProviderId } from './types.js';
 
-export const REALTIME_PROVIDER_IDS = ['qwen', 'stepfun'] as const;
+export const REALTIME_PROVIDER_IDS = ['qwen', 'stepfun', 'modelbest'] as const;
 
 export interface RealtimeProviderRuntimeSource {
   apiKey?: string;
@@ -16,7 +17,8 @@ export interface RealtimeProviderRuntimeSource {
   qwenModel?: string;
   stepfunApiKey?: string;
   stepfunModel?: string;
-  stepfunSilenceDurationMs?: number;
+  modelbestApiKey?: string;
+  modelbestModel?: string;
 }
 
 export function isRealtimeProviderId(value: unknown): value is RealtimeProviderId {
@@ -31,9 +33,15 @@ export function resolveRealtimeProviderConfig(
   if (id === 'stepfun') {
     return {
       stepfunApiKey: source.stepfunApiKey,
-      stepfunSilenceDurationMs: source.stepfunSilenceDurationMs,
       region: source.region,
       model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL,
+    };
+  }
+  if (id === 'modelbest') {
+    return {
+      modelbestApiKey: source.modelbestApiKey,
+      region: source.region,
+      model: source.modelbestModel ?? DEFAULT_MODELBEST_MODEL,
     };
   }
   return {
@@ -59,6 +67,10 @@ export function realtimeProviderHealthSummary(
     stepfun: {
       configured: Boolean(source.stepfunApiKey),
       ...(detailed ? { model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL } : {}),
+    },
+    modelbest: {
+      configured: Boolean(source.modelbestApiKey),
+      ...(detailed ? { model: source.modelbestModel ?? DEFAULT_MODELBEST_MODEL } : {}),
     },
   };
 }

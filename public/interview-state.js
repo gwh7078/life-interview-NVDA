@@ -17,7 +17,11 @@ const realtimeCallStatuses = {
 };
 
 export function resolveRealtimeProvider(value) {
-  return value === 'qwen' ? 'qwen' : 'stepfun';
+  return value === 'qwen' || value === 'modelbest' ? value : 'stepfun';
+}
+
+export function realtimeInputSampleRate(provider) {
+  return provider === 'qwen' || provider === 'modelbest' ? 16000 : 24000;
 }
 
 export function shouldIgnoreAssistantResponseMessage(lifecycle, messageType) {

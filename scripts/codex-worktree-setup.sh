@@ -24,6 +24,7 @@ if [[ ! -e .env ]]; then
       "NEMOCLAW_SANDBOX=my-assistant",
       "STORY_INTERVIEW_PROVIDER=stepfun",
       "STEPFUN_REALTIME_MODEL=step-audio-2-mini",
+      "MODELBEST_REALTIME_MODEL=MiniCPM-o-4.5-Realtime",
       "TEXT_MODEL_PROVIDER=openai-compatible",
       "TEXT_MODEL_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1",
       "TEXT_MODEL=qwen3.6-35b-a3b",
@@ -47,6 +48,7 @@ if [[ ! -e .env ]]; then
       "no_proxy=127.0.0.1,localhost,::1",
       "# 实时语音与会后总结密钥仅在需要真实模型联调时填写。",
       "# STEPFUN_API_KEY=",
+      "# MODELBEST_API_KEY=",
       "# CLOSEOUT_API_KEY=",
       "# DASHSCOPE_API_KEY=NeMo Retriever 百炼 embedding/rerank 凭证（macOS 钥匙串同步）",
       "",
@@ -84,7 +86,7 @@ else
 fi
 
 if bash scripts/codex-node.sh node --env-file-if-exists=.env --eval '
-  process.exit(process.env.STEPFUN_API_KEY?.trim() && process.env.CLOSEOUT_API_KEY?.trim() ? 0 : 1);
+  process.exit((process.env.STEPFUN_API_KEY?.trim() || process.env.MODELBEST_API_KEY?.trim()) && process.env.CLOSEOUT_API_KEY?.trim() ? 0 : 1);
 '; then
   echo "检测到实时语音与会后总结凭证；只确认是否存在，不显示其内容。"
 else

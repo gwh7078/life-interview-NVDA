@@ -14,7 +14,6 @@ export const DEFAULT_STEPFUN_VOICE = 'wenrounansheng';
 export const STEPFUN_REALTIME_URL = 'wss://api.stepfun.com/v1/realtime';
 export const STEPFUN_INPUT_SAMPLE_RATE = 24_000;
 export const STEPFUN_OUTPUT_SAMPLE_RATE = 24_000;
-export const DEFAULT_STEPFUN_SILENCE_DURATION_MS = 1_400;
 export const STEPFUN_PCM_FRAME_BYTES = 960;
 export const STEPFUN_CONTEXT_TOOL = 'get_interview_context';
 
@@ -117,7 +116,6 @@ function initialResponseInstructions(context: RealtimeInterviewContext): string 
 export function buildStepfunSessionUpdate(
   context: RealtimeInterviewContext,
   voice = DEFAULT_STEPFUN_VOICE,
-  silenceDurationMs = DEFAULT_STEPFUN_SILENCE_DURATION_MS,
 ): Record<string, unknown> {
   const allowsContextTool = context.interview_type === 'story'
     && context.task_context?.mode === 'continue'
@@ -132,11 +130,7 @@ export function buildStepfunSessionUpdate(
       input_audio_format: 'pcm16',
       output_audio_format: 'pcm16',
       voice,
-      turn_detection: {
-        type: 'server_vad',
-        prefix_padding_ms: 300,
-        silence_duration_ms: silenceDurationMs,
-      },
+      turn_detection: null,
       ...(allowsContextTool ? { tools: [buildStepfunContextTool()] } : {}),
     },
   };
@@ -203,6 +197,7 @@ function stepfunCapabilities(): RealtimeProviderCapabilities {
     supportsExplicitTurnRequest: true,
     supportsPlaybackAck: false,
     supportsExplicitSessionClose: false,
+    manualTurnControl: true,
   };
 }
 
@@ -258,10 +253,18 @@ export function createStepfunRealtimeProvider(
     const eventId = typeof event.event_id === 'string' ? event.event_id : undefined;
     if (type === 'session.created' || type === 'session.updated') {
       const session = record(event.session);
-      return [{
+      const readyEvent: NormalizedRealtimeEvent = {
         type: 'session.ready',
         ...(typeof session?.id === 'string' ? { providerSessionId: session.id } : {}),
-      }];
+      };
+      if (type !== 'session.updated') return [readyEvent];
+      const turnDetection = session?.turn_detection;
+      const turnDetectionMode: 'manual' | 'server_vad' | 'unknown' = turnDetection === null || record(turnDetection)?.type === ''
+        ? 'manual'
+        : record(turnDetection)?.type === 'server_vad'
+          ? 'server_vad'
+          : 'unknown';
+      return [readyEvent, { type: 'session.configured', turnDetectionMode }];
     }
     if (type === 'session.closed') return [{ type: 'session.closed' }];
     if (type === 'error') return [{ type: 'provider.error', message: sanitizedProviderError(event, config.stepfunApiKey), phase: 'stream' }];
@@ -388,11 +391,7 @@ export function createStepfunRealtimeProvider(
         headers: { Authorization: `Bearer ${config.stepfunApiKey}` },
       };
     },
-    setupSession: (context) => [buildStepfunSessionUpdate(
-      context,
-      DEFAULT_STEPFUN_VOICE,
-      config.stepfunSilenceDurationMs ?? DEFAULT_STEPFUN_SILENCE_DURATION_MS,
-    )],
+    setupSession: (context) => [buildStepfunSessionUpdate(context)],
     initialResponsePlan: (context) => ({
       steps: [{ message: {
         type: 'response.create',
@@ -403,12 +402,19 @@ export function createStepfunRealtimeProvider(
       } }],
     }),
     appendAudioMessages: (audio) => [buildStepfunAudioAppend(audio)],
+    commitAndRespondToInputTurn: () => [
+      { message: { type: 'input_audio_buffer.commit' } },
+      { message: { type: 'response.create', response: { modalities: ['text', 'audio'] } } },
+    ],
     recoverStalledUserTurn: () => [{ message: { type: 'input_audio_buffer.commit' } }],
     stopInputAfterCurrentTurn: () => [],
-    beginInputShutdown: () => Array.from({ length: 40 }, () => ({
-      message: buildStepfunAudioAppend(Buffer.alloc(STEPFUN_PCM_FRAME_BYTES)),
-      delayAfterMs: 20,
-    })),
+    beginInputShutdown: (options) => [
+      ...Array.from({ length: 40 }, () => ({
+        message: buildStepfunAudioAppend(Buffer.alloc(STEPFUN_PCM_FRAME_BYTES)),
+        delayAfterMs: 20,
+      })),
+      ...(options?.commitPendingInput ? [{ message: { type: 'input_audio_buffer.commit' } }] : []),
+    ],
     closePlan: (): RealtimeClosePlan | null => null,
     connectionFailureMessage: (failure) => stepfunConnectionFailureMessage(failure, config.stepfunApiKey),
     requestAssistantTurnMessages: (instruction) => [{
