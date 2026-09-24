@@ -3,7 +3,7 @@ import type { RealtimeProviderConfig, RealtimeVoiceProvider } from './provider.j
 import type { NormalizedRealtimeEvent, RealtimeConnectionFailure } from './types.js';
 
 export const DEFAULT_MODELBEST_MODEL = 'MiniCPM-o-4.5-Realtime';
-export const MODELBEST_REALTIME_URL = 'wss://api.modelbest.cn/v1/realtime';
+export const MODELBEST_REALTIME_URL = 'wss://minicpmo45.modelbest.cn/v1/realtime';
 export const MODELBEST_INPUT_SAMPLE_RATE = 16_000;
 export const MODELBEST_OUTPUT_SAMPLE_RATE = 24_000;
 export const MODELBEST_PCM_FRAME_BYTES = 640;
@@ -224,9 +224,12 @@ export function createModelBestRealtimeProvider(config: RealtimeProviderConfig):
     capabilities: {
       fullDuplex: true,
       supportsInterrupt: false,
+      supportsToolCalling: false,
+      supportsSlowContext: false,
       supportsExplicitTurnRequest: false,
       supportsPlaybackAck: false,
       supportsExplicitSessionClose: true,
+      manualTurnControl: false,
     },
     audio: {
       input: { encoding: 'pcm_s16le', sampleRate: MODELBEST_INPUT_SAMPLE_RATE, frameBytes: MODELBEST_PCM_FRAME_BYTES },
@@ -235,10 +238,8 @@ export function createModelBestRealtimeProvider(config: RealtimeProviderConfig):
     connectOptions() {
       const apiKey = config.modelbestApiKey?.trim();
       if (!apiKey) throw new Error('尚未配置面壁 MiniCPM-o Realtime。请在项目 .env 中填写 MODELBEST_API_KEY 后重启服务。');
-      const model = config.model?.trim() || DEFAULT_MODELBEST_MODEL;
       const url = new URL(MODELBEST_REALTIME_URL);
       url.searchParams.set('mode', 'audio');
-      url.searchParams.set('model', model);
       return { url: url.toString(), headers: { Authorization: `Bearer ${apiKey}` } };
     },
     setupSession(context: RealtimeInterviewContext) {

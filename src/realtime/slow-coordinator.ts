@@ -9,8 +9,6 @@ export interface RealtimeRecallRequest {
   turnId: string;
   contextVersion: number;
   query: string;
-  storySummary?: string;
-  recentContext?: Array<{ role: 'user' | 'assistant'; text: string }>;
   traceContext?: AgentTaskTraceContext;
   onProgress?: (event: RealtimeSlowPathProgress) => void;
 }
@@ -29,8 +27,6 @@ export interface RealtimeSlowPathProgress {
   candidateCount?: number;
   evidenceCount?: number;
   inputChars?: number;
-  storySummaryChars?: number;
-  recentContextChars?: number;
   evidenceInputChars?: number;
   model?: string;
   skill?: string;
@@ -139,10 +135,10 @@ export class RealtimeSlowCoordinator {
 
   constructor(
     private readonly recallPort: RealtimeRecallPort,
-    private readonly deadlineMs = 5_500,
+    private readonly deadlineMs = 5_000,
   ) {
-    if (!Number.isInteger(deadlineMs) || deadlineMs <= 0) {
-      throw new Error('Realtime slow recall deadline must be a positive integer.');
+    if (!Number.isInteger(deadlineMs) || deadlineMs <= 0 || deadlineMs > 5_000) {
+      throw new Error('Realtime slow recall deadline must be an integer between 1 and 5000.');
     }
   }
 
@@ -155,6 +151,7 @@ export class RealtimeSlowCoordinator {
   run(
     request: RealtimeRecallRequest,
     isCurrent: () => boolean = () => true,
+    deadlineAt = performance.now() + this.deadlineMs,
   ): Promise<SlowRecallResult> {
     this.active?.controller.abort('superseded');
     const generation = ++this.generation;
@@ -162,25 +159,38 @@ export class RealtimeSlowCoordinator {
     const controller = new AbortController();
     const active: ActiveRecall = { controller, generation, runId };
     this.active = active;
-    return this.execute(active, request, isCurrent);
+    return this.execute(active, request, isCurrent, deadlineAt);
   }
 
   private async execute(
     active: ActiveRecall,
     request: RealtimeRecallRequest,
     isCurrent: () => boolean,
+    deadlineAt: number,
   ): Promise<SlowRecallResult> {
     const startedAt = performance.now();
     let timeout: NodeJS.Timeout | undefined;
     let abortListener: (() => void) | undefined;
     try {
+      const remainingMs = deadlineAt - performance.now();
+      if (remainingMs <= 0) {
+        active.controller.abort('deadline');
+        return {
+          runId: active.runId,
+          status: 'timeout',
+          latencyMs: performance.now() - startedAt,
+          errorCode: 'REALTIME_RECALL_TIMEOUT',
+        };
+      }
+      const timeoutOutcome = new Promise<RecallOutcome>((resolve) => {
+        timeout = setTimeout(() => resolve({ kind: 'timeout' }), remainingMs);
+      });
       const outcome = await Promise.race<RecallOutcome>([
-        Promise.resolve(this.recallPort.recall(request, { signal: active.controller.signal }))
+        Promise.resolve()
+          .then(() => this.recallPort.recall(request, { signal: active.controller.signal }))
           .then((hint): RecallOutcome => ({ kind: 'completed', hint }))
           .catch((error): RecallOutcome => ({ kind: 'failed', error })),
-        new Promise<RecallOutcome>((resolve) => {
-          timeout = setTimeout(() => resolve({ kind: 'timeout' }), this.deadlineMs);
-        }),
+        timeoutOutcome,
         new Promise<RecallOutcome>((resolve) => {
           abortListener = () => resolve({ kind: 'aborted' });
           if (active.controller.signal.aborted) resolve({ kind: 'aborted' });

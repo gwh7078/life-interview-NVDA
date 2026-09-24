@@ -17,7 +17,7 @@ const realtimeCallStatuses = {
 };
 
 export function resolveRealtimeProvider(value) {
-  return value === 'qwen' || value === 'modelbest' ? value : 'stepfun';
+  return value === 'qwen' || value === 'stepfun' || value === 'modelbest' ? value : 'modelbest';
 }
 
 export function realtimeInputSampleRate(provider) {

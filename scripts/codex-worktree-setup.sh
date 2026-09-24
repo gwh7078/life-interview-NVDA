@@ -22,7 +22,7 @@ if [[ ! -e .env ]]; then
       "AUTH_MODE=demo_phone",
       "AI_TASK_RUNTIME=direct",
       "NEMOCLAW_SANDBOX=my-assistant",
-      "STORY_INTERVIEW_PROVIDER=stepfun",
+      "STORY_INTERVIEW_PROVIDER=modelbest",
       "STEPFUN_REALTIME_MODEL=step-audio-2-mini",
       "MODELBEST_REALTIME_MODEL=MiniCPM-o-4.5-Realtime",
       "TEXT_MODEL_PROVIDER=openai-compatible",

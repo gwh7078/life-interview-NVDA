@@ -85,7 +85,7 @@ const stableTracePath = path.resolve(
 );
 const retrieverWaitMs = integerEnv('PHASE3_BACKEND_RETRIEVER_WAIT_MS', 45_000);
 const providerWaitMs = integerEnv('PHASE3_BACKEND_PROVIDER_WAIT_MS', 75_000);
-const slowDeadlineMs = integerEnv('REALTIME_SLOW_DEADLINE_MS', 5_500);
+const slowDeadlineMs = integerEnv('REALTIME_SLOW_DEADLINE_MS', 5_000);
 const stepfunModel = process.env.STEPFUN_REALTIME_MODEL?.trim() || 'step-audio-2-mini';
 const inputText = process.env.PHASE3_STEPFUN_INPUT_TEXT?.trim()
   || '我以前跟你讲过王师傅，你还记得他和我的关系吗？';

@@ -372,16 +372,16 @@ run_start_resource_version
 
 ## 15. Realtime Context Hint Agent
 
-`interview.context_hint` runs only after a Step-Audio Tool Call in an existing `story_continue` Story. Backend completes owner/story/subject Classic Retrieval and preinjects bounded context; the Agent does not search.
+`interview.context_hint` is the mandatory semantic step after owner/story/subject-scoped Current Story Classic Retrieval for a supported Realtime Tool Call. The Agent does not search; backend sends only the query, Story IDs, and bounded Q+A evidence.
 
 - Dedicated `realtime-context` OpenClaw agent with all OpenClaw tools denied.
 - `scriptCapabilities=[]`; exactly one attempt; one model call maximum; task timeout 4,800 ms; thinking off.
 - Format Repair and Validation Repair are disabled. Invalid output fails immediately.
 - Input and output are strict schemas; output selects at most three evidence IDs and returns only short conflicts/hints. Backend reconstructs facts from the selected retrieved Answers.
-- No evidence skips the Agent. Agent unavailable or failed uses explicit `direct_retrieval` fallback; coordinator timeout, cancellation, supersede and stale protection remain authoritative.
+- No evidence returns no-context. Agent unavailable, failed, invalid, timed out, cancelled, superseded, or stale results never fall back to raw Retriever evidence; the Realtime model receives no-context or a protocol-approved empty Tool Result.
 - This task does not write Story Memory. Interview Closeout remains the only owner of long-term Memory updates.
 
-The current implementation and live validation state are recorded in `docs/05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md`. Automated contract tests pass; Realtime Agent smoke is **FAIL** (`AGENT_RUNTIME_TIMEOUT`, then `AGENT_RUNTIME_EXEC_FAILED`) and full Step-Audio voice E2E is **NOT TESTED**.
+The current implementation and live validation state are recorded in [Realtime Integration Convergence Report](../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md). Step-Audio-2-mini is Retired. MiniCPM-o-4.5-Realtime is Candidate; its public Realtime protocol does not document native Tool Calling / Tool Result / Resume, and full MiniCPM E2E is **NOT TESTED**.
 
 ## 16. Retrieval Source of Truth
 

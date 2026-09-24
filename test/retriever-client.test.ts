@@ -261,15 +261,15 @@ test('Retriever scoped search overfetches before local filtering', async () => {
     fetch: async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as { top_k?: number };
       requestedTopK = body.top_k ?? 0;
-      return jsonResponse({ hits: [{
-        text: '[message_id=message-scoped] 目标历史片段',
+      return jsonResponse({ hits: ['one', 'two', 'three'].map((id) => ({
+        text: `[message_id=message-scoped-${id}] 目标历史片段`,
         metadata: {
           user_id: 'user-1',
           story_id: 'story-1',
           session_id: 'session-1',
           source_type: 'subject',
         },
-      }] });
+      })) });
     },
   });
 
@@ -279,11 +279,11 @@ test('Retriever scoped search overfetches before local filtering', async () => {
     sessionId: 'session-1',
     sourceType: 'subject',
     query: '目标历史片段',
-    topK: 5,
+    topK: 2,
   });
 
   assert.equal(requestedTopK, 50);
-  assert.equal(evidence[0]?.messageIds[0], 'message-scoped');
+  assert.deepEqual(evidence.map((item) => item.messageIds[0]), ['message-scoped-one', 'message-scoped-two']);
 });
 
 test('Retriever search diagnostics keep only safe timings, counts, and error codes', async () => {

@@ -8,6 +8,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { createDatabase } from '../src/db/client.js';
 import { runMigrations } from '../src/db/migrate.js';
 import { seedDatabase, seedIds } from '../src/db/seed.js';
+import type { AgentTaskPort } from '../src/agent-tasks/ports/agent-task-port.js';
 import { parseQwenServerEvent } from '../src/realtime/qwen.js';
 import type { NormalizedRealtimeEvent } from '../src/realtime/types.js';
 import type { RetrieverAdapter } from '../src/retriever/types.js';
@@ -91,6 +92,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
 
   let searchInput: Parameters<RetrieverAdapter['searchTranscript']>[0] | undefined;
   let toolResultCount = 0;
+  let agentRunCount = 0;
   const retriever: RetrieverAdapter = {
     async indexSessionTranscript() { return { status: 'accepted' }; },
     async searchTranscript(input) {
@@ -115,6 +117,10 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
   let providerSocket: WebSocket | undefined;
   let resolveToolResult!: (value: Record<string, unknown>) => void;
   const toolResult = new Promise<Record<string, unknown>>((resolve) => { resolveToolResult = resolve; });
+  let resolveSecondToolResult!: (value: Record<string, unknown>) => void;
+  const secondToolResult = new Promise<Record<string, unknown>>((resolve) => {
+    resolveSecondToolResult = resolve;
+  });
   let resolveExternalToolResult!: (value: Record<string, unknown>) => void;
   const externalToolResult = new Promise<Record<string, unknown>>((resolve) => {
     resolveExternalToolResult = resolve;
@@ -147,6 +153,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
       } else if (message.type === 'mock.tool_result') {
         toolResultCount += 1;
         if (toolResultCount === 1) resolveToolResult(message);
+        else if (toolResultCount === 2) resolveSecondToolResult(message);
         else resolveExternalToolResult(message);
       } else if (message.type === 'response.create') {
         socket.send(JSON.stringify({ type: 'response.created', response: { id: 'response-B' } }));
@@ -179,6 +186,19 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     closeGraceMs: 2_000,
   }, {
     retriever,
+    realtimeContextAgentTasks: {
+      async run(taskRequest) {
+        agentRunCount += 1;
+        if (agentRunCount === 2) throw new Error('AGENT_RUNTIME_FAILED');
+        return {
+          runId: taskRequest.runId,
+          taskType: 'interview.context_hint',
+          schemaVersion: 'v1',
+          output: { selected_evidence_ids: ['e1'], possible_conflicts: [], interview_hints: [] },
+          runtime: { runtime: 'test-agent', skill: 'interview-observer', latencyMs: 1 },
+        } as Awaited<ReturnType<AgentTaskPort['run']>>;
+      },
+    },
     closeout: {
       textModelProvider: {
         async complete() {
@@ -191,9 +211,12 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
       capabilities: {
         fullDuplex: true,
         supportsInterrupt: true,
+        supportsToolCalling: true,
+        supportsSlowContext: true,
         supportsExplicitTurnRequest: true,
         supportsPlaybackAck: false,
         supportsExplicitSessionClose: false,
+        manualTurnControl: false,
       },
       audio: {
         input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 },
@@ -249,6 +272,60 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
       sourceMessageIds: ['history-message'],
     }]);
     assert.equal(result.resume, false);
+
+    providerSocket?.send(JSON.stringify({
+      type: 'conversation.item.input_audio_transcription.completed',
+      item_id: 'turn-2',
+      transcript: '我还想起另一段经历。',
+    }));
+    providerSocket?.send(JSON.stringify({
+      type: 'response.function_call_arguments.done',
+      call_id: 'call-2',
+      response_id: 'tool-response-2',
+      name: 'get_interview_context',
+      arguments: JSON.stringify({ query: '后来发生了什么' }),
+    }));
+    const failedAgentResult = await waitFor(secondToolResult, 2_000, 'Agent failure no-context result');
+    assert.deepEqual(record(failedAgentResult.output)?.facts, []);
+
+    providerSocket?.send(JSON.stringify({ type: 'response.created', response: { id: 'response-C' } }));
+    providerSocket?.send(JSON.stringify({
+      type: 'conversation.item.input_audio_transcription.completed',
+      item_id: 'turn-3',
+      transcript: '我再补充一个问题。',
+    }));
+    providerSocket?.send(JSON.stringify({
+      type: 'response.function_call_arguments.done',
+      call_id: 'call-3',
+      response_id: 'response-C',
+      name: 'get_interview_context',
+      arguments: JSON.stringify({ query: '当时还有谁在场' }),
+    }));
+    await new Promise<void>((resolve) => setTimeout(resolve, 650));
+    assert.equal(toolResultCount, 2, 'an active Response A must not receive a late Tool Result or create Response B');
+    providerSocket?.send(JSON.stringify({
+      type: 'response.done',
+      response: { id: 'response-C', status: 'completed' },
+    }));
+    providerSocket?.send(JSON.stringify({ type: 'response.created', response: { id: 'response-D' } }));
+    providerSocket?.send(JSON.stringify({
+      type: 'conversation.item.input_audio_transcription.completed',
+      item_id: 'turn-4',
+      transcript: '继续补充。',
+    }));
+    providerSocket?.send(JSON.stringify({
+      type: 'response.function_call_arguments.done',
+      call_id: 'call-4',
+      response_id: 'response-D',
+      name: 'get_interview_context',
+      arguments: JSON.stringify({ query: 'x' }),
+    }));
+    await new Promise<void>((resolve) => setTimeout(resolve, 650));
+    assert.equal(toolResultCount, 2, 'an invalid-query rejection must obey the Response A idle gate and deadline');
+    providerSocket?.send(JSON.stringify({
+      type: 'response.done',
+      response: { id: 'response-D', status: 'completed' },
+    }));
 
     const storyEnded = new Promise<void>((resolve) => {
       clientSocket?.on('message', (raw) => {
@@ -311,8 +388,8 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     assert.equal(externalOutput?.status, 'unavailable');
     assert.deepEqual(externalOutput?.facts, []);
     assert.equal(externalResult.resume, false);
-    assert.equal(searchInput?.query, '第一次去北京是什么时候');
-    assert.equal(toolResultCount, 2);
+    assert.equal(searchInput?.query, '当时还有谁在场', 'the external contributor Tool Call must not run an owner Story search');
+    assert.equal(toolResultCount, 3);
     const externalEnded = new Promise<void>((resolve) => {
       externalSocket.on('message', (raw) => {
         if (record(JSON.parse(raw.toString()))?.type === 'ended') resolve();

@@ -139,9 +139,12 @@ function qwenCapabilities(): RealtimeProviderCapabilities {
   return {
     fullDuplex: true,
     supportsInterrupt: true,
+    supportsToolCalling: false,
+    supportsSlowContext: false,
     supportsExplicitTurnRequest: true,
     supportsPlaybackAck: false,
     supportsExplicitSessionClose: false,
+    manualTurnControl: false,
   };
 }
 

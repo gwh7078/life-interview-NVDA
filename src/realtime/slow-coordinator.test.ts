@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { performance } from 'node:perf_hooks';
 import { RetrieverClientError } from '../retriever/client.js';
 import {
   RealtimeSlowCoordinator,
@@ -45,6 +46,20 @@ test('slow coordinator times out and aborts the recall', async () => {
   assert.equal(aborted, true);
 });
 
+test('an expired absolute slow deadline prevents Retriever execution', async () => {
+  let called = false;
+  const port: RealtimeRecallPort = {
+    async recall() {
+      called = true;
+      return { basedOnTurnId: 'turn-1', facts: [], possibleConflicts: [], interviewHints: [] };
+    },
+  };
+  const result = await new RealtimeSlowCoordinator(port, 100).run(request, () => true, performance.now() - 1);
+  assert.equal(result.status, 'timeout');
+  assert.equal(result.errorCode, 'REALTIME_RECALL_TIMEOUT');
+  assert.equal(called, false);
+});
+
 test('slow coordinator preserves stable Retriever error codes', async () => {
   const port: RealtimeRecallPort = {
     async recall() {
@@ -58,12 +73,15 @@ test('slow coordinator preserves stable Retriever error codes', async () => {
 
 test('a newer turn makes the older recall stale', async () => {
   let releaseFirst!: () => void;
+  let startFirst!: () => void;
   const firstReleased = new Promise<void>((resolve) => { releaseFirst = resolve; });
+  const firstStarted = new Promise<void>((resolve) => { startFirst = resolve; });
   let callCount = 0;
   const port: RealtimeRecallPort = {
     async recall(input, options) {
       callCount += 1;
       if (callCount === 1) {
+        startFirst();
         await new Promise<void>((resolve) => {
           options?.signal?.addEventListener('abort', () => resolve(), { once: true });
         });
@@ -79,6 +97,7 @@ test('a newer turn makes the older recall stale', async () => {
   };
   const coordinator = new RealtimeSlowCoordinator(port, 100);
   const first = coordinator.run(request);
+  await firstStarted;
   const second = coordinator.run({ ...request, turnId: 'turn-2', contextVersion: 2 });
   const [firstResult, secondResult] = await Promise.all([first, second]);
   await firstReleased;

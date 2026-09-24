@@ -101,8 +101,7 @@ test('NemoClawAgentTaskAdapter routes realtime context hints and preserves their
     },
     payload: {
       query: '那次是谁先提出的？',
-      story_summary: '第一次参加社区活动。',
-      recent_context: [{ role: 'user', text: '用户刚提到活动是在夏天。' }],
+      story: { story_id: 'story-1', subject_id: 'owner-1' },
       evidence: [{ id: 'e1', question: '当时谁和你一起去？', answer: '我和姐姐一起去的。' }],
     },
   };

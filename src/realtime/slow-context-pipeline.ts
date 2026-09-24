@@ -14,9 +14,6 @@ import type {
 } from './slow-coordinator.js';
 import { RetrieverRealtimeRecall, type RealtimeQAEvidence } from './retriever-recall.js';
 
-const MAX_STORY_SUMMARY_CHARS = 1_000;
-const MAX_RECENT_CONTEXT_CHARS = 1_000;
-const MAX_RECENT_CONTEXT_MESSAGES = 4;
 const MAX_EVIDENCE_ITEMS = 5;
 const MAX_EVIDENCE_CHARS = 2_000;
 const MAX_EVIDENCE_ITEM_CHARS = 450;
@@ -38,21 +35,6 @@ function clipAtSentence(value: string, maxChars: number): string {
   return characters.slice(0, stop >= Math.floor(limit * 0.6) ? stop : limit).join('');
 }
 
-function recentContextWithinBudget(
-  entries: RealtimeRecallRequest['recentContext'],
-): NonNullable<RealtimeRecallRequest['recentContext']> {
-  let remaining = MAX_RECENT_CONTEXT_CHARS;
-  const selected: NonNullable<RealtimeRecallRequest['recentContext']> = [];
-  for (const entry of (entries ?? []).slice(-MAX_RECENT_CONTEXT_MESSAGES).reverse()) {
-    if (remaining <= 0) break;
-    const text = clipAtSentence(entry.text, remaining);
-    if (!text) continue;
-    selected.unshift({ role: entry.role, text });
-    remaining -= text.length;
-  }
-  return selected;
-}
-
 function boundedEvidence(evidence: RealtimeQAEvidence[]): BoundedEvidence[] {
   let remaining = MAX_EVIDENCE_CHARS;
   const bounded: BoundedEvidence[] = [];
@@ -70,19 +52,6 @@ function boundedEvidence(evidence: RealtimeQAEvidence[]): BoundedEvidence[] {
 
 function emptyHint(turnId: string): RealtimeContextHint {
   return { basedOnTurnId: turnId, facts: [], possibleConflicts: [], interviewHints: [] };
-}
-
-function directHint(turnId: string, evidence: BoundedEvidence[]): RealtimeContextHint {
-  return {
-    basedOnTurnId: turnId,
-    facts: evidence.map((item) => ({
-      claim: item.answer,
-      ...(item.question ? { question: item.question } : {}),
-      sourceMessageIds: item.sourceMessageIds,
-    })),
-    possibleConflicts: [],
-    interviewHints: [],
-  };
 }
 
 function safeErrorCode(error: unknown): string {
@@ -131,8 +100,21 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
     request: RealtimeRecallRequest,
     options: { signal?: AbortSignal } = {},
   ): Promise<RealtimeContextHint> {
+    const retrievalStartedAt = performance.now();
     report(request, { stage: 'retrieval', status: 'started' });
-    const retrieved = await this.retrieval.retrieve(request, options);
+    let retrieved: Awaited<ReturnType<RetrieverRealtimeRecall['retrieve']>>;
+    try {
+      retrieved = await this.retrieval.retrieve(request, options);
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      report(request, {
+        stage: 'retrieval',
+        status: 'failed',
+        latencyMs: Number((performance.now() - retrievalStartedAt).toFixed(2)),
+        errorCode: safeErrorCode(error),
+      });
+      throw error;
+    }
     throwIfAborted(options.signal);
     report(request, {
       stage: 'retrieval',
@@ -159,35 +141,26 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
         stage: 'slow_agent',
         status: 'skipped',
         skipReason: 'agent_unavailable',
-        fallbackUsed: true,
-        fallbackType: 'direct_retrieval',
       });
       report(request, {
         stage: 'context_hint',
         status: 'ready',
-        count: evidence.length,
-        selectedEvidenceCount: evidence.length,
-        fallbackUsed: true,
-        fallbackType: 'direct_retrieval',
+        count: 0,
+        selectedEvidenceCount: 0,
       });
-      return directHint(request.turnId, evidence);
+      return emptyHint(request.turnId);
     }
 
-    const recentContext = recentContextWithinBudget(request.recentContext);
-    const storySummary = clipAtSentence(request.storySummary ?? '', MAX_STORY_SUMMARY_CHARS);
-    const storySummaryChars = storySummary.length;
-    const recentContextChars = recentContext.reduce((total, item) => total + item.text.length, 0);
     const agentEvidence = evidence.map(({ id, question, answer }) => ({ id, question, answer }));
     const evidenceInputChars = agentEvidence.reduce((total, item) => total + item.question.length + item.answer.length, 0);
     const evidenceById = new Map(evidence.map((item) => [item.id, item] as const));
-    const inputChars = request.query.length
-      + storySummaryChars
-      + recentContextChars
-      + evidenceInputChars;
+    const inputChars = request.query.length + evidenceInputChars;
     const payload: InterviewContextHintTaskRequest['payload'] = {
       query: request.query,
-      story_summary: storySummary,
-      recent_context: recentContext,
+      story: {
+        story_id: request.storyId ?? '',
+        subject_id: request.ownerId,
+      },
       evidence: agentEvidence,
     };
     const startedAt = performance.now();
@@ -196,9 +169,8 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
     report(request, {
       stage: 'slow_agent',
       status: 'started',
+      runId,
       inputChars,
-      storySummaryChars,
-      recentContextChars,
       evidenceInputChars,
       skill: 'interview-observer',
       ...(model ? { model } : {}),
@@ -244,8 +216,6 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
         ...(result.runtime.usage?.promptTokens === undefined ? {} : { promptTokens: result.runtime.usage.promptTokens }),
         ...(result.runtime.usage?.completionTokens === undefined ? {} : { completionTokens: result.runtime.usage.completionTokens }),
         ...(result.runtime.usage?.totalTokens === undefined ? {} : { totalTokens: result.runtime.usage.totalTokens }),
-        storySummaryChars,
-        recentContextChars,
         evidenceInputChars,
         selectedEvidenceCount: selected.length,
         possibleConflictCount: hint.possibleConflicts.length,
@@ -271,18 +241,14 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
         skill: 'interview-observer',
         ...(model ? { model } : {}),
         errorCode,
-        fallbackUsed: true,
-        fallbackType: 'direct_retrieval',
       });
       report(request, {
         stage: 'context_hint',
         status: 'ready',
-        count: evidence.length,
-        selectedEvidenceCount: evidence.length,
-        fallbackUsed: true,
-        fallbackType: 'direct_retrieval',
+        count: 0,
+        selectedEvidenceCount: 0,
       });
-      return directHint(request.turnId, evidence);
+      return emptyHint(request.turnId);
     }
   }
 }

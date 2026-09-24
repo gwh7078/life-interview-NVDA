@@ -166,7 +166,7 @@ const state = {
   autoEndGeneration: 0,
   maxSessionMs: 20 * 60 * 1000,
   providerConfigured: false,
-  realtimeProvider: 'stepfun',
+  realtimeProvider: 'modelbest',
   providers: {},
   databaseAvailable: false,
   stories: [],
@@ -190,8 +190,8 @@ const precallLastDisclosure = createTextDisclosure({
 
 const realtimeProviderLabels = {
   qwen: 'Qwen Realtime',
-  stepfun: 'Step-Audio 2 Mini Realtime',
-  modelbest: 'MiniCPM-o 4.5 Realtime',
+  stepfun: 'Step-Audio 2 Mini Realtime · Legacy',
+  modelbest: 'MiniCPM-o 4.5 Realtime · Candidate',
 };
 
 const TECH_STAGES = [
@@ -1454,7 +1454,7 @@ async function setupMicrophone() {
 }
 
 async function setupLocalVad() {
-  if (!state.manualTurnControl || state.realtimeProvider !== 'stepfun') return;
+  if (!state.manualTurnControl) return;
   const context = state.audioContext;
   const mediaStream = state.mediaStream;
   const setupGeneration = state.audioSetupGeneration;

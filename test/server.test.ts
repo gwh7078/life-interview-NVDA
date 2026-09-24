@@ -72,7 +72,7 @@ test('Local interview service exposes current realtime provider states without e
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const health = await healthResponse.json() as Record<string, unknown>;
     assert.equal(healthResponse.status, 200);
-    assert.equal(health.defaultProvider, 'stepfun');
+    assert.equal(health.defaultProvider, 'modelbest');
     assert.equal(health.databaseAvailable, true);
     assert.deepEqual(health.interviewLimits, {
       wrapUpMs: 1_080_000,
@@ -225,7 +225,7 @@ test('Local interview service exposes current realtime provider states without e
     assert.doesNotMatch(pageText, /provider-select/);
     assert.match(pageText, /id="auth-card"/);
     assert.match(pageText, /value="create"/);
-    assert.match(pageText, /Step-Audio 2 Mini Realtime/);
+    assert.match(pageText, /MiniCPM-o 4\.5 Realtime · Candidate/);
     assert.doesNotMatch(pageText, /Qwen Realtime/);
 
     const onboardingPage = await fetch(`${baseUrl}/onboarding`);

@@ -2,19 +2,14 @@
 
 本目录用于整理 NVIDIA 相关 Runtime、DGX Spark、本地推理、Retriever 与部署资料。
 
-## 当前推荐模型选型
+## 当前 Realtime 状态
 
-当前 DGX Spark 模型职责划分与候选模型已经形成 v1.2 推荐方案：
+- `Step-Audio-2-mini`：**Retired / no longer target realtime provider**。StepFun adapter 仅保留兼容路径，本轮不再围绕其 Prompt、Turn 或 VAD workaround 增加功能。
+- `MiniCPM-o-4.5-Realtime`：正式主 Provider **Candidate**。官方文档描述音频 Full-Duplex 与 PCM 协议，但未定义本产品所需的原生 Tool Calling / Tool Result / Resume；没有完整 E2E 前不得标记 Accepted。
+- MiniCPM 初次主动开口与中断语义尚未有端到端证据；Realtime 凭证当前不可用，真实 MiniCPM E2E 为 **NOT TESTED**。
+- 更完整的能力矩阵与慢系统状态见 [Realtime Integration Convergence Report](../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md)。
 
-- Realtime Fast System 第一主测：**`Step-Audio-2-mini`**；
-- Realtime 本地对照 / 回退：MiniCPM-o 4.5；
-- 云端体验基准：StepAudio 3 Realtime；
-- Realtime Judge / Evidence Summary 第一候选：`Qwen/Qwen3.5-2B`；
-- Slow Search：NeMo Retriever + Nemotron Embedding / Rerank；
-- Post-session Agent / Summary / Generation：`nvidia/Qwen3.6-35B-A3B-NVFP4`；
-- Step-Audio-2-mini 优先走 upstream vLLM-Omni；当前确认的是模型 Pipeline 支持，Realtime WebSocket / full-duplex / barge-in 仍需 DGX Spark 实机验证；
-- `Step-Audio-2-mini-Think` 仅作为专项 A/B 候选，不进入默认 Realtime 主链；
-- 最终 Production Model 仍需真实 DGX Spark Benchmark 后冻结。
+DGX Spark 其他模型职责与部署候选仍见 [模型选型 v1.2](MODEL_SELECTION_v1.0.md)；此处不据此改变当前 Realtime Provider 决策。
 
 上述 NVIDIA `Qwen3.6-35B-A3B-NVFP4` 是 DGX Spark 本地推理候选。当前 Mac/NemoClaw 的 OpenClaw Agent 与文本任务走 Bailian Model Studio API，模型 ID 为 `qwen3.6-35b-a3b`；二者是不同 provider/runtime 的部署配置。当前实时语音与检索路由见 [AI 开发联调环境](../AI开发联调环境.md)。
 

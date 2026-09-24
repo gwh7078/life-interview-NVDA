@@ -2,21 +2,6 @@ import { z } from 'zod';
 
 export const interviewEvidenceIdSchema = z.enum(['e1', 'e2', 'e3', 'e4', 'e5']);
 
-const recentContextEntrySchema = z.object({
-  role: z.enum(['user', 'assistant']),
-  text: z.string().trim().min(1).max(1000),
-}).strict();
-
-const recentContextSchema = z.array(recentContextEntrySchema).max(4)
-  .superRefine((entries, context) => {
-    if (entries.reduce((total, entry) => total + entry.text.length, 0) > 1000) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'recent_context must contain at most 1000 characters total.',
-      });
-    }
-  });
-
 const interviewEvidenceSchema = z.object({
   id: interviewEvidenceIdSchema,
   question: z.string().trim().max(450),
@@ -25,8 +10,10 @@ const interviewEvidenceSchema = z.object({
 
 export const interviewContextHintTaskInputSchema = z.object({
   query: z.string().trim().min(2).max(500),
-  story_summary: z.string().trim().max(1000),
-  recent_context: recentContextSchema,
+  story: z.object({
+    story_id: z.string().trim().min(1).max(128),
+    subject_id: z.string().trim().min(1).max(128),
+  }).strict(),
   evidence: z.array(interviewEvidenceSchema).max(5)
     .superRefine((entries, context) => {
       const ids = entries.map(({ id }) => id);

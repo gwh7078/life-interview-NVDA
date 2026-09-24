@@ -22,7 +22,7 @@ function adapter(overrides: Partial<RetrieverAdapter> = {}): RetrieverAdapter {
   };
 }
 
-test('Realtime Retriever recall sends owner/story scope and keeps only traceable evidence', async () => {
+test('Realtime Retriever returns scoped Q+A evidence with traceable user-answer IDs', async () => {
   let received: Parameters<RetrieverAdapter['searchTranscript']>[0] | undefined;
   const recall = new RetrieverRealtimeRecall(adapter({
     async searchTranscript(input) {
@@ -62,7 +62,7 @@ test('Realtime Retriever recall sends owner/story scope and keeps only traceable
     },
   }));
 
-  const result = await recall.recall(request);
+  const result = await recall.retrieve(request);
 
   assert.deepEqual(received && {
     ownerId: received.ownerId,
@@ -77,16 +77,11 @@ test('Realtime Retriever recall sends owner/story scope and keeps only traceable
     query: '第一次去北京是什么时候',
     topK: 5,
   });
-  assert.deepEqual(result, {
-    basedOnTurnId: 'turn-1',
-    facts: [{
-      claim: '2013 年春节以后第一次到北京。',
-      question: '你第一次去北京是什么时候？',
-      sourceMessageIds: ['message-1'],
-    }],
-    possibleConflicts: [],
-    interviewHints: [],
-  });
+  assert.deepEqual(result.evidence.map(({ question, answer, sourceMessageIds }) => ({ question, answer, sourceMessageIds })), [{
+    question: '你第一次去北京是什么时候？',
+    answer: '2013 年春节以后第一次到北京。',
+    sourceMessageIds: ['message-1'],
+  }]);
 });
 
 test('Realtime retrieval fails closed when there is no Current Story', async () => {
@@ -95,13 +90,13 @@ test('Realtime retrieval fails closed when there is no Current Story', async () 
     async searchTranscript() { calls += 1; return []; },
   }));
 
-  const result = await recall.recall({ ...request, storyId: undefined });
+  const result = await recall.retrieve({ ...request, storyId: undefined });
 
   assert.equal(calls, 0);
-  assert.deepEqual(result.facts, []);
+  assert.deepEqual(result.evidence, []);
 });
 
-test('only Q+A answers from the exact owner, story and subject source become facts', async () => {
+test('Q+A evidence stays within the exact owner, story and subject scope', async () => {
   const recall = new RetrieverRealtimeRecall(adapter({
     async searchTranscript() {
       return [
@@ -127,11 +122,11 @@ test('only Q+A answers from the exact owner, story and subject source become fac
     },
   }));
 
-  const result = await recall.recall(request);
+  const result = await recall.retrieve(request);
 
-  assert.deepEqual(result.facts, [{
-    claim: '2013年入厂。',
+  assert.deepEqual(result.evidence.map(({ question, answer, sourceMessageIds }) => ({ question, answer, sourceMessageIds })), [{
     question: '王师傅什么时候入厂？',
+    answer: '2013年入厂。',
     sourceMessageIds: ['a'],
   }]);
 });
@@ -146,7 +141,7 @@ test('Realtime Retriever recall forwards AbortSignal to the adapter', async () =
     },
   }));
 
-  await recall.recall(request, { signal: controller.signal });
+  await recall.retrieve(request, { signal: controller.signal });
 
   assert.equal(receivedSignal, controller.signal);
 });

@@ -37,8 +37,10 @@ async function runSmoke(): Promise<void> {
       schemaVersion: 'v1',
       payload: {
         query: '用户以前提到的第一位师傅姓什么？',
-        story_summary: '仅用于 Realtime Agent smoke 的合成故事背景。',
-        recent_context: [],
+        story: {
+          story_id: seedIds.firstProject,
+          subject_id: seedIds.user,
+        },
         evidence: [{
           id: 'e1',
           question: '谁是你入厂后的第一位师傅？',

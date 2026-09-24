@@ -1,8 +1,9 @@
-# Realtime Slow Context implementation v1.0
+# Realtime Slow Context implementation v1.0 — Historical baseline
 
 > Date: 2026-09-24
-> Scope: one read-only context-hint Agent step after Current Story Classic Retrieval.
-> Status: implementation and deterministic validation are in place. Realtime Agent smoke is **FAIL**; full Step-Audio voice E2E is **NOT TESTED**.
+> Status: **Superseded by the 2026-09-24 integration convergence report.** This file preserves the earlier implementation record; its 5,500 ms budget, direct Retriever fallback, recent-message payload, and Step-Audio acceptance route are no longer current.
+> Current rules: Current Story Retriever → mandatory context Agent → legal Tool Result → Realtime resume. Agent failure/invalid output yields no-context; raw Retriever results are never sent to Realtime. One absolute 5,000 ms deadline covers the full slow path. Step-Audio-2-mini is Retired; MiniCPM is Candidate and blocked on undocumented native Tool Calling / Tool Result / Resume.
+> Current status and evidence: [Realtime Integration Convergence Report](../../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md).
 
 This document records the behavior implemented on top of the existing Step-Audio Tool Call → HOLD → Backend → Tool Result → Resume path. The broader proposal remains in [Realtime Fast / Slow architecture v1.6](../../08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md); this document is authoritative for the narrower implementation shipped here.
 

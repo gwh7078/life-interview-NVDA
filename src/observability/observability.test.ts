@@ -85,6 +85,43 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
   })).filter((item) => item?.category === 'retriever');
   assert.deepEqual(retrieverLifecycle.map((item) => item?.eventType), ['retriever.started', 'retriever.completed']);
   assert.equal(adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'client.microphone_uplink' }), undefined);
+
+  const slowLifecycle = [
+    ['realtime.tool_call.received', { toolRunId: 'tool-cycle-a', name: 'get_interview_context' }],
+    ['slow.retriever.started', { toolRunId: 'tool-cycle-a' }],
+    ['slow.retriever.completed', { toolRunId: 'tool-cycle-a', retriever_ms: 42 }],
+    ['slow.retriever.failed', { toolRunId: 'tool-cycle-a', retriever_ms: 42 }],
+    ['slow.agent.started', { toolRunId: 'tool-cycle-a', runId: 'agent-run-a' }],
+    ['slow.agent.completed', { toolRunId: 'tool-cycle-a', runId: 'agent-run-a', agent_ms: 84 }],
+    ['slow.agent.failed', { toolRunId: 'tool-cycle-a', runId: 'agent-run-a', agent_ms: 84 }],
+    ['slow.no_context', { toolRunId: 'tool-cycle-a' }],
+    ['slow.deadline.exceeded', { toolRunId: 'tool-cycle-a', total_slow_ms: 5_000 }],
+    ['slow.result.stale_dropped', { toolRunId: 'tool-cycle-a' }],
+    ['realtime.tool_result.sent', { toolRunId: 'tool-cycle-a', sent: true, total_slow_ms: 900 }],
+    ['realtime.response.resumed', { toolRunId: 'tool-cycle-a', hold_ms: 900 }],
+  ].map(([eventName, fields]) => adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: eventName as string, fields: fields as Record<string, unknown>,
+  }));
+  assert.deepEqual(slowLifecycle.map((item) => [item?.eventType, item?.status]), [
+    ['tool.received', 'start'],
+    ['retriever.started', 'start'],
+    ['retriever.completed', 'success'],
+    ['retriever.failed', 'error'],
+    ['agent.started', 'start'],
+    ['agent.completed', 'success'],
+    ['agent.failed', 'error'],
+    ['evidence.no_context', 'warning'],
+    ['realtime.slow_deadline_exceeded', 'error'],
+    ['tool.result_stale_dropped', 'warning'],
+    ['tool.completed', 'success'],
+    ['realtime.resumed', 'success'],
+  ]);
+  assert.deepEqual([
+    slowLifecycle[2]?.durationMs, slowLifecycle[2]?.metrics?.retriever_ms,
+    slowLifecycle[5]?.durationMs, slowLifecycle[5]?.metrics?.agent_ms,
+    slowLifecycle[8]?.durationMs, slowLifecycle[10]?.durationMs, slowLifecycle[11]?.durationMs,
+  ], [42, 42, 84, 84, 5_000, 900, 900]);
+
   const vadRequest = adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'provider.turn_detection_requested', fields: { turnDetectionMode: 'manual' } });
   const vadAcknowledgement = adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'provider.turn_detection_acknowledged', fields: { turnDetectionMode: 'manual', instructions: 'private prompt' } });
   const vadCommit = adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'client.local_vad_commit_triggered', fields: { silenceObservedMs: 2_000, silenceThresholdMs: 2_000 } });

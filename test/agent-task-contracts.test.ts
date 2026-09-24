@@ -410,8 +410,7 @@ test('StubAgentTaskAdapter returns schema-valid results for all five task famili
     schemaVersion: 'v1',
     payload: {
       query: '那位师傅姓什么？',
-      story_summary: '用户讲述刚入厂时的经历。',
-      recent_context: [],
+      story: { story_id: 'story-1', subject_id: 'owner-1' },
       evidence: [{ id: 'e1', question: '谁是你的师傅？', answer: '用户说师傅姓王。' }],
     },
   };

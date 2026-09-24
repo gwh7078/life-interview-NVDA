@@ -25,16 +25,16 @@ Mac
 
 Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不依赖 Retriever 或 RAG。Phase 3 A+B 已将 Retriever 接入 Realtime Slow Path 的条件式 recall，但不改变 Phase 1 核心用户路径；当前自动 Gate G0–G8 已通过。
 
-### 当前模型路由（2026-09-23）
+### 当前模型路由与验收状态（2026-09-25）
 
 | 路径 | 当前配置 | 说明 |
 |---|---|---|
-| 实时语音 | StepFun `step-audio-2-mini` | `.env` 使用 `STORY_INTERVIEW_PROVIDER=stepfun`；凭证为 `STEPFUN_API_KEY`。 |
-| 实时语音（可选） | ModelBest `MiniCPM-o-4.5-Realtime` | 设置 `STORY_INTERVIEW_PROVIDER=modelbest`；凭证 `MODELBEST_API_KEY` 放在本机忽略的 `.env` 中。 |
+| 实时语音目标 | 默认候选 ModelBest `MiniCPM-o-4.5-Realtime` — **Candidate** | `.env.example` 与新 Worktree 模板选择 `STORY_INTERVIEW_PROVIDER=modelbest`。官方公开协议定义音频 Full-Duplex、`session.init`、`input.append`、输出 delta 与 `session.close`；没有文档化原生 Tool Calling / Tool Result / Resume。首问主动开口、中断与多轮真实 E2E **NOT TESTED**。 |
+| 旧实时 Provider | Step-Audio-2-mini — **Retired / no longer target realtime provider** | StepFun adapter 仅为兼容代码保留；本轮不继续优化该模型的 Prompt、Turn 或 VAD workaround。 |
 | OpenClaw Agent 与会后文本任务 | Bailian `qwen3.6-35b-a3b` | Agent 的默认、推理、快速推理、写作 profile 共用此模型；文本任务通过 Model Studio OpenAI-compatible Chat API 调用。 |
-| Realtime 条件式慢路径 | NeMo Retriever + 可选 `interview.context_hint` | 只在现有 `story_continue` Story 中使用；Retriever 按 owner/story/subject 检索，之后最多执行一次无工具/无脚本的 Context Hint Agent。`NEMO_RETRIEVER_ENABLED=true` 控制 Retriever/Pipeline；`REALTIME_CONTEXT_AGENT_ENABLED=1` 控制可选 Agent（显式 `0` 关闭；未设置时仅在 Agent Task runtime 可用时默认启用）。两者互不代替。Agent smoke 为 FAIL；完整 Step-Audio 语音 E2E 为 NOT TESTED。 |
+| Realtime 慢路径 | Current Story Retriever → 强制 `interview.context_hint` Agent → Tool Result → Realtime | 仅限 owner/story/subject scope。Agent 未启用、失败或输出非法时返回 no-context；禁止 Retriever 原始结果直达 Realtime。`NEMO_RETRIEVER_ENABLED=true` 与 `REALTIME_CONTEXT_AGENT_ENABLED=1` 必须分别启用；当前模板仍将两者关闭。整个慢路径硬 deadline 为 5,000 ms。当前 Provider 的原生 Tool Calling blocker 使完整链路未验收。 |
 
-Realtime Agent 配置：`AGENT_MODEL_REALTIME_CONTEXT` → `AGENT_MODEL_REASONING_FAST` → `AGENT_MODEL_DEFAULT`；Task 限制为一次尝试、4.8 秒 Agent timeout、关闭 thinking 与 repair，Slow Coordinator 总 deadline 仍为 5.5 秒。运行 `./deploy/mac/install-skill.sh` 安装 `interview-observer` 并配置独立的 `realtime-context` OpenClaw agent。`COMPETITION_TECH_PANEL=1` 只控制比赛 WebSocket 面板的 allowlisted 状态发送，不会启用 Retriever 或 Agent；SSE 技术观测栏可独立读取观察事件，并可用 `?demo=tech` 自动打开。两个面板和两个运行开关相互独立。
+Realtime Agent 配置：`AGENT_MODEL_REALTIME_CONTEXT` → `AGENT_MODEL_REASONING_FAST` → `AGENT_MODEL_DEFAULT`；最多一次尝试，Task timeout 4.8 秒、关闭 thinking 与 repair；Slow Coordinator 从 Tool Call 开始计时，在整体 5 秒 deadline 内完成 Retriever、Agent、Tool Result 准备与发送，并提前停止慢工作为结果写入留预算。运行 `./deploy/mac/install-skill.sh` 安装 `interview-observer` 并配置独立的 `realtime-context` OpenClaw agent。`COMPETITION_TECH_PANEL=1` 只控制比赛 WebSocket 面板的 allowlisted 状态发送，不会启用 Retriever 或 Agent；SSE 技术观测栏可独立读取观察事件，并可用 `?demo=tech` 自动打开。两个面板和两个运行开关相互独立。
 
 Model Studio 文档确认模型 ID 为 `qwen3.6-35b-a3b`，支持文本输入、函数调用和 262,144-token context window；参见 [Qwen3.6-35B-A3B 模型说明](https://www.alibabacloud.com/help/en/model-studio/qwen3-6-35b-a3b) 与 [OpenAI-compatible Chat API](https://www.alibabacloud.com/help/en/model-studio/qwen-api-via-openai-chat-completions)。
 
@@ -320,13 +320,15 @@ bash scripts/check-ai-env.sh
 DASHSCOPE_API_KEY
 ```
 
-当前 StepFun Realtime 联调会读取：
+旧 StepFun 兼容 Provider 读取：
 
 ```text
 STEPFUN_API_KEY
 ```
 
-ModelBest Realtime 联调读取 `MODELBEST_API_KEY`。输入为 16 kHz 单声道 Float32 PCM，输出为 24 kHz 单声道 Float32 PCM；服务器端完成 Bearer 鉴权和音频格式转换。协议参考 [ModelBest Realtime WebSocket API](https://platform.modelbest.cn/console/docs/api/realtime)。
+MiniCPM-o Realtime Candidate 读取 `MODELBEST_API_KEY`。该 Key 必须由本机安全运行环境提供；当前 Worktree 没有配置该凭证。
+
+MiniCPM-o Realtime adapter 配置 `MODELBEST_API_KEY`，输入为 16 kHz 单声道 Float32 PCM，输出为 24 kHz 单声道 Float32 PCM；本项目把浏览器 PCM16 转为/从 Float32。连接地址遵循 [OpenBMB 官方 Realtime API 文档](https://github.com/OpenBMB/MiniCPM-o-Demo/blob/main/docs-app/content/docs/en/realtime-api/overview.md)，使用 `wss://minicpmo45.modelbest.cn/v1/realtime?mode=audio`。该公开协议不定义 `response.create` 或工具调用/结果事件。当前工作树未配置 MiniCPM 凭证，真实 E2E 为 **NOT TESTED**。
 
 切换到 NVIDIA endpoint 时才需要相应的 NVIDIA credential，例如：
 
@@ -381,7 +383,9 @@ getIndexStatus(sessionId)
 - 当前 OpenClaw sandbox 转发可达（HTTP 400 仍证明端口监听），Codex 已注册 `nemo-retriever-local -> http://127.0.0.1:7670/mcp`。
 - NemoClaw sandbox `my-assistant` 经 OpenShell 转发到本机 `18790`；Phase 1 smoke 不因 Retriever 503 而失效。
 
-### 2026-09-22 当前记录
+### 2026-09-22 历史 StepFun / Phase 3 记录
+
+以下 PASS 只代表当时的 StepFun / Phase 3 A+B Gate，不验证现行 MiniCPM Candidate 或本轮新的 Realtime 慢系统状态机。
 
 - `bash scripts/check-ai-env.sh`：通过；NeMo Retriever、VectorDB、OpenClaw 转发与 Codex MCP 均可达。
 - `bash scripts/codex-node.sh npm run test:phase3:integration`：Phase 3 A+B Gate G0–G8 全部通过。
@@ -390,6 +394,13 @@ getIndexStatus(sessionId)
 - 自动化 Gate 通过后，仍需人工完成最后的真实语音体验验收。
 
 当前报告：`docs/07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md`。
+
+### 2026-09-25 Realtime 收敛状态
+
+- `bash scripts/check-ai-env.sh` 于 2026-09-25 通过；Retriever、VectorDB、OpenClaw 与 Codex MCP 均可达。
+- 当前 MiniCPM 官方 Realtime 文档没有定义原生 Tool Calling / Tool Result / Resume；面向完整慢系统的 MiniCPM Realtime E2E 为 **NOT TESTED**。
+- 2026-09-25 Realtime Context Agent smoke 为 **FAIL**（`AGENT_RUNTIME_TIMEOUT`）。
+- 5 秒慢系统 deadline、强制 Agent / no-context、Q+A 证据、stale drop 与观察事件的本地 deterministic / integration 检查见[集成收敛报告](07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md)。
 
 ### Codex 项目环境
 

@@ -2,7 +2,7 @@
 
 人生采访局 NVIDIA Agent-Native 比赛版。
 
-> 当前开发阶段：**Phase 3 A+B 自动 Integration Gate 已完成 G0–G8；人工真实语音体验验收待完成**
+> 当前开发阶段：**慢系统代码正在收敛；MiniCPM Realtime 为 Candidate，原生 Tool Calling 协议 blocker 待产品决策**
 >
 > 当前主架构：**Architecture v2.3 — 低轮次 Agent 执行策略**
 >
@@ -68,7 +68,8 @@ NeMo Agent Toolkit
 - 正常任务目标是 **1 次 Agent Run 完成**。
 - 复杂任务目标是 **1 次 Agent Run + 少量必要 Tool Call**。
 - 最终结果严格结构化；仅在“结果格式失败”时使用强制 JSON / JSON Schema 作为兜底修复。
-- Realtime 慢路径由 Step-Audio Tool Call 按需触发；Backend 保留 HOLD / 5.5 秒 Deadline / Cancel / Stale Protection，并限制到当前 story_continue Story。`interview.context_hint` Agent 已接入代码，真实本机 Agent smoke 尚未通过。
+- Step-Audio-2-mini 已退出 Realtime 目标路线。MiniCPM-o-4.5-Realtime 是正式 Candidate，但官方公开 Realtime 协议未文档化原生 Tool Calling / Tool Result / Resume；真实 MiniCPM 首问、多轮与 Closeout E2E 尚未验证。
+- Slow Path 代码按 Retriever → 强制 Agent → Tool Result → Realtime 收敛；owner/story/subject scope 不变，整体硬 deadline 为 5,000 ms。Agent 失败、超时、Response 未 idle 或结果过期时 no-context/drop，不回灌 Retriever 原始结果。
 - Retriever / Memory Search 已完成 Phase 3A 真实 ingest/query、限定检索与来源追溯验收。
 
 ## 当前 Agent Tasks

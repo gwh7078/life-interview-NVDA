@@ -72,9 +72,12 @@ test('PROVIDER-CONTRACT-02 Qwen satisfies the same generic contract with its leg
   assert.deepEqual(adapter.capabilities, {
     fullDuplex: true,
     supportsInterrupt: true,
+    supportsToolCalling: false,
+    supportsSlowContext: false,
     supportsExplicitTurnRequest: true,
     supportsPlaybackAck: false,
     supportsExplicitSessionClose: false,
+    manualTurnControl: false,
   });
   assert.deepEqual(adapter.audio, {
     input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 },

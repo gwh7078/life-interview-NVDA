@@ -568,7 +568,7 @@ function createCloseoutEndpoint(baseUrl: string, apiFormat: string): string {
 async function testForeignInterviewTarget(
   baseUrl: string,
   cookie: string,
-  provider: 'stepfun' | 'qwen',
+  provider: 'stepfun' | 'qwen' | 'modelbest',
   target: { story_id?: string; stage_id?: string },
   expectedText: string,
 ): Promise<void> {
@@ -593,7 +593,7 @@ async function testForeignInterviewTarget(
 async function runIsolationChecks(
   baseUrl: string,
   databasePath: string,
-  provider: 'stepfun' | 'qwen',
+  provider: 'stepfun' | 'qwen' | 'modelbest',
   userOne: AuthenticatedDemoUser,
   userTwo: AuthenticatedDemoUser,
   ids: IsolationFixtureIds,
@@ -756,7 +756,7 @@ async function runStoryCase(input: {
   baseUrl: string;
   databasePath: string;
   cookie: string;
-  provider: 'stepfun' | 'qwen';
+  provider: 'stepfun' | 'qwen' | 'modelbest';
   target: { story_id?: string; stage_id?: string; story_title?: string };
   expectedStoryId?: string;
   expectedStageId: string;
@@ -1123,11 +1123,15 @@ async function main(): Promise<void> {
 
   try {
     runtime = readRuntimeConfig();
-    const realtimeProvider = runtime.defaultRealtimeProvider ?? 'stepfun';
+    const realtimeProvider = runtime.defaultRealtimeProvider ?? 'modelbest';
     const realtimeConfigured = realtimeProvider === 'stepfun'
       ? Boolean(runtime.stepfunApiKey)
-      : Boolean(runtime.apiKey && runtime.workspaceId);
-    const realtimeModel = realtimeProvider === 'stepfun' ? runtime.stepfunModel : runtime.qwenModel;
+      : realtimeProvider === 'modelbest'
+        ? Boolean(runtime.modelbestApiKey)
+        : Boolean(runtime.apiKey && runtime.workspaceId);
+    const realtimeModel = realtimeProvider === 'stepfun'
+      ? runtime.stepfunModel
+      : realtimeProvider === 'modelbest' ? runtime.modelbestModel : runtime.qwenModel;
     const closeoutApiFormat = runtime.closeoutApiFormat ?? 'chat-completions';
     const closeoutEndpoint = createCloseoutEndpoint(runtime.closeoutBaseUrl ?? 'https://ark.cn-beijing.volces.com/api/plan/v3', closeoutApiFormat);
     report.providers = {

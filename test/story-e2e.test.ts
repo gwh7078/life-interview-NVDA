@@ -175,7 +175,7 @@ test('mock Story E2E creates a Story, links the Session, preserves Transcript, a
   };
   const realtimeFactory: NonNullable<import('../src/server.js').InterviewServiceDependencies['realtimeProviderFactory']> = (id) => ({
     id,
-    capabilities: { fullDuplex: true, supportsInterrupt: true, supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false },
+    capabilities: { fullDuplex: true, supportsInterrupt: true, supportsToolCalling: false, supportsSlowContext: false, supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false, manualTurnControl: false },
     audio: { input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
     connectOptions: () => ({ url: providerUrl, headers: {} }),
     setupSession: (context) => {

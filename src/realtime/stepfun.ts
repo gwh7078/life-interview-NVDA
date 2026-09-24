@@ -1,12 +1,13 @@
 import { buildInterviewContextPayload, buildInterviewInstructions, type RealtimeInterviewContext } from './prompt.js';
 import type { RealtimeProviderConfig, RealtimeVoiceProvider } from './provider.js';
-import type {
-  NormalizedRealtimeEvent,
-  RealtimeAudioSpec,
-  RealtimeClosePlan,
-  RealtimeConnectionFailure,
-  RealtimeOutboundStep,
-  RealtimeProviderCapabilities,
+import {
+  INTERVIEW_CONTEXT_TOOL_NAME,
+  type NormalizedRealtimeEvent,
+  type RealtimeAudioSpec,
+  type RealtimeClosePlan,
+  type RealtimeConnectionFailure,
+  type RealtimeOutboundStep,
+  type RealtimeProviderCapabilities,
 } from './types.js';
 
 export const DEFAULT_STEPFUN_MODEL = 'step-audio-2-mini';
@@ -15,7 +16,7 @@ export const STEPFUN_REALTIME_URL = 'wss://api.stepfun.com/v1/realtime';
 export const STEPFUN_INPUT_SAMPLE_RATE = 24_000;
 export const STEPFUN_OUTPUT_SAMPLE_RATE = 24_000;
 export const STEPFUN_PCM_FRAME_BYTES = 960;
-export const STEPFUN_CONTEXT_TOOL = 'get_interview_context';
+export const STEPFUN_CONTEXT_TOOL = INTERVIEW_CONTEXT_TOOL_NAME;
 
 const STEPFUN_CONTEXT_TOOL_DESCRIPTION = '当继续采访需要确认用户过去提到的人物、时间、关系或历史原话时调用。当前信息足够时不要调用。';
 
@@ -194,6 +195,8 @@ function stepfunCapabilities(): RealtimeProviderCapabilities {
   return {
     fullDuplex: true,
     supportsInterrupt: true,
+    supportsToolCalling: true,
+    supportsSlowContext: true,
     supportsExplicitTurnRequest: true,
     supportsPlaybackAck: false,
     supportsExplicitSessionClose: false,

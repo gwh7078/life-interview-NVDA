@@ -391,7 +391,7 @@ export class RetrieverClient implements RetrieverAdapter {
         permissionFilterMs,
       });
       diagnose('completed', { totalElapsedMs: elapsedMs(startedAt) });
-      return scoped;
+      return scoped.slice(0, input.topK);
     } catch (error) {
       diagnose('failed', {
         failedPhase,

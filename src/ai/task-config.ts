@@ -43,7 +43,7 @@ function independentTextTask(
 
 /** Task-specific model routing. Credentials deliberately remain outside this configuration object. */
 export function resolveAiTaskConfig(env: NodeJS.ProcessEnv = process.env): AiTaskConfigMap {
-  const interviewProvider = env.STORY_INTERVIEW_PROVIDER?.trim() || 'stepfun';
+  const interviewProvider = env.STORY_INTERVIEW_PROVIDER?.trim() || 'modelbest';
   if (interviewProvider !== 'qwen' && interviewProvider !== 'stepfun' && interviewProvider !== 'modelbest') {
     throw new Error('STORY_INTERVIEW_PROVIDER must be qwen, stepfun or modelbest.');
   }

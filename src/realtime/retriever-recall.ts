@@ -1,10 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import type { RetrieverAdapter, RetrieverEvidence } from '../retriever/types.js';
-import type {
-  RealtimeContextHint,
-  RealtimeRecallPort,
-  RealtimeRecallRequest,
-} from './slow-coordinator.js';
+import type { RealtimeRecallRequest } from './slow-coordinator.js';
 
 const REALTIME_RECALL_TOP_K = 5;
 const QA_ENTRY = /\[segment_id=([^\]]+)\]\[message_id=([^\]]+)\]\[Q\+A\]\s*\r?\nQuestion \(context only\):([\s\S]*?)\r?\nAnswer \(user-provided fact\):([\s\S]*?)(?=(?:\r?\n\[segment_id=)|$)/gu;
@@ -67,7 +63,7 @@ function evidenceUnits(item: RetrieverEvidence): Array<Omit<RealtimeQAEvidence, 
  * Retrieves only Current Story subject evidence. Missing story scope fails closed
  * before the Retriever adapter can interpret it as an owner-wide query.
  */
-export class RetrieverRealtimeRecall implements RealtimeRecallPort {
+export class RetrieverRealtimeRecall {
   constructor(
     private readonly retriever: RetrieverAdapter,
     private readonly topK = REALTIME_RECALL_TOP_K,
@@ -113,20 +109,4 @@ export class RetrieverRealtimeRecall implements RealtimeRecallPort {
     };
   }
 
-  async recall(
-    request: RealtimeRecallRequest,
-    options: { signal?: AbortSignal } = {},
-  ): Promise<RealtimeContextHint> {
-    const result = await this.retrieve(request, options);
-    return {
-      basedOnTurnId: request.turnId,
-      facts: result.evidence.map((item) => ({
-        claim: item.answer,
-        ...(item.question ? { question: item.question } : {}),
-        sourceMessageIds: item.sourceMessageIds,
-      })),
-      possibleConflicts: [],
-      interviewHints: [],
-    };
-  }
 }

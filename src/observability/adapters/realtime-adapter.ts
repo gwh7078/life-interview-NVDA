@@ -16,6 +16,7 @@ const numericMetrics = [
   'promptTokens', 'completionTokens', 'totalTokens', 'selectedEvidenceCount',
   'toolToFirstAudioMs', 'responseBFirstAudioMs', 'responseBLatencyMs',
   'toolResultWriteLatencyMs', 'toolCycleLatencyMs',
+  'retriever_ms', 'agent_ms', 'total_slow_ms', 'hold_ms',
   'silenceObservedMs', 'silenceThresholdMs',
 ] as const;
 
@@ -73,6 +74,28 @@ function slowPathMapping(event: string, fields: SafeFields): Mapping | undefined
   return undefined;
 }
 
+function slowStageMapping(event: string): Mapping | undefined {
+  const match = /^slow\.(retriever|agent)\.(started|completed|failed)$/u.exec(event);
+  if (!match) return undefined;
+  const [, stage, status] = match;
+  if (stage === 'retriever') {
+    return {
+      category: 'retriever',
+      eventType: `retriever.${status}`,
+      status: status === 'started' ? 'start' : status === 'completed' ? 'success' : 'error',
+      title: status === 'started' ? 'RETRIEVER STARTED' : status === 'completed' ? 'RETRIEVER COMPLETE' : 'RETRIEVER FAILED',
+      component: 'nemo-retriever',
+    };
+  }
+  return {
+    category: 'agent',
+    eventType: `agent.${status}`,
+    status: status === 'started' ? 'start' : status === 'completed' ? 'success' : 'error',
+    title: status === 'started' ? 'CONTEXT HINT AGENT STARTED' : status === 'completed' ? 'CONTEXT HINT AGENT COMPLETE' : 'CONTEXT HINT AGENT FAILED',
+    component: 'realtime-context-agent',
+  };
+}
+
 interface Mapping {
   category: ObservationEvent['category'];
   eventType: string;
@@ -82,6 +105,8 @@ interface Mapping {
 }
 
 function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
+  const slowStage = slowStageMapping(event);
+  if (slowStage) return slowStage;
   const slowPath = slowPathMapping(event, fields);
   if (slowPath) return slowPath;
   if (event === 'session.started') return { category: 'runtime', eventType: 'runtime.started', status: 'start', title: 'Session started', component: 'interview-runtime' };
@@ -97,13 +122,18 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
   if (event === 'provider.audio_started' || event === 'provider.first_audio_received') return { category: 'realtime', eventType: 'realtime.responding', status: 'running', title: 'AI SPEAKING', component: 'realtime-provider' };
   if (event === 'provider.response_done' || event === 'client.playback_response_drained') return { category: 'realtime', eventType: 'realtime.listening', status: 'success', title: 'RESPONSE COMPLETE', component: 'realtime-provider' };
   if (event === 'client.playback_interruption') return { category: 'realtime', eventType: 'realtime.interrupted', status: 'warning', title: 'INTERRUPTED', component: 'realtime-client' };
+  if (event === 'realtime.tool_call.received') return { category: 'tool', eventType: 'tool.received', status: 'start', title: 'TOOL CALL', component: 'realtime-tool' };
   if (event === 'realtime.tool_call_requested') return { category: 'tool', eventType: 'tool.started', status: 'running', title: 'TOOL CALL', component: 'realtime-tool' };
   if (event === 'realtime.tool_call_rejected' || event === 'realtime.tool_call_ignored' || event === 'realtime.tool_result_failed') return { category: 'tool', eventType: 'tool.failed', status: 'error', title: 'TOOL FAILED', component: 'realtime-tool' };
   if (event === 'realtime.tool_cycle_started') return { category: 'realtime', eventType: 'realtime.hold', status: 'running', title: 'HOLD', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_message_write' && fields.messageKind === 'resume') return { category: 'realtime', eventType: 'realtime.resume', status: fields.sent === true ? 'success' : 'error', title: 'RESUME', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_response_started') return { category: 'realtime', eventType: 'realtime.responding', status: 'success', title: 'AI RESUMED', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_response_first_audio') return { category: 'realtime', eventType: 'realtime.first_audio', status: 'success', title: 'FIRST AUDIO', component: 'realtime-tool-cycle' };
-  if (event === 'realtime.tool_result_sent') return { category: 'tool', eventType: 'tool.completed', status: fields.sent === false ? 'error' : 'success', title: 'TOOL RESULT', component: 'realtime-tool' };
+  if (event === 'realtime.tool_result.sent' || event === 'realtime.tool_result_sent') return { category: 'tool', eventType: 'tool.completed', status: fields.sent === false ? 'error' : 'success', title: 'TOOL RESULT', component: 'realtime-tool' };
+  if (event === 'realtime.response.resumed') return { category: 'realtime', eventType: 'realtime.resumed', status: 'success', title: 'AI RESUMED', component: 'realtime-tool-cycle' };
+  if (event === 'slow.no_context') return { category: 'evidence', eventType: 'evidence.no_context', status: 'warning', title: 'NO CONTEXT', component: 'realtime-context' };
+  if (event === 'slow.deadline.exceeded') return { category: 'runtime', eventType: 'realtime.slow_deadline_exceeded', status: 'error', title: 'SLOW PATH DEADLINE EXCEEDED', component: 'realtime-slow-path' };
+  if (event === 'slow.result.stale_dropped') return { category: 'tool', eventType: 'tool.result_stale_dropped', status: 'warning', title: 'STALE RESULT DROPPED', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_terminal') {
     const outcome = fields.outcome;
     return { category: 'tool', eventType: outcome === 'completed' ? 'tool.completed' : 'tool.failed', status: normalizedStatus(outcome), title: 'TOOL CYCLE', component: 'realtime-tool' };
@@ -157,7 +187,7 @@ export function adaptRealtimeTrace(input: {
   const context = input.context ?? createObservationContext({ sessionId: input.sessionId, storyId: input.storyId });
   const toolRunId = safeLabel(fields.toolRunId);
   const runId = safeLabel(fields.runId);
-  const operationSpan = mapping.eventType === 'agent.metrics' && runId
+  const operationSpan = mapping.category === 'agent' && runId
     ? `agent:${runId}`
     : toolRunId ?? safeLabel(fields.responseId) ?? runId;
   const metrics: Record<string, number | string | boolean> = {};
@@ -182,17 +212,25 @@ export function adaptRealtimeTrace(input: {
   if (numberField(fields, 'candidateCount') !== undefined) metrics.candidateCount = numberField(fields, 'candidateCount')!;
 
   const count = numberField(fields, 'factCount');
-  const latency = event === 'realtime.tool_cycle_response_started'
+  const latency = event.startsWith('slow.retriever.')
+    ? numberField(fields, 'retriever_ms') ?? numberField(fields, 'latencyMs')
+    : event.startsWith('slow.agent.')
+      ? numberField(fields, 'agent_ms') ?? numberField(fields, 'latencyMs')
+      : event === 'slow.deadline.exceeded'
+        ? numberField(fields, 'total_slow_ms')
+        : event === 'realtime.response.resumed'
+          ? numberField(fields, 'hold_ms')
+          : event === 'realtime.tool_result.sent' || event === 'realtime.tool_result_sent'
+            ? numberField(fields, 'total_slow_ms') ?? numberField(fields, 'toolResultLatencyMs') ?? numberField(fields, 'toolResultWriteLatencyMs')
+            : event === 'realtime.tool_cycle_response_started'
     ? responseStartLatency
-    : event === 'realtime.tool_cycle_response_first_audio'
+        : event === 'realtime.tool_cycle_response_first_audio'
       ? numberField(fields, 'toolToFirstAudioMs') ?? numberField(fields, 'responseBFirstAudioMs')
-        : event === 'realtime.tool_result_sent'
-          ? numberField(fields, 'toolResultLatencyMs') ?? numberField(fields, 'toolResultWriteLatencyMs')
-          : event === 'realtime.tool_cycle_message_write' && fields.messageKind === 'resume'
-            ? undefined
-            : event === 'realtime.tool_cycle_terminal'
-              ? numberField(fields, 'toolCycleLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs')
-              : numberField(fields, 'slowAgentLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
+      : event === 'realtime.tool_cycle_message_write' && fields.messageKind === 'resume'
+        ? undefined
+        : event === 'realtime.tool_cycle_terminal'
+          ? numberField(fields, 'toolCycleLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs')
+          : numberField(fields, 'slowAgentLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
   const summary = mapping.category === 'retriever'
     ? [count === undefined ? undefined : `${count} results`, latency === undefined ? undefined : `${Math.round(latency)} ms`].filter(Boolean).join(' · ') || undefined
     : mapping.category === 'tool' && safeLabel(fields.name)
@@ -203,7 +241,7 @@ export function adaptRealtimeTrace(input: {
     ...(input.timestamp ? { timestamp: input.timestamp } : {}),
     ...(operationSpan ? {
       spanId: operationSpan,
-      parentSpanId: mapping.eventType === 'agent.metrics' ? toolRunId ?? context.rootSpanId : context.rootSpanId,
+      parentSpanId: mapping.category === 'agent' ? toolRunId ?? context.rootSpanId : context.rootSpanId,
     } : { spanId: context.rootSpanId }),
     category: mapping.category,
     eventType: mapping.eventType,

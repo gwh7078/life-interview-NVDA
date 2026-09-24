@@ -20,7 +20,7 @@ export class InterviewCore<TTarget, TContext, TSession> {
   start(
     userId: string,
     context: TContext,
-    provider: RealtimeInterviewProvider,
+    provider: RealtimeInterviewProvider = 'modelbest',
   ): TSession {
     return this.strategy.openSession(this.databasePath, userId, context, provider);
   }

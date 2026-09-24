@@ -31,9 +31,11 @@ test('ModelBest can be selected without changing existing Realtime provider opti
   });
   const provider = createModelBestRealtimeProvider(config);
   assert.deepEqual(provider.connectOptions(), {
-    url: 'wss://api.modelbest.cn/v1/realtime?mode=audio&model=MiniCPM-o-4.5-Realtime',
+    url: 'wss://minicpmo45.modelbest.cn/v1/realtime?mode=audio',
     headers: { Authorization: 'Bearer test-modelbest-key' },
   });
+  assert.equal(provider.capabilities.supportsToolCalling, false);
+  assert.equal(provider.capabilities.supportsSlowContext, false);
   assert.equal(provider.capabilities.supportsExplicitTurnRequest, false);
   assert.equal(provider.requiresQueueBeforeSessionInit, true);
   assert.deepEqual(provider.audio, {

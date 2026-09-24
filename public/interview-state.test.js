@@ -8,11 +8,12 @@ import {
   shouldIgnoreAssistantResponseMessage,
 } from './interview-state.js';
 
-test('configured Realtime provider defaults to Step-Audio and preserves explicit Qwen routing', () => {
+test('Realtime provider defaults to the MiniCPM candidate and preserves explicit provider routing', () => {
+  assert.equal(resolveRealtimeProvider(undefined), 'modelbest');
   assert.equal(resolveRealtimeProvider('stepfun'), 'stepfun');
   assert.equal(resolveRealtimeProvider('qwen'), 'qwen');
   assert.equal(resolveRealtimeProvider('modelbest'), 'modelbest');
-  assert.equal(resolveRealtimeProvider('unknown'), 'stepfun');
+  assert.equal(resolveRealtimeProvider('unknown'), 'modelbest');
   assert.equal(realtimeInputSampleRate('qwen'), 16000);
   assert.equal(realtimeInputSampleRate('modelbest'), 16000);
   assert.equal(realtimeInputSampleRate('stepfun'), 24000);

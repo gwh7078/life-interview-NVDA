@@ -1,6 +1,6 @@
 # Realtime Fast / Slow Dual-System Architecture v1.6
 
-> Status: **Architecture baseline; current implementation details are in `docs/05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md`**
+> Status: **Historical proposal; superseded by the 2026-09-24 integration convergence report.** The Step-Audio route, Agent fallback, and 5.5-second budget below are not current architecture decisions.
 >
 > Date: 2026-09-22
 >
@@ -8,7 +8,7 @@
 >
 > 原有 Tool Call、HOLD/Resume、Slow Coordinator、Current Story Retriever 与 Phase 3 A+B 自动 Gate G0–G8 是已验证基线。2026-09-23 新增 `interview.context_hint` Agent 实现；Agent smoke **FAIL**（`AGENT_RUNTIME_TIMEOUT`、随后 `AGENT_RUNTIME_EXEC_FAILED`），完整 Step-Audio 语音 E2E **NOT TESTED**。以实现状态文档中的 PASS/FAIL/NOT TESTED 为准。
 >
-> 本阶段的实时 Slow Path 验收范围是 Step-Audio / StepFun；Qwen 保留为 inactive / legacy provider adapter，不在本阶段新增历史上下文 Tool。
+> Current status: Step-Audio-2-mini is **Retired / no longer target realtime provider**. MiniCPM-o-4.5-Realtime is the formal **Candidate**, but its official public API does not document native Tool Calling / Tool Result / Resume. Do not claim Accepted before full real E2E. See [current convergence report](../../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md).
 
 ## 1. 本版核心变化
 
