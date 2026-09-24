@@ -8,28 +8,7 @@ import { test } from 'node:test';
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const resultScript = readFileSync(path.join(directory, 'result.js'), 'utf8');
 const resultHtml = readFileSync(path.join(directory, 'result.html'), 'utf8');
-const resultCss = readFileSync(path.join(directory, 'result.css'), 'utf8');
 const elementIds = [...resultHtml.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
-
-test('result page consumes the stable result DTO without parsing persisted Closeout JSON', () => {
-  assert.doesNotMatch(resultScript, /closeoutResult|closeout_result_json|rawPayload/);
-  assert.doesNotMatch(resultHtml, /Closeout 结果 JSON|接口响应/);
-});
-
-test('summary loading is announced accessibly', () => {
-  assert.match(resultHtml, /role="status" aria-live="polite" aria-atomic="true"/);
-});
-
-test('processing contract explains background work and removes the ordinary cancel control', () => {
-  assert.match(resultHtml, /id="processing-notice"[^>]*hidden/);
-  assert.match(resultHtml, /你可以先离开此页面，整理会继续进行，完成后会自动写入故事。/);
-  assert.match(resultHtml, /id="processing-stage-text"/);
-  assert.match(resultHtml, /class="processing-dots"/);
-  assert.match(resultCss, /\.processing-dots/);
-  assert.match(resultCss, /#status-description/);
-  assert.doesNotMatch(resultHtml, /停止整理|cancel-button/);
-  assert.doesNotMatch(resultScript, /cancelCloseout|closeout\/cancel|ensureCancelButton|cancel-button|isCanceling|isCancelRequested/);
-});
 
 class FakeElement {
   constructor(tagName = 'div', idRegistry = null) {

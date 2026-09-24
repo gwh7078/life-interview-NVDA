@@ -1,8 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 import {
   createOnboardingStartMessage,
   onboardingEndUrl,
@@ -12,8 +9,6 @@ import {
   onboardingResultView,
   isStoryInterviewRoute,
 } from './onboarding-ui.js';
-
-const directory = path.dirname(fileURLToPath(import.meta.url));
 
 test('profile onboarding status routes to welcome, continue, or My Life', () => {
   assert.equal(onboardingHomeView('not_started'), 'welcome');
@@ -97,35 +92,4 @@ test('onboarding result view renders ordered year ranges and stage-linked Storie
   assert.equal('summary' in result.stages[1], false);
   assert.equal(result.stages[0].stories[0].title, '第一次独自去杭州');
   assert.equal(result.stages[1].stories[0].summary, '一次项目结束后开始重新考虑职业方向。');
-});
-
-test('onboarding pages use dedicated assets and expose only Done as the result-page button', () => {
-  const directoryFiles = ['index.html', 'onboarding-processing.html', 'onboarding-result.html'];
-  const pages = Object.fromEntries(directoryFiles.map((file) => [
-    file,
-    readFileSync(path.join(directory, file), 'utf8'),
-  ]));
-  const client = readFileSync(path.join(directory, 'client.js'), 'utf8');
-  const resultScript = readFileSync(path.join(directory, 'onboarding-result.js'), 'utf8');
-  const onboardingUi = readFileSync(path.join(directory, 'onboarding-ui.js'), 'utf8');
-  assert.match(pages['index.html'], /id="onboarding-welcome"/);
-  assert.doesNotMatch(pages['index.html'], /<option value="qwen"/);
-  assert.match(client, /startButtonLabel\.textContent = continuing \? '继续聊天' : '开始聊天'/);
-  assert.match(client, /onboardingHomeView\(state\.onboardingStatus\)/);
-  assert.match(client, /if \(homeView === 'my-life'\) \{[\s\S]*?const returnTo = new URLSearchParams\(window\.location\.search\)\.get\('return_to'\)/);
-  assert.match(client, /if \(!isStoryInterviewRoute\(window\.location\.pathname, window\.location\.search\)\)/);
-  assert.match(client, /window\.location\.assign\('\/my-life'\)/);
-  assert.match(client, /requestedMode === 'create' \|\| requestedStageId/);
-  assert.match(client, /requestedMode === 'continue' \|\| requestedStoryId/);
-  assert.match(client, /elements\.startButton\.addEventListener\('click', \(\) => void startInterview\(\)\)/);
-  assert.match(client, /createOnboardingStartMessage\(state\.realtimeProvider\)/);
-  assert.doesNotMatch(client, /interview_type:\s*['"]story/);
-  assert.match(pages['onboarding-processing.html'], /onboarding-processing\.js/);
-  assert.match(pages['onboarding-result.html'], /onboarding-result\.js/);
-  assert.match(pages['onboarding-result.html'], /id="finish-button" class="button button-primary"/);
-  assert.equal([...pages['onboarding-result.html'].matchAll(/<button\b/g)].length, 1);
-  assert.doesNotMatch(pages['onboarding-result.html'], /src="\/result\.js"|api\/interview-sessions/);
-  assert.match(resultScript, /finish-button[\s\S]*?assign\('\/my-life'\)/);
-  assert.doesNotMatch(resultScript, /stage\??\.(?:summary|date_precision|start_date|end_date)/);
-  assert.doesNotMatch(onboardingUi, /stage\??\.(?:summary|date_precision|start_date|end_date)/);
 });

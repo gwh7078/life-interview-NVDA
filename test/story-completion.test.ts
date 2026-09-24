@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import { and, eq } from 'drizzle-orm';
+import { createDatabase } from '../src/db/client.js';
+import { runMigrations } from '../src/db/migrate.js';
+import { seedDatabase, seedIds } from '../src/db/seed.js';
+import { stories } from '../src/db/schema.js';
+import { StoryRepository } from '../src/repositories/domain-repositories.js';
+import { StoryCompletionPersistenceError, StoryCompletionPersistenceRepository } from '../src/story/completion/persistence.js';
 import {
   StoryCompletionContextBuilder,
   StoryCompletionContextError,
@@ -18,6 +27,25 @@ import type {
   StoryCompletionModelRequest,
   StoryCompletionOutput,
 } from '../src/story/completion/index.js';
+
+const temporaryDirectories: string[] = [];
+const testTempRoot = path.resolve('data/test-tmp');
+mkdirSync(testTempRoot, { recursive: true });
+after(() => temporaryDirectories.forEach((directory) => rmSync(directory, { recursive: true, force: true })));
+
+function createSeededDatabase(prefix: string): string {
+  const directory = mkdtempSync(path.join(testTempRoot, prefix));
+  temporaryDirectories.push(directory);
+  const databasePath = path.join(directory, 'memoir.db');
+  const connection = createDatabase(databasePath);
+  try {
+    runMigrations(connection);
+    seedDatabase(connection);
+  } finally {
+    connection.close();
+  }
+  return databasePath;
+}
 
 const context: StoryCompletionContext = {
   title: '第一次离开家乡',
@@ -272,4 +300,104 @@ test('Completion derives explicit exhausted-memory directions and makes them har
   assert.deepEqual(payload.blockedDirections, built.blockedDirections);
   assert.match(prompt.system, /强约束/);
   assert.match(prompt.system, /不得生成与其语义相同/);
+});
+
+test('Completion keeps the optimistic-lock token server-side and discards stale evaluations', async () => {
+  const sourceUpdatedAt = '2026-09-14T00:00:00.000Z';
+  const context = await new StoryCompletionContextBuilder({
+    loadForUser: () => ({
+      title: '第一次离开家乡',
+      agentMemory: '【故事背景】用户离开家乡开始第一份工作。\n【已覆盖主题】离开时间和第一份工作已经确认。',
+      stageTitle: '初入职场',
+      currentStatus: 'complete',
+      sessionCount: 2,
+      sourceUpdatedAt,
+    }),
+  }).build('owner', 'story');
+  assert.equal(context.sourceUpdatedAt, sourceUpdatedAt);
+  const prompt = buildStoryCompletionPrompt(context);
+  assert.equal(prompt.user.includes('sourceUpdatedAt'), false, 'optimistic-lock metadata must never enter the model prompt');
+  assert.match(prompt.system, /currentStatus/);
+  assert.match(prompt.system, /complete/);
+
+  const databasePath = createSeededDatabase('completion-cas-');
+  const storiesRepo = new StoryRepository(databasePath);
+  const before = storiesRepo.getDetailForUser(seedIds.user, seedIds.firstProject);
+  assert.ok(before);
+
+  const connection = createDatabase(databasePath);
+  try {
+    connection.db.update(stories).set({
+      title: '并发修改后的标题',
+      updatedAt: '2099-01-01T00:00:00.000Z',
+    }).where(and(
+      eq(stories.userId, seedIds.user),
+      eq(stories.storyId, seedIds.firstProject),
+    )).run();
+  } finally {
+    connection.close();
+  }
+
+  const persistence = new StoryCompletionPersistenceRepository(databasePath);
+  assert.throws(
+    () => persistence.updateCompletionForUser(
+      seedIds.user,
+      seedIds.firstProject,
+      { status: 'interviewing', gaps: ['当时还有哪个关键场景没有讲清楚？'] },
+      before.updatedAt,
+    ),
+    (error: unknown) => error instanceof StoryCompletionPersistenceError
+      && error.code === 'STORY_CHANGED_DURING_COMPLETION',
+  );
+  const afterStaleAttempt = storiesRepo.getDetailForUser(seedIds.user, seedIds.firstProject);
+  assert.equal(afterStaleAttempt?.title, '并发修改后的标题');
+  assert.notDeepEqual(afterStaleAttempt?.gaps, ['当时还有哪个关键场景没有讲清楚？']);
+
+  const accepted = persistence.updateCompletionForUser(
+    seedIds.user,
+    seedIds.firstProject,
+    { status: 'complete', gaps: ['如果继续丰富，当时还有哪个细节最值得补充？'] },
+    afterStaleAttempt!.updatedAt,
+  );
+  assert.deepEqual(accepted, { status: 'complete', gaps: ['如果继续丰富，当时还有哪个细节最值得补充？'] });
+});
+
+test('Completion persistence keeps a complete Story sticky while updating gaps', () => {
+  const databasePath = createSeededDatabase('completion-sticky-');
+  const connection = createDatabase(databasePath);
+  try {
+    connection.db.update(stories).set({
+      status: 'complete',
+      gapsJson: JSON.stringify(['初始缺口']),
+      updatedAt: '2099-01-01T00:00:00.000Z',
+    }).where(and(
+      eq(stories.userId, seedIds.user),
+      eq(stories.storyId, seedIds.firstProject),
+    )).run();
+  } finally {
+    connection.close();
+  }
+
+  const storiesRepo = new StoryRepository(databasePath);
+  const persistence = new StoryCompletionPersistenceRepository(databasePath);
+  const evaluations: Array<{ status: 'interviewing' | 'pending'; gaps: string[] }> = [
+    { status: 'interviewing', gaps: ['当时还有哪个具体细节没有讲到？'] },
+    { status: 'pending', gaps: ['还有哪个关键事实需要你确认？'] },
+  ];
+
+  for (const evaluation of evaluations) {
+    const current = storiesRepo.getDetailForUser(seedIds.user, seedIds.firstProject);
+    assert.ok(current);
+    const persisted = persistence.updateCompletionForUser(
+      seedIds.user,
+      seedIds.firstProject,
+      evaluation,
+      current.updatedAt,
+    );
+
+    assert.deepEqual(persisted, { status: 'complete', gaps: evaluation.gaps });
+    const reloaded = storiesRepo.getDetailForUser(seedIds.user, seedIds.firstProject);
+    assert.equal(reloaded?.status, 'complete');
+    assert.deepEqual(reloaded?.gaps, evaluation.gaps);
+  }
 });

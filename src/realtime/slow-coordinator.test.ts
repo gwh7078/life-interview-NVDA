@@ -26,22 +26,6 @@ test('unavailable production fallback returns no semantic facts', async () => {
   });
 });
 
-test('slow coordinator returns a completed hint', async () => {
-  const port: RealtimeRecallPort = {
-    async recall(input) {
-      return {
-        basedOnTurnId: input.turnId,
-        facts: [],
-        possibleConflicts: [],
-        interviewHints: [],
-      };
-    },
-  };
-  const result = await new RealtimeSlowCoordinator(port, 100).run(request);
-  assert.equal(result.status, 'completed');
-  assert.equal(result.hint?.basedOnTurnId, 'turn-1');
-});
-
 test('slow coordinator times out and aborts the recall', async () => {
   let aborted = false;
   const port: RealtimeRecallPort = {

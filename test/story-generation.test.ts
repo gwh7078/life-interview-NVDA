@@ -1,5 +1,15 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import { and, eq } from 'drizzle-orm';
+import { createDatabase } from '../src/db/client.js';
+import { runMigrations } from '../src/db/migrate.js';
+import { seedDatabase, seedIds } from '../src/db/seed.js';
+import { interviewSessions, stories } from '../src/db/schema.js';
+import { closeoutResultSchema, serializeJsonColumn, serializeTranscript } from '../src/db/transcript.js';
+import { createStoryGenerationService } from '../src/story/generation/runtime.js';
+import type { TextModelProvider } from '../src/providers/text-model-provider.js';
 import {
   StoryGenerationError,
   StoryGenerationService,
@@ -18,6 +28,25 @@ import {
   type StoryGenerationStoryRecord,
   type StoryGenerationTranscriptMessage,
 } from '../src/story/generation/index.js';
+
+const temporaryDirectories: string[] = [];
+const testTempRoot = path.resolve('data/test-tmp');
+mkdirSync(testTempRoot, { recursive: true });
+after(() => temporaryDirectories.forEach((directory) => rmSync(directory, { recursive: true, force: true })));
+
+function createSeededDatabase(prefix: string): string {
+  const directory = mkdtempSync(path.join(testTempRoot, prefix));
+  temporaryDirectories.push(directory);
+  const databasePath = path.join(directory, 'memoir.db');
+  const connection = createDatabase(databasePath);
+  try {
+    runMigrations(connection);
+    seedDatabase(connection);
+  } finally {
+    connection.close();
+  }
+  return databasePath;
+}
 
 const ownerId = 'owner-db-17';
 const storyId = 'story-db-23';
@@ -308,4 +337,78 @@ test('structured output contains only a non-empty content field', () => {
   assert.equal(storyGenerationOutputSchema.safeParse({ content: '正文', title: '模型标题' }).success, false);
   assert.equal(storyGenerationJsonSchema.additionalProperties, false);
   assert.deepEqual(storyGenerationJsonSchema.required, ['content']);
+});
+
+test('Generation uses only cited side-Story evidence', async () => {
+  const databasePath = createSeededDatabase('generation-side-story-');
+  const sideStoryId = 'side-story-product-alignment';
+  const timestamp = '2026-09-14T12:00:00.000Z';
+  const citedMessage = {
+    message_id: 'side-source-cited',
+    role: 'user' as const,
+    text: '旁支事实应保留：那天我第一次决定独自去上海。',
+    timestamp,
+    provider: 'test' as const,
+  };
+  const unrelatedMessage = {
+    message_id: 'side-source-unrelated',
+    role: 'user' as const,
+    text: '来源会话里属于主故事的其他事实，不应该自动混入旁支故事。',
+    timestamp: '2026-09-14T12:01:00.000Z',
+    provider: 'test' as const,
+  };
+
+  const connection = createDatabase(databasePath);
+  try {
+    connection.db.insert(stories).values({
+      storyId: sideStoryId,
+      userId: seedIds.user,
+      stageId: seedIds.work,
+      title: '第一次独自去上海',
+      summary: '用户第一次决定独自去上海。',
+      status: 'complete',
+      createdSourceSessionId: seedIds.storySession,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }).run();
+    connection.db.update(interviewSessions).set({
+      transcriptJson: serializeTranscript([citedMessage, unrelatedMessage]),
+      closeoutResultJson: serializeJsonColumn({
+        current_story_source_message_ids: [],
+        new_stories: [{ story_id: sideStoryId, source_message_ids: [citedMessage.message_id] }],
+      }, closeoutResultSchema),
+      updatedAt: timestamp,
+    }).where(and(
+      eq(interviewSessions.userId, seedIds.user),
+      eq(interviewSessions.sessionId, seedIds.storySession),
+    )).run();
+  } finally {
+    connection.close();
+  }
+
+  let capturedPrompt = '';
+  const provider: TextModelProvider = {
+    async complete(prompt) {
+      capturedPrompt = `${prompt.system}\n${prompt.user}`;
+      return {
+        output: { content: '这是根据旁支故事事实整理出的测试正文。' },
+        model: 'fake-generation-model',
+        latencyMs: 1,
+      };
+    },
+  };
+  const service = createStoryGenerationService(databasePath, {
+    provider: 'test',
+    apiKey: 'test-key',
+  }, provider);
+  const document = await service.generate({
+    ownerId: seedIds.user,
+    storyId: sideStoryId,
+    style: 'documentary',
+  });
+
+  assert.match(capturedPrompt, /旁支事实应保留：那天我第一次决定独自去上海/);
+  assert.doesNotMatch(capturedPrompt, /来源会话里属于主故事的其他事实/);
+  const source = JSON.parse(document.sourceJson) as { sessionIds?: string[] };
+  assert.deepEqual(source.sessionIds, [seedIds.storySession]);
 });

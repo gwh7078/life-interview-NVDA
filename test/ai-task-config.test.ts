@@ -19,73 +19,33 @@ function withEnvironment(values: Record<string, string | undefined>, callback: (
   }
 }
 
-test('AI task configuration keeps realtime and closeout model routing independent and is used by runtime setup', () => {
+test('realtime and text tasks use independent credentials and model routes', () => {
   const env = {
     STORY_INTERVIEW_PROVIDER: 'qwen',
     STORY_INTERVIEW_MODEL: 'qwen-interview-test',
-    STEPFUN_REALTIME_MODEL: undefined,
-    DASHSCOPE_REGION: 'ap-southeast-1',
     DASHSCOPE_WORKSPACE_ID: 'test-workspace',
     DASHSCOPE_API_KEY: 'qwen-secret-not-config',
-    CLOSEOUT_PROVIDER: 'volcengine-agent-plan',
-    CLOSEOUT_MODEL: 'closeout-text-test',
-    ONBOARDING_CLOSEOUT_MODEL: 'onboarding-closeout-test',
-    CLOSEOUT_API_FORMAT: 'responses',
-    CLOSEOUT_BASE_URL: 'https://ark.cn-beijing.volces.com/api/plan/v3',
-    CLOSEOUT_TIMEOUT_MS: '12345',
-    STORY_COMPLETION_PROVIDER: 'volcengine-agent-plan',
-    STORY_COMPLETION_MODEL: 'completion-text-test',
-    STORY_COMPLETION_API_FORMAT: 'responses',
-    STORY_COMPLETION_BASE_URL: 'https://completion.example/v1',
-    STORY_COMPLETION_TIMEOUT_MS: '23456',
-    STORY_GENERATION_MODEL: 'generation-text-test',
-    STORY_GENERATION_API_FORMAT: 'chat-json-schema',
-    STORY_GENERATION_BASE_URL: 'https://generation.example/v1',
-    STORY_GENERATION_TIMEOUT_MS: '34567',
+    TEXT_MODEL_PROVIDER: 'openai-compatible',
+    TEXT_MODEL_BASE_URL: 'https://text.example/v1',
+    TEXT_MODEL: 'text-model-test',
     CLOSEOUT_API_KEY: 'text-secret-not-config',
-    HOST: '127.0.0.1',
-    PORT: '4174',
-    AUTH_MODE: 'demo_phone',
     NODE_ENV: 'test',
+    AUTH_MODE: 'demo_phone',
   };
   const taskConfig = resolveAiTaskConfig(env as NodeJS.ProcessEnv);
-  assert.equal(taskConfig['interview.story'].provider, 'qwen');
   assert.equal(taskConfig['interview.story'].model, 'qwen-interview-test');
-  assert.equal(taskConfig['closeout.story'].provider, 'volcengine-agent-plan');
-  assert.equal(taskConfig['closeout.story'].model, 'closeout-text-test');
-  assert.equal(taskConfig['closeout.onboarding'].provider, 'volcengine-agent-plan');
-  assert.equal(taskConfig['closeout.onboarding'].model, 'onboarding-closeout-test');
-  assert.equal(taskConfig['completion.story'].model, 'completion-text-test');
-  assert.equal(taskConfig['completion.story'].parameters.apiFormat, 'responses');
-  assert.equal(taskConfig['completion.story'].parameters.baseUrl, 'https://completion.example/v1');
-  assert.equal(taskConfig['completion.story'].parameters.timeoutMs, 23_456);
-  assert.equal(taskConfig['generation.story'].model, 'generation-text-test');
-  assert.equal(taskConfig['generation.story'].parameters.apiFormat, 'chat-json-schema');
-  assert.equal(taskConfig['generation.story'].parameters.baseUrl, 'https://generation.example/v1');
-  assert.equal(taskConfig['generation.story'].parameters.timeoutMs, 34_567);
+  assert.equal(taskConfig['closeout.story'].model, 'text-model-test');
   assert.equal(JSON.stringify(taskConfig).includes('secret-not-config'), false);
 
   withEnvironment(env, () => {
     const runtime = readRuntimeConfig();
     assert.equal(runtime.defaultRealtimeProvider, 'qwen');
-    assert.equal(runtime.region, 'ap-southeast-1');
-    assert.equal(runtime.qwenModel, 'qwen-interview-test');
     assert.equal(runtime.model, 'qwen-interview-test');
-    assert.equal(runtime.stepfunModel, 'step-audio-2-mini');
-    assert.equal(runtime.closeoutProvider, 'volcengine-agent-plan');
-    assert.equal(runtime.closeoutModel, 'closeout-text-test');
-    assert.equal(runtime.closeoutApiFormat, 'responses');
-    assert.equal(runtime.closeoutTimeoutMs, 12_345);
-    assert.equal(runtime.storyCompletionModel, 'completion-text-test');
-    assert.equal(runtime.storyCompletionTimeoutMs, 23_456);
-    assert.equal(runtime.storyGenerationModel, 'generation-text-test');
-    assert.equal(runtime.storyGenerationTimeoutMs, 34_567);
+    assert.equal(runtime.closeoutModel, 'text-model-test');
     assert.equal(runtime.apiKey, 'qwen-secret-not-config');
     assert.equal(runtime.closeoutApiKey, 'text-secret-not-config');
-    assert.equal(runtime.authMode, 'demo_phone');
   });
 });
-
 
 test('one shared text runtime profile routes all text tasks without changing business task names', () => {
   const taskConfig = resolveAiTaskConfig({

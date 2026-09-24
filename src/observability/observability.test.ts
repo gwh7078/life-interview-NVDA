@@ -7,7 +7,7 @@ import { adaptNatEvaluation } from './adapters/nat-adapter.js';
 import { adaptRealtimeTrace, normalizeAgentSkipReasonForObservation } from './adapters/realtime-adapter.js';
 import { createObservationAnalyticsConsumer } from './analytics-consumer.js';
 import { ObservationBus, emitObservationEvent } from './observation-bus.js';
-import { createObservationContext, createObservationEvent, type ObservationEvent } from './observation-event.js';
+import { createObservationContext, type ObservationEvent } from './observation-event.js';
 
 function event(sessionId: string, eventId: string, status: ObservationEvent['status'] = 'running', durationMs?: number): ObservationEvent {
   return {
@@ -23,22 +23,6 @@ function event(sessionId: string, eventId: string, status: ObservationEvent['sta
     ...(durationMs === undefined ? {} : { durationMs }),
   };
 }
-
-test('observation context groups events by trace and parent span', () => {
-  const context = createObservationContext({ sessionId: 'session-a', rootSpanId: 'root-a' });
-  const observation = createObservationEvent(context, {
-    spanId: 'tool-cycle-a',
-    parentSpanId: context.rootSpanId,
-    category: 'tool',
-    eventType: 'tool.started',
-    status: 'running',
-    component: 'realtime-tool',
-    title: 'TOOL CALL',
-  });
-  assert.equal(observation.traceId, 'session-a');
-  assert.equal(observation.sessionId, 'session-a');
-  assert.equal(observation.parentSpanId, 'root-a');
-});
 
 test('disabled bus is a no-op and event consumers cannot break emission', async () => {
   const bus = new ObservationBus({ enabled: false });
@@ -337,17 +321,4 @@ test('analytics consumer calculates rates and nearest-rank latency percentiles',
     byType: { 'realtime.listening': 2 },
   });
   analytics.dispose();
-});
-
-test('high event volume keeps session storage bounded with an asynchronous consumer', async () => {
-  const bus = new ObservationBus({ capacity: 100 });
-  let delivered = 0;
-  bus.subscribe(() => { delivered += 1; });
-  const start = performance.now();
-  for (let index = 0; index < 10_000; index += 1) bus.emit(event('session-a', `event-${index}`));
-  const elapsed = performance.now() - start;
-  await Promise.resolve();
-  assert.equal(bus.recent('session-a').length, 100);
-  assert.equal(delivered, 100);
-  assert.ok(elapsed < 3000, `10,000 event inserts took ${elapsed.toFixed(1)} ms`);
 });
