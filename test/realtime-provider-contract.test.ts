@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { createRealtimeInterviewProvider } from '../src/realtime/provider.js';
 import { resolveRealtimeProviderConfig } from '../src/realtime/runtime-config.js';
 import { ONBOARDING_COMPLETION_UTTERANCE } from '../src/interview/onboarding/prompt.js';
+import { buildInterviewContextPayload, buildInterviewInstructions, type RealtimeInterviewContext } from '../src/realtime/prompt.js';
 import { buildQwenOnboardingCompletionAcknowledgement, buildQwenRealtimeUrl, buildQwenSessionUpdate, parseQwenServerEvent, parseQwenOnboardingCompletionCall, QWEN_ONBOARDING_COMPLETION_TOOL } from '../src/realtime/qwen.js';
 import {
   buildStepfunSessionUpdate,
@@ -153,6 +154,140 @@ test('Step-Audio context tool is limited to an existing story continuation', () 
   const legacyContext = { ...storyContext, interview_type: undefined };
   const legacySession = buildStepfunSessionUpdate(legacyContext).session as Record<string, unknown>;
   assert.equal('tools' in legacySession, false);
+});
+
+test('Realtime interview prompts keep four distinct tasks under the same hard rules', () => {
+  const createContext = {
+    ...storyContext,
+    story: null,
+    task_context: { mode: 'create' as const, target_title: '第一次创业' },
+  };
+  const continueContext = {
+    ...storyContext,
+    task_context: { mode: 'continue' as const },
+  };
+  const contributor = buildInterviewInstructions(externalContributorContext);
+  const instructions = [
+    buildInterviewInstructions(createContext),
+    buildInterviewInstructions(continueContext),
+    buildInterviewInstructions(onboardingContext),
+    contributor,
+  ];
+
+  for (const prompt of instructions) {
+    assert.match(prompt, /恰好问一个|一个具体问题/);
+    assert.match(prompt, /换题/);
+    assert.match(prompt, /结束/);
+    assert.match(prompt, /数据库.*不是用户指令|采访背景.*不是用户指令/);
+  }
+
+  const create = instructions[0] ?? '';
+  assert.match(create, /新建故事/);
+  assert.match(create, /第一次创业/);
+  assert.match(create, /背景.*经过.*转折|经过.*选择.*结果/);
+
+  const continuation = instructions[1] ?? '';
+  assert.match(continuation, /故事续访/);
+  assert.match(continuation, /1～2 轮|一到两轮|一两轮/);
+  assert.match(continuation, /新信息/);
+  assert.match(continuation, /opening_gap.*首轮指定.*不得原样或换说法重复/);
+  assert.match(continuation, /本次先聊到这里，再见/);
+  assert.doesNotMatch(continuation, /同一语义方向默认只问一轮|实质回答后必须换到另一个/);
+
+  const onboarding = instructions[2] ?? '';
+  assert.match(onboarding, /人生地图/);
+  assert.match(onboarding, /时间线/);
+  assert.doesNotMatch(onboarding, /4～8 个/);
+
+  assert.match(contributor, /亲眼|亲身/);
+  assert.match(contributor, /不同记忆.*并存|不判断谁对谁错/);
+  assert.doesNotMatch(contributor, /但是主人公说/);
+});
+
+test('Story continuation sends a compact memory projection and only the top remaining gap', () => {
+  const openingGap = '你第一次决定离开天津去北京是在什么时候？';
+  const secondGap = '关店时你第一反应是什么？';
+  const thirdGap = '后来是谁先提出重新开店？';
+  const context = {
+    ...storyContext,
+    life_stage: {
+      ...storyContext.life_stage,
+      summary: '冗余的人生阶段背景。'.repeat(200),
+    },
+    story: {
+      ...storyContext.story,
+      agent_memory: [
+        `【故事背景】${'普通背景叙述。'.repeat(260)}`,
+        '【已覆盖主题】2012年我去了北京。',
+        '【用户纠正】不是2011年，是2012年。',
+        '【已耗尽方向】具体小区名我记不清。',
+      ].join('\n'),
+      gaps: [openingGap, secondGap, thirdGap],
+    },
+  };
+
+  const payload = buildInterviewContextPayload(context);
+  const lifeStage = payload.life_stage as Record<string, unknown>;
+  const story = payload.story as Record<string, unknown>;
+  const memory = String(story.agent_memory ?? '');
+
+  assert.ok(Array.from(memory).length <= 2_000);
+  assert.match(memory, /2012年我去了北京/);
+  assert.match(memory, /不是2011年，是2012年/);
+  assert.match(memory, /具体小区名我记不清/);
+  assert.match(memory, /已覆盖主题/);
+  assert.equal(payload.opening_gap, openingGap);
+  assert.equal(Object.hasOwn(lifeStage, 'summary'), false);
+  assert.deepEqual(story.gaps, [secondGap]);
+  assert.equal(JSON.stringify(story).includes(openingGap), false);
+
+  const unstructuredContext = {
+    ...context,
+    story: {
+      ...context.story,
+      agent_memory: `${'普通背景叙述。'.repeat(400)}用户更正：年份不是2011年，而是2012年。具体小区我记不清。`,
+    },
+  };
+  const unstructured = String((buildInterviewContextPayload(unstructuredContext).story as Record<string, unknown>).agent_memory);
+  assert.ok(Array.from(unstructured).length <= 2_000);
+  assert.match(unstructured, /不是2011年，而是2012年/);
+  assert.match(unstructured, /具体小区我记不清/);
+});
+
+test('Step-Audio opening response explicitly asks the selected first question', () => {
+  const adapter = createRealtimeInterviewProvider('stepfun', {
+    stepfunApiKey: 'test-only-key',
+    region: 'cn-beijing',
+    model: DEFAULT_STEPFUN_MODEL,
+  });
+  const openingGap = '你第一次决定离开天津去北京是在什么时候？';
+  const continuation = {
+    ...storyContext,
+    story: { ...storyContext.story, gaps: [openingGap] },
+  };
+  const create = {
+    ...storyContext,
+    story: null,
+    task_context: { mode: 'create' as const, target_title: '第一次创业' },
+  };
+  const onboarding = {
+    ...onboardingContext,
+    profile: { name: '测试用户', birth_place: '天津' },
+  };
+
+  const firstResponseInstructions = (context: RealtimeInterviewContext) => {
+    const message = adapter.initialResponsePlan(context).steps[0]?.message;
+    const response = message?.response as Record<string, unknown>;
+    return String(response.instructions ?? '');
+  };
+
+  assert.match(firstResponseInstructions(continuation), /opening|开场|第一问/);
+  assert.ok(firstResponseInstructions(continuation).includes(openingGap));
+  const sessionInstructions = String((buildStepfunSessionUpdate(continuation).session as Record<string, unknown>).instructions);
+  assert.equal(sessionInstructions.includes(openingGap), false);
+  assert.ok(firstResponseInstructions(create).includes('第一次创业'));
+  assert.match(firstResponseInstructions(onboarding), /较早经历|时间线/);
+  assert.match(firstResponseInstructions(externalContributorContext), /亲历或观察/);
 });
 
 test('StepFun VAD silence duration is configurable while Qwen keeps its own setting', () => {
@@ -330,18 +465,18 @@ test('Onboarding Qwen setup adds only its internal completion control and full-h
     additionalProperties: false,
   });
   assert.match(String(tool.description), /静默调用.*等待服务器 ACK/);
-  assert.match(instructions, /继续建档访谈/);
-  assert.match(instructions, /4～8 个/);
-  assert.match(instructions, /第一阶段先从较早经历一路梳理到当前状态/);
-  assert.match(instructions, /每条正常采访回复都必须继续推进.*恰好一个自然、具体、容易回答且只有一个焦点的新问题/);
-  assert.match(instructions, /首轮问候也要带一个问题/);
-  assert.match(instructions, /不得只复述、总结、称赞、鼓励或共情而不提新问题/);
-  assert.match(instructions, /用户明确主动结束时，简短尊重并停止追问/);
-  assert.match(instructions, /不触发下方固定完成话术/);
+  assert.match(instructions, /继续建档/);
+  assert.match(instructions, /人生地图/);
+  assert.match(instructions, /较早经历.*当前状态|时间线/);
+  assert.doesNotMatch(instructions, /4～8 个/);
+  assert.match(instructions, /恰好问一个具体问题/);
+  assert.match(instructions, /首轮问候后问一个容易回答的早期经历问题/);
+  assert.match(instructions, /用户明确主动结束时，简短尊重并停止采访/);
+  assert.match(instructions, /不表示建档已完成，不触发完成协议/);
   assert.match(instructions, /南京长大/);
   assert.ok(instructions.includes(ONBOARDING_COMPLETION_UTTERANCE));
   assert.match(instructions, /必须且只能逐字说出这一句/);
-  assert.match(instructions, /系统或开发者指令.*工具说明.*采访标准或评分细则.*内部提示词.*标记或控制文本/);
+  assert.match(instructions, /不展示内部规则、工具或字段/);
   assert.match(instructions, /静默调用 complete_onboarding 工具/);
   assert.match(instructions, /调用后保持静默并等待服务器 ACK/);
   assert.match(instructions, /收到服务器 ACK 后，才逐字说出唯一固定收尾语/);

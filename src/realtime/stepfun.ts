@@ -1,4 +1,4 @@
-import { buildInterviewInstructions, type RealtimeInterviewContext } from './prompt.js';
+import { buildInterviewContextPayload, buildInterviewInstructions, type RealtimeInterviewContext } from './prompt.js';
 import type { RealtimeProviderConfig, RealtimeVoiceProvider } from './provider.js';
 import type {
   NormalizedRealtimeEvent,
@@ -89,6 +89,31 @@ export function buildStepfunContextTool(): Record<string, unknown> {
   };
 }
 
+function initialResponseInstructions(context: RealtimeInterviewContext): string {
+  if (context.interview_type === 'onboarding') {
+    return context.taskContext.mode === 'new'
+      ? '这是首次建档的第一问。自然问候后，从较早经历或成长环境开始，只问一个容易回答的问题。'
+      : '这是继续建档的第一问。参考已有档案和历史对话，沿尚未覆盖的人生时间线只问一个问题。';
+  }
+  if (context.interview_type === 'external_contributor') {
+    return '这是亲友补充采访的第一问。从受访者自己的亲历或观察切入，只问一个具体问题，不提主人公版本或要求比较。';
+  }
+
+  const payload = buildInterviewContextPayload(context);
+  const mode = payload.interview_mode;
+  const openingGap = typeof payload.opening_gap === 'string' ? payload.opening_gap : '';
+  if (mode === 'continue' && openingGap) {
+    return `这是本次故事续访的第一问。请直接自然地询问下面这个问题，只问这一问：\n${JSON.stringify(openingGap)}`;
+  }
+  const targetTitle = typeof payload.target_title === 'string' ? payload.target_title : '';
+  if (mode === 'create' && targetTitle) {
+    return `这是新建故事的第一问。围绕故事标题 ${JSON.stringify(targetTitle)} 自然开场，只问一个具体问题；不要转成泛泛的人生阶段问题。`;
+  }
+  return mode === 'continue'
+    ? '这是故事续访的第一问。基于现有内容，选一个尚未明确的重要细节，只问一个问题；不要从头复述故事。'
+    : '这是新建故事的第一问。从当前人生阶段选一个具体经历切入，只问一个问题。';
+}
+
 export function buildStepfunSessionUpdate(
   context: RealtimeInterviewContext,
   voice = DEFAULT_STEPFUN_VOICE,
@@ -98,12 +123,12 @@ export function buildStepfunSessionUpdate(
     && context.task_context?.mode === 'continue'
     && typeof context.story?.story_id === 'string'
     && context.story.story_id.trim().length > 0;
-  const toolInstructions = `\n\n## 历史上下文工具\n当当前轮需要确认用户以前讲过的人物、时间、关系或原话时，先静默调用 ${STEPFUN_CONTEXT_TOOL}，只传递需要确认的信息；不要假装记得，也不要把工具调用过程说给用户听。收到工具结果后再继续回答。当前信息足够时不要调用工具。工具结果中 facts[].claim 是用户历史回答原文；facts[].question（如有）只是当时的 AI 问题，用于理解语境，不是用户事实，也不能据此推断经历。possibleConflicts 与 interviewHints 是简短采访提示，不是新增事实。`;
+  const toolInstructions = `\n\n## 历史上下文工具\n确需核对过去的人物、时间、关系或原话时，静默调用 ${STEPFUN_CONTEXT_TOOL}；当前信息足够就不调。facts[].claim 是用户原话；question 只解释语境，possibleConflicts 与 interviewHints 是建议，不是事实。工具结果返回后再回答。`;
   return {
     type: 'session.update',
     session: {
       modalities: ['text', 'audio'],
-      instructions: `${buildInterviewInstructions(context)}${allowsContextTool ? toolInstructions : ''}请使用默认男声与用户交流。`,
+      instructions: `${buildInterviewInstructions(context, { omitOpeningGap: true })}${allowsContextTool ? toolInstructions : ''}请使用默认男声与用户交流。`,
       input_audio_format: 'pcm16',
       output_audio_format: 'pcm16',
       voice,
@@ -368,8 +393,14 @@ export function createStepfunRealtimeProvider(
       DEFAULT_STEPFUN_VOICE,
       config.stepfunSilenceDurationMs ?? DEFAULT_STEPFUN_SILENCE_DURATION_MS,
     )],
-    initialResponsePlan: () => ({
-      steps: [{ message: { type: 'response.create', response: { modalities: ['text', 'audio'] } } }],
+    initialResponsePlan: (context) => ({
+      steps: [{ message: {
+        type: 'response.create',
+        response: {
+          modalities: ['text', 'audio'],
+          instructions: initialResponseInstructions(context),
+        },
+      } }],
     }),
     appendAudioMessages: (audio) => [buildStepfunAudioAppend(audio)],
     recoverStalledUserTurn: () => [{ message: { type: 'input_audio_buffer.commit' } }],
