@@ -29,6 +29,7 @@ try {
       'retriever.skipped': 'RETRIEVER SKIPPED', 'evidence.ready': 'CONTEXT HINT READY',
       'agent.started': 'AGENT STARTED', 'agent.completed': 'AGENT COMPLETE',
       'agent.failed': 'AGENT FAILED', 'agent.timeout': 'AGENT TIMEOUT', 'agent.skipped': 'AGENT SKIPPED',
+      'agent.metrics': 'AGENT METRICS',
       'skill.started': 'SKILL STARTED', 'skill.completed': 'SKILL COMPLETE', 'skill.failed': 'SKILL FAILED',
       'validator.passed': 'VALIDATION PASSED', 'validator.failed': 'VALIDATION FAILED',
       'database.write.started': 'DATABASE WRITE STARTED', 'database.write.completed': 'DATABASE WRITE COMPLETE',
@@ -64,6 +65,7 @@ try {
       if (event.eventType === 'realtime.responding') return event.component === 'realtime-tool-cycle' ? 'AI RESUMED' : 'AI SPEAKING';
       if (event.component === 'realtime-context-agent') {
         return eventTitles[event.eventType] === 'AGENT TIMEOUT' || event.eventType === 'agent.timeout'
+          || (event.eventType === 'agent.failed' && typeof event.metrics?.errorCode === 'string' && event.metrics.errorCode.includes('TIMEOUT'))
           ? 'CONTEXT HINT AGENT TIMEOUT'
           : `CONTEXT HINT ${eventTitles[event.eventType] || 'AGENT EVENT'}`;
       }

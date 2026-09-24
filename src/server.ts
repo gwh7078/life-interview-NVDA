@@ -96,7 +96,6 @@ import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script
 import { ObservationBus, emitObservationEvent } from './observability/observation-bus.js';
 import { createObservationContext, type ObservationContext } from './observability/observation-event.js';
 import { adaptRealtimeTrace, normalizeAgentSkipReasonForObservation } from './observability/adapters/realtime-adapter.js';
-import { createObservationAnalyticsConsumer } from './observability/analytics-consumer.js';
 import { RealtimeSlowContextPipeline } from './realtime/slow-context-pipeline.js';
 import { createEraContextClientFromEnv } from './era-context/client.js';
 import { EraContextScriptError, EraContextScriptGateway } from './era-context/script-gateway.js';
@@ -575,10 +574,11 @@ function createStoryWorkflowDependencies(
   observationBus: ObservationBus,
 ): InterviewServiceDependencies {
   const textModelProvider = dependencies.closeout?.textModelProvider ?? new DirectTextModelProvider();
+  const onObservationEvent = (event: Parameters<typeof emitObservationEvent>[0]) => emitObservationEvent(event, observationBus);
   const agentTasks = dependencies.agentTasks === undefined
     ? createAgentTaskPort(process.env, {
         databasePath: config.databasePath,
-        onObservationEvent: (event) => emitObservationEvent(event, observationBus),
+        onObservationEvent,
       })
     : dependencies.agentTasks;
   const realtimeAgentFlag = process.env.REALTIME_CONTEXT_AGENT_ENABLED?.trim().toLowerCase() ?? '';
@@ -587,7 +587,10 @@ function createStoryWorkflowDependencies(
   const realtimeContextAgentTasks = dependencies.realtimeContextAgentTasks !== undefined
     ? dependencies.realtimeContextAgentTasks
     : realtimeAgentEnabled
-      ? agentTasks ?? createAgentTaskPort({ ...process.env, AI_TASK_RUNTIME: 'agent' }, { databasePath: config.databasePath })
+      ? agentTasks ?? createAgentTaskPort({ ...process.env, AI_TASK_RUNTIME: 'agent' }, {
+          databasePath: config.databasePath,
+          onObservationEvent,
+        })
       : null;
   const storyCompletion = dependencies.storyCompletion
     ?? createStoryCompletionService(
@@ -2232,6 +2235,7 @@ function createRealtimeHandler(
           ...(progress.evidenceInputChars === undefined ? {} : { evidenceInputChars: progress.evidenceInputChars }),
           ...(progress.model ? { slowAgentModel: progress.model } : {}),
           ...(progress.skill ? { skill: progress.skill } : {}),
+          ...(progress.runId ? { runId: progress.runId } : {}),
           ...(progress.promptTokens === undefined ? {} : { promptTokens: progress.promptTokens }),
           ...(progress.completionTokens === undefined ? {} : { completionTokens: progress.completionTokens }),
           ...(progress.totalTokens === undefined ? {} : { totalTokens: progress.totalTokens }),
@@ -2312,6 +2316,12 @@ function createRealtimeHandler(
         query,
         storySummary,
         recentContext: recentFinalMessages.slice(-4),
+        traceContext: {
+          traceId: interviewSession!.sessionId,
+          sessionId: interviewSession!.sessionId,
+          storyId: storyContext!.story_id as string,
+          parentSpanId: toolRunId,
+        },
         onProgress,
       }, () => phase === 'active'
         && contextVersion === version
@@ -3903,7 +3913,6 @@ export function createInterviewServiceServer(
   });
   const observationBus = dependencies.observationBus
     ?? new ObservationBus({ enabled: process.env.OBSERVABILITY_ENABLED?.trim() !== 'false' });
-  const analyticsConsumer = createObservationAnalyticsConsumer(observationBus);
   const runtimeDependencies = createStoryWorkflowDependencies(effectiveConfig, dependencies, observationBus);
   const server = createServer(createHttpHandler(effectiveConfig, authService, runtimeDependencies, observationBus));
   const websocketServer = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
@@ -3979,7 +3988,6 @@ export function createInterviewServiceServer(
   });
   server.on('close', () => {
     websocketServer.close();
-    analyticsConsumer.dispose();
     observationBus.dispose();
   });
   return server;

@@ -24,6 +24,15 @@ export const agentTaskResourceSchema = z.object({
   version: z.string().trim().min(1).max(200).optional(),
 }).strict();
 
+export const agentTaskTraceContextSchema = z.object({
+  traceId: z.string().trim().min(1).max(200),
+  sessionId: z.string().trim().min(1).max(200),
+  storyId: z.string().trim().min(1).max(200).optional(),
+  parentSpanId: z.string().trim().min(1).max(200),
+}).strict();
+
+export type AgentTaskTraceContext = z.infer<typeof agentTaskTraceContextSchema>;
+
 export type AgentTaskResource = z.infer<typeof agentTaskResourceSchema>;
 
 export const agentTaskRuntimeMetadataSchema = z.object({
@@ -53,6 +62,7 @@ export const agentTaskRequestEnvelopeSchema = z.object({
   mode: z.string().trim().min(1).max(80).optional(),
   ownerId: z.string().trim().min(1).max(200),
   resource: agentTaskResourceSchema,
+  traceContext: agentTaskTraceContextSchema.optional(),
   schemaVersion: z.string().trim().min(1).max(40),
   payload: z.unknown(),
 }).strict();
@@ -72,6 +82,7 @@ export interface AgentTaskRequest<TPayload> {
   mode?: string;
   ownerId: string;
   resource: AgentTaskResource;
+  traceContext?: AgentTaskTraceContext;
   schemaVersion: string;
   payload: TPayload;
 }

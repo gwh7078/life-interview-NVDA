@@ -5,9 +5,11 @@ import { nowUtcIso } from '../../src/db/time.js';
 import { diagnosticsContentEnabled } from '../../src/diagnostics/snapshot.js';
 import { adaptAgentRun, type AgentObservationSource } from '../../src/observability/adapters/agent-adapter.js';
 import type { ObservationEvent } from '../../src/observability/observation-event.js';
+import type { AgentTaskTraceContext } from '../../src/agent-tasks/contracts/common.js';
 import type { AgentRunRequest } from '../runtime/types.js';
 
 export interface AgentRunCreateInput extends AgentRunRequest {
+  traceContext?: AgentTaskTraceContext;
   runtime: string;
   mode?: string | null;
   skill?: string | null;
@@ -94,6 +96,7 @@ export class AgentRunRepository implements AgentRunStore {
         taskType: input.taskType,
         resourceType: input.resourceType,
         resourceId: input.resourceId,
+        ...(input.traceContext ? { traceContext: input.traceContext } : {}),
         runtime: input.runtime,
         ...(input.skill ? { skill: input.skill } : {}),
         ...(input.provider ? { provider: input.provider } : {}),
@@ -182,7 +185,7 @@ export class AgentRunRepository implements AgentRunStore {
       errorCode,
       resultJson: null,
     });
-    this.observe(runId, { eventType: 'agent.failed', status: 'error', durationMs: latencyMs });
+    this.observe(runId, { eventType: 'agent.failed', status: 'error', durationMs: latencyMs, errorCode });
     this.observationSources.delete(runId);
   }
 

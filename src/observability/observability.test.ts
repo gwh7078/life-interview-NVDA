@@ -5,7 +5,6 @@ import { runInNewContext } from 'node:vm';
 import { adaptAgentRun } from './adapters/agent-adapter.js';
 import { adaptNatEvaluation } from './adapters/nat-adapter.js';
 import { adaptRealtimeTrace, normalizeAgentSkipReasonForObservation } from './adapters/realtime-adapter.js';
-import { createObservationAnalyticsConsumer } from './analytics-consumer.js';
 import { ObservationBus, emitObservationEvent } from './observation-bus.js';
 import { createObservationContext, type ObservationEvent } from './observation-event.js';
 
@@ -75,6 +74,16 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
   assert.equal(adaptRealtimeTrace({
     sessionId: 'session-a', provider: 'stepfun', event: 'realtime.tool_cycle_recall_finished', fields: { status: 'completed' },
   }), undefined);
+  const retrieverLifecycle = [
+    ['realtime.tool_cycle_recall_started', { toolRunId: 'tool-cycle-a' }],
+    ['realtime.recall_started', { toolRunId: 'tool-cycle-a' }],
+    ['realtime.slow_path.retrieval.started', { toolRunId: 'tool-cycle-a', status: 'started' }],
+    ['realtime.slow_path.retrieval.finished', { toolRunId: 'tool-cycle-a', status: 'finished' }],
+    ['realtime.tool_cycle_recall_finished', { toolRunId: 'tool-cycle-a', status: 'completed' }],
+  ].map(([eventName, fields]) => adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: eventName as string, fields: fields as Record<string, unknown>,
+  })).filter((item) => item?.category === 'retriever');
+  assert.deepEqual(retrieverLifecycle.map((item) => item?.eventType), ['retriever.started', 'retriever.completed']);
   assert.equal(adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'client.microphone_uplink' }), undefined);
   assert.deepEqual([
     adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'provider.speech_started' })?.eventType,
@@ -126,11 +135,27 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
       promptTokens: 40, completionTokens: 12, totalTokens: 52,
     },
   });
-  assert.deepEqual([timedOut?.eventType, timedOut?.status, timedOut?.durationMs], ['agent.timeout', 'warning', 4_800]);
+  assert.equal(timedOut, undefined);
+  for (const status of ['started']) {
+    assert.equal(adaptRealtimeTrace({
+      context, sessionId: 'session-a', provider: 'stepfun', event: `realtime.slow_path.slow_agent.${status}`,
+      fields: { status, toolRunId: 'tool-cycle-a' },
+    }), undefined);
+  }
+  const contextAgentMetrics = adaptRealtimeTrace({
+    context, sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_path.slow_agent.finished',
+    fields: {
+      status: 'completed', toolRunId: 'tool-cycle-a', runId: 'run-context', latencyMs: 84,
+      promptTokens: 40, completionTokens: 12, totalTokens: 52, selectedEvidenceCount: 2,
+    },
+  });
+  assert.equal(contextAgentMetrics?.eventType, 'agent.metrics');
+  assert.equal(contextAgentMetrics?.spanId, 'agent:run-context');
+  assert.equal(contextAgentMetrics?.parentSpanId, 'tool-cycle-a');
   assert.deepEqual([
-    timedOut?.metrics?.fallbackUsed, timedOut?.metrics?.fallbackType, timedOut?.metrics?.errorCode,
-    timedOut?.metrics?.promptTokens, timedOut?.metrics?.totalTokens,
-  ], [true, 'direct_retrieval', 'AGENT_RUNTIME_TIMEOUT', 40, 52]);
+    contextAgentMetrics?.metrics?.promptTokens, contextAgentMetrics?.metrics?.completionTokens,
+    contextAgentMetrics?.metrics?.selectedEvidenceCount,
+  ], [40, 12, 2]);
 
   const ready = adaptRealtimeTrace({
     context, sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_path.context_hint.ready',
@@ -190,6 +215,31 @@ test('Agent and Skill observations preserve status, duration and session correla
   assert.ok(adaptAgentRun({ ...source, resourceType: 'story', resourceId: 'story-a' }, {
     eventType: 'agent.failed', status: 'error', durationMs: 20,
   }).every((item) => item.sessionId === undefined && item.storyId === 'story-a'));
+});
+
+test('Realtime Context Agent and Skill spans stay under the originating Tool Cycle', () => {
+  const source = {
+    runId: 'run-context',
+    agentType: 'interview-observer',
+    taskType: 'interview.context_hint',
+    resourceType: 'story',
+    resourceId: 'story-a',
+    runtime: 'nemoclaw-openclaw',
+    skill: 'interview-observer',
+    model: 'qwen-test',
+    traceContext: {
+      traceId: 'trace-a', sessionId: 'session-a', storyId: 'story-a', parentSpanId: 'tool-cycle-a',
+    },
+  } as Parameters<typeof adaptAgentRun>[0];
+  const [agent, skill] = adaptAgentRun(source, { eventType: 'agent.started', status: 'running' });
+  assert.equal(agent?.traceId, 'trace-a');
+  assert.equal(agent?.sessionId, 'session-a');
+  assert.equal(agent?.storyId, 'story-a');
+  assert.equal(agent?.parentSpanId, 'tool-cycle-a');
+  assert.equal(agent?.component, 'realtime-context-agent');
+  assert.equal(agent?.metrics?.model, 'qwen-test');
+  assert.equal(skill?.traceId, 'trace-a');
+  assert.equal(skill?.parentSpanId, 'agent:run-context');
 });
 
 test('NAT adapter emits evaluation and validator events without synthetic session links', () => {
@@ -310,15 +360,15 @@ test('Tech Observer stays isolated and renders only safe fields', () => {
   assert.equal(elements.get('tech-observer-trace')?.textContent, '已关联');
 });
 
-test('analytics consumer calculates rates and nearest-rank latency percentiles', async () => {
-  const bus = new ObservationBus();
-  const analytics = createObservationAnalyticsConsumer(bus);
-  bus.emit(event('session-a', 'succeeded', 'success', 10));
-  bus.emit(event('session-a', 'failed', 'error', 40));
+test('high event volume keeps session storage bounded with an asynchronous consumer', async () => {
+  const bus = new ObservationBus({ capacity: 100 });
+  let delivered = 0;
+  bus.subscribe(() => { delivered += 1; });
+  const start = performance.now();
+  for (let index = 0; index < 10_000; index += 1) bus.emit(event('session-a', `event-${index}`));
+  const elapsed = performance.now() - start;
   await Promise.resolve();
-  assert.deepEqual(analytics.snapshot(), {
-    count: 2, successRate: 0.5, errorRate: 0.5, p50Ms: 10, p95Ms: 40,
-    byType: { 'realtime.listening': 2 },
-  });
-  analytics.dispose();
+  assert.equal(bus.recent('session-a').length, 100);
+  assert.equal(delivered, 100);
+  assert.ok(elapsed < 3000, `10,000 event inserts took ${elapsed.toFixed(1)} ms`);
 });

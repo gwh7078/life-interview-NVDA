@@ -17,9 +17,16 @@ import { RetrieverRealtimeRecall, type RealtimeQAEvidence } from './retriever-re
 const MAX_STORY_SUMMARY_CHARS = 1_000;
 const MAX_RECENT_CONTEXT_CHARS = 1_000;
 const MAX_RECENT_CONTEXT_MESSAGES = 4;
+const MAX_EVIDENCE_ITEMS = 5;
 const MAX_EVIDENCE_CHARS = 2_000;
 const MAX_EVIDENCE_ITEM_CHARS = 450;
 type EvidenceId = InterviewContextHintTaskInput['evidence'][number]['id'];
+type BoundedEvidence = {
+  id: EvidenceId;
+  question: string;
+  answer: string;
+  sourceMessageIds: string[];
+};
 
 function clipAtSentence(value: string, maxChars: number): string {
   const characters = Array.from(value.trim());
@@ -46,20 +53,16 @@ function recentContextWithinBudget(
   return selected;
 }
 
-function boundedEvidence(evidence: RealtimeQAEvidence[]): Array<{
-  id: EvidenceId;
-  question: string;
-  answer: string;
-}> {
+function boundedEvidence(evidence: RealtimeQAEvidence[]): BoundedEvidence[] {
   let remaining = MAX_EVIDENCE_CHARS;
-  const bounded: Array<{ id: EvidenceId; question: string; answer: string }> = [];
+  const bounded: BoundedEvidence[] = [];
   for (const item of evidence) {
-    if (remaining <= 0) break;
+    if (remaining <= 0 || bounded.length >= MAX_EVIDENCE_ITEMS) break;
     const question = clipAtSentence(item.question, Math.min(120, Math.floor(MAX_EVIDENCE_ITEM_CHARS / 3)));
     const answerBudget = Math.min(MAX_EVIDENCE_ITEM_CHARS - question.length, remaining - question.length);
     const answer = clipAtSentence(item.answer, answerBudget);
     if (!answer) continue;
-    bounded.push({ id: item.id as EvidenceId, question, answer });
+    bounded.push({ id: item.id as EvidenceId, question, answer, sourceMessageIds: item.sourceMessageIds });
     remaining -= question.length + answer.length;
   }
   return bounded;
@@ -69,12 +72,12 @@ function emptyHint(turnId: string): RealtimeContextHint {
   return { basedOnTurnId: turnId, facts: [], possibleConflicts: [], interviewHints: [] };
 }
 
-function directHint(turnId: string, evidence: RealtimeQAEvidence[]): RealtimeContextHint {
+function directHint(turnId: string, evidence: BoundedEvidence[]): RealtimeContextHint {
   return {
     basedOnTurnId: turnId,
     facts: evidence.map((item) => ({
       claim: item.answer,
-      ...(item.question ? { question: clipAtSentence(item.question, 120) } : {}),
+      ...(item.question ? { question: item.question } : {}),
       sourceMessageIds: item.sourceMessageIds,
     })),
     possibleConflicts: [],
@@ -167,18 +170,16 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
         fallbackUsed: true,
         fallbackType: 'direct_retrieval',
       });
-      return directHint(request.turnId, retrieved.evidence);
+      return directHint(request.turnId, evidence);
     }
 
     const recentContext = recentContextWithinBudget(request.recentContext);
     const storySummary = clipAtSentence(request.storySummary ?? '', MAX_STORY_SUMMARY_CHARS);
     const storySummaryChars = storySummary.length;
     const recentContextChars = recentContext.reduce((total, item) => total + item.text.length, 0);
-    const evidenceInputChars = evidence.reduce((total, item) => total + item.question.length + item.answer.length, 0);
-    const boundedIds = new Set<string>(evidence.map((item) => item.id));
-    const evidenceById = new Map(retrieved.evidence
-      .filter((item) => boundedIds.has(item.id))
-      .map((item) => [item.id, item] as const));
+    const agentEvidence = evidence.map(({ id, question, answer }) => ({ id, question, answer }));
+    const evidenceInputChars = agentEvidence.reduce((total, item) => total + item.question.length + item.answer.length, 0);
+    const evidenceById = new Map(evidence.map((item) => [item.id, item] as const));
     const inputChars = request.query.length
       + storySummaryChars
       + recentContextChars
@@ -187,9 +188,10 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
       query: request.query,
       story_summary: storySummary,
       recent_context: recentContext,
-      evidence,
+      evidence: agentEvidence,
     };
     const startedAt = performance.now();
+    const runId = randomUUID();
     const model = currentModel();
     report(request, {
       stage: 'slow_agent',
@@ -204,10 +206,11 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
 
     try {
       const taskRequest: InterviewContextHintTaskRequest = {
-        runId: randomUUID(),
+        runId,
         taskType: 'interview.context_hint',
         ownerId: request.ownerId,
         resource: { type: 'story', id: request.storyId ?? '', version: request.sessionId },
+        ...(request.traceContext ? { traceContext: request.traceContext } : {}),
         schemaVersion: 'v1',
         payload,
       };
@@ -233,6 +236,7 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
       report(request, {
         stage: 'slow_agent',
         status: 'completed',
+        runId,
         latencyMs: Number((performance.now() - startedAt).toFixed(2)),
         inputChars,
         skill: result.runtime.skill,
@@ -273,12 +277,12 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
       report(request, {
         stage: 'context_hint',
         status: 'ready',
-        count: retrieved.evidence.length,
-        selectedEvidenceCount: retrieved.evidence.length,
+        count: evidence.length,
+        selectedEvidenceCount: evidence.length,
         fallbackUsed: true,
         fallbackType: 'direct_retrieval',
       });
-      return directHint(request.turnId, retrieved.evidence);
+      return directHint(request.turnId, evidence);
     }
   }
 }

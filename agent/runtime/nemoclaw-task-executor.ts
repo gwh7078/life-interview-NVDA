@@ -434,6 +434,7 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
       resourceType: request.resource.type,
       resourceId: request.resource.id,
       resourceVersion: request.resource.version ?? null,
+      ...(request.traceContext ? { traceContext: request.traceContext } : {}),
       runtime: 'nemoclaw-openclaw',
       mode: request.mode ?? null,
       skill: request.skill,

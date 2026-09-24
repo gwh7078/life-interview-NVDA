@@ -96,6 +96,7 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
       taskType: request.taskType,
       ...(request.mode ? { mode: request.mode } : {}),
       resource: request.resource,
+      ...(request.traceContext ? { traceContext: request.traceContext } : {}),
       schemaVersion: request.schemaVersion,
       contextVersion: definition.contextVersion,
       skill: definition.skill,

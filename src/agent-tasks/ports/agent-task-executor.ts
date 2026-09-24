@@ -1,6 +1,7 @@
 import type {
   AgentTaskResource,
   AgentTaskRuntimeMetadata,
+  AgentTaskTraceContext,
   AgentTaskType,
 } from '../contracts/common.js';
 import type {
@@ -15,6 +16,7 @@ export interface AgentTaskExecutionRequest {
   taskType: AgentTaskType;
   mode?: string;
   resource: AgentTaskResource;
+  traceContext?: AgentTaskTraceContext;
   schemaVersion: string;
   contextVersion: string;
   skill: string;

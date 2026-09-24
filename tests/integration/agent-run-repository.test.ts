@@ -88,6 +88,27 @@ test('agent_runs persists queued to running to succeeded lifecycle', () => {
     assert.equal(observations.at(-2)?.status, 'error');
     assert.equal(observations.at(-2)?.durationMs, 45);
     assert.equal(observations.at(-1)?.eventType, 'skill.failed');
+
+    const contextRunInput = {
+      runId: 'run-context', userId: 'user-a', agentType: 'interview-observer',
+      taskType: 'interview.context_hint', resourceType: 'story', resourceId: 'story-a',
+      runtime: 'nemoclaw-openclaw', skill: 'interview-observer', model: 'qwen-test',
+      traceContext: {
+        traceId: 'trace-session-c', sessionId: 'session-c', storyId: 'story-a', parentSpanId: 'tool-cycle-c',
+      },
+    } as Parameters<AgentRunRepository['create']>[0];
+    const firstContextEvent = observations.length;
+    repo.create(contextRunInput);
+    repo.markRunning('user-a', 'run-context');
+    repo.markSucceeded('user-a', 'run-context', 25, { selected_evidence_ids: ['e1'] }, { model: 'qwen-test' });
+    const contextEvents = observations.slice(firstContextEvent);
+    assert.deepEqual(contextEvents.map((event) => event.eventType), [
+      'agent.started', 'skill.started', 'agent.completed', 'skill.completed',
+    ]);
+    assert.ok(contextEvents.every((event) => event.traceId === 'trace-session-c'
+      && event.sessionId === 'session-c' && event.storyId === 'story-a'));
+    assert.equal(contextEvents[0]?.parentSpanId, 'tool-cycle-c');
+    assert.equal(contextEvents[1]?.parentSpanId, 'agent:run-context');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
