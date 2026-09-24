@@ -12,7 +12,22 @@ const LABEL = /^[\w .:/-]{1,80}$/u;
 const numericMetrics = [
   'latencyMs', 'slowRecallLatencyMs', 'toolResultLatencyMs', 'totalElapsedMs',
   'factCount', 'attempt', 'attemptCount', 'repairCount', 'toolCallCount', 'scriptCallCount',
+  'candidateCount', 'retrievalEvidenceCount', 'retrievalLatencyMs', 'slowAgentLatencyMs',
+  'promptTokens', 'completionTokens', 'totalTokens', 'selectedEvidenceCount',
+  'toolToFirstAudioMs', 'responseBFirstAudioMs', 'responseBLatencyMs',
+  'toolResultWriteLatencyMs', 'toolCycleLatencyMs',
 ] as const;
+
+const SAFE_FALLBACK_TYPES = new Set(['direct_retrieval']);
+const SAFE_SKIP_REASONS = new Set(['no_evidence', 'agent_disabled', 'agent_unavailable', 'agent_not_configured']);
+const SAFE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,63}$/u;
+
+export function normalizeAgentSkipReasonForObservation(
+  reason: string | undefined,
+  explicitlyDisabled: boolean,
+): string | undefined {
+  return reason === 'agent_unavailable' && explicitlyDisabled ? 'agent_disabled' : reason;
+}
 
 function safeLabel(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -32,6 +47,41 @@ function normalizedStatus(value: unknown): ObservationStatus {
   return 'running';
 }
 
+function slowPathMapping(event: string, fields: SafeFields): Mapping | undefined {
+  const match = /^realtime\.slow_path\.(retrieval|slow_agent|context_hint)\.(started|finished|failed|skipped|ready)$/u.exec(event);
+  if (!match) return undefined;
+  const [, stage, suffix] = match;
+  const status = fields.status === 'finished' ? 'completed' : fields.status ?? suffix;
+
+  if (stage === 'retrieval') {
+    if (status === 'started') return { category: 'retriever', eventType: 'retriever.started', status: 'start', title: 'RETRIEVER STARTED', component: 'nemo-retriever' };
+    if (status === 'completed') return { category: 'retriever', eventType: 'retriever.completed', status: 'success', title: 'RETRIEVER COMPLETE', component: 'nemo-retriever' };
+    if (status === 'failed') return { category: 'retriever', eventType: 'retriever.failed', status: 'error', title: 'RETRIEVER FAILED', component: 'nemo-retriever' };
+    if (status === 'skipped') return { category: 'retriever', eventType: 'retriever.skipped', status: 'skip', title: 'RETRIEVER SKIPPED', component: 'nemo-retriever' };
+    return undefined;
+  }
+
+  if (stage === 'slow_agent') {
+    if (status === 'started') return { category: 'agent', eventType: 'agent.started', status: 'start', title: 'CONTEXT HINT AGENT STARTED', component: 'realtime-context-agent' };
+    if (status === 'completed') return { category: 'agent', eventType: 'agent.completed', status: 'success', title: 'CONTEXT HINT AGENT COMPLETE', component: 'realtime-context-agent' };
+    if (status === 'skipped') return { category: 'agent', eventType: 'agent.skipped', status: 'skip', title: 'CONTEXT HINT AGENT SKIPPED', component: 'realtime-context-agent' };
+    if (status === 'failed') {
+      const timeout = typeof fields.errorCode === 'string' && fields.errorCode.includes('TIMEOUT');
+      const fallback = fields.fallbackUsed === true;
+      return {
+        category: 'agent', eventType: timeout ? 'agent.timeout' : 'agent.failed',
+        status: fallback ? 'warning' : 'error',
+        title: `${timeout ? 'CONTEXT HINT AGENT TIMEOUT' : 'CONTEXT HINT AGENT FAILED'}${fallback ? ' · FALLBACK' : ''}`,
+        component: 'realtime-context-agent',
+      };
+    }
+    return undefined;
+  }
+
+  if (status === 'ready') return { category: 'evidence', eventType: 'evidence.ready', status: 'success', title: 'CONTEXT HINT READY', component: 'realtime-context' };
+  return undefined;
+}
+
 interface Mapping {
   category: ObservationEvent['category'];
   eventType: string;
@@ -41,6 +91,8 @@ interface Mapping {
 }
 
 function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
+  const slowPath = slowPathMapping(event, fields);
+  if (slowPath) return slowPath;
   if (event === 'session.started') return { category: 'runtime', eventType: 'runtime.started', status: 'start', title: 'Session started', component: 'interview-runtime' };
   if (event === 'provider.session_ready') return { category: 'realtime', eventType: 'realtime.connected', status: 'success', title: 'CONNECTED', component: 'realtime-provider' };
   if (event === 'provider.speech_started') return { category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', title: 'USER SPEAKING', component: 'realtime-provider' };
@@ -54,18 +106,25 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
   if (event === 'realtime.tool_cycle_started') return { category: 'realtime', eventType: 'realtime.hold', status: 'running', title: 'HOLD', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_message_write' && fields.messageKind === 'resume') return { category: 'realtime', eventType: 'realtime.resume', status: fields.sent === true ? 'success' : 'error', title: 'RESUME', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_response_started') return { category: 'realtime', eventType: 'realtime.responding', status: 'success', title: 'AI RESUMED', component: 'realtime-tool-cycle' };
+  if (event === 'realtime.tool_cycle_response_first_audio') return { category: 'realtime', eventType: 'realtime.first_audio', status: 'success', title: 'FIRST AUDIO', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_result_sent') return { category: 'tool', eventType: 'tool.completed', status: fields.sent === false ? 'error' : 'success', title: 'TOOL RESULT', component: 'realtime-tool' };
   if (event === 'realtime.tool_cycle_terminal') {
     const outcome = fields.outcome;
     return { category: 'tool', eventType: outcome === 'completed' ? 'tool.completed' : 'tool.failed', status: normalizedStatus(outcome), title: 'TOOL CYCLE', component: 'realtime-tool' };
   }
+  // The preceding slow_recall_finished event carries the same terminal result;
+  // suppress this duplicate tracker summary from the live timeline.
+  if (event === 'realtime.tool_cycle_recall_finished') return undefined;
   if (event === 'realtime.recall_started' || event === 'realtime.tool_cycle_recall_started') return { category: 'retriever', eventType: 'retriever.started', status: 'start', title: 'NeMo RETRIEVER', component: 'nemo-retriever' };
-  if (event === 'realtime.slow_recall_finished' || event === 'realtime.tool_cycle_recall_finished') {
-    const status = normalizedStatus(fields.status);
-    const eventType = status === 'error' ? 'retriever.failed'
-      : status === 'success' ? 'retriever.completed'
-        : status === 'warning' ? 'retriever.completed' : 'retriever.running';
-    return { category: 'retriever', eventType, status, title: 'RETRIEVER RESULT', component: 'nemo-retriever' };
+  if (event === 'realtime.slow_recall_finished') {
+    const sourceStatus = fields.status;
+    const status = sourceStatus === 'completed' ? 'success'
+      : sourceStatus === 'timeout' ? 'warning'
+        : sourceStatus === 'failed' ? 'error'
+          : sourceStatus === 'aborted' || sourceStatus === 'stale' ? 'warning' : normalizedStatus(sourceStatus);
+    const result = typeof sourceStatus === 'string' && ['completed', 'timeout', 'failed', 'aborted', 'stale'].includes(sourceStatus)
+      ? sourceStatus : 'unknown';
+    return { category: 'runtime', eventType: `realtime.slow_path.result.${result}`, status, title: result === 'completed' ? 'SLOW PATH RESULT' : `SLOW PATH ${result.toUpperCase()}`, component: 'realtime-slow-path' };
   }
   if (event === 'retriever.index_scheduled') return { category: 'retriever', eventType: 'retriever.started', status: 'start', title: 'RETRIEVER INDEX', component: 'nemo-retriever' };
   if (event === 'retriever.index_finished') {
@@ -95,6 +154,7 @@ export function adaptRealtimeTrace(input: {
   fields?: SafeFields;
   timestamp?: string;
 }): ObservationEvent | undefined {
+  const event = input.event;
   const fields = input.fields ?? {};
   const mapping = mapTrace(input.event, fields);
   if (!mapping) return undefined;
@@ -107,9 +167,32 @@ export function adaptRealtimeTrace(input: {
   }
   if (typeof fields.sent === 'boolean') metrics.sent = fields.sent;
   if (typeof fields.outcome === 'string') metrics.outcome = safeLabel(fields.outcome) ?? 'unknown';
+  if (typeof fields.fallbackUsed === 'boolean') metrics.fallbackUsed = fields.fallbackUsed;
+  if (typeof fields.fallbackType === 'string' && SAFE_FALLBACK_TYPES.has(fields.fallbackType)) metrics.fallbackType = fields.fallbackType;
+  if (typeof fields.slowAgentSkipReason === 'string' && SAFE_SKIP_REASONS.has(fields.slowAgentSkipReason)) metrics.skipReason = fields.slowAgentSkipReason;
+  if (typeof fields.errorCode === 'string' && SAFE_ERROR_CODE.test(fields.errorCode)) metrics.errorCode = fields.errorCode;
+  if (safeLabel(fields.slowAgentModel)) metrics.model = safeLabel(fields.slowAgentModel)!;
+  if (safeLabel(fields.skill)) metrics.skill = safeLabel(fields.skill)!;
+  const responseStartLatency = numberField(fields, 'responseBLatencyMs');
+  if (responseStartLatency !== undefined) metrics.resumeLatencyMs = responseStartLatency;
+  const firstAudioLatency = numberField(fields, 'toolToFirstAudioMs') ?? numberField(fields, 'responseBFirstAudioMs');
+  if (firstAudioLatency !== undefined) metrics.firstAudioLatencyMs = firstAudioLatency;
+  const evidenceCount = numberField(fields, 'retrievalEvidenceCount') ?? numberField(fields, 'factCount');
+  if (evidenceCount !== undefined) metrics.evidenceCount = evidenceCount;
+  if (numberField(fields, 'candidateCount') !== undefined) metrics.candidateCount = numberField(fields, 'candidateCount')!;
 
   const count = numberField(fields, 'factCount');
-  const latency = numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
+  const latency = event === 'realtime.tool_cycle_response_started'
+    ? responseStartLatency
+    : event === 'realtime.tool_cycle_response_first_audio'
+      ? numberField(fields, 'toolToFirstAudioMs') ?? numberField(fields, 'responseBFirstAudioMs')
+        : event === 'realtime.tool_result_sent'
+          ? numberField(fields, 'toolResultLatencyMs') ?? numberField(fields, 'toolResultWriteLatencyMs')
+          : event === 'realtime.tool_cycle_message_write' && fields.messageKind === 'resume'
+            ? undefined
+            : event === 'realtime.tool_cycle_terminal'
+              ? numberField(fields, 'toolCycleLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs')
+              : numberField(fields, 'slowAgentLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
   const summary = mapping.category === 'retriever'
     ? [count === undefined ? undefined : `${count} results`, latency === undefined ? undefined : `${Math.round(latency)} ms`].filter(Boolean).join(' · ') || undefined
     : mapping.category === 'tool' && safeLabel(fields.name)
@@ -131,6 +214,8 @@ export function adaptRealtimeTrace(input: {
       provider: input.provider,
       ...(input.environment ? { environment: input.environment } : {}),
       ...(safeLabel(fields.name) ? { tool: safeLabel(fields.name) } : {}),
+      ...(safeLabel(fields.slowAgentModel) ? { model: safeLabel(fields.slowAgentModel) } : {}),
+      ...(safeLabel(fields.skill) ? { skill: safeLabel(fields.skill) } : {}),
     },
   });
 }

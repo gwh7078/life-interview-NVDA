@@ -6,7 +6,7 @@
 >
 > Supersedes the previous Future recommendation: `REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`（内部版本 v1.5）
 >
-> 原有 Tool Call、HOLD/Resume、Slow Coordinator、Current Story Retriever 与 Phase 3 A+B 自动 Gate G0–G8 是已验证基线。2026-09-23 新增 `interview.context_hint` Agent 实现；本机真实 Agent smoke 未通过，完整 Fast/Slow 语音链路仍未验收。以实现状态文档中的 PASS/FAIL/NOT TESTED 为准。
+> 原有 Tool Call、HOLD/Resume、Slow Coordinator、Current Story Retriever 与 Phase 3 A+B 自动 Gate G0–G8 是已验证基线。2026-09-23 新增 `interview.context_hint` Agent 实现；Agent smoke **FAIL**（`AGENT_RUNTIME_TIMEOUT`、随后 `AGENT_RUNTIME_EXEC_FAILED`），完整 Step-Audio 语音 E2E **NOT TESTED**。以实现状态文档中的 PASS/FAIL/NOT TESTED 为准。
 >
 > 本阶段的实时 Slow Path 验收范围是 Step-Audio / StepFun；Qwen 保留为 inactive / legacy provider adapter，不在本阶段新增历史上下文 Tool。
 

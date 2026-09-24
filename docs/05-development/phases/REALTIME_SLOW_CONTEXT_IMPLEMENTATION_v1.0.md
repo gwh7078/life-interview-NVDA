@@ -1,8 +1,8 @@
 # Realtime Slow Context implementation v1.0
 
-> Date: 2026-09-23
+> Date: 2026-09-24
 > Scope: one read-only context-hint Agent step after Current Story Classic Retrieval.
-> Status: implementation and deterministic validation are in place. The live Agent smoke currently fails in the local runtime; full voice acceptance is not yet passed.
+> Status: implementation and deterministic validation are in place. Realtime Agent smoke is **FAIL**; full Step-Audio voice E2E is **NOT TESTED**.
 
 This document records the behavior implemented on top of the existing Step-Audio Tool Call → HOLD → Backend → Tool Result → Resume path. The broader proposal remains in [Realtime Fast / Slow architecture v1.6](../../08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md); this document is authoritative for the narrower implementation shipped here.
 
@@ -54,11 +54,26 @@ Install the Skill and provision the dedicated workspace/policy with:
 
 The installer validates the OpenClaw config change before setting `agents.list[].tools.deny` to `[*]`, then installs the Skill in the dedicated agent workspace. OpenClaw's local CLI reported a Gateway restart notice for the policy write; the application Task Runner uses `openclaw agent --local`. The policy is stored and validated, but the live Agent smoke below remains the runtime acceptance gate.
 
-Set `REALTIME_CONTEXT_AGENT_ENABLED=1` in the ignored worktree `.env` to create a separate Agent Task runtime while leaving other text tasks on their current runtime. It defaults to off in `.env.example`. The optional Tech Panel requires `COMPETITION_TECH_PANEL=1`.
+`REALTIME_CONTEXT_AGENT_ENABLED` controls only the optional context-hint Agent: explicit `1`/`true` enables it, explicit `0` disables it, and an unset value enables it only when the Agent Task runtime is available. `.env.example` sets it to `0`. `NEMO_RETRIEVER_ENABLED=true` independently controls Retriever/Pipeline availability. `COMPETITION_TECH_PANEL=1` only enables allowlisted status messages on the competition WebSocket panel; it does not enable the Agent or Retriever.
 
 ## 4. Diagnostics and UI
 
-Realtime traces contain only allowlisted stage names, counts, latencies, model/Skill labels, token counts when reported, fallback state and safe error codes. They do not contain the query, Story summary, recent context, evidence text or source message IDs. `COMPETITION_TECH_PANEL=1` enables the UI panel; it shows stage/status and available metadata using text-only DOM updates. DGX Spark/GPU utilization is reported as Not available unless a real telemetry source exists.
+Realtime traces contain only allowlisted stage names, counts, latencies, model/Skill labels, token counts when reported, fallback state and safe error codes. They do not contain query text, Transcript, Story summary, recent context, evidence text or source message IDs. The SSE Tech Observer is opened independently with `?demo=tech`; it renders fixed event labels and allowlisted metrics, shows missing values as `暂无数据`, and does not display call/session/story identifiers. The competition WebSocket panel remains gated only by `COMPETITION_TECH_PANEL=1`. DGX Spark/GPU utilization shows `暂无数据` unless a real telemetry source exists.
+
+The SSE adapter reuses the existing trace stream and its tool-cycle span; `realtime.tool_cycle_recall_finished` is suppressed in the timeline because `realtime.slow_recall_finished` already reports the same terminal result.
+
+| Existing trace event | Tech Observer state | Safe values shown when present |
+|---|---|---|
+| `realtime.tool_call_requested`, `realtime.tool_cycle_started` | Tool Call → HOLD | Tool label, lifecycle state |
+| `realtime.slow_path.retrieval.started/finished` | Retriever running → complete | Stage duration, candidate count, evidence count |
+| `realtime.slow_path.slow_agent.started/finished` | Context Hint Agent running → complete | Agent duration, model/Skill labels, token counts, selected evidence count |
+| `realtime.slow_path.slow_agent.skipped` | Agent skipped | Safe skip reason: no evidence, explicitly disabled, or unavailable runtime |
+| `realtime.slow_path.slow_agent.failed` | Agent failed or timed out | Safe error code; fallback type/state when emitted |
+| `realtime.slow_path.context_hint.ready` | Context Hint ready | Selected evidence count and fallback state/type; this remains success after a handled Agent failure |
+| `realtime.slow_recall_finished` | Slow Path result | Final status and measured latency; timeout/failed/aborted/stale are distinct from completed |
+| `realtime.tool_result_sent`, `realtime.tool_cycle_message_write` (`resume`), `realtime.tool_cycle_response_started`, `realtime.tool_cycle_response_first_audio` | Tool Result → Resume → AI resumed → First audio | Tool-result timing, Resume-to-response timing, Tool-to-first-audio and response-to-first-audio timings |
+
+The Agent failure event and the successful `context_hint.ready` / completed slow-path result are separate timeline entries when direct-retrieval fallback succeeds. A missing trace field is never inferred or filled with a fabricated value.
 
 Summarize retained traces without session or call IDs:
 
@@ -80,11 +95,11 @@ The summary reports outcome counts, fallback/no-evidence rates, retrieval/Agent/
 | Check | Status | Evidence |
 |---|---|---|
 | TypeScript typecheck | PASS | `bash scripts/codex-node.sh npm run typecheck` |
-| Full deterministic local verification | PASS | `codex-verify.sh`: typecheck; fast 215/215; integration 60/60; Agent 39/39; NAT unit 8/8. The expanded Agent contract test also passed 7/7 afterward. |
+| Full deterministic local verification | PASS | `bash scripts/codex-verify.sh`: typecheck; fast 224/224; integration 62/62; Agent 39/39; NAT unit 8/8. The Agent contract cases are included in the fast suite. |
 | OpenClaw agent and no-tools policy config | PASS, config only | `configure-realtime-context-agent.sh` dry-run and read-back returned `[*]`; Skill reports Ready in its dedicated workspace |
 | Real context-hint Agent smoke | FAIL | First run hit `AGENT_RUNTIME_TIMEOUT`; after task-level thinking-off and timeout adjustment, a run exited with `AGENT_RUNTIME_EXEC_FAILED` |
 | Full Step-Audio voice E2E with Agent enabled | NOT TESTED | Agent runtime smoke is not passing |
 | P50/P95 latency or token benchmark | NOT TESTED | No successful slow-path trace samples |
 | DGX Spark/GPU telemetry | NOT TESTED | Local sandbox status reported no GPU |
 
-The current `nemoclaw my-assistant status` reports HTTP 503 for its default NVIDIA managed-inference probe. That probe is not proof that the separately routed Bailian model endpoint is unavailable; the exact cause of the Agent command failure remains unresolved. Do not report the live slow system as passed until the Agent smoke and full voice path pass.
+On 2026-09-23, `nemoclaw my-assistant status` reported HTTP 503 for its default NVIDIA managed-inference probe. On 2026-09-24, `bash scripts/check-ai-env.sh` returned HTTP 200 for NeMo Retriever, VectorDB, and the OpenClaw forward; that health check did not invoke a model and does not change the Agent smoke result. The exact cause of the failed Agent invocation remains unresolved. Do not report the Realtime slow path as accepted: Agent smoke is **FAIL** and full Step-Audio voice E2E is **NOT TESTED**.

@@ -170,6 +170,7 @@ test('Competition Tech Panel waits for safe stage telemetry and shows no transcr
   const interview = read('index.html');
   const styles = read('styles.css');
   const script = read('client.js');
+  const observer = read('tech-observer.js');
   const panel = interview.match(/<aside class="tech-panel"[\s\S]*?<\/aside>/)?.[0];
 
   assert.ok(panel, 'the tech panel should be a dedicated aside');
@@ -177,9 +178,10 @@ test('Competition Tech Panel waits for safe stage telemetry and shows no transcr
   for (const stage of ['fast_voice', 'tool_trigger', 'retrieval', 'slow_agent', 'context_hint', 'resume', 'first_audio']) {
     assert.match(panel, new RegExp(`data-tech-stage="${stage}"`));
   }
-  assert.match(panel, /DGX Spark \/ GPU[\s\S]*?Not available/);
+  assert.match(panel, /DGX Spark \/ GPU[\s\S]*?暂无数据/);
   assert.doesNotMatch(panel, /<button|transcript|evidence|session[_ -]?id|segment[_ -]?id/i);
   assert.match(script, /message\.type === 'tech_status'[\s\S]{0,80}renderTechStatus\(message\)/);
+  assert.match(script, /\['ready', \['已就绪', 'complete'\]\]/);
   assert.match(script, /const \{ stage, status, latencyMs, count, model, skill, errorCode \} = message;/);
 
   const renderStart = script.indexOf('function renderTechStatus(message) {');
@@ -190,4 +192,12 @@ test('Competition Tech Panel waits for safe stage telemetry and shows no transcr
   assert.match(render, /techPanel\.hidden = false/);
   assert.match(styles, /grid-template-columns:\s*minmax\(0, 1fr\) 300px/);
   assert.match(styles, /@media \(max-width: 720px\)[\s\S]*?tech-panel/);
+  assert.match(interview, /id="tech-observer-session">暂无数据/);
+  assert.match(interview, /id="tech-observer-trace">暂无数据/);
+  assert.match(observer, /sessionLabel\.textContent = sessionId \? '当前采访' : '暂无数据'/);
+  assert.match(observer, /traceLabel\.textContent = '已关联'/);
+  assert.doesNotMatch(observer, /sessionLabel\.textContent\s*=\s*sessionId\s*;/);
+  assert.doesNotMatch(observer, /event\.(?:title|summary)/);
+  assert.match(observer, /safeDisplayLabel/);
+  assert.match(observer, /fallbackType: '降级方式'/);
 });

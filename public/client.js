@@ -195,6 +195,7 @@ const TECH_STATUSES = new Map([
   ['active', ['进行中', 'active']],
   ['triggered', ['已触发', 'active']],
   ['completed', ['已完成', 'complete']],
+  ['ready', ['已就绪', 'complete']],
   ['success', ['已完成', 'complete']],
   ['succeeded', ['已完成', 'complete']],
   ['failed', ['失败', 'failed']],
@@ -209,11 +210,11 @@ const TECH_STATUSES = new Map([
 ]);
 
 function safeTechIdentifier(value) {
-  if (typeof value !== 'string') return 'Not available';
+  if (typeof value !== 'string') return '暂无数据';
   const candidate = value.trim();
   return /^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,47}$/.test(candidate)
     ? candidate
-    : 'Not available';
+    : '暂无数据';
 }
 
 function renderTechStatus(message) {
@@ -229,10 +230,10 @@ function renderTechStatus(message) {
   elements.techLatency.textContent = typeof latencyMs === 'number'
     && Number.isFinite(latencyMs) && latencyMs >= 0 && latencyMs <= Number.MAX_SAFE_INTEGER
     ? `${Math.round(latencyMs)} ms`
-    : 'Not available';
+    : '暂无数据';
   elements.techCount.textContent = Number.isSafeInteger(count) && count >= 0
     ? String(count)
-    : 'Not available';
+    : '暂无数据';
   elements.techModel.textContent = safeTechIdentifier(model);
   elements.techSkill.textContent = safeTechIdentifier(skill);
 

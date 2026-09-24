@@ -95,7 +95,7 @@ import { RetrieverIndexService } from './retriever/indexer.js';
 import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
 import { ObservationBus, emitObservationEvent } from './observability/observation-bus.js';
 import { createObservationContext, type ObservationContext } from './observability/observation-event.js';
-import { adaptRealtimeTrace } from './observability/adapters/realtime-adapter.js';
+import { adaptRealtimeTrace, normalizeAgentSkipReasonForObservation } from './observability/adapters/realtime-adapter.js';
 import { createObservationAnalyticsConsumer } from './observability/analytics-consumer.js';
 import { RealtimeSlowContextPipeline } from './realtime/slow-context-pipeline.js';
 import { createEraContextClientFromEnv } from './era-context/client.js';
@@ -2213,6 +2213,10 @@ function createRealtimeHandler(
         slowAgentStarted: false,
       };
       const onProgress = (progress: RealtimeSlowPathProgress): void => {
+        const explicitlyDisabled = ['0', 'false'].includes(
+          process.env.REALTIME_CONTEXT_AGENT_ENABLED?.trim().toLowerCase() ?? '',
+        );
+        const skipReason = normalizeAgentSkipReasonForObservation(progress.skipReason, explicitlyDisabled);
         const fields: RealtimeTraceFields = {
           callId: event.callId,
           toolRunId,
@@ -2236,7 +2240,7 @@ function createRealtimeHandler(
           ...(progress.interviewHintCount === undefined ? {} : { interviewHintCount: progress.interviewHintCount }),
           ...(progress.fallbackUsed === undefined ? {} : { fallbackUsed: progress.fallbackUsed }),
           ...(progress.fallbackType ? { fallbackType: progress.fallbackType } : {}),
-          ...(progress.skipReason ? { slowAgentSkipReason: progress.skipReason } : {}),
+          ...(skipReason ? { slowAgentSkipReason: skipReason } : {}),
           ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
         };
         const eventStatus = progress.status === 'completed' ? 'finished' : progress.status;
@@ -2258,7 +2262,7 @@ function createRealtimeHandler(
             pathMetrics = {
               ...pathMetrics,
               slowAgentSkipped: true,
-              slowAgentSkipReason: progress.skipReason,
+              slowAgentSkipReason: skipReason,
               fallbackUsed: progress.fallbackUsed,
               fallbackType: progress.fallbackType,
             };

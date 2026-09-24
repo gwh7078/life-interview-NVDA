@@ -1,13 +1,16 @@
 # Feature matrix
 
-## Current implementation delta (2026-09-23)
+## Current implementation delta (2026-09-24)
 
 | Feature | Current state | Acceptance note |
 |---|---|---|
-| Realtime Slow Context Agent | Code and deterministic contracts implemented | Real local Agent smoke failed; full Step-Audio voice acceptance is not passed |
+| Realtime Slow Context Agent | Existing Current Story Retriever pipeline can run at most one `interview.context_hint` Agent | Agent smoke: **FAIL** (`AGENT_RUNTIME_TIMEOUT`, then `AGENT_RUNTIME_EXEC_FAILED`); full Step-Audio voice E2E: **NOT TESTED** |
 | Current Story Q+A retrieval | Owner/story/subject scoped; user Answer is the only fact source | Retriever service health currently returns HTTP 200; preserve SQLite as source of truth |
-| `realtime-context` OpenClaw agent | Dedicated workspace, `interview-observer` Skill and deny-all tools policy provisioned | Config dry-run/read-back passed; live model/runtime execution remains unverified |
-| Competition Tech Panel | Hidden unless `COMPETITION_TECH_PANEL=1` | Displays allowlisted stage/latency/model metadata; GPU values stay Not available without telemetry |
+| `realtime-context` OpenClaw agent | Dedicated workspace, `interview-observer` Skill and deny-all tools policy provisioned | Configuration checks passed; runtime smoke is **FAIL**, not unverified; do not claim slow-path acceptance |
+| SSE Tech Observer | Reads the session-scoped Observation Bus stream and maps existing Realtime slow-path stages | Shows stage outcomes and available safe metrics; raw call/session/story IDs and user content are not displayed |
+| Competition WebSocket panel | Allowlisted status emission only when `COMPETITION_TECH_PANEL=1` | Independent of `REALTIME_CONTEXT_AGENT_ENABLED` and `NEMO_RETRIEVER_ENABLED`; it does not enable either runtime |
+
+Deterministic verification on 2026-09-24: fast **224/224**, integration **62/62**, Agent **39/39**, NAT unit **8/8**. This does not change the Realtime Agent smoke **FAIL** or full voice E2E **NOT TESTED** status.
 
 The Phase 0/1 baseline below is retained as a historical disposition matrix.
 

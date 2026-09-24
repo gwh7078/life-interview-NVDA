@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { adaptAgentRun } from './adapters/agent-adapter.js';
 import { adaptNatEvaluation } from './adapters/nat-adapter.js';
-import { adaptRealtimeTrace } from './adapters/realtime-adapter.js';
+import { adaptRealtimeTrace, normalizeAgentSkipReasonForObservation } from './adapters/realtime-adapter.js';
 import { createObservationAnalyticsConsumer } from './analytics-consumer.js';
 import { ObservationBus, emitObservationEvent } from './observation-bus.js';
 import { createObservationContext, createObservationEvent, type ObservationEvent } from './observation-event.js';
@@ -68,7 +68,11 @@ test('ring buffers are capped and isolated by session', () => {
   assert.deepEqual(bus.recent('session-b'), []);
 });
 
-test('realtime adapter maps only existing safe lifecycle fields', () => {
+test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing fields', () => {
+  assert.equal(normalizeAgentSkipReasonForObservation('agent_unavailable', true), 'agent_disabled');
+  assert.equal(normalizeAgentSkipReasonForObservation('agent_unavailable', false), 'agent_unavailable');
+  assert.equal(normalizeAgentSkipReasonForObservation('no_evidence', true), 'no_evidence');
+
   const observation = adaptRealtimeTrace({
     sessionId: 'session-a',
     provider: 'stepfun',
@@ -76,14 +80,17 @@ test('realtime adapter maps only existing safe lifecycle fields', () => {
     event: 'realtime.slow_recall_finished',
     fields: { status: 'completed', factCount: 3, latencyMs: 42, query: 'private query', claim: 'private evidence' },
   });
-  assert.equal(observation?.eventType, 'retriever.completed');
+  assert.equal(observation?.eventType, 'realtime.slow_path.result.completed');
   assert.equal(observation?.sessionId, 'session-a');
+  assert.equal(observation?.status, 'success');
   assert.equal(observation?.durationMs, 42);
-  assert.equal(observation?.summary, '3 results · 42 ms');
   assert.equal(JSON.stringify(observation).includes('private'), false);
   assert.equal(adaptRealtimeTrace({
     sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_recall_finished', fields: { status: 'indexing' },
-  })?.eventType, 'retriever.running');
+  })?.eventType, 'realtime.slow_path.result.unknown');
+  assert.equal(adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: 'realtime.tool_cycle_recall_finished', fields: { status: 'completed' },
+  }), undefined);
   assert.equal(adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'client.microphone_uplink' }), undefined);
   assert.deepEqual([
     adaptRealtimeTrace({ sessionId: 'session-a', provider: 'stepfun', event: 'provider.speech_started' })?.eventType,
@@ -100,6 +107,77 @@ test('realtime adapter maps only existing safe lifecycle fields', () => {
   }), [
     ['retriever.completed', 'success'], ['retriever.failed', 'error'], ['retriever.running', 'running'],
   ]);
+  const context = createObservationContext({ sessionId: 'session-a', storyId: 'story-a', rootSpanId: 'session:session-a' });
+  const retrieved = adaptRealtimeTrace({
+    context, sessionId: 'session-a', storyId: 'story-a', provider: 'stepfun',
+    event: 'realtime.slow_path.retrieval.finished',
+    fields: {
+      status: 'completed', toolRunId: 'tool-cycle-1', latencyMs: 42, candidateCount: 8,
+      retrievalEvidenceCount: 3, query: 'SENSITIVE_QUERY_SENTINEL', transcript: 'SENSITIVE_TRANSCRIPT_SENTINEL',
+      storySummary: 'SENSITIVE_SUMMARY_SENTINEL', evidenceText: 'SENSITIVE_EVIDENCE_SENTINEL', sourceMessageIds: ['message-1'], apiKey: 'sk-secret',
+    },
+  });
+  assert.equal(retrieved?.category, 'retriever');
+  assert.equal(retrieved?.eventType, 'retriever.completed');
+  assert.equal(retrieved?.status, 'success');
+  assert.equal(retrieved?.durationMs, 42);
+  assert.equal(retrieved?.metrics?.candidateCount, 8);
+  assert.equal(retrieved?.metrics?.evidenceCount, 3);
+  assert.equal(retrieved?.spanId, 'tool-cycle-1');
+  assert.equal(retrieved?.parentSpanId, 'session:session-a');
+  assert.equal(JSON.stringify(retrieved).includes('SENSITIVE_'), false);
+  assert.equal(JSON.stringify(retrieved).includes('sk-secret'), false);
+
+  const skipped = adaptRealtimeTrace({
+    context, sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_path.slow_agent.skipped',
+    fields: { status: 'skipped', slowAgentSkipReason: 'no_evidence' },
+  });
+  assert.deepEqual([skipped?.eventType, skipped?.status, skipped?.metrics?.skipReason], ['agent.skipped', 'skip', 'no_evidence']);
+
+  const timedOut = adaptRealtimeTrace({
+    context, sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_path.slow_agent.failed',
+    fields: {
+      status: 'failed', latencyMs: 4_800, errorCode: 'AGENT_RUNTIME_TIMEOUT', fallbackUsed: true,
+      fallbackType: 'direct_retrieval', slowAgentModel: 'bailian/qwen3.6-35b-a3b', skill: 'interview-observer',
+      promptTokens: 40, completionTokens: 12, totalTokens: 52,
+    },
+  });
+  assert.deepEqual([timedOut?.eventType, timedOut?.status, timedOut?.durationMs], ['agent.timeout', 'warning', 4_800]);
+  assert.deepEqual([
+    timedOut?.metrics?.fallbackUsed, timedOut?.metrics?.fallbackType, timedOut?.metrics?.errorCode,
+    timedOut?.metrics?.promptTokens, timedOut?.metrics?.totalTokens,
+  ], [true, 'direct_retrieval', 'AGENT_RUNTIME_TIMEOUT', 40, 52]);
+
+  const ready = adaptRealtimeTrace({
+    context, sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_path.context_hint.ready',
+    fields: { status: 'ready', selectedEvidenceCount: 3, fallbackUsed: true, fallbackType: 'direct_retrieval' },
+  });
+  const result = adaptRealtimeTrace({
+    context, sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_recall_finished',
+    fields: { status: 'completed', slowRecallLatencyMs: 5_100, factCount: 3 },
+  });
+  assert.deepEqual([ready?.eventType, ready?.status, ready?.metrics?.selectedEvidenceCount, ready?.metrics?.fallbackUsed], [
+    'evidence.ready', 'success', 3, true,
+  ]);
+  assert.deepEqual([result?.eventType, result?.status, result?.durationMs], [
+    'realtime.slow_path.result.completed', 'success', 5_100,
+  ]);
+
+  const resume = adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: 'realtime.tool_cycle_response_started',
+    fields: { responseBLatencyMs: 115, responseId: 'response-secret' },
+  });
+  const firstAudio = adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: 'realtime.tool_cycle_response_first_audio',
+    fields: { toolToFirstAudioMs: 730, responseBFirstAudioMs: 128, responseId: 'response-secret' },
+  });
+  assert.deepEqual([resume?.eventType, resume?.durationMs, resume?.metrics?.resumeLatencyMs], [
+    'realtime.responding', 115, 115,
+  ]);
+  assert.deepEqual([firstAudio?.eventType, firstAudio?.durationMs, firstAudio?.metrics?.firstAudioLatencyMs], [
+    'realtime.first_audio', 730, 730,
+  ]);
+  assert.equal(firstAudio?.metrics?.responseBFirstAudioMs, 128);
 });
 
 test('Agent and Skill observations preserve status, duration and session correlation', () => {
@@ -167,11 +245,85 @@ test('NAT adapter emits evaluation and validator events without synthetic sessio
   assert.equal(failedEvaluation.at(-1)?.eventType, 'validator.failed');
 });
 
-test('a broken observer module fails inside its own isolated boundary', () => {
+test('Tech Observer stays isolated and renders only safe fields', () => {
   const source = readFileSync(new URL('../../public/tech-observer.js', import.meta.url), 'utf8');
   assert.doesNotThrow(() => runInNewContext(source, {
     document: { querySelector() { throw new Error('simulated observer DOM failure'); } },
   }));
+  const makeElement = (): any => ({
+    dataset: {}, children: [], hidden: true, textContent: '',
+    classList: { toggle() {} },
+    addEventListener() {}, setAttribute() {},
+    append(...children: any[]) { this.children.push(...children); },
+    replaceChildren(...children: any[]) {
+      this.children = children.flatMap((child) => child.isFragment === true ? child.children as Array<Record<string, unknown>> : [child]);
+    },
+  });
+  const flowItems = ['realtime', 'agent', 'skill', 'tool', 'retriever', 'evidence', 'validator', 'persistence']
+    .map((category) => ({ dataset: { category } }));
+  const elements = new Map<string, ReturnType<typeof makeElement>>();
+  for (const id of [
+    'tech-observer', 'tech-observer-toggle', 'tech-observer-events', 'tech-observer-live',
+    'tech-observer-session', 'tech-observer-trace', 'tech-observer-count', 'tech-observer-empty',
+    'tech-observer-environment', 'tech-observer-provider', 'tech-observer-agent', 'tech-observer-runtime',
+    'tech-observer-skill', 'tech-observer-tool', 'tech-observer-model',
+  ]) elements.set(id, makeElement());
+  const panel = elements.get('tech-observer')!;
+  panel.querySelectorAll = (selector: string) => selector === '.tech-observer-flow li' ? flowItems : [];
+  const shell = { classList: { toggle() {} } };
+  const listeners = new Map<string, (event: { detail?: unknown }) => void>();
+  const windowObject = {
+    location: { search: '?demo=tech' },
+    addEventListener(type: string, listener: (event: { detail?: unknown }) => void) { listeners.set(type, listener); },
+  };
+  const streams: Array<{ listeners: Map<string, (event: { data: string }) => void> }> = [];
+  class FakeEventSource {
+    listeners = new Map<string, (event: { data: string }) => void>();
+    constructor(_url: string) { streams.push(this); }
+    addEventListener(type: string, listener: (event: { data: string }) => void) { this.listeners.set(type, listener); }
+    close() {}
+  }
+  const documentObject = {
+    querySelector(selector: string) { return selector === '.app-shell' ? shell : null; },
+    getElementById(id: string) { return elements.get(id) ?? null; },
+    createElement() { return makeElement(); },
+    createDocumentFragment() { return { ...makeElement(), isFragment: true }; },
+  };
+  runInNewContext(source, {
+    document: documentObject, window: windowObject, EventSource: FakeEventSource,
+    URLSearchParams, Date, requestAnimationFrame: (callback: () => void) => callback(),
+  });
+  listeners.get('interview:session')?.({ detail: { sessionId: 'session-secret' } });
+  streams[0]?.listeners.get('observation')?.({ data: JSON.stringify({
+    eventId: 'event-secret', timestamp: '2026-09-24T08:00:00.000Z', traceId: 'trace-secret',
+    spanId: 'call-secret', parentSpanId: 'story-secret', sessionId: 'session-secret', storyId: 'story-secret',
+    category: 'agent', eventType: 'agent.timeout', status: 'warning', component: 'realtime-context-agent',
+    title: 'SENSITIVE_TITLE_SENTINEL', summary: 'SENSITIVE_EVIDENCE_SENTINEL',
+    metrics: {
+      errorCode: 'AGENT_RUNTIME_TIMEOUT', fallbackUsed: true, fallbackType: 'direct_retrieval',
+      promptTokens: 40, model: 'sk-secret', query: 'SENSITIVE_QUERY_SENTINEL',
+    },
+    metadata: { agent: 'Interview Agent', provider: 'session-secret', runtime: 'Bearer secret-value' },
+  }) });
+  streams[0]?.listeners.get('observation')?.({ data: JSON.stringify({
+    eventId: 'skip-event', timestamp: '2026-09-24T08:00:01.000Z', traceId: 'trace-secret',
+    spanId: 'call-secret', parentSpanId: 'story-secret', sessionId: 'session-secret', storyId: 'story-secret',
+    category: 'agent', eventType: 'agent.skipped', status: 'skip', component: 'realtime-context-agent',
+    title: 'UNTRUSTED TITLE', metrics: { skipReason: 'agent_disabled', fallbackUsed: true, fallbackType: 'direct_retrieval' },
+  }) });
+
+  const collectText = (node: { textContent?: string; children?: Array<Record<string, unknown>> }): string =>
+    `${node.textContent ?? ''} ${(node.children ?? []).map((child) => collectText(child as typeof node)).join(' ')}`;
+  const rendered = collectText(elements.get('tech-observer-events')!);
+  assert.match(rendered, /CONTEXT HINT AGENT TIMEOUT/u);
+  assert.match(rendered, /AGENT_RUNTIME_TIMEOUT/u);
+  assert.match(rendered, /直接使用检索证据/u);
+  assert.match(rendered, /Agent 未启用/u);
+  for (const secret of ['session-secret', 'story-secret', 'trace-secret', 'call-secret', 'SENSITIVE_', 'sk-secret', 'Bearer']) {
+    assert.equal(rendered.includes(secret), false, `observer leaked ${secret}`);
+  }
+  assert.equal(elements.get('tech-observer-session')?.textContent, '当前采访');
+  assert.equal(elements.get('tech-observer-trace')?.textContent, '已关联');
 });
 
 test('analytics consumer calculates rates and nearest-rank latency percentiles', async () => {

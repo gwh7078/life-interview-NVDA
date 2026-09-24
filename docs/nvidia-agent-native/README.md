@@ -10,4 +10,4 @@ Frozen principles:
 4. Long-term state remains in the application database, not OpenClaw session history.
 5. Mac and DGX Spark share the same business code; environment differences are adapters/configuration.
 6. Phase 1 uses a real NemoClaw/OpenClaw sandbox, not a mock runtime, for the smoke gate.
-7. NeMo Retriever remains outside the Phase 1 core path; Phase 3A/B now owns its scoped integration Gate, and the Mac automated Gate G0–G8 has passed. The final manual real-voice experience check remains separate.
+7. NeMo Retriever remains outside the Phase 1 core path; Phase 3A/B owns its scoped integration Gate, and the Mac automated Gate G0–G8 has passed. Realtime Agent smoke is **FAIL** and full Step-Audio voice E2E is **NOT TESTED**; these do not follow from the G0–G8 result.

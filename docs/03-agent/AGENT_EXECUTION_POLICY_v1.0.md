@@ -381,7 +381,7 @@ run_start_resource_version
 - No evidence skips the Agent. Agent unavailable or failed uses explicit `direct_retrieval` fallback; coordinator timeout, cancellation, supersede and stale protection remain authoritative.
 - This task does not write Story Memory. Interview Closeout remains the only owner of long-term Memory updates.
 
-The current implementation and live validation state are recorded in `docs/05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md`. Automated contract tests pass; the local live Agent smoke currently fails, so full Realtime voice acceptance remains open.
+The current implementation and live validation state are recorded in `docs/05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md`. Automated contract tests pass; Realtime Agent smoke is **FAIL** (`AGENT_RUNTIME_TIMEOUT`, then `AGENT_RUNTIME_EXEC_FAILED`) and full Step-Audio voice E2E is **NOT TESTED**.
 
 ## 16. Retrieval Source of Truth
 

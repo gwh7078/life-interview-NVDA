@@ -1,6 +1,6 @@
 # 人生采访局 NVIDIA 版｜AI 开发、对接、联调与测试环境
 
-版本：2026-09-23
+版本：2026-09-24
 适用对象：Codex、其他 AI 开发 Agent、前后端开发、Agent/Skill 开发、联调与测试人员。
 
 ## 1. 文档目的
@@ -31,9 +31,9 @@ Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不�
 |---|---|---|
 | 实时语音 | StepFun `step-audio-2-mini` | `.env` 使用 `STORY_INTERVIEW_PROVIDER=stepfun`；凭证为 `STEPFUN_API_KEY`。 |
 | OpenClaw Agent 与会后文本任务 | Bailian `qwen3.6-35b-a3b` | Agent 的默认、推理、快速推理、写作 profile 共用此模型；文本任务通过 Model Studio OpenAI-compatible Chat API 调用。 |
-| Realtime 条件式慢路径 | NeMo Retriever + `interview.context_hint` | 只在现有 `story_continue` Story 中使用；Retriever 按 owner/story/subject 检索，之后最多执行一次无工具/无脚本的 Context Hint Agent。Agent 失败时降级到直接检索证据。由 `REALTIME_CONTEXT_AGENT_ENABLED=1` 独立启用。代码已接入，本机 Agent smoke 当前未通过，不能标记为真实 E2E 通过。 |
+| Realtime 条件式慢路径 | NeMo Retriever + 可选 `interview.context_hint` | 只在现有 `story_continue` Story 中使用；Retriever 按 owner/story/subject 检索，之后最多执行一次无工具/无脚本的 Context Hint Agent。`NEMO_RETRIEVER_ENABLED=true` 控制 Retriever/Pipeline；`REALTIME_CONTEXT_AGENT_ENABLED=1` 控制可选 Agent（显式 `0` 关闭；未设置时仅在 Agent Task runtime 可用时默认启用）。两者互不代替。Agent smoke 为 FAIL；完整 Step-Audio 语音 E2E 为 NOT TESTED。 |
 
-Realtime Agent 配置：`AGENT_MODEL_REALTIME_CONTEXT` → `AGENT_MODEL_REASONING_FAST` → `AGENT_MODEL_DEFAULT`；Task 限制为一次尝试、4.8 秒 Agent timeout、关闭 thinking 与 repair，Slow Coordinator 总 deadline 仍为 5.5 秒。运行 `./deploy/mac/install-skill.sh` 安装 `interview-observer` 并配置独立的 `realtime-context` OpenClaw agent。技术观测台默认关闭，设置 `COMPETITION_TECH_PANEL=1` 才会通过 WebSocket 发送 allowlisted 状态。
+Realtime Agent 配置：`AGENT_MODEL_REALTIME_CONTEXT` → `AGENT_MODEL_REASONING_FAST` → `AGENT_MODEL_DEFAULT`；Task 限制为一次尝试、4.8 秒 Agent timeout、关闭 thinking 与 repair，Slow Coordinator 总 deadline 仍为 5.5 秒。运行 `./deploy/mac/install-skill.sh` 安装 `interview-observer` 并配置独立的 `realtime-context` OpenClaw agent。`COMPETITION_TECH_PANEL=1` 只控制比赛 WebSocket 面板的 allowlisted 状态发送，不会启用 Retriever 或 Agent；SSE 技术观测栏可独立读取观察事件，并可用 `?demo=tech` 自动打开。两个面板和两个运行开关相互独立。
 
 Model Studio 文档确认模型 ID 为 `qwen3.6-35b-a3b`，支持文本输入、函数调用和 262,144-token context window；参见 [Qwen3.6-35B-A3B 模型说明](https://www.alibabacloud.com/help/en/model-studio/qwen3-6-35b-a3b) 与 [OpenAI-compatible Chat API](https://www.alibabacloud.com/help/en/model-studio/qwen-api-via-openai-chat-completions)。
 
