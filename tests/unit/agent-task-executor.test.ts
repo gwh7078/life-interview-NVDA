@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
+  AgentProposalValidationError,
   AgentResultFormatError,
   NemoClawAgentTaskExecutor,
   NemoClawOpenClawAttemptRunner,
@@ -160,6 +161,40 @@ test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scrip
   assert.equal(result.execCallCount, 0);
   assert.equal(result.scriptCallCount, 0);
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
+});
+
+test('AttemptRunner targets the task-specific OpenClaw agent and session', async () => {
+  const runner = new CaptureRunner();
+  const attempts = new NemoClawOpenClawAttemptRunner({ sandboxName: 'my-assistant' }, runner);
+  const base = taskRequest();
+
+  await attempts.run({
+    task: {
+      ...base,
+      taskType: 'interview.context_hint',
+      skill: 'interview-observer',
+      modelProfile: 'realtime-context',
+      executionPolicy: {
+        agentId: 'realtime-context',
+        thinking: 'off',
+        maxAttempts: 1,
+        timeoutMs: 4_800,
+        scriptCapabilities: [],
+        allowFormatRepair: false,
+        allowValidationRepair: false,
+      },
+      payload: { query: '用户刚才提到的那件事是什么？' },
+    },
+    attemptNumber: 1,
+    mode: 'normal',
+  });
+
+  const agentIndex = runner.args.indexOf('--agent');
+  const sessionIndex = runner.args.indexOf('--session-key');
+  assert.equal(runner.args[agentIndex + 1], 'realtime-context');
+  assert.equal(runner.args[sessionIndex + 1], 'agent:realtime-context:task:run-1:attempt:1');
+  assert.equal(runner.args[runner.args.indexOf('--thinking') + 1], 'off');
+  assert.match(runner.stdin, /do not call tools, retrieve data, execute scripts/u);
 });
 
 test('AttemptRunner exposes only the authorized retrieval script and counts its marker', async () => {
@@ -373,6 +408,24 @@ test('TaskExecutor sends schema or business validation failure to Validation Rep
     path: 'status',
     instruction: 'invalid completion output',
   }]);
+});
+
+test('TaskExecutor does not run validation repair when the task policy disables it', async () => {
+  const request = taskRequest();
+  request.executionPolicy = {
+    ...request.executionPolicy,
+    maxAttempts: 2,
+    allowValidationRepair: false,
+  };
+  const attempts = new SequenceAttemptRunner([
+    okAttempt({ status: 'broken', gaps: [] }),
+    okAttempt({ status: 'interviewing', gaps: [] }),
+  ]);
+  const executor = new NemoClawAgentTaskExecutor(attempts);
+
+  await assert.rejects(() => executor.execute(request), AgentProposalValidationError);
+  assert.equal(attempts.requests.length, 1);
+  assert.equal(attempts.requests[0]?.mode, 'normal');
 });
 
 test('TaskExecutor does not retry a cancelled task', async () => {

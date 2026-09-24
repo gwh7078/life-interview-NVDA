@@ -23,7 +23,7 @@
 - Agent Reasoning 与 Backend Execution 分权；
 - Contract-First Agentization；
 - Architecture v2.3 低轮次 Agent 执行策略；
-- Future Realtime Fast / Slow 双系统；
+- Realtime Fast / Slow 双系统：Step-Audio 按需 Tool Trigger + Backend Current Story Retrieval + 单次 Context Hint Agent；新 Agent live smoke 尚未通过；
 - Future “个人历史 + 时代背景”双来源检索：既记得用户说过什么，也理解用户生活在什么时代。
 
 差异化重点：
@@ -61,7 +61,7 @@ Agentic Retrieval
 
 时代背景只负责唤起记忆和寻找采访话题，绝不自动成为用户事实。
 
-**注意：个人历史 Classic Retrieval 已完成 Phase 3 A+B Mac 自动 Gate；Agentic Retrieval 与时代背景库仍为 Planned / Future。人工真实语音体验验收仍待完成。**
+**注意：个人历史 Classic Retrieval 与原有 Tool/HOLD/Resume 已完成 Phase 3 A+B 自动 Gate。Realtime Context Hint 的代码和定向自动测试已完成，但当前本机 Agent smoke FAIL；不可宣称 Slow Agent 真实链路或人工语音体验验收通过。Agentic Retrieval 与时代背景库仍为 Planned / Future。**
 
 主要证据：
 
@@ -80,26 +80,22 @@ Agentic Retrieval
 - NemoClaw / OpenClaw 真实最小 Smoke；
 - Scoped Tool API；
 - Agent Runtime 与业务数据库隔离；
-- 4 个 Agent Task Contract；
-- 4 个正式 Skill family；
+- 5 个 Agent Task type（`interview.closeout` 含 3 个 mode）；
+- 5 个正式 Skill family；
 - NemoClawAgentTaskAdapter；
 - Task → Skill / Model Profile 确定性路由；
 - Agent / Skill / Tool 职责分层；
 - 低轮次执行策略已经冻结。
 - Phase 3 A+B 真实 Integration Gate G0–G8；
 - Realtime Tool/HOLD/Resume 与个人历史 Classic Retrieval 真实联调。
+- `interview.context_hint` 的固定 Contract、专用 OpenClaw profile、无工具/无脚本策略及 direct-retrieval fallback 已实现；真实 Agent smoke 尚未通过。
 
 后续需要补齐：
 
-- 正式 AgentTaskExecutor；
-- 真实六路径 Agent E2E（6/6）；
-- Runtime Retry / Validation Repair / Format Repair；
-- Model Router；
-- Agent Eval；
-- Schema success / first-pass success / evidence accuracy / latency / tool-call-rate benchmark；
+- Realtime Context Hint Agent 的真实运行通过和完整 Step-Audio voice E2E；
+- Slow Path 成功样本、P50/P95 latency、token usage、fallback rate 与 evidence accuracy benchmark；
 - 条件式个人历史 Classic Memory Search 已通过 Phase 3 Gate；
 - Future Agentic Deep Search；
-- Future Realtime Slow Agent；
 - Future 时代背景事件库与 `era_context_search`；
 - 如确有价值，再展示目标不同的多 Agent 协作，而不是为了数量拆 Agent。
 

@@ -34,6 +34,7 @@ Task 路由是确定性的：
 - `interview.closeout / story_create`
 - `interview.closeout / story_continue`
 - `interview.closeout / contributor`
+- `interview.context_hint`
 - `story.completion`
 - `story.generation`
 
@@ -112,7 +113,7 @@ Future 不给模型暴露一个无限能力的万能 Retrieval Tool，而是在�
 - 普通历史 Recall；
 - 单个或少量相关证据查询；
 - 低延迟后台检索；
-- Future Realtime Slow Agent。
+- Realtime `interview.context_hint` 使用独立 no-tools Agent；详见 [Realtime Slow Context 实现状态](../05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md)。
 
 典型：
 
@@ -369,21 +370,18 @@ run_start_resource_version
 
 > Agent 的自主性不是来自无意义的多轮，而是来自“只在确实需要时才决定是否搜索，以及选择 Classic 还是 Agentic Retrieval”。
 
-## 15. Future Realtime Slow Agent
+## 15. Realtime Context Hint Agent
 
-当前不开发。
+`interview.context_hint` runs only after a Step-Audio Tool Call in an existing `story_continue` Story. Backend completes owner/story/subject Classic Retrieval and preinjects bounded context; the Agent does not search.
 
-未来 Slow Agent 应：
+- Dedicated `realtime-context` OpenClaw agent with all OpenClaw tools denied.
+- `scriptCapabilities=[]`; exactly one attempt; one model call maximum; task timeout 4,800 ms; thinking off.
+- Format Repair and Validation Repair are disabled. Invalid output fails immediately.
+- Input and output are strict schemas; output selects at most three evidence IDs and returns only short conflicts/hints. Backend reconstructs facts from the selected retrieved Answers.
+- No evidence skips the Agent. Agent unavailable or failed uses explicit `direct_retrieval` fallback; coordinator timeout, cancellation, supersede and stale protection remain authoritative.
+- This task does not write Story Memory. Interview Closeout remains the only owner of long-term Memory updates.
 
-- 旁路观察 Transcript；
-- 不阻塞实时语音；
-- 条件式运行 `scripts/memory-search.mjs`；
-- 条件式运行 `scripts/era-context-search.mjs`；
-- **只使用 Classic Retrieval**；
-- 输出短 Context Hint；
-- 不写长期 Story Memory；
-- 不运行 `memory-deep-search.mjs` 阻塞实时会话；
-- 永久 Memory 仍由 Interview Closeout 统一维护。
+The current implementation and live validation state are recorded in `docs/05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md`. Automated contract tests pass; the local live Agent smoke currently fails, so full Realtime voice acceptance remains open.
 
 ## 16. Retrieval Source of Truth
 

@@ -84,10 +84,24 @@ const elements = {
   callControls: document.querySelector('#call-controls'),
   callEndButton: document.querySelector('#call-end-button'),
   connectionNote: document.querySelector('#connection-note'),
+  workspaceLayout: document.querySelector('#workspace-layout'),
+  techPanel: document.querySelector('#tech-panel'),
+  techCurrent: document.querySelector('#tech-current'),
+  techLatency: document.querySelector('#tech-latency'),
+  techCount: document.querySelector('#tech-count'),
+  techModel: document.querySelector('#tech-model'),
+  techSkill: document.querySelector('#tech-skill'),
+  techError: document.querySelector('#tech-error'),
+  techErrorCode: document.querySelector('#tech-error-code'),
   externalCloseoutRetry: document.querySelector('#external-closeout-retry'),
   externalCloseoutRetryMessage: document.querySelector('#external-closeout-retry-message'),
   externalCloseoutRetryButton: document.querySelector('#external-closeout-retry-button'),
 };
+
+const techStageRows = new Map(
+  [...document.querySelectorAll('#tech-stage-flow [data-tech-stage]')]
+    .map((row) => [row.dataset.techStage, row]),
+);
 
 const state = {
   websocket: null,
@@ -161,6 +175,75 @@ const realtimeProviderLabels = {
   qwen: 'Qwen Realtime',
   stepfun: 'Step-Audio 2 Mini Realtime',
 };
+
+const TECH_STAGES = [
+  { id: 'fast_voice', label: '快速语音' },
+  { id: 'tool_trigger', label: '工具触发' },
+  { id: 'retrieval', label: '历史检索' },
+  { id: 'slow_agent', label: 'Agent 慢路径' },
+  { id: 'context_hint', label: '上下文提示' },
+  { id: 'resume', label: '恢复对话' },
+  { id: 'first_audio', label: '首段语音' },
+];
+
+const TECH_STATUSES = new Map([
+  ['pending', ['等待', 'pending']],
+  ['queued', ['等待', 'pending']],
+  ['waiting', ['等待', 'pending']],
+  ['started', ['进行中', 'active']],
+  ['running', ['进行中', 'active']],
+  ['active', ['进行中', 'active']],
+  ['triggered', ['已触发', 'active']],
+  ['completed', ['已完成', 'complete']],
+  ['success', ['已完成', 'complete']],
+  ['succeeded', ['已完成', 'complete']],
+  ['failed', ['失败', 'failed']],
+  ['error', ['失败', 'failed']],
+  ['timeout', ['超时', 'failed']],
+  ['timed_out', ['超时', 'failed']],
+  ['aborted', ['已中止', 'pending']],
+  ['cancelled', ['已中止', 'pending']],
+  ['canceled', ['已中止', 'pending']],
+  ['stale', ['已结束', 'pending']],
+  ['skipped', ['已跳过', 'pending']],
+]);
+
+function safeTechIdentifier(value) {
+  if (typeof value !== 'string') return 'Not available';
+  const candidate = value.trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,47}$/.test(candidate)
+    ? candidate
+    : 'Not available';
+}
+
+function renderTechStatus(message) {
+  const { stage, status, latencyMs, count, model, skill, errorCode } = message;
+  const stageDefinition = TECH_STAGES.find((item) => item.id === stage);
+  const stageRow = techStageRows.get(stage);
+  if (!stageDefinition || !stageRow) return;
+
+  const [statusLabel, statusState] = TECH_STATUSES.get(status) || ['状态更新', 'active'];
+  stageRow.dataset.status = statusState;
+  stageRow.querySelector('[data-tech-stage-status]').textContent = statusLabel;
+  elements.techCurrent.textContent = `${stageDefinition.label} · ${statusLabel}`;
+  elements.techLatency.textContent = typeof latencyMs === 'number'
+    && Number.isFinite(latencyMs) && latencyMs >= 0 && latencyMs <= Number.MAX_SAFE_INTEGER
+    ? `${Math.round(latencyMs)} ms`
+    : 'Not available';
+  elements.techCount.textContent = Number.isSafeInteger(count) && count >= 0
+    ? String(count)
+    : 'Not available';
+  elements.techModel.textContent = safeTechIdentifier(model);
+  elements.techSkill.textContent = safeTechIdentifier(skill);
+
+  const safeErrorCode = typeof errorCode === 'string' && /^[A-Z0-9][A-Z0-9_]{0,47}$/.test(errorCode)
+    ? errorCode
+    : '';
+  elements.techError.hidden = !safeErrorCode;
+  elements.techErrorCode.textContent = safeErrorCode;
+  elements.techPanel.hidden = false;
+  elements.workspaceLayout.classList.add('has-tech-panel');
+}
 
 const PLAYBACK_SCHEDULE_AHEAD_SECONDS = 0.12;
 const MAX_PLAYBACK_SCHEDULE_AHEAD_SECONDS = 0.85;
@@ -1276,6 +1359,11 @@ function connectRealtime() {
       if (typeof event.data !== 'string') return;
       let message;
       try { message = JSON.parse(event.data); } catch { return; }
+
+      if (message.type === 'tech_status') {
+        renderTechStatus(message);
+        return;
+      }
 
       if (shouldIgnoreAssistantResponseMessage(state.lifecycle, message.type)) {
         const responseId = typeof message.responseId === 'string' ? message.responseId : undefined;

@@ -382,11 +382,11 @@ Agentic Retrieval 已经完成且证据仍有效时，Format Repair 不应默认
 
 > **At-least-once reasoning + Exactly-once domain apply**
 
-## 13. Realtime Future
+## 13. Realtime Future 与实现状态
 
-Realtime 当前不进入 Phase 2B Agent 主链路。
+Realtime 不进入 Phase 2B Agent 主链路。本节原先描述完整的 Future 方案；截至 2026-09-23，Current Story 的有限 Context Hint 路径已有代码实现，验收状态见 [Realtime Slow Context 实现状态](../05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md)。
 
-未来采用：
+完整目标方向：
 
 ```text
 Realtime Voice Fast System
@@ -394,10 +394,9 @@ Realtime Voice Fast System
 Parallel Interview Slow Agent
 ```
 
-Slow Agent 旁路消费 Transcript，条件式执行：
+已实现路径仅在现有 `story_continue` Story 中调用个人历史 Classic Retrieval，并可执行一次受限 `interview.context_hint` Agent Task。以下更广的能力仍属于 Future / Deferred：
 
 - Story Agent Memory recall；
-- `memory-search.mjs` / 个人历史 Classic Retrieval；
 - `era-context-search.mjs` / 时代背景 Classic Retrieval（Future）；
 - 人物关系识别；
 - 时间冲突；
@@ -409,7 +408,7 @@ Slow Agent 旁路消费 Transcript，条件式执行：
 
 > **Realtime Slow Agent 不调用 Agentic Retrieval。**
 
-Slow Agent 只输出短 Context Hint，在安全轮次边界注入 Fast System，不阻塞当前语音轮次。
+完整目标方向下，Slow Agent 只输出短 Context Hint，在安全轮次边界交给 Fast System，不阻塞当前语音轮次；当前 Tool/HOLD/Resume 的有限实现见上方状态链接。
 
 Future 慢系统的检索来源可以分为：
 
@@ -432,7 +431,7 @@ Future 慢系统的检索来源可以分为：
 
 - `docs/08-future/retriever/ERA_CONTEXT_LIBRARY_v1.0.md`
 
-**上述 Realtime Slow System 与时代背景检索都仍是 Future / Deferred，当前未实现。**
+**时代背景检索、跨 Story 检索、人物关系分析和下列更广能力仍是 Future / Deferred；当前有限 Context Hint 路径尚未通过真实 Agent smoke 或完整语音验收。**
 
 ## 14. Retrieval Depth Routing
 

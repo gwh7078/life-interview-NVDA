@@ -28,8 +28,9 @@
 11. [NeMo Agent Toolkit 接入说明](04-nvidia/NEMO_AGENT_TOOLKIT_INTEGRATION_v1.0.md)
 12. [工程报告入口](07-reports/README.md)
 13. [Phase 3 A+B Integration Gate](07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md)
-14. [Future Realtime Fast / Slow](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
-15. [UI / UX 设计资料](09-uiux/README.md)
+14. [Realtime Slow Context 实现状态](05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md)
+15. [Realtime Fast / Slow 架构基线](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
+16. [UI / UX 设计资料](09-uiux/README.md)
 
 ## 当前状态
 
@@ -42,8 +43,9 @@
 - Phase 2B-C Agent Runtime Integration — Completed / six-path Real Agent E2E 6/6
 - Phase 3A NeMo Retriever + Classic Retrieval — **真实 Mac ingest/query、来源追溯与索引状态验收通过**
 - Phase 3 A+B Integration Gate — **自动 Gate G0–G8 全部 PASS**；人工真实语音体验验收仍待完成
+- Realtime Slow Context Agent — **代码与定向自动测试完成；本机 Agent smoke FAIL，完整语音验收未通过**
 - NAT-1 NeMo Agent Toolkit Evaluation Lane — **真实 Runtime Smoke 6/6；24 条 Synthetic Regression Stub Gate 通过**；Relay / ATIF / Phoenix 仍为 Future
-- 4 个正式 Skill family — 已提交
+- 5 个正式 Skill family — 已提交
 
 ### Validated Historical Work
 
@@ -55,7 +57,8 @@
 
 ### Future / Deferred
 
-- Agentic Retrieval、Realtime Slow System 的完整真实验收
+- Agentic Retrieval 与时代背景检索
+- Realtime Slow System 的完整真实语音验收
 - 人工真实语音体验验收
 - DGX Spark 最终本地推理与 Benchmark
 - 外部世界事实核查

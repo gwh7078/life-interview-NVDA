@@ -140,6 +140,9 @@ test('slow recall trace records result shape while keeping query and hint text o
       possibleConflictCount: 1,
       interviewHintCount: 2,
       query: 'private query text',
+      storySummary: 'private story summary',
+      recentContext: [{ text: 'SUPER_SECRET_USER_TEXT_123' }],
+      evidence: [{ id: 'e1', answer: 'private evidence text' }],
       hint: { facts: [{ claim: 'private returned fact' }] },
     });
     await trace.flush();
@@ -147,13 +150,21 @@ test('slow recall trace records result shape while keeping query and hint text o
     const row = JSON.parse((await readFile(trace.filePath, 'utf8')).trim()) as Record<string, unknown>;
     assert.equal(row.factCount, 1);
     assert.equal(row.factClaimChars, 24);
-    assert.equal(row.factSourceMessageIds, 'source-1');
+    assert.equal('factSourceMessageIds' in row, false);
     assert.equal(row.possibleConflictCount, 1);
     assert.equal(row.interviewHintCount, 2);
     assert.equal('query' in row, false);
+    assert.equal('storySummary' in row, false);
+    assert.equal('recentContext' in row, false);
+    assert.equal('evidence' in row, false);
     assert.equal('hint' in row, false);
-    assert.equal(row.rejectedFieldCount, 2);
-    assert.equal((await readFile(trace.filePath, 'utf8')).includes('private returned fact'), false);
+    assert.equal(row.rejectedFieldCount, 6);
+    const traceText = await readFile(trace.filePath, 'utf8');
+    assert.equal(traceText.includes('private query text'), false);
+    assert.equal(traceText.includes('private story summary'), false);
+    assert.equal(traceText.includes('SUPER_SECRET_USER_TEXT_123'), false);
+    assert.equal(traceText.includes('private evidence text'), false);
+    assert.equal(traceText.includes('private returned fact'), false);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

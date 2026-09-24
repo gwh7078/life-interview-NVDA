@@ -27,6 +27,8 @@
         </nav>
       </header>
 
+      <div class="workspace-layout" id="workspace-layout">
+        <div class="workspace-main">
       <section class="auth-card panel" id="auth-card" aria-labelledby="auth-heading">
         <div class="auth-intro">
           <p class="section-label">进入你的档案</p>
@@ -189,6 +191,38 @@
           <button id="external-closeout-retry-button" class="button button-secondary" type="button">重新整理</button>
         </div>
       </section>
+        </div>
+
+        <aside class="tech-panel" id="tech-panel" aria-labelledby="tech-panel-title" hidden>
+          <div class="tech-panel-heading">
+            <p class="section-label">COMPETITION TECH PANEL</p>
+            <h2 id="tech-panel-title">实时技术链路</h2>
+            <p id="tech-current" class="tech-current" role="status" aria-live="polite" aria-atomic="true">等待技术状态</p>
+          </div>
+
+          <section class="tech-flow-section" aria-labelledby="tech-flow-title">
+            <h3 id="tech-flow-title" class="tech-section-title">阶段进展</h3>
+            <ol class="tech-stage-flow" id="tech-stage-flow">
+              <li class="tech-stage" data-tech-stage="fast_voice" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">快速语音</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
+              <li class="tech-stage" data-tech-stage="tool_trigger" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">工具触发</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
+              <li class="tech-stage" data-tech-stage="retrieval" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">历史检索</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
+              <li class="tech-stage" data-tech-stage="slow_agent" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">Agent 慢路径</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
+              <li class="tech-stage" data-tech-stage="context_hint" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">上下文提示</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
+              <li class="tech-stage" data-tech-stage="resume" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">恢复对话</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
+              <li class="tech-stage" data-tech-stage="first_audio" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">首段语音</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
+            </ol>
+          </section>
+
+          <section class="tech-metrics" aria-label="链路指标">
+            <div class="tech-metric"><span class="tech-metric-label">响应延迟</span><strong class="tech-metric-value" id="tech-latency">Not available</strong></div>
+            <div class="tech-metric"><span class="tech-metric-label">调用计数</span><strong class="tech-metric-value" id="tech-count">Not available</strong></div>
+            <div class="tech-metric tech-metric-wide"><span class="tech-metric-label">模型</span><strong class="tech-metric-value" id="tech-model">Not available</strong></div>
+            <div class="tech-metric tech-metric-wide"><span class="tech-metric-label">Skill</span><strong class="tech-metric-value" id="tech-skill">Not available</strong></div>
+            <div class="tech-metric tech-metric-wide"><span class="tech-metric-label">DGX Spark / GPU</span><strong class="tech-metric-value">Not available</strong></div>
+            <div class="tech-error" id="tech-error" hidden><span class="tech-metric-label">错误代码</span><code id="tech-error-code"></code></div>
+          </section>
+        </aside>
+      </div>
 
       <aside id="tech-observer" class="tech-observer" aria-label="技术实时观测" hidden>
         <header class="tech-observer-header">

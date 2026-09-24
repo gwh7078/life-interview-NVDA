@@ -209,6 +209,12 @@ function buildPrompt(request: AgentAttemptRequest): string {
     );
   }
 
+  if (task.taskType === 'interview.context_hint') {
+    lines.push(
+      'This task is read-only: do not call tools, retrieve data, execute scripts, access or write databases, or output reasoning.',
+    );
+  }
+
   if (request.mode === 'format_repair') {
     lines.push(
       'This is a FORMAT REPAIR attempt.',
@@ -261,7 +267,9 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
     const model = this.config.models?.[request.task.modelProfile]
       ?? this.config.defaultModel
       ?? null;
-    const thinking = this.config.thinking?.trim() || null;
+    const thinking = request.task.executionPolicy.thinking
+      ?? this.config.thinking?.trim()
+      ?? null;
     let prompt = '';
     let promptBuildMs = 0;
     let commandMs = 0;
@@ -282,6 +290,7 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
       ? `export LIFE_INTERVIEW_RETRIEVAL_BASE_URL=${shellQuote(authorizedScriptContext.baseUrl)}; `
         + `export LIFE_INTERVIEW_RETRIEVAL_TOKEN=${shellQuote(authorizedScriptContext.token)}; `
       : '';
+    const agentId = request.task.executionPolicy.agentId ?? 'main';
     const sandboxAgentCommand =
       scriptEnvironment
       + 'tmp=$(mktemp /tmp/life-interview-task.XXXXXX); '
@@ -306,9 +315,9 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
       sandboxAgentCommand,
       'sh',
       '--agent',
-      'main',
+      agentId,
       '--session-key',
-      `agent:main:task:${request.task.runId}:attempt:${request.attemptNumber}`,
+      `agent:${agentId}:task:${request.task.runId}:attempt:${request.attemptNumber}`,
       '--local',
       '--timeout',
       String(Math.max(1, Math.ceil(request.task.executionPolicy.timeoutMs / 1000))),
@@ -509,7 +518,9 @@ export class NemoClawAgentTaskExecutor implements AgentTaskExecutor {
       } catch (error) {
         lastError = error;
         const canRetry = attemptNumber < request.executionPolicy.maxAttempts;
-        if (error instanceof AgentProposalValidationError && canRetry) {
+        if (error instanceof AgentProposalValidationError
+          && request.executionPolicy.allowValidationRepair !== false
+          && canRetry) {
           mode = 'validation_repair';
           repairCount += 1;
           repairFeedback = error.feedback;

@@ -1,8 +1,8 @@
 # Skill / Script Mapping v1.0
 
-> Status: **Current Design Baseline**
+> Status: **Current Design Baseline; Realtime Context Hint implemented**
 >
-> Scope: OpenClaw Agent Skills, future Retriever integration, Realtime Slow Agent
+> Scope: OpenClaw Agent Skills, Retriever integration, Realtime Context Hint Agent
 >
 > Date: 2026-09-21
 
@@ -53,9 +53,9 @@ Backend / Retriever API
 | `interview-closeout / contributor` | 无 | 当前 | 第三者证据与主人公历史隔离；禁止搜索主人公 Memory / Transcript |
 | `story-completion` | 无 | 当前 | Completion 只读 Agent Memory，不回查 Transcript |
 | `story-generation` | 无 | 当前 | 当前 Contract 已提供完整主人公 Transcript；不动态搜索 |
-| Future `interview-observer` | `scripts/memory-search.mjs` | Future | Realtime Slow Agent 的个人历史 Classic Retrieval |
-| Future `interview-observer` | `scripts/era-context-search.mjs` | Future | 年代背景只读检索；只用于话题提示 |
-| Future `interview-observer` | `memory-deep-search.mjs` | **禁止** | Realtime 不允许 Agentic Retrieval 阻塞实时链路 |
+| `interview.context_hint` / `interview-observer` | 无 | 已接入；真实 Agent smoke 未通过 | Backend 先做 Current Story Classic Retrieval；Agent 只选择证据 ID 和生成短提示；OpenClaw tools 与 scripts 均关闭 |
+| Future Era Context | `scripts/era-context-search.mjs` | Future | 当前 Slow Context 范围不含年代背景检索 |
+| Realtime Context Hint | `memory-deep-search.mjs` | **禁止** | Realtime 不允许 Agentic Retrieval 阻塞实时链路 |
 
 ## 3. Interview Closeout 推荐目录
 
@@ -121,22 +121,14 @@ memory-deep-search.mjs
 
 它可以在脚本内部封装多查询、检索、融合、裁剪等确定性/半确定性步骤，但最终只返回 Evidence，不写业务数据库。
 
-## 4. Future Realtime Slow Agent 推荐目录
+## 4. Current Realtime Context Hint Skill
 
 ```text
 agent/skills/interview-observer/
-├── SKILL.md
-└── scripts/
-    ├── memory-search.mjs
-    └── era-context-search.mjs
+└── SKILL.md
 ```
 
-其中：
-
-- `memory-search.mjs`：回答“用户以前说过什么”；
-- `era-context-search.mjs`：回答“这个年代有哪些可能帮助唤起回忆的背景话题”。
-
-Realtime Slow Agent 不使用 `memory-deep-search.mjs`。
+检索由 Backend 在同一 Tool Cycle 内完成，不由 Agent 再检索。`interview-observer` 只看固定注入的 Query、Current Story 摘要、最近最终消息和最多五条 Evidence。它不能读写数据库、调用工具或执行脚本；Evidence Answer 是事实来源，Question 只提供语境。Era Context 可在后续独立评估，当前不接入。
 
 ## 5. 哪些能力不要做成脚本
 

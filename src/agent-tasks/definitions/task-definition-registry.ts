@@ -1,6 +1,8 @@
 import type { ZodType } from 'zod';
 import {
   contributorCloseoutTaskOutputSchema,
+  interviewContextHintTaskInputSchema,
+  interviewContextHintTaskOutputSchema,
   interviewCloseoutModes,
   onboardingCloseoutTaskInputSchema,
   onboardingCloseoutTaskOutputSchema,
@@ -17,13 +19,16 @@ import {
 } from '../contracts/interview-closeout.js';
 import { AgentTaskContractError } from '../errors.js';
 
-export type AgentModelProfile = 'reasoning' | 'reasoning-fast' | 'writing';
+export type AgentModelProfile = 'reasoning' | 'reasoning-fast' | 'realtime-context' | 'writing';
 
 export interface AgentTaskExecutionPolicy {
+  agentId?: string;
+  thinking?: 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'adaptive' | 'max';
   maxAttempts: number;
   timeoutMs: number;
   scriptCapabilities: readonly string[];
   allowFormatRepair: boolean;
+  allowValidationRepair?: boolean;
 }
 
 export interface AgentTaskDefinition {
@@ -65,6 +70,16 @@ const generationPolicy: AgentTaskExecutionPolicy = Object.freeze({
   allowFormatRepair: true,
 });
 
+const realtimeContextHintPolicy: AgentTaskExecutionPolicy = Object.freeze({
+  agentId: 'realtime-context',
+  thinking: 'off',
+  maxAttempts: 1,
+  timeoutMs: 4_800,
+  scriptCapabilities: Object.freeze([]),
+  allowFormatRepair: false,
+  allowValidationRepair: false,
+});
+
 const definitions: AgentTaskDefinition[] = [
   {
     taskType: 'onboarding.closeout',
@@ -91,6 +106,17 @@ const definitions: AgentTaskDefinition[] = [
     schemaVersion: 'v1',
     executionPolicy: mode === 'story_continue' ? storyContinuePolicy : standardReasoningPolicy,
   })),
+  {
+    taskType: 'interview.context_hint',
+    skill: 'interview-observer',
+    skillVersion: 'v1',
+    modelProfile: 'realtime-context',
+    inputSchema: interviewContextHintTaskInputSchema,
+    outputSchema: interviewContextHintTaskOutputSchema,
+    contextVersion: 'v1',
+    schemaVersion: 'v1',
+    executionPolicy: realtimeContextHintPolicy,
+  },
   {
     taskType: 'story.completion',
     skill: 'story-completion',

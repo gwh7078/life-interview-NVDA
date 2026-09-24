@@ -21,8 +21,10 @@ interface ToolCycle {
   responseAId: string;
   startedAt: number;
   recallStatus?: SlowRecallStatus;
+  provider?: string;
   expectedOutcome?: RealtimeToolCycleOutcome;
   recallLatencyMs?: number;
+  slowPathMetrics?: RealtimeTraceFields;
   errorCode?: string;
   resumeRequestedAt?: number;
   responseBId?: string;
@@ -36,6 +38,7 @@ export interface RealtimeToolCycleTracker {
     callId: string;
     toolName: string;
     responseAId: string;
+    provider?: string;
     turnId?: string;
     contextVersion?: number;
   }): string;
@@ -44,6 +47,7 @@ export interface RealtimeToolCycleTracker {
     status: SlowRecallStatus;
     latencyMs: number;
     errorCode?: string;
+    metrics?: RealtimeTraceFields;
   }): void;
   recordMessageWrite(callId: string, input: {
     kind: RealtimeToolMessageKind;
@@ -52,7 +56,8 @@ export interface RealtimeToolCycleTracker {
   }): void;
   setExpectedOutcome(callId: string, outcome: RealtimeToolCycleOutcome, errorCode?: string): void;
   markAssistantResponseStarted(responseId: string): void;
-  markFirstAudio(responseId: string): void;
+  markFirstAudio(responseId: string): number | undefined;
+  setMetrics(callId: string, metrics: RealtimeTraceFields): void;
   markAssistantResponseDone(responseId: string, status: string): void;
   finish(callId: string, outcome: RealtimeToolCycleOutcome, reason: string, errorCode?: string): void;
   finishAll(outcome: 'session_ended' | 'provider_disconnected', reason: string): void;
@@ -83,6 +88,7 @@ export function createRealtimeToolCycleTracker(options: {
     toolRunId: cycle.toolRunId,
     callId: cycle.callId,
     toolName: cycle.toolName,
+    ...(cycle.provider ? { provider: cycle.provider } : {}),
   });
 
   const finish = (
@@ -106,12 +112,16 @@ export function createRealtimeToolCycleTracker(options: {
       ...(errorCode ?? cycle.errorCode ? { errorCode: errorCode ?? cycle.errorCode } : {}),
       toolCycleLatencyMs: roundMilliseconds(endedAt - cycle.startedAt),
       ...(cycle.recallLatencyMs === undefined ? {} : { slowRecallLatencyMs: cycle.recallLatencyMs }),
+      ...(cycle.slowPathMetrics ?? {}),
       ...(cycle.resumeRequestedAt === undefined || cycle.responseBStartedAt === undefined
         ? {}
         : { responseBLatencyMs: roundMilliseconds(cycle.responseBStartedAt - cycle.resumeRequestedAt) }),
       ...(cycle.responseBFirstAudioAt === undefined || cycle.responseBStartedAt === undefined
         ? {}
         : { responseBFirstAudioMs: roundMilliseconds(cycle.responseBFirstAudioAt - cycle.responseBStartedAt) }),
+      ...(cycle.responseBFirstAudioAt === undefined
+        ? {}
+        : { toolToFirstAudioMs: roundMilliseconds(cycle.responseBFirstAudioAt - cycle.startedAt) }),
       ...(cycle.responseBStartedAt === undefined
         ? {}
         : { responseBTotalMs: roundMilliseconds(endedAt - cycle.responseBStartedAt) }),
@@ -134,6 +144,7 @@ export function createRealtimeToolCycleTracker(options: {
         callId: input.callId,
         toolName: input.toolName,
         responseAId: input.responseAId,
+        ...(input.provider ? { provider: input.provider } : {}),
         startedAt: now(),
       };
       const responseAStartedAt = responseStartedAt.get(input.responseAId);
@@ -143,6 +154,7 @@ export function createRealtimeToolCycleTracker(options: {
         responseAId: cycle.responseAId,
         ...(input.turnId ? { turnId: input.turnId } : {}),
         ...(input.contextVersion === undefined ? {} : { contextVersion: input.contextVersion }),
+        ...(input.provider ? { provider: input.provider } : {}),
         ...(responseAStartedAt === undefined ? {} : {
           responseAStartedToToolCallMs: roundMilliseconds(cycle.startedAt - responseAStartedAt),
         }),
@@ -165,6 +177,7 @@ export function createRealtimeToolCycleTracker(options: {
       cycle.recallStatus = input.status;
       cycle.recallLatencyMs = roundMilliseconds(input.latencyMs);
       cycle.errorCode = input.errorCode;
+      cycle.slowPathMetrics = input.metrics;
       options.record('realtime.tool_cycle_recall_finished', {
         ...cycleFields(cycle),
         responseAId: cycle.responseAId,
@@ -232,16 +245,25 @@ export function createRealtimeToolCycleTracker(options: {
 
     markFirstAudio(responseId) {
       const cycle = cyclesByResponseId.get(responseId);
-      if (!cycle || cycle.responseBFirstAudioAt !== undefined) return;
+      if (!cycle || cycle.responseBFirstAudioAt !== undefined) return undefined;
       const at = now();
       cycle.responseBFirstAudioAt = at;
+      const toolToFirstAudioMs = roundMilliseconds(at - cycle.startedAt);
       options.record('realtime.tool_cycle_response_first_audio', {
         ...cycleFields(cycle),
         responseId,
+        toolToFirstAudioMs,
         ...(cycle.responseBStartedAt === undefined ? {} : {
           responseBFirstAudioMs: roundMilliseconds(at - cycle.responseBStartedAt),
         }),
       });
+      return toolToFirstAudioMs;
+    },
+
+    setMetrics(callId, metrics) {
+      const cycle = cyclesByCallId.get(callId);
+      if (!cycle) return;
+      cycle.slowPathMetrics = { ...cycle.slowPathMetrics, ...metrics };
     },
 
     markAssistantResponseDone(responseId, status) {

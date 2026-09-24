@@ -12,6 +12,7 @@ import {
 } from '../src/realtime/stepfun.js';
 
 const storyContext = {
+  interview_type: 'story' as const,
   user: { user_id: 'user-1', name: '测试用户' },
   life_stage: { stage_id: 'stage-1', title: '工作阶段' },
   story: {
@@ -125,6 +126,20 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   assert.equal((toolMessages?.[0]?.item as Record<string, unknown>).call_id, 'call-1');
   assert.equal(toolMessages?.[1]?.type, 'response.create');
   assert.equal(adapter.handleToolResult?.(toolCall, { status: 'stale' }, { resume: false })?.length, 1);
+});
+
+test('Step-Audio context tool is limited to an existing story continuation', () => {
+  const createContext = {
+    ...storyContext,
+    story: null,
+    task_context: { mode: 'create' as const },
+  };
+  const createSession = buildStepfunSessionUpdate(createContext).session as Record<string, unknown>;
+  assert.equal('tools' in createSession, false);
+
+  const legacyContext = { ...storyContext, interview_type: undefined };
+  const legacySession = buildStepfunSessionUpdate(legacyContext).session as Record<string, unknown>;
+  assert.equal('tools' in legacySession, false);
 });
 
 test('StepFun VAD silence duration is configurable while Qwen keeps its own setting', () => {

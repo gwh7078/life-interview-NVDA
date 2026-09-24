@@ -1,10 +1,15 @@
 export * from './common.js';
 export * from './onboarding-closeout.js';
 export * from './interview-closeout.js';
+export * from './interview-context-hint.js';
 export * from './story-completion.js';
 export * from './story-generation.js';
 
 import type { AgentTaskRequest, AgentTaskResult } from './common.js';
+import type {
+  InterviewContextHintTaskInput,
+  InterviewContextHintTaskOutput,
+} from './interview-context-hint.js';
 import type {
   ContributorCloseoutTaskInput,
   ContributorCloseoutTaskOutput,
@@ -46,6 +51,11 @@ export type ContributorCloseoutTaskRequest = AgentTaskRequest<ContributorCloseou
   mode: 'contributor';
 };
 
+export type InterviewContextHintTaskRequest = AgentTaskRequest<InterviewContextHintTaskInput> & {
+  taskType: 'interview.context_hint';
+  mode?: undefined;
+};
+
 export type StoryCompletionTaskRequest = AgentTaskRequest<StoryCompletionTaskInput> & {
   taskType: 'story.completion';
   mode?: undefined;
@@ -61,6 +71,7 @@ export type AgentTaskRequestUnion =
   | StoryCreateCloseoutTaskRequest
   | StoryContinueCloseoutTaskRequest
   | ContributorCloseoutTaskRequest
+  | InterviewContextHintTaskRequest
   | StoryCompletionTaskRequest
   | StoryGenerationTaskRequest;
 
@@ -84,6 +95,11 @@ export type ContributorCloseoutTaskResult = AgentTaskResult<ContributorCloseoutT
   mode: 'contributor';
 };
 
+export type InterviewContextHintTaskResult = AgentTaskResult<InterviewContextHintTaskOutput> & {
+  taskType: 'interview.context_hint';
+  mode?: undefined;
+};
+
 export type StoryCompletionTaskResult = AgentTaskResult<StoryCompletionTaskOutput> & {
   taskType: 'story.completion';
   mode?: undefined;
@@ -99,5 +115,6 @@ export type AgentTaskResultUnion =
   | StoryCreateCloseoutTaskResult
   | StoryContinueCloseoutTaskResult
   | ContributorCloseoutTaskResult
+  | InterviewContextHintTaskResult
   | StoryCompletionTaskResult
   | StoryGenerationTaskResult;

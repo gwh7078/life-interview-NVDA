@@ -68,10 +68,10 @@ NeMo Agent Toolkit
 - 正常任务目标是 **1 次 Agent Run 完成**。
 - 复杂任务目标是 **1 次 Agent Run + 少量必要 Tool Call**。
 - 最终结果严格结构化；仅在“结果格式失败”时使用强制 JSON / JSON Schema 作为兜底修复。
-- Realtime 主链路当前保持低延迟；Future v1.6 优先采用 Step-Audio Tool Calling 触发慢系统，Backend Adapter 负责 HOLD / Deadline / Stale Protection，独立 2B Judge 暂作为 Benchmark / Fallback。
+- Realtime 慢路径由 Step-Audio Tool Call 按需触发；Backend 保留 HOLD / 5.5 秒 Deadline / Cancel / Stale Protection，并限制到当前 story_continue Story。`interview.context_hint` Agent 已接入代码，真实本机 Agent smoke 尚未通过。
 - Retriever / Memory Search 已完成 Phase 3A 真实 ingest/query、限定检索与来源追溯验收。
 
-## 当前 4 个 Agent Task
+## 当前 Agent Tasks
 
 ```text
 onboarding.closeout
@@ -80,6 +80,8 @@ interview.closeout
   - story_create
   - story_continue
   - contributor
+
+interview.context_hint
 
 story.completion
 
@@ -103,7 +105,8 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 | Phase 3A Retriever / Classic Retrieval | **已完成 / 真实 Gate 通过** | SQLite Transcript 异步索引、RetrieverAdapter、条件式 Memory Search、真实 ingest/query 与来源追溯 |
 | Phase 3 A+B Integration Gate | **自动验收通过 / G0–G8 PASS** | Realtime Tool/HOLD/Resume、Slow Coordinator、Retriever recall、并发隔离、延迟与最终状态核对 |
 | NAT-1 Agent Evaluation Lane | **已完成 / 真实 Smoke 6/6** | NAT Bridge、确定性 Evaluator、Profiler、24 条 Synthetic Regression；Relay / ATIF / Phoenix 后续 |
-| Realtime Fast/Slow + Agentic Retrieval | 延期 | Slow System、Agentic Retrieval、时代背景检索 |
+| Realtime Fast/Slow Context Agent | **代码完成 / 本机 Agent smoke FAIL** | Current Story retrieval、单次只读 Context Hint Agent、直接检索降级；完整语音验收未通过 |
+| Agentic Retrieval / 年代背景检索 | 后续 | 跨 Story 深度检索、Era Context |
 | DGX Spark Optimization | 后续 | 本地推理、模型评测、性能优化 |
 | Competition Packaging | 后续 | README、部署文档、Demo、Benchmark、视频、征文 |
 
@@ -115,9 +118,10 @@ Agent 执行策略：[`docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`](docs/03-ag
 4. [Agent 执行策略](docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md)
 5. [Phase 2B-C 产品 Runtime 与真实 E2E](docs/05-development/phases/PHASE_2B_C_PRODUCT_RUNTIME_INTEGRATION_v1.0.md)
 6. [架构决策 ADR](docs/06-decisions/ADR_INDEX_v1.0.md)
-7. [未来 Realtime Fast / Slow](docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
-8. [比赛评分对照](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)
-9. [比赛要求原始整理](资料库/DGX_Spark_Hackathon_比赛要求.md)
+7. [Realtime Slow Context 实现状态](docs/05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md)
+8. [Realtime Fast / Slow 架构基线](docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
+9. [比赛评分对照](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)
+10. [比赛要求原始整理](资料库/DGX_Spark_Hackathon_比赛要求.md)
 
 真实 Agent 验收记录：[`docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md`](docs/07-reports/testing/PHASE2B_C_REAL_AGENT_E2E_REPORT_v1.0.md)
 

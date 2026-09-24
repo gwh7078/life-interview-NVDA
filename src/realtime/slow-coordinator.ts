@@ -8,11 +8,40 @@ export interface RealtimeRecallRequest {
   turnId: string;
   contextVersion: number;
   query: string;
+  storySummary?: string;
+  recentContext?: Array<{ role: 'user' | 'assistant'; text: string }>;
+  onProgress?: (event: RealtimeSlowPathProgress) => void;
 }
 
 export interface RealtimeContextFact {
   claim: string;
+  question?: string;
   sourceMessageIds: string[];
+}
+
+export interface RealtimeSlowPathProgress {
+  stage: 'retrieval' | 'slow_agent' | 'context_hint';
+  status: 'started' | 'completed' | 'failed' | 'skipped' | 'ready';
+  latencyMs?: number;
+  count?: number;
+  candidateCount?: number;
+  evidenceCount?: number;
+  inputChars?: number;
+  storySummaryChars?: number;
+  recentContextChars?: number;
+  evidenceInputChars?: number;
+  model?: string;
+  skill?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  selectedEvidenceCount?: number;
+  possibleConflictCount?: number;
+  interviewHintCount?: number;
+  fallbackUsed?: boolean;
+  fallbackType?: string;
+  skipReason?: string;
+  errorCode?: string;
 }
 
 export interface RealtimeContextHint {

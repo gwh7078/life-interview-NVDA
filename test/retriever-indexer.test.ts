@@ -11,7 +11,7 @@ import { retrieverIndexJobs } from '../src/db/schema.js';
 import { createStoryInterviewCore } from '../src/interview/core.js';
 import { endRealtimeInterviewSession } from '../src/interview/session.js';
 import { TranscriptRepository } from '../src/repositories/domain-repositories.js';
-import { RetrieverIndexService } from '../src/retriever/indexer.js';
+import { buildRetrieverIndexInput, RetrieverIndexService } from '../src/retriever/indexer.js';
 import { RetrieverScriptGateway } from '../src/retriever/script-gateway.js';
 import type { RetrieverAdapter, RetrieverIndexInput, RetrieverRequestOptions } from '../src/retriever/types.js';
 
@@ -67,6 +67,123 @@ function fakeAdapter(options: {
     async getIndexStatus(sessionId) { return { documentId: sessionId, status: 'completed' }; },
   };
 }
+
+function transcriptText(messages: Array<{
+  message_id: string;
+  role: 'assistant' | 'user';
+  text: string;
+}>): string {
+  return buildRetrieverIndexInput({
+    userId: 'user-1',
+    sessionId: 'session-1',
+    storyId: null,
+    stageId: null,
+    sessionType: 'story',
+    sourceType: 'subject',
+    endedAt: null,
+    transcriptJson: JSON.stringify(messages.map((message) => ({
+      ...message,
+      timestamp: '2026-01-01T00:00:00.000Z',
+      provider: 'test',
+    }))),
+  }).transcriptText;
+}
+
+test('Retriever indexes Q+A pairs with provenance only on each user answer', () => {
+  const text = transcriptText([
+    { message_id: 'question-1', role: 'assistant', text: '你第一次独自出远门是什么时候？' },
+    { message_id: 'answer-1', role: 'user', text: '我第一次独自去北京是在2013年。' },
+    { message_id: 'question-2', role: 'assistant', text: '之后去了哪里？' },
+    { message_id: 'answer-2', role: 'user', text: '我后来去了上海。' },
+  ]);
+
+  assert.match(text, /\[segment_id=answer-1\]\[message_id=answer-1\]\[Q\+A\]/);
+  assert.match(text, /Question \(context only\): 你第一次独自出远门是什么时候？/);
+  assert.match(text, /Answer \(user-provided fact\): 我第一次独自去北京是在2013年。/);
+  assert.match(text, /\[segment_id=answer-2\]\[message_id=answer-2\]\[Q\+A\]/);
+  assert.match(text, /Question \(context only\): 之后去了哪里？/);
+  assert.match(text, /Answer \(user-provided fact\): 我后来去了上海。/);
+  assert.doesNotMatch(text, /\[segment_id=question-1\]|\[message_id=question-1\]/);
+  assert.doesNotMatch(text, /\[segment_id=question-2\]|\[message_id=question-2\]/);
+});
+
+test('a user answer without an assistant question is indexed with an empty question', () => {
+  const text = transcriptText([
+    { message_id: 'answer-alone', role: 'user', text: '我第一次独自去北京是在2013年。' },
+  ]);
+
+  assert.match(text, /Question \(context only\): \nAnswer \(user-provided fact\): 我第一次独自去北京是在2013年。/);
+  assert.match(text, /\[segment_id=answer-alone\]\[message_id=answer-alone\]/);
+});
+
+test('the nearest persisted assistant message is used when several questions precede an answer', () => {
+  const text = transcriptText([
+    { message_id: 'question-old', role: 'assistant', text: '较早的问题' },
+    { message_id: 'question-nearest', role: 'assistant', text: '紧邻回答的问题' },
+    { message_id: 'answer-nearest', role: 'user', text: '回答内容' },
+  ]);
+
+  assert.match(text, /Question \(context only\): 紧邻回答的问题/);
+  assert.doesNotMatch(text, /较早的问题/);
+});
+
+test('partial status cannot be represented; indexing accepts schema-valid persisted messages only', () => {
+  assert.throws(() => buildRetrieverIndexInput({
+    userId: 'user-1',
+    sessionId: 'session-1',
+    storyId: null,
+    stageId: null,
+    sessionType: 'story',
+    sourceType: 'subject',
+    endedAt: null,
+    transcriptJson: JSON.stringify([{
+      message_id: 'partial-answer',
+      role: 'user',
+      text: '尚未完成的回答',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      provider: 'test',
+      status: 'partial',
+    }]),
+  }), /Session Transcript JSON is invalid/);
+});
+
+test('blank persisted user answers are skipped and do not carry a question forward', () => {
+  const text = transcriptText([
+    { message_id: 'question-for-blank', role: 'assistant', text: '这个问题没有有效回答' },
+    { message_id: 'blank-answer', role: 'user', text: ' \n  ' },
+    { message_id: 'answer-after-blank', role: 'user', text: '没有问题的有效回答' },
+  ]);
+
+  assert.doesNotMatch(text, /blank-answer|这个问题没有有效回答/);
+  assert.match(text, /Question \(context only\): \nAnswer \(user-provided fact\): 没有问题的有效回答/);
+});
+
+test('long answers split into bounded chunks and repeat the same question on each chunk', () => {
+  const answer = '答'.repeat(2500);
+  const text = transcriptText([
+    { message_id: 'long-question', role: 'assistant', text: '请详细讲讲。' },
+    { message_id: 'long-answer', role: 'user', text: answer },
+  ]);
+  const chunks = (text.match(/Answer \(user-provided fact\): [^\n]*/gu) ?? [])
+    .map((line) => line.slice('Answer (user-provided fact): '.length));
+
+  assert.deepEqual(chunks.map((chunk) => Array.from(chunk).length), [320, 320, 320, 320, 320, 320, 320, 260]);
+  assert.equal((text.match(/Question \(context only\): 请详细讲讲。/gu) ?? []).length, 8);
+  assert.equal(chunks.join(''), answer);
+  assert.equal((text.match(/\[segment_id=long-answer\]/gu) ?? []).length, 8);
+});
+
+test('a correcting answer is marked as fact while the possibly wrong question stays context', () => {
+  const text = transcriptText([
+    { message_id: 'question-wrong-fact', role: 'assistant', text: '你是2014年开始工作的，对吗？' },
+    { message_id: 'answer-correction', role: 'user', text: '不是，我是2013年开始工作的。' },
+  ]);
+
+  assert.match(text, /Question \(context only\): 你是2014年开始工作的，对吗？/);
+  assert.match(text, /Answer \(user-provided fact\): 不是，我是2013年开始工作的。/);
+  assert.match(text, /\[segment_id=answer-correction\]\[message_id=answer-correction\]/);
+  assert.doesNotMatch(text, /\[segment_id=question-wrong-fact\]|\[message_id=question-wrong-fact\]/);
+});
 
 test('Transcript remains persisted, indexing is traceable, and the same content is idempotent', async () => {
   const input = fixture();

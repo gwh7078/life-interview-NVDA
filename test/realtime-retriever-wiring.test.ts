@@ -96,7 +96,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     async searchTranscript(input) {
       searchInput = input;
       return [{
-        text: '2013 年春节以后第一次到北京。',
+        text: '[segment_id=history-message][message_id=history-message][Q+A]\nQuestion (context only): 第一次去北京是什么时候？\nAnswer (user-provided fact): 2013 年春节以后第一次到北京。',
         score: 0.95,
         ownerId: input.ownerId,
         storyId: input.storyId ?? null,
@@ -245,6 +245,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
     assert.equal(searchInput?.query, '第一次去北京是什么时候');
     assert.deepEqual(output?.facts, [{
       claim: '2013 年春节以后第一次到北京。',
+      question: '第一次去北京是什么时候？',
       sourceMessageIds: ['history-message'],
     }]);
     assert.equal(result.resume, false);
@@ -271,7 +272,7 @@ test('Realtime Tool Call uses the default Retriever recall adapter when one is c
       .find((row) => row.event === 'realtime.slow_recall_finished');
     assert.equal(slowRecallTrace?.status, 'completed');
     assert.equal(slowRecallTrace?.factCount, 1);
-    assert.equal(slowRecallTrace?.factSourceMessageIds, 'history-message');
+    assert.equal('factSourceMessageIds' in (slowRecallTrace ?? {}), false);
     assert.equal('query' in (slowRecallTrace ?? {}), false);
     assert.equal(traceText.includes('第一次去北京是什么时候'), false);
     assert.equal(traceText.includes('2013 年春节以后第一次到北京。'), false);

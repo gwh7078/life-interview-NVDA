@@ -304,7 +304,10 @@ test('Story continuation loads persisted Agent Memory without replaying historic
   });
 
   assert.equal(context.story?.agent_memory, '【事件过程】\n- 用户已经说明项目上线前先和团队确认风险。\n【已覆盖主题】\n- 团队支持情况已经讨论清楚。');
-  assert.equal('summary' in (context.story ?? {}), false);
+  assert.equal(typeof context.story?.summary, 'string');
+  assert.match(String(context.story?.summary), /项目于 2013 年正式上线/);
+  assert.equal(context.interview_type, 'story');
+  assert.deepEqual(context.task_context, { mode: 'continue' });
   assert.equal('recent_asked_questions' in context, false);
   assert.equal('history' in context, false);
   assert.equal('related_stories' in context, false);

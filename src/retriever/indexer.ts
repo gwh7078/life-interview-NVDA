@@ -87,6 +87,28 @@ function mergeRemoteStatus(
   };
 }
 
+const ANSWER_CHUNK_SIZE = 320;
+
+function splitAnswer(text: string): string[] {
+  const characters = Array.from(text);
+  if (characters.length <= ANSWER_CHUNK_SIZE) return [text];
+  const chunks: string[] = [];
+  for (let offset = 0; offset < characters.length;) {
+    let end = Math.min(offset + ANSWER_CHUNK_SIZE, characters.length);
+    if (end < characters.length) {
+      for (let boundary = end - 1; boundary >= offset + 160; boundary -= 1) {
+        if (/[。！？!?；;\n]/u.test(characters[boundary] ?? '')) {
+          end = boundary + 1;
+          break;
+        }
+      }
+    }
+    chunks.push(characters.slice(offset, end).join(''));
+    offset = end;
+  }
+  return chunks;
+}
+
 function transcriptDocument(input: {
   userId: string;
   sessionId: string;
@@ -97,6 +119,18 @@ function transcriptDocument(input: {
   endedAt: string | null;
   messages: TranscriptMessage[];
 }): { text: string; contentHash: string } {
+  const exchanges: Array<{ question: string; answer: TranscriptMessage }> = [];
+  let latestAssistant: TranscriptMessage | undefined;
+  for (const message of input.messages) {
+    if (message.role === 'assistant') {
+      latestAssistant = message;
+    } else {
+      // TranscriptMessage has no partial/final marker, so index only persisted user messages.
+      if (message.text.trim()) exchanges.push({ question: latestAssistant?.text ?? '', answer: message });
+      latestAssistant = undefined;
+    }
+  }
+
   const lines = [
     '# Life Interview Transcript',
     `user_id: ${input.userId}`,
@@ -107,9 +141,9 @@ function transcriptDocument(input: {
     `source_type: ${input.sourceType}`,
     `ended_at: ${input.endedAt ?? ''}`,
     '',
-    ...input.messages.map((message) => (
-      `[segment_id=${message.message_id}][message_id=${message.message_id}][${message.role}] ${message.text}`
-    )),
+    ...exchanges.flatMap(({ question, answer }) => splitAnswer(answer.text).map((chunk) => (
+      `[segment_id=${answer.message_id}][message_id=${answer.message_id}][Q+A]\nQuestion (context only): ${question}\nAnswer (user-provided fact): ${chunk}`
+    ))),
   ];
   const text = lines.join('\n');
   const contentHash = createHash('sha256').update(text, 'utf8').digest('hex');

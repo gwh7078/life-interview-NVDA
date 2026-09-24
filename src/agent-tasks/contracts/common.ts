@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const agentTaskTypes = [
   'onboarding.closeout',
   'interview.closeout',
+  'interview.context_hint',
   'story.completion',
   'story.generation',
 ] as const;

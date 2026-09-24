@@ -6,6 +6,7 @@ import {
   type AgentTaskExecutionResult,
   type AgentTaskExecutor,
   type ContributorCloseoutTaskRequest,
+  type InterviewContextHintTaskRequest,
   type StoryCompletionTaskRequest,
 } from '../../src/agent-tasks/index.js';
 import { AgentTaskContractError } from '../../src/agent-tasks/errors.js';
@@ -68,6 +69,54 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
   assert.equal(result.runtime.skillVersion, 'v1');
   assert.equal(result.runtime.provider, 'stepfun');
   assert.equal(result.runtime.model, 'test-model');
+  await assert.rejects(
+    () => adapter.run(request, {
+      scriptContext: { baseUrl: 'http://backend.test', token: 'short-lived' },
+    }),
+    (error: unknown) => error instanceof AgentTaskContractError
+      && error.code === 'AGENT_SCRIPT_CAPABILITY_UNAUTHORIZED',
+  );
+});
+
+test('NemoClawAgentTaskAdapter routes realtime context hints through the bounded observer policy', async () => {
+  const executor = new FakeExecutor({
+    output: {
+      selected_evidence_ids: ['e1'],
+      possible_conflicts: [],
+      interview_hints: ['可以问问当时是谁先提出这个安排。'],
+    },
+    runtime: { runtime: 'nemoclaw-openclaw', latencyMs: 20 },
+  });
+  const adapter = new NemoClawAgentTaskAdapter(executor);
+  const request: InterviewContextHintTaskRequest = {
+    runId: 'run-context-hint',
+    taskType: 'interview.context_hint',
+    ownerId: 'owner-1',
+    resource: { type: 'interview_turn', id: 'turn-1' },
+    schemaVersion: 'v1',
+    payload: {
+      query: '那次是谁先提出的？',
+      story_summary: '第一次参加社区活动。',
+      recent_context: [{ role: 'user', text: '用户刚提到活动是在夏天。' }],
+      evidence: [{ id: 'e1', question: '当时谁和你一起去？', answer: '我和姐姐一起去的。' }],
+    },
+  };
+
+  const result = await adapter.run(request);
+  const routed = executor.requests[0];
+  assert.equal(routed?.skill, 'interview-observer');
+  assert.equal(routed?.executionPolicy.agentId, 'realtime-context');
+  assert.equal(routed?.modelProfile, 'realtime-context');
+  assert.equal(routed?.executionPolicy.maxAttempts, 1);
+  assert.equal(routed?.executionPolicy.timeoutMs, 4_800);
+  assert.deepEqual(routed?.executionPolicy.scriptCapabilities, []);
+  assert.equal(routed?.executionPolicy.allowFormatRepair, false);
+  assert.equal(routed?.executionPolicy.allowValidationRepair, false);
+  assert.deepEqual(result.output, {
+    selected_evidence_ids: ['e1'],
+    possible_conflicts: [],
+    interview_hints: ['可以问问当时是谁先提出这个安排。'],
+  });
   await assert.rejects(
     () => adapter.run(request, {
       scriptContext: { baseUrl: 'http://backend.test', token: 'short-lived' },

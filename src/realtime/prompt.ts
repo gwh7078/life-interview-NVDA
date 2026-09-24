@@ -5,7 +5,7 @@ import { isStoryGapQuestion } from '../story/gaps.js';
 import { externalContributorRelationshipLabel } from '../interview/external-contributor/relationship.js';
 
 export interface StoryInterviewContext {
-  /** Existing Story contexts omit this at runtime for wire/backward compatibility. */
+  /** Older serialized Story contexts may omit this; missing values disable context tools. */
   interview_type?: 'story';
   user: Record<string, unknown>;
   life_stage: Record<string, unknown>;

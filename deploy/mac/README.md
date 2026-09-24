@@ -97,3 +97,27 @@ The smoke Skill itself contains no database path and requires only the Tool API 
 9. Run `npm run agent:smoke`.
 
 The real hosted-model smoke is intentionally outside deterministic CI.
+
+## Realtime Slow Context Agent
+
+The Realtime slow path uses the existing `my-assistant` sandbox and a dedicated
+`realtime-context` OpenClaw agent. Install the `interview-observer` skill and
+configure that agent with a deny-all tool policy:
+
+```bash
+./deploy/mac/install-skill.sh
+```
+
+`install-skill.sh` installs the Skill to the sandbox workspace, then copies it
+into the dedicated agent workspace and applies the no-tools policy. Re-run
+`./deploy/mac/configure-realtime-context-agent.sh` to re-verify or reapply only
+that profile.
+
+The configuration script creates the agent only when missing, validates the
+OpenClaw config change with `--dry-run`, and then sets `agents.list[].tools.deny`
+to `[*]`. The slow task does not enable tool calls, scripts, format repair, or
+validation repair. Set `REALTIME_CONTEXT_AGENT_ENABLED=1` and optionally
+`AGENT_MODEL_REALTIME_CONTEXT` in the worktree's ignored `.env` to enable the
+Agent step. The model route falls back to `AGENT_MODEL_REASONING_FAST` and then
+`AGENT_MODEL_DEFAULT`; Retriever-only mode remains available as a direct-evidence
+fallback.

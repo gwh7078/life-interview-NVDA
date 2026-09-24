@@ -81,7 +81,7 @@ test('Interview Core keeps four product scenarios distinct while Story create/co
   assert.equal(continueStory.story?.story_id, seedIds.firstProject);
   assert.match(String(continueStory.story?.agent_memory), /跨团队项目/);
   assert.deepEqual(continueStory.story?.gaps, ['项目上线前最担心什么？']);
-  assert.equal(continueStory.task_context, undefined);
+  assert.deepEqual(continueStory.task_context, { mode: 'continue' });
 
   // 4. 第三者访谈：独立 External Contributor Context，连续记忆属于 share_id。
   const external = core.prepare(seedIds.user, {

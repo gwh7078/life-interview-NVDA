@@ -24,6 +24,7 @@ function userMessageIds(request: AgentTaskRequestUnion): string[] {
   if (request.taskType === 'onboarding.closeout') return [];
   if (request.taskType === 'story.completion') return [];
   if (request.taskType === 'story.generation') return [];
+  if (request.taskType === 'interview.context_hint') return [];
   return request.payload.transcript
     .filter((message) => message.role === 'user')
     .map((message) => message.message_id);

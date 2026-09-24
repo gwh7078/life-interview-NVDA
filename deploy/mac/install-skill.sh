@@ -9,6 +9,7 @@ skills=(
   "interview-closeout"
   "story-completion"
   "story-generation"
+  "interview-observer"
 )
 
 echo "Installing Phase 2B-C skills into NemoClaw sandbox: $sandbox"
@@ -25,6 +26,8 @@ done
 echo
 echo "Installed skills:"
 nemoclaw "$sandbox" skill list
+
+bash "$repo_root/deploy/mac/configure-realtime-context-agent.sh"
 
 echo
 echo "Phase 2B-C skill installation complete."

@@ -87,6 +87,14 @@ function stubOutput(request: AgentTaskRequestUnion): unknown {
     };
   }
 
+  if (request.taskType === 'interview.context_hint') {
+    return {
+      selected_evidence_ids: [],
+      possible_conflicts: [],
+      interview_hints: [],
+    };
+  }
+
   return { content: 'Stub story document.' };
 }
 

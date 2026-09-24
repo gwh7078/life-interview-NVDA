@@ -69,7 +69,7 @@ Phase 2A 已冻结 Backend / Agent Contract。
 Phase 2B 正式实现：
 
 - NemoClawAgentTaskAdapter；
-- 4 类正式 Agent Task / Skill family；
+- 5 类正式 Agent Task / Skill family（含 Realtime `interview.context_hint`）；
 - Model Router；
 - Runtime Error Contract；
 - Tracing；
@@ -119,7 +119,7 @@ dense / hybrid retrieval
 
 用途：
 
-- Realtime Slow System；
+- 已实现但仍待真实 Agent / 语音验收的 Current Story Realtime Context Hint；
 - 普通历史 Recall；
 - 低延迟 Evidence Search。
 

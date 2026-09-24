@@ -51,6 +51,7 @@ import {
   RealtimeSlowCoordinator,
   UnavailableRealtimeRecall,
   type RealtimeRecallPort,
+  type RealtimeSlowPathProgress,
 } from './realtime/slow-coordinator.js';
 import {
   createRealtimeTraceStageTracker,
@@ -92,11 +93,11 @@ import { AgentToolTokenService } from '../agent/tools/token.js';
 import { createRetrieverClientFromEnv, type RetrieverAdapter } from './retriever/client.js';
 import { RetrieverIndexService } from './retriever/indexer.js';
 import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
-import { RetrieverRealtimeRecall } from './realtime/retriever-recall.js';
 import { ObservationBus, emitObservationEvent } from './observability/observation-bus.js';
 import { createObservationContext, type ObservationContext } from './observability/observation-event.js';
 import { adaptRealtimeTrace } from './observability/adapters/realtime-adapter.js';
 import { createObservationAnalyticsConsumer } from './observability/analytics-consumer.js';
+import { RealtimeSlowContextPipeline } from './realtime/slow-context-pipeline.js';
 import { createEraContextClientFromEnv } from './era-context/client.js';
 import { EraContextScriptError, EraContextScriptGateway } from './era-context/script-gateway.js';
 
@@ -173,6 +174,7 @@ export interface InterviewServiceDependencies {
   eraContextScriptGateway?: EraContextScriptGateway;
   realtimeRecall?: RealtimeRecallPort;
   observationBus?: ObservationBus;
+  realtimeContextAgentTasks?: AgentTaskPort | null;
 }
 
 interface ProviderTranscriptMessage {
@@ -579,6 +581,14 @@ function createStoryWorkflowDependencies(
         onObservationEvent: (event) => emitObservationEvent(event, observationBus),
       })
     : dependencies.agentTasks;
+  const realtimeAgentFlag = process.env.REALTIME_CONTEXT_AGENT_ENABLED?.trim().toLowerCase() ?? '';
+  const realtimeAgentEnabled = ['1', 'true'].includes(realtimeAgentFlag)
+    || (realtimeAgentFlag === '' && agentTasks !== null);
+  const realtimeContextAgentTasks = dependencies.realtimeContextAgentTasks !== undefined
+    ? dependencies.realtimeContextAgentTasks
+    : realtimeAgentEnabled
+      ? agentTasks ?? createAgentTaskPort({ ...process.env, AI_TASK_RUNTIME: 'agent' }, { databasePath: config.databasePath })
+      : null;
   const storyCompletion = dependencies.storyCompletion
     ?? createStoryCompletionService(
       config.databasePath,
@@ -596,7 +606,7 @@ function createStoryWorkflowDependencies(
   const retriever = dependencies.retriever
     ?? (process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true' ? createRetrieverClientFromEnv(process.env) : undefined);
   const realtimeRecall = dependencies.realtimeRecall
-    ?? (retriever ? new RetrieverRealtimeRecall(retriever) : undefined);
+    ?? (retriever ? new RealtimeSlowContextPipeline(retriever, realtimeContextAgentTasks) : undefined);
   const retrieverIndex = dependencies.retrieverIndex
     ?? (retriever ? new RetrieverIndexService(config.databasePath, retriever) : undefined);
   const retrievalTokenSecret = process.env.AGENT_RETRIEVAL_TOKEN_SECRET?.trim()
@@ -1931,6 +1941,7 @@ function createRealtimeHandler(
   let modelCompletionReady = false;
   const transcriptWriteErrors: string[] = [];
   const seenProviderMessages = new Set<string>();
+  const recentFinalMessages: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   const activeResponses = new Set<string>();
   const assistantResponses = new Map<string, AssistantResponse>();
   const providerAudioTrace = new Map<string, ProviderAudioTrace>();
@@ -1945,6 +1956,29 @@ function createRealtimeHandler(
     if (client.readyState !== WebSocket.OPEN) return false;
     client.send(JSON.stringify(message));
     return true;
+  };
+
+  const competitionTechPanelEnabled = process.env.COMPETITION_TECH_PANEL?.trim() === '1';
+  const sendTechStatus = (input: {
+    stage: 'fast_voice' | 'tool_trigger' | 'retrieval' | 'slow_agent' | 'context_hint' | 'resume' | 'first_audio';
+    status: 'started' | 'completed' | 'failed' | 'skipped' | 'ready';
+    latencyMs?: number;
+    count?: number;
+    model?: string;
+    skill?: string;
+    errorCode?: string;
+  }): void => {
+    if (!competitionTechPanelEnabled) return;
+    send({
+      type: 'tech_status',
+      stage: input.stage,
+      status: input.status,
+      ...(Number.isFinite(input.latencyMs) ? { latencyMs: input.latencyMs } : {}),
+      ...(Number.isFinite(input.count) ? { count: input.count } : {}),
+      ...(input.model ? { model: input.model } : {}),
+      ...(input.skill ? { skill: input.skill } : {}),
+      ...(input.errorCode ? { errorCode: input.errorCode } : {}),
+    });
   };
 
   const sendProviderMessages = (messages: Record<string, unknown>[]): boolean => {
@@ -2079,6 +2113,7 @@ function createRealtimeHandler(
       callId: event.callId,
       toolName: event.name,
       responseAId: event.responseId,
+      provider: selectedProvider,
       turnId,
       contextVersion: version,
     });
@@ -2098,8 +2133,13 @@ function createRealtimeHandler(
       possibleConflicts: [],
       interviewHints: [],
     };
-    const storyContextAllowed = sessionContext.interview_type === undefined
-      || sessionContext.interview_type === 'story';
+    const storyContext = sessionContext.interview_type === 'story'
+      ? record(sessionContext.story)
+      : undefined;
+    const storyContextAllowed = sessionContext.interview_type === 'story'
+      && sessionContext.task_context?.mode === 'continue'
+      && typeof storyContext?.story_id === 'string'
+      && storyContext.story_id.trim().length > 0;
     if (event.name !== STEPFUN_CONTEXT_TOOL || !storyContextAllowed) {
       const write = writeToolResultMessages(event.callId, selectedAdapter.handleToolResult(event, unavailableOutput, { resume: true }));
       const errorCode = event.name !== STEPFUN_CONTEXT_TOOL
@@ -2151,6 +2191,7 @@ function createRealtimeHandler(
       return;
     }
     toolCycleTracker.markRecallStarted(event.callId);
+    sendTechStatus({ stage: 'tool_trigger', status: 'started' });
     recordTrace('realtime.recall_started', {
       callId: event.callId,
       toolRunId,
@@ -2163,18 +2204,111 @@ function createRealtimeHandler(
 
     void (async () => {
       const recallStartedAt = performance.now();
-      const storyContext = sessionContext && 'story' in sessionContext
-        ? record(sessionContext.story)
-        : undefined;
+      const deadlineMs = config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS;
+      const responseIdlePromise = waitForResponseIdle(event.responseId, deadlineMs);
+      const storySummary = typeof storyContext?.summary === 'string' ? storyContext.summary : '';
+      let pathMetrics: RealtimeTraceFields = {
+        storyExists: Boolean(storyContext?.story_id),
+        storySummaryChars: storySummary.length,
+        slowAgentStarted: false,
+      };
+      const onProgress = (progress: RealtimeSlowPathProgress): void => {
+        const fields: RealtimeTraceFields = {
+          callId: event.callId,
+          toolRunId,
+          stage: progress.stage,
+          status: progress.status,
+          ...(progress.latencyMs === undefined ? {} : { latencyMs: progress.latencyMs }),
+          ...(progress.count === undefined ? {} : { count: progress.count }),
+          ...(progress.candidateCount === undefined ? {} : { candidateCount: progress.candidateCount }),
+          ...(progress.evidenceCount === undefined ? {} : { retrievalEvidenceCount: progress.evidenceCount }),
+          ...(progress.inputChars === undefined ? {} : { inputChars: progress.inputChars }),
+          ...(progress.storySummaryChars === undefined ? {} : { storySummaryChars: progress.storySummaryChars }),
+          ...(progress.recentContextChars === undefined ? {} : { recentContextChars: progress.recentContextChars }),
+          ...(progress.evidenceInputChars === undefined ? {} : { evidenceInputChars: progress.evidenceInputChars }),
+          ...(progress.model ? { slowAgentModel: progress.model } : {}),
+          ...(progress.skill ? { skill: progress.skill } : {}),
+          ...(progress.promptTokens === undefined ? {} : { promptTokens: progress.promptTokens }),
+          ...(progress.completionTokens === undefined ? {} : { completionTokens: progress.completionTokens }),
+          ...(progress.totalTokens === undefined ? {} : { totalTokens: progress.totalTokens }),
+          ...(progress.selectedEvidenceCount === undefined ? {} : { selectedEvidenceCount: progress.selectedEvidenceCount }),
+          ...(progress.possibleConflictCount === undefined ? {} : { possibleConflictCount: progress.possibleConflictCount }),
+          ...(progress.interviewHintCount === undefined ? {} : { interviewHintCount: progress.interviewHintCount }),
+          ...(progress.fallbackUsed === undefined ? {} : { fallbackUsed: progress.fallbackUsed }),
+          ...(progress.fallbackType ? { fallbackType: progress.fallbackType } : {}),
+          ...(progress.skipReason ? { slowAgentSkipReason: progress.skipReason } : {}),
+          ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
+        };
+        const eventStatus = progress.status === 'completed' ? 'finished' : progress.status;
+        recordTrace(`realtime.slow_path.${progress.stage}.${eventStatus}`, fields);
+
+        if (progress.stage === 'retrieval') {
+          if (progress.status === 'completed') {
+            pathMetrics = {
+              ...pathMetrics,
+              retrievalLatencyMs: progress.latencyMs,
+              candidateCount: progress.candidateCount,
+              retrievalEvidenceCount: progress.evidenceCount,
+              qaUnitCount: progress.evidenceCount,
+            };
+          }
+        } else if (progress.stage === 'slow_agent') {
+          if (progress.status === 'started') pathMetrics = { ...pathMetrics, slowAgentStarted: true };
+          if (progress.status === 'skipped') {
+            pathMetrics = {
+              ...pathMetrics,
+              slowAgentSkipped: true,
+              slowAgentSkipReason: progress.skipReason,
+              fallbackUsed: progress.fallbackUsed,
+              fallbackType: progress.fallbackType,
+            };
+          }
+          if (progress.status === 'completed' || progress.status === 'failed') {
+            pathMetrics = {
+              ...pathMetrics,
+              slowAgentLatencyMs: progress.latencyMs,
+              ...(progress.model ? { slowAgentModel: progress.model } : {}),
+              ...(progress.skill ? { skill: progress.skill } : {}),
+              ...(progress.promptTokens === undefined ? {} : { promptTokens: progress.promptTokens }),
+              ...(progress.completionTokens === undefined ? {} : { completionTokens: progress.completionTokens }),
+              ...(progress.totalTokens === undefined ? {} : { totalTokens: progress.totalTokens }),
+              ...(progress.selectedEvidenceCount === undefined ? {} : { selectedEvidenceCount: progress.selectedEvidenceCount }),
+              ...(progress.fallbackUsed === undefined ? {} : { fallbackUsed: progress.fallbackUsed }),
+              ...(progress.fallbackType ? { fallbackType: progress.fallbackType } : {}),
+            };
+          }
+        } else if (progress.status === 'ready') {
+          pathMetrics = {
+            ...pathMetrics,
+            selectedEvidenceCount: progress.selectedEvidenceCount ?? progress.count,
+            possibleConflictCount: progress.possibleConflictCount,
+            interviewHintCount: progress.interviewHintCount,
+            fallbackUsed: progress.fallbackUsed,
+            fallbackType: progress.fallbackType,
+          };
+        }
+        toolCycleTracker.setMetrics(event.callId, pathMetrics);
+
+        sendTechStatus({
+          stage: progress.stage === 'slow_agent' ? 'slow_agent' : progress.stage,
+          status: progress.status,
+          latencyMs: progress.latencyMs,
+          count: progress.selectedEvidenceCount ?? progress.evidenceCount ?? progress.count,
+          model: progress.model,
+          skill: progress.skill,
+          errorCode: progress.errorCode,
+        });
+      };
       const result = await slowCoordinator.run({
         ownerId: authContext.userId,
         sessionId: interviewSession!.sessionId,
-        storyId: typeof storyContext?.story_id === 'string'
-          ? storyContext.story_id
-          : undefined,
+        storyId: storyContext!.story_id as string,
         turnId,
         contextVersion: version,
         query,
+        storySummary,
+        recentContext: recentFinalMessages.slice(-4),
+        onProgress,
       }, () => phase === 'active'
         && contextVersion === version
         && (currentTurnId === undefined || currentTurnId === turnId));
@@ -2189,7 +2323,6 @@ function createRealtimeHandler(
         totalElapsedMs: performance.now() - recallStartedAt,
         factCount: result.hint?.facts.length ?? 0,
         factClaimChars: result.hint?.facts.reduce((total, fact) => total + fact.claim.length, 0) ?? 0,
-        factSourceMessageIds: result.hint?.facts.flatMap((fact) => fact.sourceMessageIds).join(','),
         possibleConflictCount: result.hint?.possibleConflicts.length ?? 0,
         interviewHintCount: result.hint?.interviewHints.length ?? 0,
         contextVersion: version,
@@ -2198,6 +2331,10 @@ function createRealtimeHandler(
       toolCycleTracker.markRecallFinished(event.callId, {
         status: result.status,
         latencyMs: result.latencyMs,
+        metrics: {
+          ...pathMetrics,
+          slowPathLatencyMs: result.latencyMs,
+        },
         ...(result.errorCode ? { errorCode: result.errorCode } : {}),
       });
       if (diagnosticsContentEnabled()) {
@@ -2213,7 +2350,7 @@ function createRealtimeHandler(
         });
       }
 
-      const responseIdle = await waitForResponseIdle(event.responseId, (config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS) + 1_000);
+      const responseIdle = await responseIdlePromise;
       if (!responseIdle) {
         recordTrace('realtime.tool_result_deferred', {
           callId: event.callId,
@@ -2250,6 +2387,13 @@ function createRealtimeHandler(
       const write = writeToolResultMessages(event.callId, selectedAdapter.handleToolResult(event, output, {
         resume: effectiveStatus !== 'stale',
       }));
+      const toolResultWriteLatencyMs = performance.now() - recallStartedAt;
+      toolCycleTracker.setMetrics(event.callId, {
+        toolResultWriteLatencyMs,
+        terminalOutcome: !write.sent || (effectiveStatus !== 'stale' && write.resumeExpected && !write.resumeWritten)
+          ? 'failed'
+          : effectiveStatus === 'stale' ? 'stale' : effectiveStatus,
+      });
       recordTrace('realtime.tool_result_sent', {
         callId: event.callId,
         toolRunId,
@@ -2258,9 +2402,15 @@ function createRealtimeHandler(
         outputWritten: write.outputWritten,
         resumeWritten: write.resumeWritten,
         recallStatus: effectiveStatus,
-        toolResultLatencyMs: performance.now() - recallStartedAt,
+        toolResultLatencyMs: toolResultWriteLatencyMs,
+        toolResultWriteLatencyMs,
         stale: effectiveStatus === 'stale',
         resumeRequested: write.resumeWritten,
+      });
+      sendTechStatus({
+        stage: 'resume',
+        status: write.resumeWritten ? 'completed' : 'failed',
+        latencyMs: toolResultWriteLatencyMs,
       });
       if (!write.sent || (effectiveStatus !== 'stale' && write.resumeExpected && !write.resumeWritten)) {
         toolCycleTracker.finish(event.callId, 'failed', 'tool_result_write_failed');
@@ -2372,7 +2522,10 @@ function createRealtimeHandler(
 
   const recordProviderAudioDelta = (responseId: string, delta: string): void => {
     const now = performance.now();
-    toolCycleTracker.markFirstAudio(responseId);
+    const toolToFirstAudioMs = toolCycleTracker.markFirstAudio(responseId);
+    if (toolToFirstAudioMs !== undefined) {
+      sendTechStatus({ stage: 'first_audio', status: 'completed', latencyMs: toolToFirstAudioMs });
+    }
     const stats = getProviderAudioTrace(responseId);
     const deltaBytes = base64ByteLength(delta);
     const interArrivalMs = stats.lastDeltaAt === undefined ? undefined : now - stats.lastDeltaAt;
@@ -2453,6 +2606,8 @@ function createRealtimeHandler(
     const dedupeKey = `${message.role}:${message.providerMessageId}`;
     if (seenProviderMessages.has(dedupeKey)) return;
     seenProviderMessages.add(dedupeKey);
+    recentFinalMessages.push({ role: message.role, text: message.text });
+    if (recentFinalMessages.length > 4) recentFinalMessages.shift();
     pendingWriteCount += 1;
     const queuedAt = performance.now();
     recordTrace('transcript.write_queued', {
@@ -3565,6 +3720,13 @@ function createRealtimeHandler(
         startedAt: interviewSession.startedAt,
         wrapUpMs,
         maxSessionMs,
+      });
+      sendTechStatus({
+        stage: 'fast_voice',
+        status: 'completed',
+        model: providerName === 'stepfun'
+          ? config.stepfunModel ?? DEFAULT_STEPFUN_MODEL
+          : config.qwenModel ?? DEFAULT_QWEN_MODEL,
       });
       if (provider?.readyState === WebSocket.OPEN && selectedAdapter) {
         const opening = selectedAdapter.initialResponsePlan(context);

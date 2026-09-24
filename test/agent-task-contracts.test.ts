@@ -17,6 +17,7 @@ import {
   resolveAgentTaskRuntime,
   storyCompletionTaskOutputSchema,
   type ContributorCloseoutTaskRequest,
+  type InterviewContextHintTaskRequest,
   type OnboardingCloseoutTaskRequest,
   type StoryCompletionTaskRequest,
   type StoryCreateCloseoutTaskRequest,
@@ -39,8 +40,8 @@ function transcript(messageId = 'message-1', text = '这是一次有具体内容
   }];
 }
 
-test('TaskDefinitionRegistry exposes four tasks and three interview.closeout modes', () => {
-  assert.equal(agentTaskDefinitions.length, 6);
+test('TaskDefinitionRegistry exposes five tasks and three interview.closeout modes', () => {
+  assert.equal(agentTaskDefinitions.length, 7);
   assert.equal(getAgentTaskDefinition('onboarding.closeout').skill, 'onboarding-closeout');
   assert.equal(getAgentTaskDefinition('interview.closeout', 'story_create').skill, 'interview-closeout');
   assert.equal(getAgentTaskDefinition('interview.closeout', 'story_continue').skill, 'interview-closeout');
@@ -269,7 +270,7 @@ test('completion, generation and contributor mappers expose only task-approved c
   assert.equal('agent_memory' in contributor.request.payload, false);
 });
 
-test('StubAgentTaskAdapter returns schema-valid results for all four task families', async () => {
+test('StubAgentTaskAdapter returns schema-valid results for all five task families', async () => {
   const adapter = new StubAgentTaskAdapter();
 
   const onboardingRequest: OnboardingCloseoutTaskRequest = {
@@ -400,6 +401,23 @@ test('StubAgentTaskAdapter returns schema-valid results for all four task famili
   const generationResult = await adapter.run(generationRequest);
   getAgentTaskDefinition(generationResult.taskType, generationResult.mode)
     .outputSchema.parse(generationResult.output);
+
+  const contextHintRequest: InterviewContextHintTaskRequest = {
+    runId: 'run-6',
+    taskType: 'interview.context_hint',
+    ownerId: 'owner-1',
+    resource: { type: 'story', id: 'story-1' },
+    schemaVersion: 'v1',
+    payload: {
+      query: '那位师傅姓什么？',
+      story_summary: '用户讲述刚入厂时的经历。',
+      recent_context: [],
+      evidence: [{ id: 'e1', question: '谁是你的师傅？', answer: '用户说师傅姓王。' }],
+    },
+  };
+  const contextHintResult = await adapter.run(contextHintRequest);
+  getAgentTaskDefinition(contextHintResult.taskType, contextHintResult.mode)
+    .outputSchema.parse(contextHintResult.output);
 });
 
 test('AI_TASK_RUNTIME defaults to direct and supports explicit stub or agent composition', () => {

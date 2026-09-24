@@ -3,6 +3,7 @@ import {
   NemoClawAgentTaskExecutor,
   NemoClawOpenClawAttemptRunner,
 } from '../../agent/runtime/nemoclaw-task-executor.js';
+import type { AgentModelProfile } from './definitions/task-definition-registry.js';
 import { NemoClawAgentTaskAdapter } from './adapters/nemoclaw-agent-task-adapter.js';
 import { StubAgentTaskAdapter } from './adapters/stub-agent-task-adapter.js';
 import { AgentTaskContractError } from './errors.js';
@@ -14,6 +15,29 @@ export type AgentTaskRuntimeId = 'direct' | 'stub' | 'agent';
 function optionalEnv(env: NodeJS.ProcessEnv, key: string): string | undefined {
   const value = env[key]?.trim();
   return value || undefined;
+}
+
+export function resolveAgentTaskModelRoutes(env: NodeJS.ProcessEnv = process.env): {
+  defaultModel?: string;
+  models: Partial<Record<AgentModelProfile, string>>;
+} {
+  const reasoningFast = optionalEnv(env, 'AGENT_MODEL_REASONING_FAST');
+  const realtimeContext = optionalEnv(env, 'AGENT_MODEL_REALTIME_CONTEXT') ?? reasoningFast;
+  return {
+    ...(optionalEnv(env, 'AGENT_MODEL_DEFAULT')
+      ? { defaultModel: optionalEnv(env, 'AGENT_MODEL_DEFAULT') }
+      : {}),
+    models: {
+      ...(optionalEnv(env, 'AGENT_MODEL_REASONING')
+        ? { reasoning: optionalEnv(env, 'AGENT_MODEL_REASONING') }
+        : {}),
+      ...(reasoningFast ? { 'reasoning-fast': reasoningFast } : {}),
+      ...(realtimeContext ? { 'realtime-context': realtimeContext } : {}),
+      ...(optionalEnv(env, 'AGENT_MODEL_WRITING')
+        ? { writing: optionalEnv(env, 'AGENT_MODEL_WRITING') }
+        : {}),
+    },
+  };
 }
 
 export function resolveAgentTaskRuntime(env: NodeJS.ProcessEnv = process.env): AgentTaskRuntimeId {
@@ -45,19 +69,16 @@ export function createAgentTaskPort(
     );
   }
 
+  const modelRoutes = resolveAgentTaskModelRoutes(env);
   const attempts = new NemoClawOpenClawAttemptRunner({
     sandboxName,
     ...(optionalEnv(env, 'AGENT_PROVIDER') ? { provider: optionalEnv(env, 'AGENT_PROVIDER') } : {}),
-    ...(optionalEnv(env, 'AGENT_MODEL_DEFAULT') ? { defaultModel: optionalEnv(env, 'AGENT_MODEL_DEFAULT') } : {}),
+    ...(modelRoutes.defaultModel ? { defaultModel: modelRoutes.defaultModel } : {}),
     ...(optionalEnv(env, 'AGENT_THINKING') ? { thinking: optionalEnv(env, 'AGENT_THINKING') } : {}),
     ...(optionalEnv(env, 'AGENT_RUNTIME_DIAGNOSTICS_PATH')
       ? { diagnosticsPath: optionalEnv(env, 'AGENT_RUNTIME_DIAGNOSTICS_PATH') }
       : {}),
-    models: {
-      ...(optionalEnv(env, 'AGENT_MODEL_REASONING') ? { reasoning: optionalEnv(env, 'AGENT_MODEL_REASONING') } : {}),
-      ...(optionalEnv(env, 'AGENT_MODEL_REASONING_FAST') ? { 'reasoning-fast': optionalEnv(env, 'AGENT_MODEL_REASONING_FAST') } : {}),
-      ...(optionalEnv(env, 'AGENT_MODEL_WRITING') ? { writing: optionalEnv(env, 'AGENT_MODEL_WRITING') } : {}),
-    },
+    models: modelRoutes.models,
   });
   const runs = new AgentRunRepository(options.databasePath ?? optionalEnv(env, 'DATABASE_PATH'), {
     captureContent: env.DIAGNOSTICS_CAPTURE_CONTENT?.trim() === '1',

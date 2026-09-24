@@ -94,8 +94,11 @@ export function buildStepfunSessionUpdate(
   voice = DEFAULT_STEPFUN_VOICE,
   silenceDurationMs = DEFAULT_STEPFUN_SILENCE_DURATION_MS,
 ): Record<string, unknown> {
-  const allowsContextTool = context.interview_type === undefined || context.interview_type === 'story';
-  const toolInstructions = `\n\n## 历史上下文工具\n当当前轮需要确认用户以前讲过的人物、时间、关系或原话时，先静默调用 ${STEPFUN_CONTEXT_TOOL}，只传递需要确认的信息；不要假装记得，也不要把工具调用过程说给用户听。收到工具结果后再继续回答。当前信息足够时不要调用工具。`;
+  const allowsContextTool = context.interview_type === 'story'
+    && context.task_context?.mode === 'continue'
+    && typeof context.story?.story_id === 'string'
+    && context.story.story_id.trim().length > 0;
+  const toolInstructions = `\n\n## 历史上下文工具\n当当前轮需要确认用户以前讲过的人物、时间、关系或原话时，先静默调用 ${STEPFUN_CONTEXT_TOOL}，只传递需要确认的信息；不要假装记得，也不要把工具调用过程说给用户听。收到工具结果后再继续回答。当前信息足够时不要调用工具。工具结果中 facts[].claim 是用户历史回答原文；facts[].question（如有）只是当时的 AI 问题，用于理解语境，不是用户事实，也不能据此推断经历。possibleConflicts 与 interviewHints 是简短采访提示，不是新增事实。`;
   return {
     type: 'session.update',
     session: {

@@ -47,6 +47,7 @@ export class StoryInterviewContextBuilder {
 
 
     return {
+      interview_type: 'story',
       user: {
         user_id: profile.userId,
         name: profile.name,
@@ -68,13 +69,15 @@ export class StoryInterviewContextBuilder {
       story: story ? {
         story_id: story.storyId,
         title: story.title,
+        summary: story.summary,
         agent_memory: story.agentMemory || story.summary,
         status: story.status,
         gaps: parseStoryGaps(story.gapsJson),
       } : null,
-      ...(target.mode === 'create'
-        ? { task_context: { mode: 'create' as const, ...(target.title ? { target_title: target.title } : {}) } }
-        : {}),
+      task_context: {
+        mode: target.mode,
+        ...(target.mode === 'create' && target.title ? { target_title: target.title } : {}),
+      },
     };
   }
 }

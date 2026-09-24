@@ -29,7 +29,7 @@ test('Realtime Retriever recall sends owner/story scope and keeps only traceable
       received = input;
       return [
         {
-          text: '2013 年春节以后第一次到北京。',
+          text: '[segment_id=segment-1][message_id=message-1][Q+A]\nQuestion (context only):你第一次去北京是什么时候？\nAnswer (user-provided fact):2013 年春节以后第一次到北京。',
           score: 0.9,
           ownerId: 'user-1',
           storyId: 'story-1',
@@ -81,11 +81,59 @@ test('Realtime Retriever recall sends owner/story scope and keeps only traceable
     basedOnTurnId: 'turn-1',
     facts: [{
       claim: '2013 年春节以后第一次到北京。',
+      question: '你第一次去北京是什么时候？',
       sourceMessageIds: ['message-1'],
     }],
     possibleConflicts: [],
     interviewHints: [],
   });
+});
+
+test('Realtime retrieval fails closed when there is no Current Story', async () => {
+  let calls = 0;
+  const recall = new RetrieverRealtimeRecall(adapter({
+    async searchTranscript() { calls += 1; return []; },
+  }));
+
+  const result = await recall.recall({ ...request, storyId: undefined });
+
+  assert.equal(calls, 0);
+  assert.deepEqual(result.facts, []);
+});
+
+test('only Q+A answers from the exact owner, story and subject source become facts', async () => {
+  const recall = new RetrieverRealtimeRecall(adapter({
+    async searchTranscript() {
+      return [
+        {
+          text: '[segment_id=a][message_id=a][Q+A]\nQuestion (context only):王师傅什么时候入厂？\nAnswer (user-provided fact):2013年入厂。',
+          score: 1,
+          ownerId: 'user-1', storyId: 'story-1', sourceType: 'subject',
+          sessionId: 'session-a', messageIds: ['a'], segmentIds: ['a'],
+        },
+        {
+          text: '[segment_id=b][message_id=b][Q+A]\nQuestion (context only):王师傅什么时候入厂？\nAnswer (user-provided fact):2013年入厂。',
+          score: 0.99,
+          ownerId: 'user-1', storyId: 'story-2', sourceType: 'subject',
+          sessionId: 'session-b', messageIds: ['b'], segmentIds: ['b'],
+        },
+        {
+          text: '[segment_id=c][message_id=c][Q+A]\nQuestion (context only):王师傅什么时候入厂？\nAnswer (user-provided fact):2013年入厂。',
+          score: 0.98,
+          ownerId: 'user-1', storyId: 'story-1', sourceType: 'external_contributor',
+          sessionId: 'session-c', messageIds: ['c'], segmentIds: ['c'],
+        },
+      ];
+    },
+  }));
+
+  const result = await recall.recall(request);
+
+  assert.deepEqual(result.facts, [{
+    claim: '2013年入厂。',
+    question: '王师傅什么时候入厂？',
+    sourceMessageIds: ['a'],
+  }]);
 });
 
 test('Realtime Retriever recall forwards AbortSignal to the adapter', async () => {
