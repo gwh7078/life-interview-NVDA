@@ -8,7 +8,7 @@
 >
 > 原有 Tool Call、HOLD/Resume、Slow Coordinator、Current Story Retriever 与 Phase 3 A+B 自动 Gate G0–G8 是已验证基线。2026-09-23 新增 `interview.context_hint` Agent 实现；Agent smoke **FAIL**（`AGENT_RUNTIME_TIMEOUT`、随后 `AGENT_RUNTIME_EXEC_FAILED`），完整 Step-Audio 语音 E2E **NOT TESTED**。以实现状态文档中的 PASS/FAIL/NOT TESTED 为准。
 >
-> Current status: Step-Audio-2-mini is **Retired / no longer target realtime provider**. MiniCPM-o-4.5-Realtime is the formal **Candidate**, but its official public API does not document native Tool Calling / Tool Result / Resume. Do not claim Accepted before full real E2E. See [current convergence report](../../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md).
+> Current status: This is a historical proposal. The current StepAudio 3 / Step-Audio-2-mini profiles and independent Memory flow are documented in the [Realtime Dual Profile and Memory Report](../../07-reports/testing/REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md).
 
 ## 1. 本版核心变化
 

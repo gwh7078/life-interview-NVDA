@@ -381,7 +381,7 @@ run_start_resource_version
 - No evidence returns no-context. Agent unavailable, failed, invalid, timed out, cancelled, superseded, or stale results never fall back to raw Retriever evidence; the Realtime model receives no-context or a protocol-approved empty Tool Result.
 - This task does not write Story Memory. Interview Closeout remains the only owner of long-term Memory updates.
 
-The current implementation and live validation state are recorded in [Realtime Integration Convergence Report](../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md). Step-Audio-2-mini is Retired. MiniCPM-o-4.5-Realtime is Candidate; its public Realtime protocol does not document native Tool Calling / Tool Result / Resume, and full MiniCPM E2E is **NOT TESTED**.
+The current realtime profiles and live validation state are recorded in [Realtime Dual Profile and Memory Report](../07-reports/testing/REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md). StepAudio 3 Quality is the default StepFun Cloud route; Step-Audio-2-mini is the second formal profile; MiniCPM-o Realtime is Experimental.
 
 ## 16. Retrieval Source of Truth
 

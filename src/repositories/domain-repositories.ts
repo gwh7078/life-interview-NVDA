@@ -357,7 +357,7 @@ export class TranscriptRepository {
   appendForSession(userId: string, sessionId: string, input: {
     role: 'user' | 'assistant';
     text: string;
-    provider: 'doubao' | 'qwen' | 'stepfun' | 'modelbest' | 'openclaw' | 'test';
+    provider: 'doubao' | 'qwen' | 'stepfun' | 'stepaudio3_quality' | 'stepaudio2_mini' | 'modelbest' | 'openclaw' | 'test';
     providerMessageId?: string;
   }): TranscriptMessage {
     const connection = createDatabase(this.databasePath);

@@ -4,6 +4,8 @@
 基线：`gwh7078/life-interview-NVDA` `main@36c307b4418d3c784043f1ba76074b34a71b77c7`  
 基线核对：2026-09-25 再次 fetch 后，`origin/main`、本地 `main` 与工作树基线仍相同。最终本地 `main` 提交 SHA 见本轮交付记录。
 
+> **历史快照，已被后续双 Profile 实现取代。** 本文保留的是 `36c307b` 基线上的当时判断；其中 Step-Audio-2-mini Retired、MiniCPM Candidate、`supportsSlowContext` 及“Tool timeout 不发送 Tool Result”均不是当前状态。当前实现与验收以 [Realtime 双 Profile 与独立 Memory 报告](REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md) 为准。
+
 ## 结论
 
 慢系统边界、5 秒总 deadline、no-context 失败策略、Q+A 事实来源、Provider capability 和技术观测已收敛。MiniCPM-o-4.5-Realtime 仍是 **Candidate**，本轮不能标为 Accepted：OpenBMB 公开 Realtime API 文档没有定义原生 Tool Calling、Tool Result 与 Resume 协议；真实 MiniCPM E2E 也没有运行。没有用文本解析、提示词约定或客户端猜测补造协议能力。

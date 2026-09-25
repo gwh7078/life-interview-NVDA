@@ -2,12 +2,12 @@ import {
   DEFAULT_QWEN_MODEL,
   type QwenRealtimeRegion,
 } from './qwen.js';
-import { DEFAULT_STEPFUN_MODEL } from './stepfun.js';
+import { DEFAULT_STEPFUN_MODEL, DEFAULT_STEPAUDIO3_MODEL } from './stepfun.js';
 import { DEFAULT_MODELBEST_MODEL } from './modelbest.js';
 import type { RealtimeProviderConfig } from './provider.js';
 import type { RealtimeProviderId } from './types.js';
 
-export const REALTIME_PROVIDER_IDS = ['qwen', 'stepfun', 'modelbest'] as const;
+export const REALTIME_PROVIDER_IDS = ['qwen', 'stepfun', 'modelbest', 'stepaudio3_quality', 'stepaudio2_mini'] as const;
 
 export interface RealtimeProviderRuntimeSource {
   apiKey?: string;
@@ -17,6 +17,7 @@ export interface RealtimeProviderRuntimeSource {
   qwenModel?: string;
   stepfunApiKey?: string;
   stepfunModel?: string;
+  stepaudio3Model?: string;
   modelbestApiKey?: string;
   modelbestModel?: string;
 }
@@ -30,7 +31,14 @@ export function resolveRealtimeProviderConfig(
   id: RealtimeProviderId,
   source: RealtimeProviderRuntimeSource,
 ): RealtimeProviderConfig {
-  if (id === 'stepfun') {
+  if (id === 'stepaudio3_quality') {
+    return {
+      stepfunApiKey: source.stepfunApiKey,
+      region: source.region,
+      model: source.stepaudio3Model ?? DEFAULT_STEPAUDIO3_MODEL,
+    };
+  }
+  if (id === 'stepfun' || id === 'stepaudio2_mini') {
     return {
       stepfunApiKey: source.stepfunApiKey,
       region: source.region,
@@ -66,11 +74,19 @@ export function realtimeProviderHealthSummary(
     },
     stepfun: {
       configured: Boolean(source.stepfunApiKey),
-      ...(detailed ? { model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL } : {}),
+      ...(detailed ? { model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL, execution: 'stepfun-cloud', compatibilityAlias: 'stepaudio2_mini' } : {}),
+    },
+    stepaudio3_quality: {
+      configured: Boolean(source.stepfunApiKey),
+      ...(detailed ? { model: source.stepaudio3Model ?? DEFAULT_STEPAUDIO3_MODEL, execution: 'stepfun-cloud' } : {}),
+    },
+    stepaudio2_mini: {
+      configured: Boolean(source.stepfunApiKey),
+      ...(detailed ? { model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL, execution: 'stepfun-cloud' } : {}),
     },
     modelbest: {
       configured: Boolean(source.modelbestApiKey),
-      ...(detailed ? { model: source.modelbestModel ?? DEFAULT_MODELBEST_MODEL } : {}),
+      ...(detailed ? { model: source.modelbestModel ?? DEFAULT_MODELBEST_MODEL, experimental: true } : {}),
     },
   };
 }

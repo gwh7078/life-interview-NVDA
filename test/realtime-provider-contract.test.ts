@@ -8,7 +8,9 @@ import { buildQwenOnboardingCompletionAcknowledgement, buildQwenRealtimeUrl, bui
 import {
   buildStepfunSessionUpdate,
   DEFAULT_STEPFUN_MODEL,
+  DEFAULT_STEPAUDIO3_MODEL,
   STEPFUN_CONTEXT_TOOL,
+  STEPAUDIO_3_REALTIME_PREVIEW,
 } from '../src/realtime/stepfun.js';
 
 const storyContext = {
@@ -73,7 +75,7 @@ test('PROVIDER-CONTRACT-02 Qwen satisfies the same generic contract with its leg
     fullDuplex: true,
     supportsInterrupt: true,
     supportsToolCalling: false,
-    supportsSlowContext: false,
+    supportsContextInjection: false,
     supportsExplicitTurnRequest: true,
     supportsPlaybackAck: false,
     supportsExplicitSessionClose: false,
@@ -100,17 +102,28 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
     model: DEFAULT_STEPFUN_MODEL,
   });
 
-  assert.equal(adapter.id, 'stepfun');
+  assert.equal(adapter.id, 'stepaudio2_mini');
   assert.deepEqual(adapter.audio, {
     input: { encoding: 'pcm_s16le', sampleRate: 24_000, frameBytes: 960 },
     output: { encoding: 'pcm_s16le', sampleRate: 24_000 },
   });
   assert.equal(adapter.connectOptions().url, 'wss://api.stepfun.com/v1/realtime?model=step-audio-2-mini');
+  assert.equal(adapter.capabilities.supportsInterrupt, false);
+  assert.equal(adapter.capabilities.supportsToolCalling, true);
+  assert.equal(adapter.capabilities.supportsContextInjection, true);
+  assert.equal(adapter.capabilities.manualTurnControl, true);
   const session = adapter.setupSession(storyContext)[0]?.session as Record<string, unknown>;
   assert.equal(session.turn_detection, null);
   const tools = session.tools as Array<Record<string, unknown>>;
   assert.equal((tools[0]?.function as Record<string, unknown>).name, STEPFUN_CONTEXT_TOOL);
   assert.equal(adapter.appendAudioMessages(Buffer.from([0, 1]))[0]?.type, 'input_audio_buffer.append');
+  assert.deepEqual(adapter.openingPreludeMessages?.(), []);
+  assert.equal(adapter.injectContextHint?.({
+    basedOnTurnId: 'turn-1',
+    facts: [{ claim: '用户曾说 2013 年去了北京。', sourceMessageIds: ['message-1'] }],
+    possibleConflicts: [],
+    interviewHints: [],
+  })[0]?.type, 'conversation.item.create');
 
   adapter.normalizeServerMessage(JSON.stringify({
     type: 'response.function_call_arguments.delta',
@@ -140,6 +153,33 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   assert.equal((toolMessages?.[0]?.item as Record<string, unknown>).call_id, 'call-1');
   assert.equal(toolMessages?.[1]?.type, 'response.create');
   assert.equal(adapter.handleToolResult?.(toolCall, { status: 'stale' }, { resume: false })?.length, 1);
+});
+
+test('StepAudio 3 profile shares StepFun transport and keeps its opening protocol explicit', () => {
+  const config = resolveRealtimeProviderConfig('stepaudio3_quality', {
+    stepfunApiKey: 'test-only-key',
+    region: 'cn-beijing',
+    model: DEFAULT_STEPFUN_MODEL,
+  });
+  const adapter = createRealtimeInterviewProvider('stepaudio3_quality', config);
+  assert.equal(config.model, DEFAULT_STEPAUDIO3_MODEL);
+  assert.equal(adapter.id, 'stepaudio3_quality');
+  assert.equal(adapter.connectOptions().url, `wss://api.stepfun.com/v1/realtime?model=${STEPAUDIO_3_REALTIME_PREVIEW}`);
+  assert.deepEqual(adapter.openingPreludeMessages?.()[0], {
+    type: 'conversation.item.create',
+    item: {
+      type: 'message',
+      role: 'user',
+      content: [{ type: 'input_text', text: '请开始访谈。' }],
+    },
+  });
+  assert.equal(adapter.capabilities.supportsToolCalling, true);
+  assert.equal(adapter.capabilities.supportsInterrupt, false);
+  assert.equal(adapter.capabilities.supportsContextInjection, true);
+  assert.equal(adapter.handleToolResult?.({
+    type: 'tool.call.requested', name: STEPFUN_CONTEXT_TOOL, callId: 'call-1',
+    arguments: {}, responseId: 'response-1',
+  }, { status: 'no-context' }).at(-1)?.type, 'response.create');
 });
 
 test('Step-Audio context tool is limited to an existing story continuation', () => {

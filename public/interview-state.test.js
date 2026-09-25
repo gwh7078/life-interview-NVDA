@@ -8,15 +8,19 @@ import {
   shouldIgnoreAssistantResponseMessage,
 } from './interview-state.js';
 
-test('Realtime provider defaults to the MiniCPM candidate and preserves explicit provider routing', () => {
-  assert.equal(resolveRealtimeProvider(undefined), 'modelbest');
+test('Realtime provider defaults to StepAudio 3 and preserves both StepFun voice profiles', () => {
+  assert.equal(resolveRealtimeProvider(undefined), 'stepaudio3_quality');
+  assert.equal(resolveRealtimeProvider('stepaudio3_quality'), 'stepaudio3_quality');
+  assert.equal(resolveRealtimeProvider('stepaudio2_mini'), 'stepaudio2_mini');
   assert.equal(resolveRealtimeProvider('stepfun'), 'stepfun');
   assert.equal(resolveRealtimeProvider('qwen'), 'qwen');
   assert.equal(resolveRealtimeProvider('modelbest'), 'modelbest');
-  assert.equal(resolveRealtimeProvider('unknown'), 'modelbest');
+  assert.equal(resolveRealtimeProvider('unknown'), 'stepaudio3_quality');
   assert.equal(realtimeInputSampleRate('qwen'), 16000);
   assert.equal(realtimeInputSampleRate('modelbest'), 16000);
   assert.equal(realtimeInputSampleRate('stepfun'), 24000);
+  assert.equal(realtimeInputSampleRate('stepaudio3_quality'), 24000);
+  assert.equal(realtimeInputSampleRate('stepaudio2_mini'), 24000);
 });
 
 test('Step realtime events map to the visible call states', () => {

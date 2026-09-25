@@ -1,5 +1,6 @@
 import { buildInterviewContextPayload, buildInterviewInstructions, type RealtimeInterviewContext } from './prompt.js';
 import type { RealtimeProviderConfig, RealtimeVoiceProvider } from './provider.js';
+import type { RealtimeContextHint } from './slow-coordinator.js';
 import {
   INTERVIEW_CONTEXT_TOOL_NAME,
   type NormalizedRealtimeEvent,
@@ -11,6 +12,8 @@ import {
 } from './types.js';
 
 export const DEFAULT_STEPFUN_MODEL = 'step-audio-2-mini';
+export const STEPAUDIO_3_REALTIME_PREVIEW = 'stepaudio-3-realtime-preview';
+export const DEFAULT_STEPAUDIO3_MODEL = STEPAUDIO_3_REALTIME_PREVIEW;
 export const DEFAULT_STEPFUN_VOICE = 'wenrounansheng';
 export const STEPFUN_REALTIME_URL = 'wss://api.stepfun.com/v1/realtime';
 export const STEPFUN_INPUT_SAMPLE_RATE = 24_000;
@@ -18,7 +21,35 @@ export const STEPFUN_OUTPUT_SAMPLE_RATE = 24_000;
 export const STEPFUN_PCM_FRAME_BYTES = 960;
 export const STEPFUN_CONTEXT_TOOL = INTERVIEW_CONTEXT_TOOL_NAME;
 
-const STEPFUN_CONTEXT_TOOL_DESCRIPTION = '当继续采访需要确认用户过去提到的人物、时间、关系或历史原话时调用。当前信息足够时不要调用。';
+export type StepFunRealtimeProfileId = 'stepaudio3_quality' | 'stepaudio2_mini';
+
+const STEPFUN_CAPABILITIES: RealtimeProviderCapabilities = {
+  fullDuplex: true,
+  supportsInterrupt: false,
+  supportsToolCalling: true,
+  supportsContextInjection: true,
+  supportsExplicitTurnRequest: true,
+  supportsPlaybackAck: false,
+  supportsExplicitSessionClose: false,
+  manualTurnControl: true,
+};
+
+export const STEPFUN_REALTIME_PROFILES = {
+  stepaudio3_quality: {
+    model: DEFAULT_STEPAUDIO3_MODEL,
+    execution: 'stepfun-cloud',
+    openingPrelude: true,
+    capabilities: STEPFUN_CAPABILITIES,
+  },
+  stepaudio2_mini: {
+    model: DEFAULT_STEPFUN_MODEL,
+    execution: 'stepfun-cloud',
+    openingPrelude: false,
+    capabilities: STEPFUN_CAPABILITIES,
+  },
+} as const;
+
+const STEPFUN_CONTEXT_TOOL_DESCRIPTION = '读取系统已经准备好的当前 Story Memory Hint；此工具不触发 Retriever 或 Agent。没有已准备内容时返回空结果。';
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -122,7 +153,7 @@ export function buildStepfunSessionUpdate(
     && context.task_context?.mode === 'continue'
     && typeof context.story?.story_id === 'string'
     && context.story.story_id.trim().length > 0;
-  const toolInstructions = `\n\n## 历史上下文工具\n确需核对过去的人物、时间、关系或原话时，静默调用 ${STEPFUN_CONTEXT_TOOL}；当前信息足够就不调。facts[].claim 是用户原话；question 只解释语境，possibleConflicts 与 interviewHints 是建议，不是事实。工具结果返回后再回答。`;
+  const toolInstructions = `\n\n## 历史 Memory 与工具调用\nMemory 会在用户回答后由系统独立触发。不要调用 ${STEPFUN_CONTEXT_TOOL} 来启动检索；若当前回合确需读取已经准备好的 Memory Hint，可以调用该工具。Tool Result 可能为空，随后继续当前采访。`;
   return {
     type: 'session.update',
     session: {
@@ -191,19 +222,6 @@ export function parseStepfunServerEvent(raw: unknown): Record<string, unknown> |
   }
 }
 
-function stepfunCapabilities(): RealtimeProviderCapabilities {
-  return {
-    fullDuplex: true,
-    supportsInterrupt: true,
-    supportsToolCalling: true,
-    supportsSlowContext: true,
-    supportsExplicitTurnRequest: true,
-    supportsPlaybackAck: false,
-    supportsExplicitSessionClose: false,
-    manualTurnControl: true,
-  };
-}
-
 function stepfunAudio(): RealtimeAudioSpec {
   return {
     input: { encoding: 'pcm_s16le', sampleRate: STEPFUN_INPUT_SAMPLE_RATE, frameBytes: STEPFUN_PCM_FRAME_BYTES },
@@ -231,7 +249,9 @@ function stepfunConnectionFailureMessage(
 
 export function createStepfunRealtimeProvider(
   config: RealtimeProviderConfig,
+  profileId: StepFunRealtimeProfileId = 'stepaudio2_mini',
 ): RealtimeVoiceProvider {
+  const profile = STEPFUN_REALTIME_PROFILES[profileId];
   let activeResponseId: string | undefined;
   let speechStopEmitted = false;
   const audioStartedResponses = new Set<string>();
@@ -384,8 +404,8 @@ export function createStepfunRealtimeProvider(
   };
 
   const adapter: RealtimeVoiceProvider = {
-    id: 'stepfun',
-    capabilities: stepfunCapabilities(),
+    id: profileId,
+    capabilities: profile.capabilities,
     audio: stepfunAudio(),
     connectOptions() {
       if (!config.stepfunApiKey) throw new Error('尚未配置 StepFun Realtime。请在项目 .env 中填写 STEPFUN_API_KEY 后重启服务。');
@@ -395,6 +415,16 @@ export function createStepfunRealtimeProvider(
       };
     },
     setupSession: (context) => [buildStepfunSessionUpdate(context)],
+    openingPreludeMessages: () => profile.openingPrelude
+      ? [{
+          type: 'conversation.item.create',
+          item: {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'input_text', text: '请开始访谈。' }],
+          },
+        }]
+      : [],
     initialResponsePlan: (context) => ({
       steps: [{ message: {
         type: 'response.create',
@@ -426,7 +456,30 @@ export function createStepfunRealtimeProvider(
     }],
     normalizeServerMessage: normalize,
     handleControlEvent: () => [],
+    injectContextHint: (hint) => profile.capabilities.supportsContextInjection
+      ? buildStepfunContextHintMessages(hint)
+      : [],
     handleToolResult: (call, output, options) => buildStepfunToolResult(call.callId, output, options),
   };
   return adapter;
+}
+
+export function buildStepfunContextHintMessages(hint: RealtimeContextHint): Record<string, unknown>[] {
+  const lines = [
+    ...hint.facts.map((fact) => `${fact.question ? `问题：${fact.question} ` : ''}用户回答：${fact.claim}`),
+    ...hint.possibleConflicts.map((conflict) => `可能需要向用户确认：${conflict}`),
+    ...hint.interviewHints,
+  ];
+  if (lines.length === 0) return [];
+  return [{
+    type: 'conversation.item.create',
+    item: {
+      type: 'message',
+        role: 'assistant',
+        content: [{
+          type: 'input_text',
+          text: `以下背景来自当前 Story 已保存的用户回答，只作为已核验的历史上下文，不代表用户本轮新表达；用户当前回答优先：\n${lines.join('\n')}`,
+      }],
+    },
+  }];
 }

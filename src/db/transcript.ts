@@ -5,7 +5,7 @@ export const transcriptMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
   text: z.string(),
   timestamp: z.string().datetime({ offset: true }),
-  provider: z.enum(['doubao', 'qwen', 'stepfun', 'modelbest', 'openclaw', 'test']),
+  provider: z.enum(['doubao', 'qwen', 'stepfun', 'stepaudio3_quality', 'stepaudio2_mini', 'modelbest', 'openclaw', 'test']),
   provider_message_id: z.string().optional(),
 }).strict();
 

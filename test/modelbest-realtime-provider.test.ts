@@ -35,7 +35,7 @@ test('ModelBest can be selected without changing existing Realtime provider opti
     headers: { Authorization: 'Bearer test-modelbest-key' },
   });
   assert.equal(provider.capabilities.supportsToolCalling, false);
-  assert.equal(provider.capabilities.supportsSlowContext, false);
+  assert.equal(provider.capabilities.supportsContextInjection, false);
   assert.equal(provider.capabilities.supportsExplicitTurnRequest, false);
   assert.equal(provider.requiresQueueBeforeSessionInit, true);
   assert.deepEqual(provider.audio, {

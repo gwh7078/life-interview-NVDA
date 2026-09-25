@@ -72,7 +72,7 @@ test('Local interview service exposes current realtime provider states without e
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const health = await healthResponse.json() as Record<string, unknown>;
     assert.equal(healthResponse.status, 200);
-    assert.equal(health.defaultProvider, 'modelbest');
+    assert.equal(health.defaultProvider, 'stepaudio3_quality');
     assert.equal(health.databaseAvailable, true);
     assert.deepEqual(health.interviewLimits, {
       wrapUpMs: 1_080_000,
@@ -85,6 +85,9 @@ test('Local interview service exposes current realtime provider states without e
     assert.equal(providers.doubao, undefined);
     assert.equal(providers.stepfun?.configured, true);
     assert.equal(providers.stepfun?.model, 'step-audio-2-mini');
+    assert.equal(providers.stepaudio3_quality?.configured, true);
+    assert.equal(providers.stepaudio3_quality?.model, 'stepaudio-3-realtime-preview');
+    assert.equal(providers.stepaudio2_mini?.configured, true);
     assert.equal(providers.qwen?.configured, true);
     const healthText = JSON.stringify(health);
     assert.equal(healthText.includes('qwen-secret-test-value'), false);
@@ -225,7 +228,7 @@ test('Local interview service exposes current realtime provider states without e
     assert.doesNotMatch(pageText, /provider-select/);
     assert.match(pageText, /id="auth-card"/);
     assert.match(pageText, /value="create"/);
-    assert.match(pageText, /MiniCPM-o 4\.5 Realtime · Candidate/);
+    assert.match(pageText, /StepAudio 3 Realtime · 高质量默认/);
     assert.doesNotMatch(pageText, /Qwen Realtime/);
 
     const onboardingPage = await fetch(`${baseUrl}/onboarding`);

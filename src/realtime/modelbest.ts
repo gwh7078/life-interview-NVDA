@@ -225,7 +225,7 @@ export function createModelBestRealtimeProvider(config: RealtimeProviderConfig):
       fullDuplex: true,
       supportsInterrupt: false,
       supportsToolCalling: false,
-      supportsSlowContext: false,
+      supportsContextInjection: false,
       supportsExplicitTurnRequest: false,
       supportsPlaybackAck: false,
       supportsExplicitSessionClose: true,

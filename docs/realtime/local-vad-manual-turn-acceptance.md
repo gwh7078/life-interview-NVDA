@@ -2,7 +2,7 @@
 
 日期：2026-09-24
 
-> 本文记录的是 StepFun/Step-Audio 手动回合路径的历史验收。Local VAD controller 保留为 Provider-neutral 模块；仅当 Provider capability `manualTurnControl=true` 时启用。Step-Audio-2-mini 已 Retired；MiniCPM 的本地 VAD 接入与人工语音验收 **NOT TESTED**。当前 Provider 与慢路径状态见 [集成收敛报告](../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md)。
+> 本文记录的是 StepFun/Step-Audio 手动回合路径的历史验收。Local VAD controller 保留为 Provider-neutral 模块；仅当 Provider capability `manualTurnControl=true` 时启用。Step-Audio-2-mini 当前是正式的 StepFun Cloud Profile；本文旧版手动语音结果不代表本轮双 Profile 的实时验收。MiniCPM 的本地 VAD 接入与人工语音验收 **NOT TESTED**。当前 Provider 与慢路径状态见 [Realtime 双 Profile 与 Memory 验收报告](../07-reports/testing/REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md)。
 
 ## 自动验证复跑
 

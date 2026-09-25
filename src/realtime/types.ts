@@ -1,4 +1,4 @@
-export type RealtimeProviderId = 'qwen' | 'stepfun' | 'modelbest';
+export type RealtimeProviderId = 'qwen' | 'stepfun' | 'modelbest' | 'stepaudio3_quality' | 'stepaudio2_mini';
 export const INTERVIEW_CONTEXT_TOOL_NAME = 'get_interview_context';
 
 export type RealtimeAudioEncoding = 'pcm_s16le';
@@ -19,7 +19,7 @@ export interface RealtimeProviderCapabilities {
   fullDuplex: boolean;
   supportsInterrupt: boolean;
   supportsToolCalling: boolean;
-  supportsSlowContext: boolean;
+  supportsContextInjection: boolean;
   supportsExplicitTurnRequest: boolean;
   supportsPlaybackAck: boolean;
   supportsExplicitSessionClose: boolean;

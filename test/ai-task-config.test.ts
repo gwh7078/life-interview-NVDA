@@ -63,9 +63,9 @@ test('one shared text runtime profile routes all text tasks without changing bus
     assert.equal(taskConfig[taskName].parameters.apiFormat, 'chat-completions');
     assert.equal(taskConfig[taskName].parameters.timeoutMs, 45_678);
   }
-  assert.equal(taskConfig['interview.story'].provider, 'modelbest',
+  assert.equal(taskConfig['interview.story'].provider, 'stepaudio3_quality',
     'text runtime routing must not implicitly change realtime voice');
-  assert.equal(taskConfig['interview.story'].model, 'MiniCPM-o-4.5-Realtime');
+  assert.equal(taskConfig['interview.story'].model, 'stepaudio-3-realtime-preview');
 });
 
 test('runtime config accepts a loopback local text runtime without requiring a model API key', () => {
@@ -85,7 +85,7 @@ test('runtime config accepts a loopback local text runtime without requiring a m
     assert.equal(runtime.storyCompletionProvider, 'openai-compatible');
     assert.equal(runtime.storyGenerationProvider, 'openai-compatible');
     assert.equal(runtime.closeoutApiKey, undefined);
-    assert.equal(runtime.defaultRealtimeProvider, 'modelbest',
+    assert.equal(runtime.defaultRealtimeProvider, 'stepaudio3_quality',
       'text runtime changes must not switch the realtime voice provider');
   });
 });
@@ -130,15 +130,18 @@ test('local VAD silence timeout defaults to 2000ms and accepts a runtime overrid
   });
 });
 
-test('MiniCPM-o-4.5-Realtime is the default candidate and legacy Doubao config is rejected', () => {
+test('StepAudio 3 is the default and both formal StepFun profiles resolve independently', () => {
   const taskConfig = resolveAiTaskConfig({} as NodeJS.ProcessEnv);
-  assert.equal(taskConfig['interview.story'].provider, 'modelbest');
-  assert.equal(taskConfig['interview.story'].model, 'MiniCPM-o-4.5-Realtime');
+  assert.equal(taskConfig['interview.story'].provider, 'stepaudio3_quality');
+  assert.equal(taskConfig['interview.story'].model, 'stepaudio-3-realtime-preview');
+  const mini = resolveAiTaskConfig({ STORY_INTERVIEW_PROVIDER: 'stepaudio2_mini' } as NodeJS.ProcessEnv);
+  assert.equal(mini['interview.story'].provider, 'stepaudio2_mini');
+  assert.equal(mini['interview.story'].model, 'step-audio-2-mini');
   withEnvironment({
     NODE_ENV: 'test',
     STORY_INTERVIEW_PROVIDER: 'doubao',
   }, () => {
-    assert.throws(() => readRuntimeConfig(), /STORY_INTERVIEW_PROVIDER must be qwen, stepfun or modelbest/);
+    assert.throws(() => readRuntimeConfig(), /STORY_INTERVIEW_PROVIDER/);
   });
 });
 

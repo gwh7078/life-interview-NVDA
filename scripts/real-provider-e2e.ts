@@ -568,7 +568,7 @@ function createCloseoutEndpoint(baseUrl: string, apiFormat: string): string {
 async function testForeignInterviewTarget(
   baseUrl: string,
   cookie: string,
-  provider: 'stepfun' | 'qwen' | 'modelbest',
+  provider: 'stepfun' | 'stepaudio3_quality' | 'stepaudio2_mini' | 'qwen' | 'modelbest',
   target: { story_id?: string; stage_id?: string },
   expectedText: string,
 ): Promise<void> {
@@ -593,7 +593,7 @@ async function testForeignInterviewTarget(
 async function runIsolationChecks(
   baseUrl: string,
   databasePath: string,
-  provider: 'stepfun' | 'qwen' | 'modelbest',
+  provider: 'stepfun' | 'stepaudio3_quality' | 'stepaudio2_mini' | 'qwen' | 'modelbest',
   userOne: AuthenticatedDemoUser,
   userTwo: AuthenticatedDemoUser,
   ids: IsolationFixtureIds,
@@ -666,6 +666,7 @@ async function sendAudioTurn(
   socket: WebSocket,
   channel: ReturnType<typeof listenForMessages>,
   clip: AudioClip,
+  turnControl: { manual: boolean; silenceTimeoutMs: number },
   knownUserIds: Set<string>,
   knownResponseIds: Set<string>,
   reportAudio: {
@@ -678,8 +679,12 @@ async function sendAudioTurn(
   label: string,
 ): Promise<{ userTextCharacters: number; assistantTextCharacters: number; userMessageId: string; assistantResponseId: string }> {
   const frameBytes = clip.sampleRate / 50 * 2;
-  const silenceTail = Buffer.alloc(clip.sampleRate * 2 * reportAudio.silenceTailMs / 1_000);
+  const silenceTailMs = turnControl.manual
+    ? Math.max(reportAudio.silenceTailMs, turnControl.silenceTimeoutMs)
+    : reportAudio.silenceTailMs;
+  const silenceTail = Buffer.alloc(clip.sampleRate * 2 * silenceTailMs / 1_000);
   const audio = Buffer.concat([clip.pcm, silenceTail]);
+  if (turnControl.manual) socket.send(JSON.stringify({ type: 'manual_turn_started' }));
   for (let offset = 0; offset < audio.length; offset += frameBytes) {
     const frame = audio.subarray(offset, Math.min(offset + frameBytes, audio.length));
     socket.send(frame, { binary: true });
@@ -687,6 +692,10 @@ async function sendAudioTurn(
     reportAudio.frames += 1;
     await sleep(20);
   }
+  if (turnControl.manual) socket.send(JSON.stringify({
+    type: 'manual_turn_commit',
+    silenceObservedMs: silenceTailMs,
+  }));
 
   const silenceFrame = Buffer.alloc(frameBytes);
   const keepalive = setInterval(() => {
@@ -756,7 +765,7 @@ async function runStoryCase(input: {
   baseUrl: string;
   databasePath: string;
   cookie: string;
-  provider: 'stepfun' | 'qwen' | 'modelbest';
+  provider: 'stepfun' | 'stepaudio3_quality' | 'stepaudio2_mini' | 'qwen' | 'modelbest';
   target: { story_id?: string; stage_id?: string; story_title?: string };
   expectedStoryId?: string;
   expectedStageId: string;
@@ -797,6 +806,12 @@ async function runStoryCase(input: {
       () => realtimeChannel.waitFor((message) => message.type === 'ready', `${input.name} Realtime ready`),
     );
     sessionId = String(ready.sessionId);
+    const turnControl = {
+      manual: ready.manualTurnControl === true,
+      silenceTimeoutMs: typeof ready.localVadSilenceTimeoutMs === 'number'
+        ? ready.localVadSilenceTimeoutMs
+        : 2_000,
+    };
     input.reportCase.sessionId = sessionId;
     const startingSession = readSession(input.databasePath, sessionId);
     assert.ok(startingSession, `${input.name} should create its Session after target ownership is validated`);
@@ -834,6 +849,7 @@ async function runStoryCase(input: {
         socket,
         channel,
         input.clips[index]!,
+        turnControl,
         knownUserIds,
         knownResponseIds,
         audioStats,
@@ -1123,14 +1139,19 @@ async function main(): Promise<void> {
 
   try {
     runtime = readRuntimeConfig();
-    const realtimeProvider = runtime.defaultRealtimeProvider ?? 'modelbest';
-    const realtimeConfigured = realtimeProvider === 'stepfun'
+    const realtimeProvider = runtime.defaultRealtimeProvider ?? 'stepaudio3_quality';
+    const isStepFunProfile = realtimeProvider === 'stepfun'
+      || realtimeProvider === 'stepaudio3_quality'
+      || realtimeProvider === 'stepaudio2_mini';
+    const realtimeConfigured = isStepFunProfile
       ? Boolean(runtime.stepfunApiKey)
       : realtimeProvider === 'modelbest'
         ? Boolean(runtime.modelbestApiKey)
         : Boolean(runtime.apiKey && runtime.workspaceId);
-    const realtimeModel = realtimeProvider === 'stepfun'
-      ? runtime.stepfunModel
+    const realtimeModel = realtimeProvider === 'stepaudio3_quality'
+      ? runtime.stepaudio3Model
+      : isStepFunProfile
+        ? runtime.stepfunModel
       : realtimeProvider === 'modelbest' ? runtime.modelbestModel : runtime.qwenModel;
     const closeoutApiFormat = runtime.closeoutApiFormat ?? 'chat-completions';
     const closeoutEndpoint = createCloseoutEndpoint(runtime.closeoutBaseUrl ?? 'https://ark.cn-beijing.volces.com/api/plan/v3', closeoutApiFormat);
@@ -1153,7 +1174,7 @@ async function main(): Promise<void> {
     try { runMigrations(migrationDb); } finally { migrationDb.close(); }
 
     const voice = process.env.E2E_TTS_VOICE?.trim() || 'Tingting';
-    const sampleRate = realtimeProvider === 'stepfun' ? 24_000 : 16_000;
+    const sampleRate = isStepFunProfile ? 24_000 : 16_000;
     const createClips = createStoryAnswers.map((answer, index) => synthesizeClip(answer, voice, `case-a-answer-${index + 1}`, runDirectory, sampleRate));
     const continueClips = continueStoryAnswers.map((answer, index) => synthesizeClip(answer, voice, `case-b-answer-${index + 1}`, runDirectory, sampleRate));
     report.providers = { ...report.providers, syntheticSpeechVoice: voice, syntheticUserAnswersPerCase: 5 };

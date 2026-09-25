@@ -4,10 +4,10 @@
 
 ## 当前 Realtime 状态
 
-- `Step-Audio-2-mini`：**Retired / no longer target realtime provider**。StepFun adapter 仅保留兼容路径，本轮不再围绕其 Prompt、Turn 或 VAD workaround 增加功能。
-- `MiniCPM-o-4.5-Realtime`：正式主 Provider **Candidate**。官方文档描述音频 Full-Duplex 与 PCM 协议，但未定义本产品所需的原生 Tool Calling / Tool Result / Resume；没有完整 E2E 前不得标记 Accepted。
-- MiniCPM 初次主动开口与中断语义尚未有端到端证据；Realtime 凭证当前不可用，真实 MiniCPM E2E 为 **NOT TESTED**。
-- 更完整的能力矩阵与慢系统状态见 [Realtime Integration Convergence Report](../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md)。
+- `StepAudio 3 Quality`：默认正式 Realtime profile，通过 StepFun Cloud Realtime API 运行。
+- `Step-Audio-2-mini`：第二条正式 profile，当前继续使用 StepFun Cloud；未来 DGX Spark 只替换这一 profile 的执行后端。
+- MiniCPM-o Realtime 保留为 **Experimental**，不作为默认 Provider，也不自动回退。
+- 双 Profile 与 Independent Memory 的当前实现、验证结果见 [Realtime Dual Profile and Memory Report](../07-reports/testing/REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md)。
 
 DGX Spark 其他模型职责与部署候选仍见 [模型选型 v1.2](MODEL_SELECTION_v1.0.md)；此处不据此改变当前 Realtime Provider 决策。
 

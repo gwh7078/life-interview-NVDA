@@ -12,7 +12,7 @@ export type AiTaskName =
   | 'completion.story'
   | 'generation.story';
 
-export type RealtimeModelProviderId = 'qwen' | 'stepfun' | 'modelbest';
+export type RealtimeModelProviderId = 'qwen' | 'stepfun' | 'modelbest' | 'stepaudio3_quality' | 'stepaudio2_mini';
 export interface AiTaskConfig {
   provider: RealtimeModelProviderId | TextRuntimeProviderId;
   model: string;
@@ -43,9 +43,9 @@ function independentTextTask(
 
 /** Task-specific model routing. Credentials deliberately remain outside this configuration object. */
 export function resolveAiTaskConfig(env: NodeJS.ProcessEnv = process.env): AiTaskConfigMap {
-  const interviewProvider = env.STORY_INTERVIEW_PROVIDER?.trim() || 'modelbest';
-  if (interviewProvider !== 'qwen' && interviewProvider !== 'stepfun' && interviewProvider !== 'modelbest') {
-    throw new Error('STORY_INTERVIEW_PROVIDER must be qwen, stepfun or modelbest.');
+  const interviewProvider = (env.STORY_INTERVIEW_PROVIDER?.trim() || 'stepaudio3_quality') as RealtimeModelProviderId;
+  if (!['qwen', 'stepfun', 'modelbest', 'stepaudio3_quality', 'stepaudio2_mini'].includes(interviewProvider)) {
+    throw new Error('STORY_INTERVIEW_PROVIDER must be qwen, stepaudio3_quality, stepaudio2_mini, stepfun or modelbest.');
   }
   const textProvider = env.TEXT_MODEL_PROVIDER?.trim() || 'openai-compatible';
   if (!isTextRuntimeProviderId(textProvider)) {
@@ -76,7 +76,9 @@ export function resolveAiTaskConfig(env: NodeJS.ProcessEnv = process.env): AiTas
     'interview.story': {
       provider: interviewProvider,
       model: env.STORY_INTERVIEW_MODEL?.trim()
-        || (interviewProvider === 'stepfun'
+        || (interviewProvider === 'stepaudio3_quality'
+          ? env.STEPAUDIO3_REALTIME_MODEL?.trim() || 'stepaudio-3-realtime-preview'
+          : interviewProvider === 'stepfun' || interviewProvider === 'stepaudio2_mini'
           ? env.STEPFUN_REALTIME_MODEL?.trim() || 'step-audio-2-mini'
           : interviewProvider === 'modelbest'
             ? env.MODELBEST_REALTIME_MODEL?.trim() || DEFAULT_MODELBEST_MODEL

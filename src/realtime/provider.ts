@@ -12,6 +12,7 @@ import {
 import { createStepfunRealtimeProvider } from './stepfun.js';
 import { createModelBestRealtimeProvider } from './modelbest.js';
 import type { RealtimeInterviewContext } from './prompt.js';
+import type { RealtimeContextHint } from './slow-coordinator.js';
 import type {
   NormalizedRealtimeEvent,
   RealtimeAudioSpec,
@@ -34,6 +35,7 @@ const QWEN_OUTPUT_ENCODING = 'pcm_s16le';
 
 export interface RealtimeProviderConfig {
   stepfunApiKey?: string;
+  stepaudio3Model?: string;
   modelbestApiKey?: string;
   apiKey?: string;
   workspaceId?: string;
@@ -82,6 +84,7 @@ function sanitizedProviderError(
 
 export interface RealtimeVoiceProvider extends RealtimeProviderContract {
   readonly requiresQueueBeforeSessionInit?: boolean;
+  openingPreludeMessages?(): Record<string, unknown>[];
   connectOptions(): { url: string; headers: Record<string, string> };
   setupSession(context: RealtimeInterviewContext): Record<string, unknown>[];
   initialResponsePlan(context: RealtimeInterviewContext): {
@@ -100,6 +103,7 @@ export interface RealtimeVoiceProvider extends RealtimeProviderContract {
   connectionFailureMessage(failure: RealtimeConnectionFailure): string;
   normalizeServerMessage(raw: unknown): NormalizedRealtimeEvent[];
   handleControlEvent(event: NormalizedRealtimeEvent): Record<string, unknown>[];
+  injectContextHint?(hint: RealtimeContextHint): Record<string, unknown>[];
   handleToolResult?(
     call: Extract<NormalizedRealtimeEvent, { type: 'tool.call.requested' }>,
     output: unknown,
@@ -140,7 +144,7 @@ function qwenCapabilities(): RealtimeProviderCapabilities {
     fullDuplex: true,
     supportsInterrupt: true,
     supportsToolCalling: false,
-    supportsSlowContext: false,
+    supportsContextInjection: false,
     supportsExplicitTurnRequest: true,
     supportsPlaybackAck: false,
     supportsExplicitSessionClose: false,
@@ -160,7 +164,8 @@ export function createRealtimeInterviewProvider(
   id: RealtimeProviderId,
   config: RealtimeProviderConfig,
 ): RealtimeVoiceProvider {
-  if (id === 'stepfun') return createStepfunRealtimeProvider(config);
+  if (id === 'stepfun' || id === 'stepaudio2_mini') return createStepfunRealtimeProvider(config, 'stepaudio2_mini');
+  if (id === 'stepaudio3_quality') return createStepfunRealtimeProvider(config, 'stepaudio3_quality');
   if (id === 'modelbest') return createModelBestRealtimeProvider(config);
 
   const audioStartedResponses = new Set<string>();

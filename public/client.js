@@ -166,7 +166,7 @@ const state = {
   autoEndGeneration: 0,
   maxSessionMs: 20 * 60 * 1000,
   providerConfigured: false,
-  realtimeProvider: 'modelbest',
+  realtimeProvider: 'stepaudio3_quality',
   providers: {},
   databaseAvailable: false,
   stories: [],
@@ -190,8 +190,10 @@ const precallLastDisclosure = createTextDisclosure({
 
 const realtimeProviderLabels = {
   qwen: 'Qwen Realtime',
-  stepfun: 'Step-Audio 2 Mini Realtime · Legacy',
-  modelbest: 'MiniCPM-o 4.5 Realtime · Candidate',
+  stepfun: 'Step-Audio-2-mini Realtime',
+  stepaudio3_quality: 'StepAudio 3 Realtime · 高质量默认',
+  stepaudio2_mini: 'Step-Audio-2-mini Realtime',
+  modelbest: 'MiniCPM-o 4.5 Realtime · Experimental',
 };
 
 const TECH_STAGES = [
@@ -515,7 +517,9 @@ function updateRealtimeAvailability() {
   }
   elements.connectionNote.textContent = provider === 'qwen'
     ? `数据库已连接 · Qwen ${config.region || 'Realtime'}${config.model ? ` · ${config.model}` : ''}`
-    : `数据库已连接 · ${label} · ${config.model || (provider === 'modelbest' ? 'MiniCPM-o-4.5-Realtime' : 'step-audio-2-mini')}`;
+    : `数据库已连接 · ${label} · ${config.model || (provider === 'stepaudio2_mini' || provider === 'stepfun'
+      ? 'step-audio-2-mini'
+      : provider === 'modelbest' ? 'MiniCPM-o-4.5-Realtime' : 'stepaudio-3-realtime-preview')}`;
   setStatus('idle', '未开始');
 }
 

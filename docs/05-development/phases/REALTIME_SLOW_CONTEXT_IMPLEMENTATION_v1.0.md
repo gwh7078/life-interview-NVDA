@@ -1,9 +1,9 @@
 # Realtime Slow Context implementation v1.0 — Historical baseline
 
 > Date: 2026-09-24
-> Status: **Superseded by the 2026-09-24 integration convergence report.** This file preserves the earlier implementation record; its 5,500 ms budget, direct Retriever fallback, recent-message payload, and Step-Audio acceptance route are no longer current.
-> Current rules: Current Story Retriever → mandatory context Agent → legal Tool Result → Realtime resume. Agent failure/invalid output yields no-context; raw Retriever results are never sent to Realtime. One absolute 5,000 ms deadline covers the full slow path. Step-Audio-2-mini is Retired; MiniCPM is Candidate and blocked on undocumented native Tool Calling / Tool Result / Resume.
-> Current status and evidence: [Realtime Integration Convergence Report](../../07-reports/testing/REALTIME_INTEGRATION_CONVERGENCE_REPORT_v1.0.md).
+> Status: **Historical implementation record; superseded by the 2026-09-25 dual-profile report.** The Tool Call-triggered memory flow below is not current.
+> Current rules: `user.transcript.final` starts an independent Current Story Memory path; Voice does not wait. The 5,000 ms TTL covers retrieval, mandatory Context Agent, and hint preparation. Results enter `pendingNextTurnContext` and are injected once at the next safe response boundary. Native Tool Calls remain separate and receive an empty Tool Result plus Resume on timeout.
+> Current status and evidence: [Realtime Dual Profile and Memory Report](../../07-reports/testing/REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md).
 
 This document records the behavior implemented on top of the existing Step-Audio Tool Call → HOLD → Backend → Tool Result → Resume path. The broader proposal remains in [Realtime Fast / Slow architecture v1.6](../../08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md); this document is authoritative for the narrower implementation shipped here.
 

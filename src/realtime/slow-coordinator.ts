@@ -198,6 +198,15 @@ export class RealtimeSlowCoordinator {
         }),
       ]);
       const latencyMs = performance.now() - startedAt;
+      if (performance.now() > deadlineAt) {
+        active.controller.abort('deadline');
+        return {
+          runId: active.runId,
+          status: 'timeout',
+          latencyMs,
+          errorCode: 'REALTIME_RECALL_TIMEOUT',
+        };
+      }
       const stale = active.generation !== this.generation || this.active?.runId !== active.runId || !isCurrent();
       if (stale) return { runId: active.runId, status: 'stale', latencyMs };
       if (outcome.kind === 'completed') return { runId: active.runId, status: 'completed', latencyMs, hint: outcome.hint };
