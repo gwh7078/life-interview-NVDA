@@ -10,6 +10,7 @@ import { buildStoryCloseoutPrompt } from '../src/interview/closeout/prompt-build
 import { StoryCloseoutValidator } from '../src/interview/closeout/validator.js';
 import { storyCloseoutOutputSchema } from '../src/interview/closeout-schema.js';
 import { closeoutResultSchema } from '../src/db/transcript.js';
+import type { StoryCloseoutContext } from '../src/interview/closeout/context-builder.js';
 
 test('ending intent recognizes direct requests and contextual no-more-detail replies', () => {
   assert.equal(isExplicitEndIntent('今天先到这里吧'), true);
@@ -83,6 +84,51 @@ test('story closeout prompts allow a fuller skeletal summary without turning int
   assert.match(continued.prompt.system, /Story Seed/);
   assert.match(continued.prompt.system, /最多 5 个/);
   assert.match(continued.prompt.system, /同一人生阶段不等于同一个 Story/);
+});
+
+test('story closeout uses role aliases and restores only user source aliases to database IDs', () => {
+  const context: StoryCloseoutContext = {
+    sessionId: 'session-aliases',
+    userId: 'user-1',
+    mode: 'create',
+    currentStageId: 'stage-db-1',
+    targetStoryTitle: '第一次登台',
+    currentStory: null,
+    lifeStages: [{ stage_id: 'stage-db-1', title: '学生时代', start_date: null, end_date: null }],
+    otherStories: [],
+    transcript: [
+      { message_id: 'db-user-message-1', role: 'user', text: '我第一次登台是在学校礼堂。', timestamp: '2026-09-20T00:00:00.000Z', provider: 'test' },
+      { message_id: 'db-assistant-message-1', role: 'assistant', text: '当时是什么感受？', timestamp: '2026-09-20T00:00:01.000Z', provider: 'test' },
+      { message_id: 'db-user-message-2', role: 'user', text: '我很紧张，但还是完成了演出。', timestamp: '2026-09-20T00:00:02.000Z', provider: 'test' },
+    ],
+  };
+  const built = buildStoryCloseoutPrompt(context);
+  const promptTranscript = (JSON.parse(built.prompt.user) as { transcript: Array<{ message_id: string; role: string }> }).transcript;
+  assert.deepEqual(promptTranscript.map(({ message_id, role }) => [message_id, role]), [
+    ['u1', 'user'], ['a1', 'assistant'], ['u2', 'user'],
+  ]);
+  assert.deepEqual([...built.references.sourceMessageIds], [
+    ['u1', 'db-user-message-1'], ['u2', 'db-user-message-2'],
+  ]);
+  assert.match(built.prompt.system, /source_message_ids 只能引用输入 Transcript 中 role=user 的 u#/);
+
+  const validator = new StoryCloseoutValidator();
+  const candidate = {
+    story: {
+      title: '第一次登台',
+      summary: '我第一次登台是在学校礼堂，虽然很紧张，还是完成了演出。',
+      agent_memory: '【事件过程】我第一次登台是在学校礼堂，虽然很紧张，还是完成了演出。',
+      source_message_ids: ['u1'],
+    },
+  };
+  const validated = validator.validate(candidate, context, built.references);
+  assert.deepEqual(validated.mode === 'create' ? validated.story.source_message_ids : [], ['db-user-message-1']);
+  assert.throws(() => validator.validate({
+    story: { ...candidate.story, source_message_ids: ['a1'] },
+  }, context, built.references), (error: unknown) => Boolean(
+    error && typeof error === 'object' && 'code' in error
+      && (error as { code: string }).code === 'INVALID_SOURCE_MESSAGE_IDS'
+  ));
 });
 
 
@@ -159,9 +205,9 @@ test('Agent Memory guard rejects silent information loss and accepts evidence-ba
         type: 'correct',
         previous_text: '2019年我和老王第一次创业。',
         new_text: '2020年我开始第一次创业。',
-        source_message_ids: ['m1'],
+        source_message_ids: ['u1'],
       }],
-      source_message_ids: ['m1'],
+      source_message_ids: ['u1'],
     },
     new_stories: [],
   }, context, built.references), (error: unknown) => Boolean(
@@ -177,9 +223,9 @@ test('Agent Memory guard rejects silent information loss and accepts evidence-ba
         type: 'correct',
         previous_text: '2019年我和老王第一次创业。',
         new_text: '2020年我和老王第一次创业。',
-        source_message_ids: ['m1'],
+        source_message_ids: ['u1'],
       }],
-      source_message_ids: ['m1'],
+      source_message_ids: ['u1'],
     },
     new_stories: [],
   }, context, built.references);
@@ -237,9 +283,9 @@ test('Agent Memory guard requires current-user evidence for destructive changes'
         type: 'remove',
         previous_text: '父亲当时反对这个决定。',
         new_text: '',
-        source_message_ids: ['m2'],
+        source_message_ids: ['a1'],
       }],
-      source_message_ids: ['m1'],
+      source_message_ids: ['u1'],
     },
     new_stories: [],
   }, context, built.references), (error: unknown) => Boolean(
@@ -258,7 +304,7 @@ test('Agent Memory rejects a real but unrelated source message for a new fact', 
   const built = buildStoryCloseoutPrompt(context); const validator = new StoryCloseoutValidator();
   assert.throws(() => validator.validate({ current_story: {
     summary: '用户刚开始新的工作。', agent_memory: ['【故事背景】用户刚开始新的工作。', '【后续经历】后来在海边开了一家咖啡馆。'].join('\n'),
-    memory_changes: [{ type: 'add', previous_text: '', new_text: '后来在海边开了一家咖啡馆。', source_message_ids: ['m1'] }], source_message_ids: ['m1'],
+    memory_changes: [{ type: 'add', previous_text: '', new_text: '后来在海边开了一家咖啡馆。', source_message_ids: ['u1'] }], source_message_ids: ['u1'],
   }, new_stories: [] }, context, built.references), (error: unknown) => Boolean(error && typeof error === 'object' && 'code' in error
     && (error as { code: string }).code === 'INVALID_MEMORY_CHANGE' && 'diagnostics' in error
     && (error as { diagnostics?: Record<string, unknown> }).diagnostics?.reason === 'new_text_not_grounded_in_cited_messages'));

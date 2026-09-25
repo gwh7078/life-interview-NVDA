@@ -101,6 +101,31 @@ class CaptureRunner implements CommandRunner {
   }
 }
 
+class InferEnvelopeRunner extends CaptureRunner {
+  async run(
+    command: string,
+    args: string[],
+    _timeoutMs: number,
+    stdin?: string,
+    signal?: AbortSignal,
+  ) {
+    this.command = command;
+    this.args = args;
+    this.stdin = stdin ?? '';
+    this.signal = signal;
+    return {
+      stdout: JSON.stringify({
+        ok: true,
+        outputs: [{
+          type: 'text',
+          text: '{"selected_evidence_ids":["e1"],"possible_conflicts":[],"interview_hints":[]}',
+        }],
+      }),
+      stderr: '',
+    };
+  }
+}
+
 class SequenceCaptureRunner implements CommandRunner {
   inputs: string[] = [];
   private callCount = 0;
@@ -163,12 +188,12 @@ test('AttemptRunner preinjects fixed Context and authorizes zero retrieval scrip
   assert.deepEqual(result.output, { status: 'interviewing', gaps: [] });
 });
 
-test('AttemptRunner targets the task-specific OpenClaw agent and session', async () => {
-  const runner = new CaptureRunner();
+test('Context Hint uses OpenClaw local zero-tool inference with its installed Skill rules', async () => {
+  const runner = new InferEnvelopeRunner();
   const attempts = new NemoClawOpenClawAttemptRunner({ sandboxName: 'my-assistant' }, runner);
   const base = taskRequest();
 
-  await attempts.run({
+  const result = await attempts.run({
     task: {
       ...base,
       taskType: 'interview.context_hint',
@@ -189,12 +214,22 @@ test('AttemptRunner targets the task-specific OpenClaw agent and session', async
     mode: 'normal',
   });
 
-  const agentIndex = runner.args.indexOf('--agent');
-  const sessionIndex = runner.args.indexOf('--session-key');
-  assert.equal(runner.args[agentIndex + 1], 'realtime-context');
-  assert.equal(runner.args[sessionIndex + 1], 'agent:realtime-context:task:run-1:attempt:1');
+  const command = runner.args[runner.args.indexOf('-c') + 1] ?? '';
+  assert.match(command, /openclaw infer model run --local/u);
+  assert.doesNotMatch(command, /openclaw agent/u);
+  assert.equal(runner.args.includes('--agent'), false);
+  assert.equal(runner.args.includes('--session-key'), false);
   assert.equal(runner.args[runner.args.indexOf('--thinking') + 1], 'off');
-  assert.match(runner.stdin, /do not call tools, retrieve data, execute scripts/u);
+  assert.match(runner.stdin, /Question 只提供语境/u);
+  assert.match(runner.stdin, /不进行检索，不调用工具或脚本/u);
+  assert.match(runner.stdin, /<LIFE_INTERVIEW_TASK_CONTEXT>/u);
+  assert.match(runner.stdin, /"query":"用户刚才提到的那件事是什么？"/u);
+  assert.equal(runner.args.some((arg) => arg.includes('memory-search.mjs')), false);
+  assert.deepEqual(result.output, {
+    selected_evidence_ids: ['e1'],
+    possible_conflicts: [],
+    interview_hints: [],
+  });
 });
 
 test('AttemptRunner exposes only the authorized retrieval script and counts its marker', async () => {

@@ -6,7 +6,9 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
-const MODEL = 'step-audio-2-mini';
+const MODEL = process.env.STEPFUN_TEST_MODEL?.trim()
+  || process.env.STEPFUN_REALTIME_MODEL?.trim()
+  || 'step-audio-2-mini';
 const WS_BASE_URL = 'wss://api.stepfun.com/v1/realtime';
 const SAMPLE_RATE = Number(process.env.STEPFUN_SAMPLE_RATE || 24_000);
 const VOICE = process.env.STEPFUN_VOICE || 'wenrounansheng';
@@ -15,8 +17,7 @@ const INPUT_TEXT = process.env.STEPFUN_INPUT_TEXT || '你好，我想聊聊我�
 const TTS_VOICE = process.env.STEPFUN_TTS_VOICE || 'Tingting';
 const CONTEXT_ROLE = process.env.STEPFUN_CONTEXT_ROLE || 'user';
 const CONTEXT_TEXT = process.env.STEPFUN_CONTEXT_TEXT
-  || '补充上下文（来自本地 Judge/Retriever）：请在回答开头明确说“上下文已注入”，然后围绕用户的第一次创业经历提出一个追问。';
-const CONTEXT_ITEM_ID = 'stepfun_probe_context';
+  || '后台测试提示：本地插入标记为“蓝色风筝7391”。请在下一轮回答中原样说出“蓝色风筝7391”，然后围绕用户的第一次创业经历提出一个追问。';
 const TOOL_TEST_MODE = process.env.STEPFUN_TOOL_TEST_MODE || '';
 const TOOL_NAME = 'get_interview_context';
 const TOOL_INPUT_TEXT = process.env.STEPFUN_TOOL_INPUT_TEXT
@@ -496,7 +497,7 @@ async function main() {
     input_audio_recognized: false,
     output_audio_received: false,
     context_injected_before_response: false,
-    context_requested_item_id: CONTEXT_ITEM_ID,
+    context_requested_item_id: null,
     context_role: CONTEXT_ROLE,
     context_ack_event_observed: false,
     context_marker_in_output: false,
@@ -575,18 +576,11 @@ async function main() {
     probe.send('input_audio_buffer.append', {
       audio: audio.pcm16.toString('base64'),
     });
-    const commitSentAtMs = Date.now();
-    probe.send('input_audio_buffer.commit');
-    const committed = await probe.waitForType('input_audio_buffer.committed', 15_000, appendAfterSeq);
-    commitEntry = committed.entry;
-    result.manual_commit = true;
-
-    const holdStartedAtMs = Date.now();
+    let contextAcknowledgement;
     if (!TOOL_TEST_MODE) {
       const contextAfterSeq = probe.seq;
       probe.send('conversation.item.create', {
         item: {
-          id: CONTEXT_ITEM_ID,
           type: 'message',
           role: CONTEXT_ROLE,
           content: [{
@@ -595,21 +589,31 @@ async function main() {
           }],
         },
       });
+      contextAcknowledgement = probe.waitFor(
+        (event) => event.type === 'conversation.item.created'
+          && event.item?.role === CONTEXT_ROLE
+          && event.item?.id
+          && event.item.type === 'message',
+        750,
+        'context conversation.item.created',
+        contextAfterSeq,
+      );
+    }
+
+    const commitSentAtMs = Date.now();
+    probe.send('input_audio_buffer.commit');
+    const committed = await probe.waitForType('input_audio_buffer.committed', 15_000, appendAfterSeq);
+    commitEntry = committed.entry;
+    result.manual_commit = true;
+    if (contextAcknowledgement) {
       try {
-        await probe.waitFor(
-          (event) => event.type === 'conversation.item.created'
-            && event.item?.role === CONTEXT_ROLE
-            && event.item?.id
-            && event.item.id !== committed.event.item_id,
-          750,
-          'context conversation.item.created',
-          contextAfterSeq,
-        );
+        await contextAcknowledgement;
         result.context_ack_event_observed = true;
       } catch {
         result.context_ack_event_observed = false;
       }
     }
+    const holdStartedAtMs = Date.now();
 
     const remainingHoldMs = TOOL_TEST_MODE ? 0 : HOLD_MS - (Date.now() - holdStartedAtMs);
     if (remainingHoldMs > 0) await sleep(remainingHoldMs);
@@ -680,9 +684,8 @@ async function main() {
       result.response_done_status = responseDone.event.response?.status || null;
       result.input_transcript = probe.inputTranscript;
       result.response_transcript = probe.outputTranscript;
-      result.context_marker_in_output = probe.outputTranscript.includes('上下文已注入');
-      result.context_injected_before_response = result.context_ack_event_observed
-        || result.context_marker_in_output;
+      result.context_marker_in_output = probe.outputTranscript.includes('蓝色风筝7391');
+      result.context_injected_before_response = result.context_marker_in_output;
     }
     result.input_audio_recognized = Boolean(probe.inputTranscript.trim());
     if (probe.outputChunks.length === 0) probe.outputChunks = probe.fallbackOutputChunks;
@@ -730,7 +733,7 @@ async function main() {
       && result.tool_resume_audio_received
       : TOOL_TEST_MODE === 'negative'
         ? basePassed && result.tool_configured && result.negative_no_tool_call
-        : basePassed;
+        : basePassed && (CONTEXT_ROLE !== 'assistant' || result.context_marker_in_output);
   const report = {
     generated_at: new Date().toISOString(),
     config: {

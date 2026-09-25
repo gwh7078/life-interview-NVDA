@@ -12,6 +12,10 @@ try {
     const values = {
       environment: document.getElementById('tech-observer-environment'),
       provider: document.getElementById('tech-observer-provider'),
+      memoryTriggerMode: document.getElementById('tech-observer-memory-trigger'),
+      retriever: document.getElementById('tech-observer-retriever'),
+      contextAgent: document.getElementById('tech-observer-context-agent'),
+      contextInjection: document.getElementById('tech-observer-context-injection'),
       agent: document.getElementById('tech-observer-agent'),
       runtime: document.getElementById('tech-observer-runtime'),
       skill: document.getElementById('tech-observer-skill'),
@@ -55,7 +59,7 @@ try {
     let renderQueued = false;
 
     const safeDisplayLabel = (value) => typeof value === 'string'
-      && /^[A-Za-z0-9][A-Za-z0-9 .:/+-]{0,63}$/u.test(value.trim())
+      && /^[A-Za-z0-9_][A-Za-z0-9_ .:/+-]{0,63}$/u.test(value.trim())
       && !/(?:\b(?:bearer|token|api[ _-]?key|cookie|authorization|secret)\b|^sk[-_]|^(?:session|sess|story|call|response|run|trace|span)[_:-]|^[0-9a-f]{8}-[0-9a-f-]{27,}$)/iu.test(value.trim())
       ? value.trim()
       : undefined;

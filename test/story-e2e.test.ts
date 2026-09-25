@@ -164,7 +164,7 @@ test('mock Story E2E creates a Story, links the Session, preserves Transcript, a
             title: '模型拟定标题（由用户标题覆盖）',
             summary: '用户回忆第一次独立负责这段经历时，先听取团队意见，再重新安排当天分工。',
             agent_memory: '【事件过程】用户回忆第一次独立负责这段经历时，先听取团队意见，再重新安排当天分工。',
-            source_message_ids: ['m1'],
+            source_message_ids: ['u1'],
           },
         },
         model: 'mock-closeout-model',

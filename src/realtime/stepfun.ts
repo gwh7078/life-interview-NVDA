@@ -1,4 +1,9 @@
-import { buildInterviewContextPayload, buildInterviewInstructions, type RealtimeInterviewContext } from './prompt.js';
+import {
+  buildInterviewContextPayload,
+  buildStepfunInterviewInstructions,
+  type RealtimeInterviewContext,
+  type StoryInterviewContext,
+} from './prompt.js';
 import type { RealtimeProviderConfig, RealtimeVoiceProvider } from './provider.js';
 import type { RealtimeContextHint } from './slow-coordinator.js';
 import {
@@ -23,7 +28,18 @@ export const STEPFUN_CONTEXT_TOOL = INTERVIEW_CONTEXT_TOOL_NAME;
 
 export type StepFunRealtimeProfileId = 'stepaudio3_quality' | 'stepaudio2_mini';
 
-const STEPFUN_CAPABILITIES: RealtimeProviderCapabilities = {
+const STEPAUDIO3_CAPABILITIES: RealtimeProviderCapabilities = {
+  fullDuplex: true,
+  supportsInterrupt: false,
+  supportsToolCalling: true,
+  supportsContextInjection: true,
+  supportsExplicitTurnRequest: true,
+  supportsPlaybackAck: false,
+  supportsExplicitSessionClose: false,
+  manualTurnControl: true,
+};
+
+const STEPAUDIO2_MINI_CAPABILITIES: RealtimeProviderCapabilities = {
   fullDuplex: true,
   supportsInterrupt: false,
   supportsToolCalling: true,
@@ -39,17 +55,17 @@ export const STEPFUN_REALTIME_PROFILES = {
     model: DEFAULT_STEPAUDIO3_MODEL,
     execution: 'stepfun-cloud',
     openingPrelude: true,
-    capabilities: STEPFUN_CAPABILITIES,
+    capabilities: STEPAUDIO3_CAPABILITIES,
   },
   stepaudio2_mini: {
     model: DEFAULT_STEPFUN_MODEL,
     execution: 'stepfun-cloud',
     openingPrelude: false,
-    capabilities: STEPFUN_CAPABILITIES,
+    capabilities: STEPAUDIO2_MINI_CAPABILITIES,
   },
 } as const;
 
-const STEPFUN_CONTEXT_TOOL_DESCRIPTION = '读取系统已经准备好的当前 Story Memory Hint；此工具不触发 Retriever 或 Agent。没有已准备内容时返回空结果。';
+const STEPFUN_CONTEXT_TOOL_DESCRIPTION = '查询当前故事的历史信息，仅用于核对事实、矛盾或避免重复提问。';
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -110,7 +126,7 @@ export function buildStepfunContextTool(): Record<string, unknown> {
         properties: {
           query: {
             type: 'string',
-            description: '用一句简短中文描述需要确认的历史信息。',
+            description: '用一句简短中文描述要查的历史信息。',
           },
         },
         required: ['query'],
@@ -148,17 +164,28 @@ function initialResponseInstructions(context: RealtimeInterviewContext): string 
 export function buildStepfunSessionUpdate(
   context: RealtimeInterviewContext,
   voice = DEFAULT_STEPFUN_VOICE,
+  adapterProfile: StepFunRealtimeProfileId = 'stepaudio2_mini',
 ): Record<string, unknown> {
+  const storyContext = context.interview_type === 'onboarding' || context.interview_type === 'external_contributor'
+    ? undefined
+    : context as StoryInterviewContext;
+  const memoryTriggerMode = storyContext?.memoryTriggerMode ?? 'backend_auto';
+  const profile = storyContext?.voiceProfile ?? adapterProfile;
   const allowsContextTool = context.interview_type === 'story'
+    && memoryTriggerMode === 'voice_tool'
     && context.task_context?.mode === 'continue'
     && typeof context.story?.story_id === 'string'
     && context.story.story_id.trim().length > 0;
-  const toolInstructions = `\n\n## 历史 Memory 与工具调用\nMemory 会在用户回答后由系统独立触发。不要调用 ${STEPFUN_CONTEXT_TOOL} 来启动检索；若当前回合确需读取已经准备好的 Memory Hint，可以调用该工具。Tool Result 可能为空，随后继续当前采访。`;
   return {
     type: 'session.update',
     session: {
       modalities: ['text', 'audio'],
-      instructions: `${buildInterviewInstructions(context, { omitOpeningGap: true })}${allowsContextTool ? toolInstructions : ''}请使用默认男声与用户交流。`,
+      instructions: `${buildStepfunInterviewInstructions(context, {
+        profile,
+        memoryTriggerMode,
+        allowsContextTool,
+        omitOpeningGap: true,
+      })}\n\n请使用默认男声与用户交流。`,
       input_audio_format: 'pcm16',
       output_audio_format: 'pcm16',
       voice,
@@ -414,7 +441,7 @@ export function createStepfunRealtimeProvider(
         headers: { Authorization: `Bearer ${config.stepfunApiKey}` },
       };
     },
-    setupSession: (context) => [buildStepfunSessionUpdate(context)],
+    setupSession: (context) => [buildStepfunSessionUpdate(context, DEFAULT_STEPFUN_VOICE, profileId)],
     openingPreludeMessages: () => profile.openingPrelude
       ? [{
           type: 'conversation.item.create',

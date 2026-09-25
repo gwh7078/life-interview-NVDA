@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { once } from 'node:events';
+import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 import { after, test } from 'node:test';
 import WebSocket, { WebSocketServer } from 'ws';
@@ -15,13 +16,16 @@ import type { RetrieverAdapter } from '../src/retriever/types.js';
 import { StoryShareRepository } from '../src/repositories/story-share-repository.js';
 import { createInterviewServiceServer } from '../src/server.js';
 
+type JsonRecord = Record<string, unknown>;
+type TriggerMode = 'voice_tool' | 'backend_auto';
+
 const temporaryDirectories: string[] = [];
 
 after(() => temporaryDirectories.forEach((directory) => rmSync(directory, { recursive: true, force: true })));
 
-function record(value: unknown): Record<string, unknown> | undefined {
+function record(value: unknown): JsonRecord | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? value as JsonRecord
     : undefined;
 }
 
@@ -29,7 +33,12 @@ function normalize(raw: unknown): NormalizedRealtimeEvent[] {
   const event = record(parseQwenServerEvent(raw));
   if (!event) return [];
   const type = String(event.type ?? '');
-  if (type === 'session.updated') return [{ type: 'session.ready', providerSessionId: 'mock-session' }];
+  if (type === 'session.updated') {
+    return [
+      { type: 'session.configured', turnDetectionMode: 'manual' },
+      { type: 'session.ready', providerSessionId: 'mock-session' },
+    ];
+  }
   if (type === 'response.created') {
     const response = record(event.response);
     return [{ type: 'assistant.started', responseId: String(response?.id ?? 'opening') }];
@@ -64,13 +73,63 @@ function normalize(raw: unknown): NormalizedRealtimeEvent[] {
 }
 
 function waitFor<T>(promise: Promise<T>, timeoutMs = 2_000, label = 'Realtime wiring'): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined;
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timed out waiting for ${label}.`)), timeoutMs)),
-  ]);
+    new Promise<T>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error('Timed out waiting for ' + label + '.')), timeoutMs);
+    }),
+  ]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
 }
 
-test('user final independently triggers Memory while native Tool Calls only return Tool Results', async () => {
+function waitForMatch<T>(
+  read: () => T[],
+  predicate: (item: T, index: number) => boolean,
+  label: string,
+  timeoutMs = 2_000,
+): Promise<T> {
+  const found = read().find(predicate);
+  if (found) return Promise.resolve(found);
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(() => {
+      const next = read().find(predicate);
+      if (next) {
+        clearInterval(interval);
+        clearTimeout(timeout);
+        resolve(next);
+      }
+    }, 5);
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      reject(new Error('Timed out waiting for ' + label + '.'));
+    }, timeoutMs);
+  });
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function sendProviderEvent(socket: WebSocket | undefined, event: JsonRecord): void {
+  if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error('Mock Realtime provider is not connected.');
+  socket.send(JSON.stringify(event));
+}
+
+interface FixtureOptions {
+  realtimeMemoryTriggerMode: TriggerMode;
+  realtimeSlowDeadlineMs?: number;
+  manualTurnControl?: boolean;
+  supportsContextInjection?: boolean;
+}
+
+interface ClientConnection {
+  socket: WebSocket;
+  messages: JsonRecord[];
+}
+
+async function createFixture(options: FixtureOptions) {
   const directory = mkdtempSync(path.resolve('data/test-tmp/realtime-retriever-wiring-'));
   temporaryDirectories.push(directory);
   const diagnosticsDirectory = path.join(directory, 'diagnostics');
@@ -78,6 +137,7 @@ test('user final independently triggers Memory while native Tool Calls only retu
   const previousCaptureContent = process.env.DIAGNOSTICS_CAPTURE_CONTENT;
   process.env.DIAGNOSTICS_DIR = diagnosticsDirectory;
   process.env.DIAGNOSTICS_CAPTURE_CONTENT = '1';
+
   const databasePath = path.join(directory, 'memoir.db');
   const database = createDatabase(databasePath);
   try {
@@ -90,14 +150,23 @@ test('user final independently triggers Memory while native Tool Calls only retu
     .createForStory(seedIds.user, seedIds.firstProject, 'daughter');
   assert.ok(share);
 
-  let searchInput: Parameters<RetrieverAdapter['searchTranscript']>[0] | undefined;
-  let toolResultCount = 0;
-  let agentRunCount = 0;
+  const searchInputs: Parameters<RetrieverAdapter['searchTranscript']>[0][] = [];
+  const agentQueries: string[] = [];
+  const toolResults: JsonRecord[] = [];
+  const injectedHints: Array<{ hint: unknown; at: number }> = [];
+  const providerMessages: JsonRecord[] = [];
+  const clientConnections: ClientConnection[] = [];
+  const providerSockets: WebSocket[] = [];
+  let providerHttpClosed = false;
+  let appServerClosed = false;
+  let responseId = 0;
+  let openingId = 0;
+
   const retriever: RetrieverAdapter = {
     async indexSessionTranscript() { return { status: 'accepted' }; },
     async searchTranscript(input) {
-      searchInput = input;
-      if (input.query === '继续补充。') throw new Error('RETRIEVER_TEST_FAILURE');
+      searchInputs.push(input);
+      if (input.query === 'retriever-failure') throw new Error('RETRIEVER_TEST_FAILURE');
       return [{
         text: '[segment_id=history-message][message_id=history-message][Q+A]\nQuestion (context only): 第一次去北京是什么时候？\nAnswer (user-provided fact): 2013 年春节以后第一次到北京。',
         score: 0.95,
@@ -115,47 +184,27 @@ test('user final independently triggers Memory while native Tool Calls only retu
 
   const providerHttp = createServer();
   const providerServer = new WebSocketServer({ server: providerHttp });
-  let providerSocket: WebSocket | undefined;
-  const toolResults: Record<string, unknown>[] = [];
-  const toolResultWaiters = new Map<number, (value: Record<string, unknown>) => void>();
-  const waitForToolResult = (count: number): Promise<Record<string, unknown>> => toolResults.length >= count
-    ? Promise.resolve(toolResults[count - 1]!)
-    : new Promise((resolve) => toolResultWaiters.set(count, resolve));
   providerServer.on('connection', (socket) => {
-    providerSocket = socket;
+    providerSockets.push(socket);
     socket.on('message', (raw) => {
       const message = record(JSON.parse(raw.toString()));
       if (!message) return;
+      providerMessages.push(message);
       if (message.type === 'mock.setup') {
-        socket.send(JSON.stringify({ type: 'session.updated', session: { id: 'mock-session' } }));
+        socket.send(JSON.stringify({
+          type: 'session.updated',
+          session: { id: 'mock-session', turn_detection: null },
+        }));
       } else if (message.type === 'mock.opening') {
-        socket.send(JSON.stringify({ type: 'response.created', response: { id: 'opening' } }));
-        socket.send(JSON.stringify({ type: 'response.done', response: { id: 'opening', status: 'completed' } }));
-        setTimeout(() => {
-          if (socket.readyState !== WebSocket.OPEN) return;
-          socket.send(JSON.stringify({
-            type: 'conversation.item.input_audio_transcription.completed',
-            item_id: 'turn-1',
-            transcript: '我第一次去北京是什么时候？',
-          }));
-          setTimeout(() => socket.send(JSON.stringify({
-            type: 'response.function_call_arguments.done',
-            call_id: 'call-1',
-            response_id: 'tool-response',
-            name: 'get_interview_context',
-            arguments: JSON.stringify({ query: '第一次去北京是什么时候' }),
-          })), 250);
-        }, 20);
+        const id = 'opening-' + (++openingId);
+        socket.send(JSON.stringify({ type: 'response.created', response: { id } }));
+        socket.send(JSON.stringify({ type: 'response.done', response: { id, status: 'completed' } }));
       } else if (message.type === 'mock.tool_result') {
         toolResults.push(message);
-        toolResultWaiters.get(toolResults.length)?.(message);
-        toolResultCount = toolResults.length;
       } else if (message.type === 'response.create') {
-        socket.send(JSON.stringify({ type: 'response.created', response: { id: 'response-B' } }));
-        socket.send(JSON.stringify({
-          type: 'response.done',
-          response: { id: 'response-B', status: 'completed' },
-        }));
+        const id = 'response-' + (++responseId);
+        socket.send(JSON.stringify({ type: 'response.created', response: { id } }));
+        socket.send(JSON.stringify({ type: 'response.done', response: { id, status: 'completed' } }));
       }
     });
   });
@@ -163,7 +212,7 @@ test('user final independently triggers Memory while native Tool Calls only retu
   await once(providerHttp, 'listening');
   const providerAddress = providerHttp.address();
   assert.ok(providerAddress && typeof providerAddress === 'object');
-  const providerUrl = `ws://127.0.0.1:${providerAddress.port}`;
+  const providerUrl = 'ws://127.0.0.1:' + providerAddress.port;
 
   const appServer = createInterviewServiceServer({
     host: '127.0.0.1',
@@ -175,7 +224,8 @@ test('user final independently triggers Memory while native Tool Calls only retu
     workspaceId: 'mock-workspace',
     developmentAuthEnabled: true,
     openingResponseTimeoutMs: 500,
-    realtimeSlowDeadlineMs: 500,
+    realtimeSlowDeadlineMs: options.realtimeSlowDeadlineMs ?? 800,
+    realtimeMemoryTriggerMode: options.realtimeMemoryTriggerMode,
     wrapUpMs: 100_000,
     maxSessionMs: 200_000,
     closeGraceMs: 2_000,
@@ -183,8 +233,10 @@ test('user final independently triggers Memory while native Tool Calls only retu
     retriever,
     realtimeContextAgentTasks: {
       async run(taskRequest) {
-        agentRunCount += 1;
-        if (agentRunCount === 2) throw new Error('AGENT_RUNTIME_FAILED');
+        const query = String(record(taskRequest.payload)?.query ?? '');
+        agentQueries.push(query);
+        if (query === 'agent-failure') throw new Error('AGENT_RUNTIME_FAILED');
+        if (query === 'agent-timeout') await new Promise<void>(() => {});
         return {
           runId: taskRequest.runId,
           taskType: 'interview.context_hint',
@@ -207,11 +259,11 @@ test('user final independently triggers Memory while native Tool Calls only retu
         fullDuplex: true,
         supportsInterrupt: true,
         supportsToolCalling: true,
-        supportsContextInjection: true,
+        supportsContextInjection: options.supportsContextInjection !== false,
         supportsExplicitTurnRequest: true,
         supportsPlaybackAck: false,
         supportsExplicitSessionClose: false,
-        manualTurnControl: false,
+        manualTurnControl: options.manualTurnControl === true,
       },
       audio: {
         input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 },
@@ -222,16 +274,23 @@ test('user final independently triggers Memory while native Tool Calls only retu
       initialResponsePlan: () => ({ steps: [{ message: { type: 'mock.opening' } }] }),
       appendAudioMessages: () => [],
       requestAssistantTurnMessages: () => [],
+      commitAndRespondToInputTurn: () => [
+        { message: { type: 'mock.commit' } },
+        { message: { type: 'response.create' } },
+      ],
       stopInputAfterCurrentTurn: () => [],
       beginInputShutdown: () => [],
       closePlan: () => null,
       connectionFailureMessage: () => 'mock realtime failure',
       normalizeServerMessage: normalize,
       handleControlEvent: () => [],
-      injectContextHint: (hint) => [{ type: 'mock.context_hint', hint }],
-      handleToolResult: (_call, output, options) => [
-        { type: 'mock.tool_result', output, resume: false },
-        ...(options?.resume === false ? [] : [{ type: 'response.create' }]),
+      injectContextHint: (hint) => {
+        injectedHints.push({ hint, at: performance.now() });
+        return [{ type: 'mock.context_hint', hint }];
+      },
+      handleToolResult: (_call, output, resultOptions) => [
+        { type: 'mock.tool_result', output, resume: resultOptions?.resume !== false },
+        ...(resultOptions?.resume === false ? [] : [{ type: 'response.create' }]),
       ],
     }),
   });
@@ -239,167 +298,408 @@ test('user final independently triggers Memory while native Tool Calls only retu
   await once(appServer, 'listening');
   const appAddress = appServer.address();
   assert.ok(appAddress && typeof appAddress === 'object');
-  const baseUrl = `http://127.0.0.1:${appAddress.port}`;
-  let clientSocket: WebSocket | undefined;
+  const baseUrl = 'http://127.0.0.1:' + appAddress.port;
+
+  const observeClient = (socket: WebSocket): ClientConnection => {
+    const connection = { socket, messages: [] as JsonRecord[] };
+    socket.on('message', (raw) => {
+      const message = record(JSON.parse(raw.toString()));
+      if (message) connection.messages.push(message);
+    });
+    clientConnections.push(connection);
+    return connection;
+  };
 
   try {
-    const login = await fetch(`${baseUrl}/api/auth/development/legacy-session`, { method: 'POST' });
+    const login = await fetch(baseUrl + '/api/auth/development/legacy-session', { method: 'POST' });
     const cookie = login.headers.get('set-cookie')?.split(';', 1)[0];
     assert.ok(cookie);
-    clientSocket = new WebSocket(`ws://127.0.0.1:${appAddress.port}/api/realtime`, { headers: { cookie } });
-    await once(clientSocket, 'open');
-    clientSocket.send(JSON.stringify({ type: 'start', story_id: seedIds.firstProject, provider: 'qwen' }));
-    await waitFor(new Promise<void>((resolve) => {
-      clientSocket?.on('message', (raw) => {
-        if (record(JSON.parse(raw.toString()))?.type === 'ready') resolve();
-      });
-    }), 2_000, 'story ready');
-    clientSocket.send(JSON.stringify({ type: 'playback_ready' }));
-
-    const result = await waitFor(waitForToolResult(1), 2_000, 'story tool result');
-    const output = record(result.output);
-    assert.equal(searchInput?.ownerId, seedIds.user);
-    assert.equal(searchInput?.storyId, seedIds.firstProject);
-    assert.equal(searchInput?.sourceType, 'subject');
-    assert.equal(searchInput?.query, '我第一次去北京是什么时候？', 'Retriever query is the user final, not Tool arguments');
-    assert.deepEqual(output?.facts, [{
-      claim: '2013 年春节以后第一次到北京。',
-      question: '第一次去北京是什么时候？',
-      sourceMessageIds: ['history-message'],
-    }], 'Tool Result may return the Context Agent-selected user Answer, never raw Retriever output');
-    assert.equal(result.resume, false);
-
-    providerSocket?.send(JSON.stringify({
-      type: 'conversation.item.input_audio_transcription.completed',
-      item_id: 'turn-2',
-      transcript: '我还想起另一段经历。',
-    }));
-    providerSocket?.send(JSON.stringify({
-      type: 'response.function_call_arguments.done',
-      call_id: 'call-2',
-      response_id: 'tool-response-2',
-      name: 'get_interview_context',
-      arguments: JSON.stringify({ query: '后来发生了什么' }),
-    }));
-    const failedAgentResult = await waitFor(waitForToolResult(2), 2_000, 'Agent failure no-context result');
-    assert.deepEqual(record(failedAgentResult.output)?.facts, []);
-
-    providerSocket?.send(JSON.stringify({ type: 'response.created', response: { id: 'response-C' } }));
-    providerSocket?.send(JSON.stringify({
-      type: 'conversation.item.input_audio_transcription.completed',
-      item_id: 'turn-3',
-      transcript: '我再补充一个问题。',
-    }));
-    providerSocket?.send(JSON.stringify({
-      type: 'response.function_call_arguments.done',
-      call_id: 'call-3',
-      response_id: 'response-C',
-      name: 'get_interview_context',
-      arguments: JSON.stringify({ query: '当时还有谁在场' }),
-    }));
-    const timedOutResult = await waitFor(waitForToolResult(3), 1_000, 'empty Tool Result after native Tool timeout');
-    assert.deepEqual(record(timedOutResult.output)?.facts, [], 'timeout discards the pending result but still resolves the Tool Call');
-    assert.deepEqual(record(timedOutResult.output)?.facts, [], 'timed-out Tool Call returns no Memory Hint');
-    providerSocket?.send(JSON.stringify({
-      type: 'response.done',
-      response: { id: 'response-C', status: 'completed' },
-    }));
-    providerSocket?.send(JSON.stringify({ type: 'response.created', response: { id: 'response-D' } }));
-    providerSocket?.send(JSON.stringify({
-      type: 'conversation.item.input_audio_transcription.completed',
-      item_id: 'turn-4',
-      transcript: '继续补充。',
-    }));
-    providerSocket?.send(JSON.stringify({
-      type: 'response.function_call_arguments.done',
-      call_id: 'call-4',
-      response_id: 'response-D',
-      name: 'get_interview_context',
-      arguments: JSON.stringify({ query: 'x' }),
-    }));
-    const failedRetrieverResult = await waitFor(waitForToolResult(4), 1_000, 'Tool Result after Retriever failure');
-    assert.deepEqual(record(failedRetrieverResult.output)?.facts, []);
-    providerSocket?.send(JSON.stringify({
-      type: 'response.done',
-      response: { id: 'response-D', status: 'completed' },
-    }));
-
-    const storyEnded = new Promise<void>((resolve) => {
-      clientSocket?.on('message', (raw) => {
-        if (record(JSON.parse(raw.toString()))?.type === 'ended') resolve();
-      });
+    const ownerSocket = new WebSocket('ws://127.0.0.1:' + appAddress.port + '/api/realtime', {
+      headers: { cookie },
     });
-    clientSocket.send(JSON.stringify({ type: 'end', reason: 'user_confirmed' }));
-    await waitFor(storyEnded, 5_000, 'story ended');
-    const traceDirectory = path.join(diagnosticsDirectory, 'traces', 'realtime');
+    await once(ownerSocket, 'open');
+    const owner = observeClient(ownerSocket);
+    ownerSocket.send(JSON.stringify({ type: 'start', story_id: seedIds.firstProject, provider: 'qwen' }));
+    await waitForMatch(() => owner.messages, (message) => message.type === 'ready', 'story ready');
+    ownerSocket.send(JSON.stringify({ type: 'playback_ready' }));
+    await waitForMatch(
+      () => owner.messages,
+      (message) => message.type === 'response_done' && message.responseId === 'opening-1',
+      'opening response',
+    );
+
+    const waitForProviderMessage = (predicate: (message: JsonRecord) => boolean, label: string) =>
+      waitForMatch(() => providerMessages, predicate, label);
+    const waitForToolResult = (count: number) => waitForMatch(
+      () => toolResults,
+      (_message, index) => index === count - 1,
+      'Tool Result ' + count,
+    );
+    const waitForInjection = (count: number) => waitForMatch(
+      () => injectedHints,
+      (_entry, index) => index === count - 1,
+      'Context Hint ' + count,
+    );
+
+    return {
+      directory,
+      diagnosticsDirectory,
+      appAddress,
+      baseUrl,
+      shareToken: share.token,
+      ownerSocket,
+      ownerMessages: owner.messages,
+      providerMessages,
+      searchInputs,
+      agentQueries,
+      toolResults,
+      injectedHints,
+      sendProviderEvent: (event: JsonRecord) => sendProviderEvent(providerSockets.at(-1), event),
+      waitForProviderMessage,
+      waitForToolResult,
+      waitForInjection,
+      waitForAgentQuery: (query: string) => waitForMatch(
+        () => agentQueries,
+        (candidate) => candidate === query,
+        'Context Agent query ' + query,
+      ),
+      waitForOwnerMessage: (predicate: (message: JsonRecord) => boolean, label: string) =>
+        waitForMatch(() => owner.messages, predicate, label),
+      openExternalClient: async () => {
+        const externalSocket = new WebSocket(
+          'ws://127.0.0.1:' + appAddress.port + '/api/realtime?share_token=' + encodeURIComponent(share.token),
+          { headers: { origin: baseUrl } },
+        );
+        await once(externalSocket, 'open');
+        const external = observeClient(externalSocket);
+        return external;
+      },
+      close: async () => {
+        for (const client of clientConnections) {
+          if (client.socket.readyState === WebSocket.OPEN) {
+            const closed = once(client.socket, 'close');
+            client.socket.close();
+            await closed;
+          }
+        }
+        for (const socket of providerSockets) {
+          if (socket.readyState === WebSocket.OPEN) socket.close();
+        }
+        if (!appServerClosed) {
+          const closed = once(appServer, 'close');
+          appServer.close();
+          appServer.closeAllConnections();
+          await closed;
+          appServerClosed = true;
+        }
+        providerServer.close();
+        if (!providerHttpClosed) {
+          const closed = once(providerHttp, 'close');
+          providerHttp.close();
+          await closed;
+          providerHttpClosed = true;
+        }
+        if (previousDiagnosticsDirectory === undefined) delete process.env.DIAGNOSTICS_DIR;
+        else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
+        if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+        else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
+      },
+    };
+  } catch (error) {
+    if (previousDiagnosticsDirectory === undefined) delete process.env.DIAGNOSTICS_DIR;
+    else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
+    if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+    else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
+    throw error;
+  }
+}
+
+function sendUserFinal(fixture: Awaited<ReturnType<typeof createFixture>>, itemId: string, text: string): void {
+  fixture.sendProviderEvent({
+    type: 'conversation.item.input_audio_transcription.completed',
+    item_id: itemId,
+    transcript: text,
+  });
+}
+
+function sendContextToolCall(
+  fixture: Awaited<ReturnType<typeof createFixture>>,
+  callId: string,
+  query: string,
+  responseId = 'tool-response-' + callId,
+): void {
+  fixture.sendProviderEvent({
+    type: 'response.function_call_arguments.done',
+    call_id: callId,
+    response_id: responseId,
+    name: 'get_interview_context',
+    arguments: JSON.stringify({ query }),
+  });
+}
+
+async function endStorySession(fixture: Awaited<ReturnType<typeof createFixture>>): Promise<void> {
+  const ended = fixture.waitForOwnerMessage((message) => message.type === 'ended', 'story ended');
+  fixture.ownerSocket.send(JSON.stringify({ type: 'end', reason: 'user_confirmed' }));
+  await waitFor(ended, 5_000, 'story ended');
+}
+
+test('voice_tool routes only get_interview_context through one shared Retriever and Agent pipeline', async () => {
+  const fixture = await createFixture({ realtimeMemoryTriggerMode: 'voice_tool', realtimeSlowDeadlineMs: 800 });
+  try {
+    const failures: string[] = [];
+    const check = (condition: boolean, message: string) => {
+      if (!condition) failures.push(message);
+    };
+
+    sendUserFinal(fixture, 'voice-final', '我第一次去北京是什么时候？');
+    await fixture.waitForOwnerMessage((message) => message.type === 'user_final', 'voice user final');
+    await delay(40);
+    const searchesAfterFinal = fixture.searchInputs.length;
+    const agentsAfterFinal = fixture.agentQueries.length;
+    check(searchesAfterFinal === 0, 'user final must not start Retriever in voice_tool mode');
+    check(agentsAfterFinal === 0, 'user final must not start Agent in voice_tool mode');
+
+    sendContextToolCall(fixture, 'voice-context', '第一次去北京是什么时候？');
+    const contextResult = await fixture.waitForToolResult(1);
+    check(
+      fixture.searchInputs.filter((input) => input.query === '第一次去北京是什么时候？').length === 1,
+      'get_interview_context query must invoke Retriever exactly once',
+    );
+    check(
+      fixture.agentQueries.filter((query) => query === '第一次去北京是什么时候？').length === 1,
+      'get_interview_context query must invoke the shared Context Agent exactly once',
+    );
+    check(
+      (record(contextResult.output)?.facts as unknown[] | undefined)?.length === 1,
+      'successful shared recall should return its selected user evidence',
+    );
+
+    sendContextToolCall(fixture, 'voice-agent-failure', 'agent-failure');
+    const failedResult = await fixture.waitForToolResult(2);
+    check(
+      fixture.searchInputs.filter((input) => input.query === 'agent-failure').length === 1
+        && fixture.agentQueries.filter((query) => query === 'agent-failure').length === 1,
+      'Agent failure case must exercise the shared Retriever and Agent pipeline',
+    );
+    check(
+      (record(failedResult.output)?.facts as unknown[] | undefined)?.length === 0,
+      'Agent failure must return an empty Tool Result',
+    );
+    check(failedResult.resume === true, 'Agent failure Tool Result must Resume');
+
+    sendContextToolCall(fixture, 'voice-timeout', 'agent-timeout');
+    const timeoutResult = await fixture.waitForToolResult(3);
+    check(
+      fixture.searchInputs.filter((input) => input.query === 'agent-timeout').length === 1
+        && fixture.agentQueries.filter((query) => query === 'agent-timeout').length === 1,
+      'timeout case must exercise the shared Retriever and Agent pipeline',
+    );
+    check(
+      (record(timeoutResult.output)?.facts as unknown[] | undefined)?.length === 0,
+      'pipeline timeout must return an empty Tool Result',
+    );
+    check(timeoutResult.resume === true, 'pipeline timeout Tool Result must Resume');
+    check(
+      fixture.providerMessages.filter((message) => message.type === 'response.create').length >= 3,
+      'each Tool Result must send a Resume response.create',
+    );
+
+    await endStorySession(fixture);
+    assert.deepEqual(failures, [], failures.join('\n'));
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('backend_auto starts once from user final and Tool Call does not start a second pipeline or HOLD early', async () => {
+  const fixture = await createFixture({ realtimeMemoryTriggerMode: 'backend_auto' });
+  try {
+    sendUserFinal(fixture, 'auto-final', '我第一次去北京是什么时候？');
+    await fixture.waitForOwnerMessage((message) => message.type === 'user_final', 'backend_auto user final');
+    await fixture.waitForInjection(1);
+
+    assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.agentQueries.length, 1);
+    assert.equal(fixture.searchInputs[0]?.query, '我第一次去北京是什么时候？');
+    assert.equal(fixture.agentQueries[0], '我第一次去北京是什么时候？');
+    assert.equal(
+      fixture.providerMessages.some((message) => message.type === 'mock.tool_result'
+        || message.type === 'response.create'),
+      false,
+      'backend_auto without a Tool Call must not enter HOLD or send Tool Result/Resume',
+    );
+
+    sendContextToolCall(fixture, 'auto-unexpected-tool', '后来发生了什么');
+    const toolResult = await fixture.waitForToolResult(1);
+    assert.equal(fixture.searchInputs.length, 1, 'Tool Call must not launch a second Retriever pipeline');
+    assert.equal(fixture.agentQueries.length, 1, 'Tool Call must not launch a second Agent pipeline');
+    assert.equal(fixture.searchInputs[0]?.query, '我第一次去北京是什么时候？');
+    assert.equal(
+      (record(toolResult.output)?.facts as unknown[] | undefined)?.length,
+      0,
+      'backend_auto must not reuse its pending Context Hint to answer an unexpected model Tool Call',
+    );
+    assert.equal(toolResult.resume, true);
+
+    await endStorySession(fixture);
+    const traceDirectory = path.join(fixture.diagnosticsDirectory, 'traces', 'realtime');
     const traceText = readFileSync(path.join(traceDirectory, readdirSync(traceDirectory)[0]!), 'utf8');
-    const slowRecallTrace = traceText.trim().split('\n')
-      .map((line) => JSON.parse(line) as Record<string, unknown>)
-      .find((row) => row.event === 'realtime.slow_recall_finished');
-    assert.equal(slowRecallTrace?.status, 'completed');
-    assert.equal(slowRecallTrace?.factCount, 1);
-    assert.equal('factSourceMessageIds' in (slowRecallTrace ?? {}), false);
-    assert.equal('query' in (slowRecallTrace ?? {}), false);
-    assert.equal(traceText.includes('第一次去北京是什么时候'), false);
-    assert.equal(traceText.includes('2013 年春节以后第一次到北京。'), false);
     const traceRows = traceText.trim().split('\n')
-      .map((line) => JSON.parse(line) as Record<string, unknown>);
+      .map((line) => JSON.parse(line) as JsonRecord);
+    const recall = traceRows.find((row) => row.event === 'realtime.slow_recall_finished');
+    assert.equal(recall?.status, 'completed');
+    assert.equal(recall?.factCount, 1);
+    assert.equal('factSourceMessageIds' in (recall ?? {}), false);
+    assert.equal('query' in (recall ?? {}), false);
+    assert.equal(traceText.includes('我第一次去北京是什么时候？'), false);
+    assert.equal(traceText.includes('2013 年春节以后第一次到北京。'), false);
     const cycleEvents = traceRows.filter((row) => String(row.event).startsWith('realtime.tool_cycle_'));
-    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_started' && row.callId === 'call-1'));
+    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_started'
+      && row.callId === 'auto-unexpected-tool'));
     assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_message_write'
       && row.messageKind === 'output' && row.sent === true));
     assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_message_write'
       && row.messageKind === 'resume' && row.sent === true));
     assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_response_started'
-      && row.responseId === 'response-B'));
+      && row.responseId === 'response-1'));
     assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_terminal'
       && row.outcome === 'completed'));
-    if (clientSocket.readyState === WebSocket.OPEN) {
-      clientSocket.close();
-      await once(clientSocket, 'close');
-    }
-    clientSocket = undefined;
-    const externalSocket = new WebSocket(
-      `ws://127.0.0.1:${appAddress.port}/api/realtime?share_token=${encodeURIComponent(share.token)}`,
-      { headers: { origin: baseUrl } },
+
+    const external = await fixture.openExternalClient();
+    external.socket.send(JSON.stringify({
+      type: 'start',
+      interview_type: 'external_contributor',
+      provider: 'qwen',
+    }));
+    await waitForMatch(
+      () => external.messages,
+      (message) => message.type === 'ready',
+      'external ready',
     );
-    clientSocket = externalSocket;
-    await once(externalSocket, 'open');
-    externalSocket.send(JSON.stringify({ type: 'start', interview_type: 'external_contributor', provider: 'qwen' }));
-    await waitFor(new Promise<void>((resolve) => {
-      externalSocket.on('message', (raw) => {
-        if (record(JSON.parse(raw.toString()))?.type === 'ready') resolve();
-      });
-    }), 2_000, 'external ready');
-    externalSocket.send(JSON.stringify({ type: 'playback_ready' }));
-    const externalResult = await waitFor(waitForToolResult(5), 2_000, 'external tool result');
+    external.socket.send(JSON.stringify({ type: 'playback_ready' }));
+    sendContextToolCall(fixture, 'external-tool', '外部贡献者不应查询 owner Story');
+    const externalResult = await fixture.waitForToolResult(2);
     const externalOutput = record(externalResult.output);
     assert.equal(externalOutput?.status, 'unavailable');
     assert.deepEqual(externalOutput?.facts, []);
-    assert.equal(externalResult.resume, false);
-    assert.equal(searchInput?.query, '继续补充。', 'external contributor Tool Calls never run owner Story retrieval');
-    assert.equal(toolResultCount, 5);
-    const externalEnded = new Promise<void>((resolve) => {
-      externalSocket.on('message', (raw) => {
-        if (record(JSON.parse(raw.toString()))?.type === 'ended') resolve();
-      });
-    });
-    externalSocket.send(JSON.stringify({ type: 'end', reason: 'user_confirmed' }));
+    assert.equal(externalResult.resume, true);
+    assert.equal(fixture.searchInputs.length, 1, 'external contributor must not run owner Story retrieval');
+
+    const externalEnded = waitForMatch(
+      () => external.messages,
+      (message) => message.type === 'ended',
+      'external ended',
+    );
+    external.socket.send(JSON.stringify({ type: 'end', reason: 'user_confirmed' }));
     await waitFor(externalEnded, 5_000, 'external ended');
   } finally {
-    if (clientSocket?.readyState === WebSocket.OPEN) clientSocket.close();
-    if (providerSocket?.readyState === WebSocket.OPEN) providerSocket.close();
-    const appClosed = once(appServer, 'close');
-    appServer.close();
-    appServer.closeAllConnections();
-    await appClosed;
-    providerServer.close();
-    const providerClosed = once(providerHttp, 'close');
-    providerHttp.close();
-    await providerClosed;
-    if (previousDiagnosticsDirectory === undefined) delete process.env.DIAGNOSTICS_DIR;
-    else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
-    if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
-    else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
+    await fixture.close();
+  }
+});
+
+test('backend_auto runs the shared pipeline and reports unsupported when Context Injection is unavailable', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'backend_auto',
+    supportsContextInjection: false,
+  });
+  try {
+    sendUserFinal(fixture, 'unsupported-final', '我第一次去北京是什么时候？');
+    await fixture.waitForAgentQuery('我第一次去北京是什么时候？');
+
+    assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.agentQueries.length, 1);
+    assert.equal(fixture.injectedHints.length, 0);
+
+    await delay(40);
+    fixture.sendProviderEvent({ type: 'response.created', response: { id: 'unsupported-next-response' } });
+    fixture.sendProviderEvent({
+      type: 'response.done',
+      response: { id: 'unsupported-next-response', status: 'completed' },
+    });
+    await fixture.waitForOwnerMessage(
+      (message) => message.type === 'response_done' && message.responseId === 'unsupported-next-response',
+      'unsupported flow voice response',
+    );
+    await endStorySession(fixture);
+    const traceDirectory = path.join(fixture.diagnosticsDirectory, 'traces', 'realtime');
+    const traceText = readFileSync(path.join(traceDirectory, readdirSync(traceDirectory)[0]!), 'utf8');
+    const traceRows = traceText.trim().split('\n').map((line) => JSON.parse(line) as JsonRecord);
+    assert.ok(traceRows.some((row) => row.event === 'realtime.memory_trigger.unsupported'
+      && row.reason === 'context_injection_unsupported'));
+    assert.ok(traceRows.some((row) => row.event === 'realtime.slow_recall_finished'
+      && row.status === 'unsupported'));
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('voice_tool cancels a stuck response and writes empty Tool Result plus Resume within its deadline', async () => {
+  const deadlineMs = 240;
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'voice_tool',
+    realtimeSlowDeadlineMs: deadlineMs,
+  });
+  try {
+    sendUserFinal(fixture, 'stuck-tool-final', '我第一次去北京是什么时候？');
+    await fixture.waitForOwnerMessage((message) => message.type === 'user_final', 'stuck Tool Call user final');
+    fixture.sendProviderEvent({ type: 'response.created', response: { id: 'stuck-tool-response' } });
+    await delay(20);
+    const startedAt = performance.now();
+    sendContextToolCall(fixture, 'stuck-tool', 'agent-timeout', 'stuck-tool-response');
+
+    const result = await fixture.waitForToolResult(1);
+    await fixture.waitForProviderMessage((message) => message.type === 'response.cancel', 'stuck response cancel');
+    await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'deadline Resume');
+
+    assert.deepEqual(record(result.output)?.facts, []);
+    assert.equal(result.resume, true);
+    assert.ok(performance.now() - startedAt < deadlineMs,
+      'Tool Result and Resume must be written before the total Tool Call deadline');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('backend_auto drops a pending Hint that expires before the next safe manual commit', async () => {
+  const deadlineMs = 250;
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'backend_auto',
+    realtimeSlowDeadlineMs: deadlineMs,
+    manualTurnControl: true,
+  });
+  try {
+    const triggerStartedAt = performance.now();
+    sendUserFinal(fixture, 'ttl-final', '需要保存的这一轮上下文。');
+    await fixture.waitForOwnerMessage((message) => message.type === 'user_final', 'TTL user final');
+    const prepared = await fixture.waitForInjection(1);
+    assert.ok(prepared.at - triggerStartedAt < deadlineMs,
+      'the Hint must be generated within the test deadline before expiry is exercised');
+
+    const expireAfter = prepared.at + deadlineMs + 25;
+    const waitMs = expireAfter - performance.now();
+    if (waitMs > 0) await delay(waitMs);
+    assert.ok(performance.now() > expireAfter, 'the pending Hint must be expired before commit');
+
+    fixture.sendProviderEvent({ type: 'response.created', response: { id: 'auto-answer' } });
+    fixture.sendProviderEvent({
+      type: 'response.done',
+      response: { id: 'auto-answer', status: 'completed' },
+    });
+    await fixture.waitForOwnerMessage(
+      (message) => message.type === 'response_done' && message.responseId === 'auto-answer',
+      'automatic answer completed',
+    );
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await fixture.waitForOwnerMessage((message) => message.type === 'speech_started', 'manual turn started');
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
+    await fixture.waitForProviderMessage((message) => message.type === 'mock.commit', 'safe manual commit');
+
+    assert.equal(
+      fixture.providerMessages.some((message) => message.type === 'mock.context_hint'),
+      false,
+      'an expired pending Hint must be dropped instead of injected at the safe manual commit',
+    );
+  } finally {
+    await fixture.close();
   }
 });

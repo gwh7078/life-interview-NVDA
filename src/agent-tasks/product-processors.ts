@@ -74,9 +74,13 @@ function storyReferences(
   context: StoryCloseoutContext,
   references: AgentTaskReferenceMap,
 ): CompactPromptReferences {
-  const sourceMessageIds = new Map(Object.entries(references.messageIds ?? {}));
+  const messageIds = new Map(Object.entries(references.messageIds ?? {}));
+  const userMessageIds = new Set(context.transcript
+    .filter((message) => message.role === 'user')
+    .map((message) => message.message_id));
+  const sourceMessageIds = new Map([...messageIds].filter(([, original]) => userMessageIds.has(original)));
   const messageAliases = new Map(
-    [...sourceMessageIds.entries()].map(([alias, original]) => [original, alias] as const),
+    [...messageIds.entries()].map(([alias, original]) => [original, alias] as const),
   );
   const stageIds = new Map(Object.entries(references.stageIds ?? {}));
   const stageIdAliases = new Map(

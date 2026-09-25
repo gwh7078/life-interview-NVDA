@@ -41,10 +41,19 @@ test('Local interview service exposes current realtime provider states without e
     region: 'cn-beijing',
     model: 'qwen-audio-3.0-realtime-plus',
     stepfunApiKey: 'stepfun-secret-test-value',
+    defaultRealtimeProvider: 'stepaudio2_mini',
+    realtimeMemoryTriggerMode: 'voice_tool',
+    realtimeRetrieverEnabled: true,
+    realtimeContextAgentEnabled: true,
     wrapUpMs: 1_080_000,
     maxSessionMs: 1_200_000,
     closeGraceMs: 45_000,
   }, {
+    realtimeContextAgentTasks: {
+      async run() {
+        throw new Error('Unexpected Context Agent execution in health check test.');
+      },
+    },
     storyGeneration: {
       async generate(input) {
         generationInput = input;
@@ -72,7 +81,14 @@ test('Local interview service exposes current realtime provider states without e
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const health = await healthResponse.json() as Record<string, unknown>;
     assert.equal(healthResponse.status, 200);
-    assert.equal(health.defaultProvider, 'stepaudio3_quality');
+    assert.equal(health.defaultProvider, 'stepaudio2_mini');
+    assert.deepEqual(health.realtimeMemory, {
+      voiceModel: 'Step-Audio-2-mini',
+      memoryTriggerMode: 'voice_tool',
+      retriever: 'enabled',
+      contextAgent: 'enabled',
+      contextInjection: 'supported',
+    });
     assert.equal(health.databaseAvailable, true);
     assert.deepEqual(health.interviewLimits, {
       wrapUpMs: 1_080_000,

@@ -23,8 +23,11 @@ import {
   type StoryCreateCloseoutTaskRequest,
   type StoryGenerationTaskRequest,
 } from '../src/agent-tasks/index.js';
+import { AgentStoryCloseoutProcessor } from '../src/agent-tasks/product-processors.js';
+import type { AgentTaskPort } from '../src/agent-tasks/ports/agent-task-port.js';
 import { AgentTaskContractError } from '../src/agent-tasks/errors.js';
 import type { StoryCloseoutContext } from '../src/interview/closeout/context-builder.js';
+import type { ProcessStoryCloseoutInput } from '../src/interview/closeout/processor.js';
 import type { OnboardingCloseoutContext } from '../src/onboarding/types.js';
 import type { StoryGenerationContext } from '../src/story/generation/types.js';
 
@@ -199,15 +202,79 @@ test('context mappers create prompt-safe aliases and preserve backend-only refer
       end_date: '2008',
     }],
     otherStories: [],
-    transcript: transcript('raw-message-2'),
+    transcript: [
+      ...transcript('raw-message-2'),
+      { message_id: 'raw-assistant-message-2', role: 'assistant', text: '接下来呢？', timestamp, provider: 'test' },
+      { message_id: 'raw-message-3', role: 'user', text: '后来我完成了。', timestamp, provider: 'test' },
+    ],
   };
   const mappedStory = mapStoryCloseoutContextToTask(storyContext, 'run-story');
   assert.equal(mappedStory.request.mode, 'story_continue');
-  assert.equal(mappedStory.request.payload.transcript[0]?.message_id, 'm1');
-  assert.equal(mappedStory.references.messageIds?.m1, 'raw-message-2');
+  assert.deepEqual(mappedStory.request.payload.transcript.map(({ message_id, role }) => [message_id, role]), [
+    ['u1', 'user'], ['a1', 'assistant'], ['u2', 'user'],
+  ]);
+  assert.equal(mappedStory.references.messageIds?.u1, 'raw-message-2');
+  assert.equal(mappedStory.references.messageIds?.a1, 'raw-assistant-message-2');
+  assert.equal(mappedStory.references.messageIds?.u2, 'raw-message-3');
   assert.equal(mappedStory.request.payload.current_stage.stage_id, 's1');
   assert.equal(mappedStory.references.stageIds?.s1, 'stage-real');
   assert.equal(mappedStory.request.resource.version, timestamp);
+});
+
+test('Agent Story Closeout restores task user aliases before strict source validation', async () => {
+  const storyContext: StoryCloseoutContext = {
+    sessionId: 'session-story',
+    userId: 'owner-1',
+    mode: 'continue',
+    currentStageId: 'stage-real',
+    currentStory: {
+      story_id: 'story-real', title: '第一次登台', summary: '旧摘要', agent_memory: '旧的长期工作记忆',
+      status: 'interviewing', stage_id: 'stage-real', updated_at: timestamp,
+    },
+    lifeStages: [{ stage_id: 'stage-real', title: '学生时期', start_date: '2005', end_date: '2008' }],
+    otherStories: [],
+    transcript: [
+      { message_id: 'db-user-message', role: 'user', text: '这是一次具体的用户回答。', timestamp, provider: 'test' },
+      { message_id: 'db-assistant-message', role: 'assistant', text: '接下来发生了什么？', timestamp, provider: 'test' },
+    ],
+  };
+  const candidate = {
+    current_story: {
+      summary: '旧摘要', agent_memory: '旧的长期工作记忆', memory_changes: [], source_message_ids: ['u1'],
+    },
+    new_stories: [],
+  };
+  let request: unknown;
+  const tasks = {
+    async run(mappedRequest: { runId: string; taskType: string; mode?: string; schemaVersion: string }, options?: { validateProposal?(output: unknown): void }) {
+      request = mappedRequest;
+      options?.validateProposal?.(candidate);
+      return {
+        runId: mappedRequest.runId,
+        taskType: mappedRequest.taskType,
+        mode: mappedRequest.mode,
+        schemaVersion: mappedRequest.schemaVersion,
+        output: candidate,
+        runtime: { runtime: 'test' },
+      };
+    },
+  } as unknown as AgentTaskPort;
+  const processor = new AgentStoryCloseoutProcessor(tasks);
+  const input = {
+    context: storyContext,
+    config: {} as ProcessStoryCloseoutInput['config'],
+    signal: new AbortController().signal,
+    assertCurrentAttempt() {},
+  } satisfies ProcessStoryCloseoutInput;
+  const result = await processor.process(input);
+  const taskPayload = (request as { payload: { transcript: Array<{ message_id: string; role: string }> } }).payload;
+  assert.deepEqual(taskPayload.transcript.map(({ message_id, role }) => [message_id, role]), [
+    ['u1', 'user'], ['a1', 'assistant'],
+  ]);
+  assert.equal(result.output.mode, 'continue');
+  if (result.output.mode === 'continue') {
+    assert.deepEqual(result.output.current_story.source_message_ids, ['db-user-message']);
+  }
 });
 
 test('completion, generation and contributor mappers expose only task-approved context', () => {
@@ -263,9 +330,15 @@ test('completion, generation and contributor mappers expose only task-approved c
     sessionId: 'contributor-session',
     relationship: '女儿',
     previousContributorSummary: '此前她提到父亲很重视这件事。',
-    transcript: transcript('contributor-message', '我记得那天他很早就出门了。'),
+    transcript: [
+      ...transcript('contributor-message', '我记得那天他很早就出门了。'),
+      { message_id: 'contributor-assistant', role: 'assistant', text: '是什么时候？', timestamp, provider: 'test' },
+    ],
   }, 'run-contributor');
   assert.equal(contributor.request.mode, 'contributor');
+  assert.deepEqual(contributor.request.payload.transcript.map(({ message_id, role }) => [message_id, role]), [
+    ['u1', 'user'], ['a1', 'assistant'],
+  ]);
   assert.equal('current_story' in contributor.request.payload, false);
   assert.equal('agent_memory' in contributor.request.payload, false);
 });

@@ -254,6 +254,11 @@ export function adaptRealtimeTrace(input: {
     metadata: {
       provider: input.provider,
       ...(input.environment ? { environment: input.environment } : {}),
+      ...(safeLabel(fields.voiceModel) ? { voiceModel: safeLabel(fields.voiceModel) } : {}),
+      ...(safeLabel(fields.memoryTriggerMode) ? { memoryTriggerMode: safeLabel(fields.memoryTriggerMode) } : {}),
+      ...(safeLabel(fields.retriever) ? { retriever: safeLabel(fields.retriever) } : {}),
+      ...(safeLabel(fields.contextAgent) ? { contextAgent: safeLabel(fields.contextAgent) } : {}),
+      ...(safeLabel(fields.contextInjection) ? { contextInjection: safeLabel(fields.contextInjection) } : {}),
       ...(safeLabel(fields.name) ? { tool: safeLabel(fields.name) } : {}),
       ...(safeLabel(fields.slowAgentModel) ? { model: safeLabel(fields.slowAgentModel) } : {}),
       ...(safeLabel(fields.skill) ? { skill: safeLabel(fields.skill) } : {}),

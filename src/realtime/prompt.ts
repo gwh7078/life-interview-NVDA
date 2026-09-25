@@ -7,6 +7,8 @@ import { externalContributorRelationshipLabel } from '../interview/external-cont
 export interface StoryInterviewContext {
   /** Older serialized Story contexts may omit this; missing values disable context tools. */
   interview_type?: 'story';
+  memoryTriggerMode?: RealtimeMemoryTriggerMode;
+  voiceProfile?: StepfunStoryPromptProfile;
   user: Record<string, unknown>;
   life_stage: Record<string, unknown>;
   story: Record<string, unknown> | null;
@@ -51,10 +53,7 @@ ${STORY_ENDING_INSTRUCTIONS}`;
 
 const STORY_CONTINUE_INSTRUCTIONS = `# 故事续访 Story Continue
 在已有内容上补充当前 Story，不从头采访。下一问按此顺序选：用户刚给出的新线索；尚未覆盖的重要 gap；故事明显缺失的部分；最后才查历史记录。
-若有 opening_gap，它是首轮指定的问题，只用于首轮；问过后不得原样或换说法重复。Agent Memory 是压缩后的数据库背景，不是原话；用户当前回答和明确纠正优先。gap 是候选方向，不是清单。
-只有确需核对过去讲过的人物、时间、关系或原话时才调用历史上下文工具；当前信息足够就不调用。
-
-${STORY_ENDING_INSTRUCTIONS}`;
+若有 opening_gap，它是首轮指定的问题，只用于首轮；问过后不得原样或换说法重复。Agent Memory 是压缩后的数据库背景，不是原话；用户当前回答和明确纠正优先。gap 是候选方向，不是清单。`;
 
 const EXTERNAL_CONTRIBUTOR_INSTRUCTIONS = `# 第三者访谈 External Contributor
 获取这位受访者独有的记忆和视角。优先问亲眼所见、亲身参与、当时直接听到的内容，再问其当时的感受或判断；转述和推测只作低优先级参考。
@@ -136,7 +135,32 @@ function definedFields(
 
 interface InterviewPromptOptions {
   omitOpeningGap?: boolean;
+  storyContinueMemoryInstructions?: string | null;
 }
+
+export type RealtimeMemoryTriggerMode = 'voice_tool' | 'backend_auto';
+export type StepfunStoryPromptProfile = 'stepaudio3_quality' | 'stepaudio2_mini';
+
+const STEPAUDIO3_VOICE_TOOL_MEMORY_JUDGE = `## 历史信息判断
+仅在以下情况调用 get_interview_context：
+1. 需要确认以前说过的人、事、时间；
+2. 当前说法可能与历史内容冲突；
+3. 需要判断这个问题以前是否已经问过；
+4. 当前出现明显历史指代但上下文不足；
+5. 必须依赖已有 Story Memory 才能继续高质量追问。
+普通新信息不要调用。`;
+
+const STEPAUDIO3_BACKEND_MEMORY_NOTE = '历史信息判断与检索由后端负责；你只需依据当前回答继续采访。';
+
+const STEPAUDIO2_MINI_STORY_RULES = `你是人生采访记者。每次只问一个问题，根据用户刚说的话继续追问；不要替用户回答，不要编造事实。
+
+${STORY_ENDING_INSTRUCTIONS}`;
+
+const STEPAUDIO2_MINI_VOICE_TOOL_RULES = `只有以下情况调用 get_interview_context：
+1. 需要确认以前聊过的人、事或时间；
+2. 用户现在的说法可能和以前矛盾；
+3. 不确定这个问题以前是否问过。
+其他情况不要调用工具。调用后等待结果，再继续采访。`;
 
 export function buildInterviewContextPayload(
   context: StoryInterviewContext,
@@ -205,5 +229,43 @@ export function buildInterviewInstructions(
   const taskInstructions = interviewMode === 'continue'
     ? STORY_CONTINUE_INSTRUCTIONS
     : STORY_CREATE_INSTRUCTIONS;
-  return `${COMMON_INTERVIEW_RULES}\n\n${taskInstructions}\n\n## 采访背景\n${STORY_CONTEXT_MARKER}\n${JSON.stringify(buildInterviewContextPayload(context, options), null, 2)}`;
+  const memoryInstructions = interviewMode === 'continue'
+    ? options.storyContinueMemoryInstructions === undefined
+      ? '只有确需核对过去讲过的人物、时间、关系或原话时才调用历史上下文工具；当前信息足够就不调用。'
+      : options.storyContinueMemoryInstructions ?? ''
+    : '';
+  const endingInstructions = interviewMode === 'continue' ? STORY_ENDING_INSTRUCTIONS : '';
+  return `${COMMON_INTERVIEW_RULES}\n\n${taskInstructions}${memoryInstructions ? `\n${memoryInstructions}` : ''}${endingInstructions ? `\n\n${endingInstructions}` : ''}\n\n## 采访背景\n${STORY_CONTEXT_MARKER}\n${JSON.stringify(buildInterviewContextPayload(context, options), null, 2)}`;
+}
+
+export function buildStepfunInterviewInstructions(
+  context: RealtimeInterviewContext,
+  options: {
+    profile: StepfunStoryPromptProfile;
+    memoryTriggerMode: RealtimeMemoryTriggerMode;
+    allowsContextTool: boolean;
+    omitOpeningGap?: boolean;
+  },
+): string {
+  if (context.interview_type === 'onboarding' || context.interview_type === 'external_contributor') {
+    return buildInterviewInstructions(context, { omitOpeningGap: options.omitOpeningGap });
+  }
+
+  if (options.profile === 'stepaudio2_mini') {
+    const voiceToolInstructions = options.memoryTriggerMode === 'voice_tool' && options.allowsContextTool
+      ? `\n\n${STEPAUDIO2_MINI_VOICE_TOOL_RULES}`
+      : '';
+    return `${STEPAUDIO2_MINI_STORY_RULES}${voiceToolInstructions}\n\n## 采访背景\n${STORY_CONTEXT_MARKER}\n${JSON.stringify(buildInterviewContextPayload(context, { omitOpeningGap: options.omitOpeningGap }), null, 2)}`;
+  }
+
+  const storyContinueMemoryInstructions = options.memoryTriggerMode === 'backend_auto'
+    ? null
+    : options.allowsContextTool ? STEPAUDIO3_VOICE_TOOL_MEMORY_JUDGE : null;
+  const interviewInstructions = buildInterviewInstructions(context, {
+    omitOpeningGap: options.omitOpeningGap,
+    storyContinueMemoryInstructions,
+  });
+  return options.memoryTriggerMode === 'backend_auto'
+    ? `${interviewInstructions}\n\n${STEPAUDIO3_BACKEND_MEMORY_NOTE}`
+    : interviewInstructions;
 }

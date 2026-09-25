@@ -111,7 +111,7 @@ function modelOutput(scenario: Scenario, options: {
 } = {}): Record<string, unknown> {
   const summary = options.summary ?? `${scenario.initialSummary} ${scenario.userText}`;
   const agentMemory = options.agentMemory ?? options.summary ?? `${scenario.initialAgentMemory} ${scenario.userText}`;
-  const sourceMessageIds = options.sourceMessageIds ?? ['m1'];
+  const sourceMessageIds = options.sourceMessageIds ?? ['u1'];
   const memoryChanges = options.memoryChanges ?? (
     agentMemory.trim() === scenario.initialAgentMemory.trim()
       ? []
@@ -368,14 +368,14 @@ test('compact closeout updates the Story, directly creates independent Stories, 
     title: '上线当天的团队协作',
     summary: '2013年项目上线当天，团队先核对信息再调整分工。',
     stage_id: 's1',
-    source_message_ids: ['m1'],
+    source_message_ids: ['u1'],
   };
   const output = modelOutput(scenario, { newStories: [newStory] });
   const evaluatedStories: Array<{ userId: string; storyId: string }> = [];
   await withPlanStub(async (_call, body) => {
     const input = body.messages as Array<Record<string, unknown>>;
     const userPayload = JSON.parse(String(input.find((message) => message.role === 'user')?.content)) as Record<string, unknown>;
-    assert.deepEqual((userPayload.transcript as Array<Record<string, unknown>>).map((message) => message.message_id), ['m1', 'm2']);
+    assert.deepEqual((userPayload.transcript as Array<Record<string, unknown>>).map((message) => message.message_id), ['u1', 'a1']);
     const currentStageAlias = String(userPayload.current_stage_id);
     assert.match(currentStageAlias, /^s\d+$/);
     assert.ok((userPayload.life_stages as Array<Record<string, unknown>>).every((stage) => /^s\d+$/.test(String(stage.stage_id))));
@@ -477,34 +477,34 @@ test('Story continuation accepts four independent Story Seeds across same and ot
           type: 'add',
           previous_text: '',
           new_text: scenario.userText,
-          source_message_ids: ['m1'],
+          source_message_ids: ['u1'],
         }],
-        source_message_ids: ['m1'],
+        source_message_ids: ['u1'],
       },
       new_stories: [
         {
           title: '项目上线后的第一次跨团队复盘',
           summary: '项目上线后，团队做了一次跨团队复盘。',
           stage_id: currentStageAlias,
-          source_message_ids: ['m1'],
+          source_message_ids: ['u1'],
         },
         {
           title: '会议里第一次公开反驳负责人',
           summary: '一次会议中，我第一次公开反驳负责人。',
           stage_id: currentStageAlias,
-          source_message_ids: ['m1'],
+          source_message_ids: ['u1'],
         },
         {
           title: '搬到新城市后的第一份兼职',
           summary: '后来在另一个人生阶段，我搬到新城市并做过第一份兼职。',
           stage_id: otherStageAlias,
-          source_message_ids: ['m1'],
+          source_message_ids: ['u1'],
         },
         {
           title: '第一次独自处理家庭突发事件',
           summary: '另一个人生阶段里，我第一次独自处理过家庭突发事件。',
           stage_id: otherStageAlias,
-          source_message_ids: ['m1'],
+          source_message_ids: ['u1'],
         },
       ],
     }));
@@ -590,15 +590,15 @@ test('one Completion failure does not stop later Story Seed evaluations or roll 
           type: 'add',
           previous_text: '',
           new_text: scenario.userText,
-          source_message_ids: ['m1'],
+          source_message_ids: ['u1'],
         }],
-        source_message_ids: ['m1'],
+        source_message_ids: ['u1'],
       },
       new_stories: [{
         title: '另一次独立的跨团队经历',
         summary: '用户还提到另一次独立的跨团队经历。',
         stage_id: currentStageAlias,
-        source_message_ids: ['m1'],
+        source_message_ids: ['u1'],
       }],
     }));
   }, async (realFetch) => {
@@ -700,7 +700,7 @@ test('a short supplement is merged into one complete Story Summary without sidec
       type: 'refine',
       previous_text: oldSummary,
       new_text: refinedMemory,
-      source_message_ids: ['m1'],
+      source_message_ids: ['u1'],
     }],
     newStories: [],
   });
@@ -739,7 +739,7 @@ test('an explicit correction replaces the old year while the original Transcript
       type: 'correct',
       previous_text: oldSummary,
       new_text: correctedMemory,
-      source_message_ids: ['m1'],
+      source_message_ids: ['u1'],
     }],
     newStories: [],
   });
@@ -870,9 +870,9 @@ test('silent Agent Memory information loss is repaired before persistence', asyn
           type: 'correct',
           previous_text: '2019年我第一次独自搬到上海生活。',
           new_text: correctedSentence,
-          source_message_ids: ['m1'],
+          source_message_ids: ['u1'],
         }],
-        source_message_ids: ['m1'],
+        source_message_ids: ['u1'],
       },
       new_stories: [],
     }));

@@ -8,7 +8,9 @@ import { buildQwenOnboardingCompletionAcknowledgement, buildQwenRealtimeUrl, bui
 import {
   buildStepfunSessionUpdate,
   DEFAULT_STEPFUN_MODEL,
+  DEFAULT_STEPFUN_VOICE,
   DEFAULT_STEPAUDIO3_MODEL,
+  STEPFUN_REALTIME_PROFILES,
   STEPFUN_CONTEXT_TOOL,
   STEPAUDIO_3_REALTIME_PREVIEW,
 } from '../src/realtime/stepfun.js';
@@ -26,6 +28,13 @@ const storyContext = {
   },
   task_context: { mode: 'continue' as const },
 };
+
+function stepfunStoryContext(
+  voiceProfile: 'stepaudio3_quality' | 'stepaudio2_mini',
+  memoryTriggerMode: 'voice_tool' | 'backend_auto',
+) {
+  return { ...storyContext, voiceProfile, memoryTriggerMode };
+}
 
 const onboardingContext = {
   interview_type: 'onboarding' as const,
@@ -112,18 +121,23 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   assert.equal(adapter.capabilities.supportsToolCalling, true);
   assert.equal(adapter.capabilities.supportsContextInjection, true);
   assert.equal(adapter.capabilities.manualTurnControl, true);
-  const session = adapter.setupSession(storyContext)[0]?.session as Record<string, unknown>;
+  const session = buildStepfunSessionUpdate(
+    stepfunStoryContext('stepaudio2_mini', 'voice_tool'),
+    DEFAULT_STEPFUN_VOICE,
+  ).session as Record<string, unknown>;
   assert.equal(session.turn_detection, null);
   const tools = session.tools as Array<Record<string, unknown>>;
   assert.equal((tools[0]?.function as Record<string, unknown>).name, STEPFUN_CONTEXT_TOOL);
   assert.equal(adapter.appendAudioMessages(Buffer.from([0, 1]))[0]?.type, 'input_audio_buffer.append');
   assert.deepEqual(adapter.openingPreludeMessages?.(), []);
-  assert.equal(adapter.injectContextHint?.({
+  const contextMessages = adapter.injectContextHint?.({
     basedOnTurnId: 'turn-1',
     facts: [{ claim: '用户曾说 2013 年去了北京。', sourceMessageIds: ['message-1'] }],
     possibleConflicts: [],
     interviewHints: [],
-  })[0]?.type, 'conversation.item.create');
+  });
+  assert.equal(contextMessages?.length, 1);
+  assert.equal((contextMessages?.[0]?.item as Record<string, unknown>).role, 'assistant');
 
   adapter.normalizeServerMessage(JSON.stringify({
     type: 'response.function_call_arguments.delta',
@@ -176,24 +190,89 @@ test('StepAudio 3 profile shares StepFun transport and keeps its opening protoco
   assert.equal(adapter.capabilities.supportsToolCalling, true);
   assert.equal(adapter.capabilities.supportsInterrupt, false);
   assert.equal(adapter.capabilities.supportsContextInjection, true);
+  assert.notEqual(
+    STEPFUN_REALTIME_PROFILES.stepaudio3_quality.capabilities,
+    STEPFUN_REALTIME_PROFILES.stepaudio2_mini.capabilities,
+  );
   assert.equal(adapter.handleToolResult?.({
     type: 'tool.call.requested', name: STEPFUN_CONTEXT_TOOL, callId: 'call-1',
     arguments: {}, responseId: 'response-1',
   }, { status: 'no-context' }).at(-1)?.type, 'response.create');
 });
 
-test('Step-Audio context tool is limited to an existing story continuation', () => {
+test('Step-Audio context tool is limited to voice_tool on an existing story continuation', () => {
   const createContext = {
-    ...storyContext,
+    ...stepfunStoryContext('stepaudio2_mini', 'voice_tool'),
     story: null,
     task_context: { mode: 'create' as const },
   };
-  const createSession = buildStepfunSessionUpdate(createContext).session as Record<string, unknown>;
+  const createSession = buildStepfunSessionUpdate(createContext, DEFAULT_STEPFUN_VOICE).session as Record<string, unknown>;
   assert.equal('tools' in createSession, false);
 
-  const legacyContext = { ...storyContext, interview_type: undefined };
-  const legacySession = buildStepfunSessionUpdate(legacyContext).session as Record<string, unknown>;
+  const legacyContext = { ...stepfunStoryContext('stepaudio2_mini', 'voice_tool'), interview_type: undefined };
+  const legacySession = buildStepfunSessionUpdate(legacyContext, DEFAULT_STEPFUN_VOICE).session as Record<string, unknown>;
   assert.equal('tools' in legacySession, false);
+
+  const backendSession = buildStepfunSessionUpdate(
+    stepfunStoryContext('stepaudio2_mini', 'backend_auto'),
+    DEFAULT_STEPFUN_VOICE,
+  ).session as Record<string, unknown>;
+  assert.equal('tools' in backendSession, false);
+});
+
+test('StepFun Story prompts select one Memory trigger strategy and keep profile-specific scope', () => {
+  const session = (profile: 'stepaudio3_quality' | 'stepaudio2_mini', trigger: 'voice_tool' | 'backend_auto') =>
+    buildStepfunSessionUpdate(stepfunStoryContext(profile, trigger), DEFAULT_STEPFUN_VOICE).session as Record<string, unknown>;
+  const instructions = (value: Record<string, unknown>) => String(value.instructions ?? '');
+
+  const audio3Voice = session('stepaudio3_quality', 'voice_tool');
+  const audio3VoiceInstructions = instructions(audio3Voice);
+  assert.ok(Array.isArray(audio3Voice.tools));
+  assert.match(audio3VoiceInstructions, /每轮必须遵守/);
+  assert.match(audio3VoiceInstructions, /以前说过的人、事、时间/);
+  assert.match(audio3VoiceInstructions, /当前说法可能与历史内容冲突/);
+  assert.match(audio3VoiceInstructions, /这个问题以前是否已经问过/);
+  assert.match(audio3VoiceInstructions, /明显历史指代但上下文不足/);
+  assert.match(audio3VoiceInstructions, /必须依赖已有 Story Memory/);
+  assert.match(audio3VoiceInstructions, /普通新信息不要调用/);
+
+  const audio3Backend = session('stepaudio3_quality', 'backend_auto');
+  const audio3BackendInstructions = instructions(audio3Backend);
+  assert.equal('tools' in audio3Backend, false);
+  assert.match(audio3BackendInstructions, /历史信息判断与检索由后端负责/);
+  assert.doesNotMatch(audio3BackendInstructions, /get_interview_context|调用历史上下文工具|什么时候调用/u);
+  assert.match(audio3BackendInstructions, /每轮必须遵守/);
+
+  const miniVoice = session('stepaudio2_mini', 'voice_tool');
+  const miniVoiceInstructions = instructions(miniVoice);
+  assert.ok(Array.isArray(miniVoice.tools));
+  assert.match(miniVoiceInstructions, /你是人生采访记者/);
+  assert.match(miniVoiceInstructions, /每次只问一个问题/);
+  assert.match(miniVoiceInstructions, /根据用户刚说的话继续追问/);
+  assert.match(miniVoiceInstructions, /不要替用户回答，不要编造事实/);
+  assert.match(miniVoiceInstructions, /以前聊过的人、事或时间/);
+  assert.match(miniVoiceInstructions, /现在的说法可能和以前矛盾/);
+  assert.match(miniVoiceInstructions, /不确定这个问题以前是否问过/);
+  assert.match(miniVoiceInstructions, /等待结果，再继续采访/);
+  assert.doesNotMatch(miniVoiceInstructions, /明显历史指代|必须依赖已有 Story Memory|每轮必须遵守/u);
+
+  const miniBackend = session('stepaudio2_mini', 'backend_auto');
+  const miniBackendInstructions = instructions(miniBackend);
+  assert.equal('tools' in miniBackend, false);
+  assert.match(miniBackendInstructions, /你是人生采访记者/);
+  assert.match(miniBackendInstructions, /每次只问一个问题/);
+  assert.match(miniBackendInstructions, /根据用户刚说的话继续追问/);
+  assert.match(miniBackendInstructions, /不要替用户回答，不要编造事实/);
+  assert.match(miniBackendInstructions, /本次先聊到这里，再见/);
+  assert.doesNotMatch(miniBackendInstructions, /get_interview_context|Memory Judge|历史上下文工具|判断.*Memory/u);
+
+  const tool = audio3Voice.tools as Array<Record<string, unknown>>;
+  const toolFunction = tool[0]?.function as Record<string, unknown>;
+  assert.equal(toolFunction.name, STEPFUN_CONTEXT_TOOL);
+  assert.ok(String(toolFunction.description).length < 80);
+  const parameters = toolFunction.parameters as Record<string, unknown>;
+  const query = (parameters.properties as Record<string, Record<string, unknown>>).query;
+  assert.equal(query?.description, '用一句简短中文描述要查的历史信息。');
 });
 
 test('Realtime interview prompts keep four distinct tasks under the same hard rules', () => {

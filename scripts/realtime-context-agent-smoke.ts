@@ -51,10 +51,13 @@ async function runSmoke(): Promise<void> {
     const result = await port.run(request);
     if (result.taskType !== 'interview.context_hint') throw new Error('REALTIME_CONTEXT_TASK_TYPE_MISMATCH');
     const validEvidenceIds = new Set(request.payload.evidence.map((item) => item.id));
-    const validSelection = result.output.selected_evidence_ids.every((id) => validEvidenceIds.has(id));
+    const selectedEvidenceIds = result.output.selected_evidence_ids;
+    const hasSelection = selectedEvidenceIds.length > 0;
+    const selectedSeedEvidence = selectedEvidenceIds.includes('e1');
+    const validSelection = selectedEvidenceIds.every((id) => validEvidenceIds.has(id));
     const noScripts = result.runtime.scriptCallCount === 0;
     const oneAttempt = result.runtime.attemptCount === 1;
-    const passed = validSelection && noScripts && oneAttempt;
+    const passed = hasSelection && selectedSeedEvidence && validSelection && noScripts && oneAttempt;
 
     process.stdout.write(`${JSON.stringify({
       status: passed ? 'PASS' : 'FAIL',
@@ -65,7 +68,9 @@ async function runSmoke(): Promise<void> {
       latencyMs: result.runtime.latencyMs ?? null,
       attemptCount: result.runtime.attemptCount ?? null,
       scriptCallCount: result.runtime.scriptCallCount ?? null,
-      selectedEvidenceCount: result.output.selected_evidence_ids.length,
+      hasSelection,
+      selectedSeedEvidence,
+      selectedEvidenceCount: selectedEvidenceIds.length,
       evidenceIdsValid: validSelection,
     }, null, 2)}\n`);
     if (!passed) process.exitCode = 1;
@@ -75,10 +80,27 @@ async function runSmoke(): Promise<void> {
 }
 
 runSmoke().catch((error: unknown) => {
-  const value = error && typeof error === 'object' ? error as { code?: unknown } : undefined;
+  const value = error && typeof error === 'object'
+    ? error as { code?: unknown; stderr?: unknown }
+    : undefined;
   const errorCode = typeof value?.code === 'string' && /^[A-Z0-9_]{1,96}$/u.test(value.code)
     ? value.code
     : error instanceof Error ? error.name : 'UNKNOWN_ERROR';
   process.stderr.write(`Realtime context Agent smoke failed: ${errorCode}\n`);
+  if (typeof value?.stderr === 'string') {
+    const diagnostic = value.stderr
+      .replace(/\u001b\[[0-9;]*m/gu, '')
+      .replace(/Bearer\s+\S+/giu, 'Bearer [REDACTED]')
+      .replace(/(api[_ -]?key|authorization|token)(\s*[:=]\s*|\s+)[^\s,;]+/giu, '$1$2[REDACTED]')
+      .replace(/https?:\/\/\S+/giu, '[URL]')
+      .replace(/[A-Za-z0-9_./+\-=]{48,}/gu, '[REDACTED]')
+      .replace(/<LIFE_INTERVIEW_TASK_CONTEXT>[\s\S]*?<\/LIFE_INTERVIEW_TASK_CONTEXT>/gu, '[task context elided]')
+      .split(/\r?\n/u)
+      .filter((line) => /(error|failed|exception|unsupported|invalid|timeout|refused|no .*tool)/iu.test(line))
+      .slice(-3)
+      .join('\n')
+      .slice(-600);
+    if (diagnostic) process.stderr.write(`Diagnostic: ${diagnostic}\n`);
+  }
   process.exitCode = 1;
 });

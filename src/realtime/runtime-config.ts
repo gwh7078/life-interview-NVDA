@@ -8,6 +8,14 @@ import type { RealtimeProviderConfig } from './provider.js';
 import type { RealtimeProviderId } from './types.js';
 
 export const REALTIME_PROVIDER_IDS = ['qwen', 'stepfun', 'modelbest', 'stepaudio3_quality', 'stepaudio2_mini'] as const;
+export type RealtimeMemoryTriggerMode = 'voice_tool' | 'backend_auto';
+export const DEFAULT_REALTIME_MEMORY_TRIGGER_MODE: RealtimeMemoryTriggerMode = 'backend_auto';
+
+export function parseRealtimeMemoryTriggerMode(value: unknown): RealtimeMemoryTriggerMode {
+  if (value === undefined || value === null || value === '') return DEFAULT_REALTIME_MEMORY_TRIGGER_MODE;
+  if (value === 'voice_tool' || value === 'backend_auto') return value;
+  throw new Error('REALTIME_MEMORY_TRIGGER must be voice_tool or backend_auto.');
+}
 
 export interface RealtimeProviderRuntimeSource {
   apiKey?: string;

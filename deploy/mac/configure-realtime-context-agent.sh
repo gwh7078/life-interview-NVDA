@@ -38,7 +38,12 @@ if [ -z "$agent_index" ]; then
   exit 1
 fi
 
+tools_allow_path="agents.list[$agent_index].tools.allow"
 tools_deny_path="agents.list[$agent_index].tools.deny"
+nemoclaw "$sandbox" exec -- openclaw config set \
+  --dry-run --strict-json "$tools_allow_path" '[]'
+nemoclaw "$sandbox" exec -- openclaw config set \
+  --strict-json "$tools_allow_path" '[]'
 nemoclaw "$sandbox" exec -- openclaw config set \
   --dry-run --strict-json "$tools_deny_path" '["*"]'
 nemoclaw "$sandbox" exec -- openclaw config set \
@@ -49,6 +54,8 @@ nemoclaw "$sandbox" exec -- openclaw skills install \
   --agent "$agent_id" --force
 
 echo
+echo "Verified per-agent empty tool allowlist: $tools_allow_path"
+nemoclaw "$sandbox" exec -- openclaw config get "$tools_allow_path"
 echo "Verified per-agent policy path: $tools_deny_path"
 nemoclaw "$sandbox" exec -- openclaw config get "$tools_deny_path"
 nemoclaw "$sandbox" exec -- openclaw skills info interview-observer --agent "$agent_id"

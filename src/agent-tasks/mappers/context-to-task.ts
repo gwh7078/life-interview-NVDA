@@ -29,6 +29,22 @@ function compactIds(values: string[], prefix: string): {
   return { aliasToOriginal, originalToAlias };
 }
 
+function compactTranscriptIds(transcript: TranscriptMessage[]): {
+  aliasToOriginal: Record<string, string>;
+  originalToAlias: Map<string, string>;
+} {
+  const aliasToOriginal: Record<string, string> = {};
+  const originalToAlias = new Map<string, string>();
+  let userIndex = 0;
+  let assistantIndex = 0;
+  for (const message of transcript) {
+    const alias = message.role === 'user' ? `u${++userIndex}` : `a${++assistantIndex}`;
+    aliasToOriginal[alias] = message.message_id;
+    originalToAlias.set(message.message_id, alias);
+  }
+  return { aliasToOriginal, originalToAlias };
+}
+
 function mapTranscript(
   transcript: TranscriptMessage[],
   aliases: Map<string, string>,
@@ -100,7 +116,7 @@ export function mapStoryCloseoutContextToTask(
   context: StoryCloseoutContext,
   runId: string,
 ): MappedAgentTask<StoryCreateCloseoutTaskRequest | StoryContinueCloseoutTaskRequest> {
-  const messages = compactIds(context.transcript.map((message) => message.message_id), 'm');
+  const messages = compactTranscriptIds(context.transcript);
   const stages = compactIds([
     ...context.lifeStages.map((stage) => stage.stage_id),
     context.currentStageId,
@@ -200,7 +216,7 @@ export function mapContributorCloseoutContextToTask(
   context: ContributorCloseoutTaskContext,
   runId: string,
 ): MappedAgentTask<ContributorCloseoutTaskRequest> {
-  const messages = compactIds(context.transcript.map((message) => message.message_id), 'm');
+  const messages = compactTranscriptIds(context.transcript);
   return {
     request: {
       runId,
