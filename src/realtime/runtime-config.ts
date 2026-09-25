@@ -8,13 +8,21 @@ import type { RealtimeProviderConfig } from './provider.js';
 import type { RealtimeProviderId } from './types.js';
 
 export const REALTIME_PROVIDER_IDS = ['qwen', 'stepfun', 'modelbest', 'stepaudio3_quality', 'stepaudio2_mini'] as const;
-export type RealtimeMemoryTriggerMode = 'voice_tool' | 'backend_auto';
-export const DEFAULT_REALTIME_MEMORY_TRIGGER_MODE: RealtimeMemoryTriggerMode = 'backend_auto';
+export type RealtimeMemoryTriggerMode = 'voice_tool' | 'supervisor_auto';
 
-export function parseRealtimeMemoryTriggerMode(value: unknown): RealtimeMemoryTriggerMode {
-  if (value === undefined || value === null || value === '') return DEFAULT_REALTIME_MEMORY_TRIGGER_MODE;
-  if (value === 'voice_tool' || value === 'backend_auto') return value;
-  throw new Error('REALTIME_MEMORY_TRIGGER must be voice_tool or backend_auto.');
+export function parseRealtimeMemoryTriggerMode(value: unknown): RealtimeMemoryTriggerMode | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (value === 'voice_tool' || value === 'supervisor_auto') return value;
+  if (value === 'backend_auto') return 'supervisor_auto';
+  throw new Error('REALTIME_MEMORY_TRIGGER must be voice_tool or supervisor_auto (backend_auto is deprecated).');
+}
+
+export function resolveRealtimeMemoryTriggerMode(
+  profile: RealtimeProviderId | undefined,
+  override?: RealtimeMemoryTriggerMode,
+): RealtimeMemoryTriggerMode {
+  if (profile === 'stepaudio2_mini' || profile === 'stepfun') return override ?? 'supervisor_auto';
+  return 'voice_tool';
 }
 
 export interface RealtimeProviderRuntimeSource {

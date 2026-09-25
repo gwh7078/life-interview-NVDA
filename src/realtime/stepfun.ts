@@ -1,8 +1,8 @@
 import {
   buildInterviewContextPayload,
+  buildStepAudio2MiniInstructions,
   buildStepfunInterviewInstructions,
   type RealtimeInterviewContext,
-  type StoryInterviewContext,
 } from './prompt.js';
 import type { RealtimeProviderConfig, RealtimeVoiceProvider } from './provider.js';
 import type { RealtimeContextHint } from './slow-coordinator.js';
@@ -136,29 +136,34 @@ export function buildStepfunContextTool(): Record<string, unknown> {
   };
 }
 
-function initialResponseInstructions(context: RealtimeInterviewContext): string {
+function initialResponseInstructions(context: RealtimeInterviewContext, profile: StepFunRealtimeProfileId): string {
+  const miniBase = () => buildStepAudio2MiniInstructions(context, {
+    memoryTriggerMode: context.memoryTriggerMode ?? 'supervisor_auto',
+    omitOpeningGap: true,
+  });
   if (context.interview_type === 'onboarding') {
-    return context.taskContext.mode === 'new'
+    const opening = context.taskContext.mode === 'new'
       ? '这是首次建档的第一问。自然问候后，从较早经历或成长环境开始，只问一个容易回答的问题。'
       : '这是继续建档的第一问。参考已有档案和历史对话，沿尚未覆盖的人生时间线只问一个问题。';
+    return profile === 'stepaudio2_mini' ? `${miniBase()}\n${opening}` : opening;
   }
   if (context.interview_type === 'external_contributor') {
-    return '这是亲友补充采访的第一问。从受访者自己的亲历或观察切入，只问一个具体问题，不提主人公版本或要求比较。';
+    const opening = '这是亲友补充采访的第一问。从受访者自己的亲历或观察切入，只问一个具体问题，不提主人公版本或要求比较。';
+    return profile === 'stepaudio2_mini' ? `${miniBase()}\n${opening}` : opening;
   }
 
   const payload = buildInterviewContextPayload(context);
   const mode = payload.interview_mode;
   const openingGap = typeof payload.opening_gap === 'string' ? payload.opening_gap : '';
-  if (mode === 'continue' && openingGap) {
-    return `这是本次故事续访的第一问。请直接自然地询问下面这个问题，只问这一问：\n${JSON.stringify(openingGap)}`;
-  }
   const targetTitle = typeof payload.target_title === 'string' ? payload.target_title : '';
-  if (mode === 'create' && targetTitle) {
-    return `这是新建故事的第一问。围绕故事标题 ${JSON.stringify(targetTitle)} 自然开场，只问一个具体问题；不要转成泛泛的人生阶段问题。`;
-  }
-  return mode === 'continue'
-    ? '这是故事续访的第一问。基于现有内容，选一个尚未明确的重要细节，只问一个问题；不要从头复述故事。'
-    : '这是新建故事的第一问。从当前人生阶段选一个具体经历切入，只问一个问题。';
+  const opening = mode === 'continue' && openingGap
+    ? `这是本次故事续访的第一问。请直接自然地询问下面这个问题，只问这一问：\n${JSON.stringify(openingGap)}`
+    : mode === 'create' && targetTitle
+      ? `这是新建故事的第一问。围绕故事标题 ${JSON.stringify(targetTitle)} 自然开场，只问一个具体问题；不要转成泛泛的人生阶段问题。`
+      : mode === 'continue'
+        ? '这是故事续访的第一问。基于现有内容，选一个尚未明确的重要细节，只问一个问题；不要从头复述故事。'
+        : '这是新建故事的第一问。从当前人生阶段选一个具体经历切入，只问一个问题。';
+  return profile === 'stepaudio2_mini' ? `${miniBase()}\n${opening}` : opening;
 }
 
 export function buildStepfunSessionUpdate(
@@ -166,11 +171,10 @@ export function buildStepfunSessionUpdate(
   voice = DEFAULT_STEPFUN_VOICE,
   adapterProfile: StepFunRealtimeProfileId = 'stepaudio2_mini',
 ): Record<string, unknown> {
-  const storyContext = context.interview_type === 'onboarding' || context.interview_type === 'external_contributor'
-    ? undefined
-    : context as StoryInterviewContext;
-  const memoryTriggerMode = storyContext?.memoryTriggerMode ?? 'backend_auto';
-  const profile = storyContext?.voiceProfile ?? adapterProfile;
+  const profile = context.voiceProfile ?? adapterProfile;
+  const memoryTriggerMode = profile === 'stepaudio3_quality'
+    ? 'voice_tool'
+    : context.memoryTriggerMode ?? 'supervisor_auto';
   const allowsContextTool = context.interview_type === 'story'
     && memoryTriggerMode === 'voice_tool'
     && context.task_context?.mode === 'continue'
@@ -457,11 +461,12 @@ export function createStepfunRealtimeProvider(
         type: 'response.create',
         response: {
           modalities: ['text', 'audio'],
-          instructions: initialResponseInstructions(context),
+          instructions: initialResponseInstructions(context, profileId),
         },
       } }],
     }),
     appendAudioMessages: (audio) => [buildStepfunAudioAppend(audio)],
+    commitInputTurn: () => [{ message: { type: 'input_audio_buffer.commit' } }],
     commitAndRespondToInputTurn: () => [
       { message: { type: 'input_audio_buffer.commit' } },
       { message: { type: 'response.create', response: { modalities: ['text', 'audio'] } } },

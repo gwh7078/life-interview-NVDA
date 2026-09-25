@@ -92,6 +92,7 @@ export interface RealtimeVoiceProvider extends RealtimeProviderContract {
     fallbackText?: string;
   };
   appendAudioMessages(audio: Uint8Array): Record<string, unknown>[];
+  commitInputTurn?(): RealtimeOutboundStep[];
   commitAndRespondToInputTurn?(): RealtimeOutboundStep[];
   requestAssistantTurnMessages(instruction: string): Record<string, unknown>[];
   /** Provider-specific recovery for a user turn that has stopped producing ASR activity. */

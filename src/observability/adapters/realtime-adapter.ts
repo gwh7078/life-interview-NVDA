@@ -18,6 +18,7 @@ const numericMetrics = [
   'toolResultWriteLatencyMs', 'toolCycleLatencyMs',
   'retriever_ms', 'agent_ms', 'total_slow_ms', 'hold_ms',
   'silenceObservedMs', 'silenceThresholdMs',
+  'gate_ms', 'retrieval_ms', 'resolve_ms', 'total_ms', 'packetChars',
 ] as const;
 
 const SAFE_FALLBACK_TYPES = new Set(['direct_retrieval']);
@@ -35,6 +36,11 @@ function safeLabel(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return LABEL.test(trimmed) ? trimmed : undefined;
+}
+
+function normalizedTrigger(value: unknown): string | undefined {
+  const label = safeLabel(value);
+  return label === 'backend_auto' ? 'supervisor_auto' : label;
 }
 
 function numberField(fields: SafeFields, key: string): number | undefined {
@@ -105,6 +111,26 @@ interface Mapping {
 }
 
 function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
+  const coachStage = /^coach\.(gate|retrieval|resolve)\.(started|completed|timeout|failed)$/u.exec(event);
+  if (coachStage) {
+    const [, stage, status] = coachStage;
+    if (stage === 'retrieval') return {
+      category: 'retriever',
+      eventType: `coach.retrieval.${status}`,
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : 'running',
+      title: status === 'started' ? 'COACH RETRIEVER RUNNING' : `COACH RETRIEVER ${status.toUpperCase()}`,
+      component: 'realtime-coach-retriever',
+    };
+    return {
+      category: 'runtime',
+      eventType: `coach.${stage}.${status}`,
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : 'running',
+      title: `COACH ${stage.toUpperCase()} ${status.toUpperCase()}`,
+      component: stage === 'gate' ? 'realtime-coach-gate' : 'realtime-coach-resolve',
+    };
+  }
+  if (event === 'coach.applied') return { category: 'runtime', eventType: event, status: 'success', title: 'COACH APPLIED', component: 'realtime-coach' };
+  if (event === 'coach.skipped') return { category: 'runtime', eventType: event, status: 'warning', title: 'COACH SKIPPED', component: 'realtime-coach' };
   const slowStage = slowStageMapping(event);
   if (slowStage) return slowStage;
   const slowPath = slowPathMapping(event, fields);
@@ -193,11 +219,21 @@ export function adaptRealtimeTrace(input: {
   const metrics: Record<string, number | string | boolean> = {};
   for (const key of numericMetrics) {
     const value = numberField(fields, key);
-    if (value !== undefined) metrics[key] = value;
+    if (value !== undefined) {
+      const normalizedKey = key === 'gate_ms' ? 'gateMs'
+        : key === 'retrieval_ms' ? 'retrievalMs'
+          : key === 'resolve_ms' ? 'resolveMs'
+            : key === 'total_ms' ? 'totalMs' : key;
+      metrics[normalizedKey] = value;
+    }
   }
   if (typeof fields.sent === 'boolean') metrics.sent = fields.sent;
   if (typeof fields.outcome === 'string') metrics.outcome = safeLabel(fields.outcome) ?? 'unknown';
   if (typeof fields.fallbackUsed === 'boolean') metrics.fallbackUsed = fields.fallbackUsed;
+  if (typeof fields.retrieve === 'boolean') metrics.retrieve = fields.retrieve;
+  for (const key of ['action', 'scenario', 'reason']) {
+    if (safeLabel(fields[key])) metrics[key] = safeLabel(fields[key])!;
+  }
   if (typeof fields.fallbackType === 'string' && SAFE_FALLBACK_TYPES.has(fields.fallbackType)) metrics.fallbackType = fields.fallbackType;
   if (typeof fields.slowAgentSkipReason === 'string' && SAFE_SKIP_REASONS.has(fields.slowAgentSkipReason)) metrics.skipReason = fields.slowAgentSkipReason;
   if (typeof fields.errorCode === 'string' && SAFE_ERROR_CODE.test(fields.errorCode)) metrics.errorCode = fields.errorCode;
@@ -230,6 +266,14 @@ export function adaptRealtimeTrace(input: {
         ? undefined
         : event === 'realtime.tool_cycle_terminal'
           ? numberField(fields, 'toolCycleLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs')
+          : event.startsWith('coach.gate.')
+            ? numberField(fields, 'gate_ms')
+            : event.startsWith('coach.retrieval.')
+              ? numberField(fields, 'retrieval_ms')
+              : event.startsWith('coach.resolve.')
+                ? numberField(fields, 'resolve_ms')
+                : event === 'coach.applied' || event === 'coach.skipped'
+                  ? numberField(fields, 'total_ms')
           : numberField(fields, 'slowAgentLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
   const summary = mapping.category === 'retriever'
     ? [count === undefined ? undefined : `${count} results`, latency === undefined ? undefined : `${Math.round(latency)} ms`].filter(Boolean).join(' · ') || undefined
@@ -255,7 +299,10 @@ export function adaptRealtimeTrace(input: {
       provider: input.provider,
       ...(input.environment ? { environment: input.environment } : {}),
       ...(safeLabel(fields.voiceModel) ? { voiceModel: safeLabel(fields.voiceModel) } : {}),
-      ...(safeLabel(fields.memoryTriggerMode) ? { memoryTriggerMode: safeLabel(fields.memoryTriggerMode) } : {}),
+      ...(safeLabel(fields.voiceProfile) ? { voiceProfile: safeLabel(fields.voiceProfile) } : {}),
+      ...(normalizedTrigger(fields.memoryTriggerMode) ? { memoryTriggerMode: normalizedTrigger(fields.memoryTriggerMode) } : {}),
+      ...(normalizedTrigger(fields.triggerMode) ? { triggerMode: normalizedTrigger(fields.triggerMode) } : {}),
+      ...(safeLabel(fields.coachModel) ? { coachModel: safeLabel(fields.coachModel) } : {}),
       ...(safeLabel(fields.retriever) ? { retriever: safeLabel(fields.retriever) } : {}),
       ...(safeLabel(fields.contextAgent) ? { contextAgent: safeLabel(fields.contextAgent) } : {}),
       ...(safeLabel(fields.contextInjection) ? { contextInjection: safeLabel(fields.contextInjection) } : {}),

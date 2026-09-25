@@ -12,43 +12,8 @@ import type {
   RealtimeRecallRequest,
   RealtimeSlowPathProgress,
 } from './slow-coordinator.js';
-import { RetrieverRealtimeRecall, type RealtimeQAEvidence } from './retriever-recall.js';
-
-const MAX_EVIDENCE_ITEMS = 5;
-const MAX_EVIDENCE_CHARS = 2_000;
-const MAX_EVIDENCE_ITEM_CHARS = 450;
+import { boundRealtimeQAEvidence, RetrieverRealtimeRecall } from './retriever-recall.js';
 type EvidenceId = InterviewContextHintTaskInput['evidence'][number]['id'];
-type BoundedEvidence = {
-  id: EvidenceId;
-  question: string;
-  answer: string;
-  sourceMessageIds: string[];
-};
-
-function clipAtSentence(value: string, maxChars: number): string {
-  const characters = Array.from(value.trim());
-  if (characters.length <= maxChars) return characters.join('');
-  const limit = Math.max(0, maxChars);
-  const stop = characters.slice(0, limit).reduce((latest, character, index) => (
-    /[。！？!?；;\n]/u.test(character) ? index + 1 : latest
-  ), 0);
-  return characters.slice(0, stop >= Math.floor(limit * 0.6) ? stop : limit).join('');
-}
-
-function boundedEvidence(evidence: RealtimeQAEvidence[]): BoundedEvidence[] {
-  let remaining = MAX_EVIDENCE_CHARS;
-  const bounded: BoundedEvidence[] = [];
-  for (const item of evidence) {
-    if (remaining <= 0 || bounded.length >= MAX_EVIDENCE_ITEMS) break;
-    const question = clipAtSentence(item.question, Math.min(120, Math.floor(MAX_EVIDENCE_ITEM_CHARS / 3)));
-    const answerBudget = Math.min(MAX_EVIDENCE_ITEM_CHARS - question.length, remaining - question.length);
-    const answer = clipAtSentence(item.answer, answerBudget);
-    if (!answer) continue;
-    bounded.push({ id: item.id as EvidenceId, question, answer, sourceMessageIds: item.sourceMessageIds });
-    remaining -= question.length + answer.length;
-  }
-  return bounded;
-}
 
 function emptyHint(turnId: string): RealtimeContextHint {
   return { basedOnTurnId: turnId, facts: [], possibleConflicts: [], interviewHints: [] };
@@ -124,7 +89,10 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
       evidenceCount: retrieved.evidence.length,
     });
 
-    const evidence = boundedEvidence(retrieved.evidence);
+    const evidence = boundRealtimeQAEvidence(retrieved.evidence).map((item) => ({
+      ...item,
+      id: item.id as EvidenceId,
+    }));
     if (evidence.length === 0) {
       report(request, { stage: 'slow_agent', status: 'skipped', skipReason: 'no_evidence' });
       report(request, {
@@ -199,7 +167,7 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
         basedOnTurnId: request.turnId,
         facts: selected.map((item) => ({
           claim: item.answer,
-          ...(item.question ? { question: clipAtSentence(item.question, 120) } : {}),
+          ...(item.question ? { question: item.question } : {}),
           sourceMessageIds: item.sourceMessageIds,
         })),
         possibleConflicts: output.possible_conflicts,

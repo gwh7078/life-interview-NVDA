@@ -13,6 +13,9 @@ try {
       environment: document.getElementById('tech-observer-environment'),
       provider: document.getElementById('tech-observer-provider'),
       memoryTriggerMode: document.getElementById('tech-observer-memory-trigger'),
+      coach: document.getElementById('tech-observer-coach'),
+      coachAction: document.getElementById('tech-observer-coach-action'),
+      coachLatency: document.getElementById('tech-observer-coach-latency'),
       retriever: document.getElementById('tech-observer-retriever'),
       contextAgent: document.getElementById('tech-observer-context-agent'),
       contextInjection: document.getElementById('tech-observer-context-injection'),
@@ -24,6 +27,13 @@ try {
     };
     const eventTitles = {
       'runtime.started': 'SESSION STARTED', 'runtime.ended': 'SESSION ENDED',
+      'coach.gate.started': 'COACH GATE STARTED', 'coach.gate.completed': 'COACH GATE COMPLETE',
+      'coach.gate.timeout': 'COACH GATE TIMEOUT', 'coach.gate.failed': 'COACH GATE FAILED',
+      'coach.retrieval.started': 'COACH RETRIEVER RUNNING', 'coach.retrieval.completed': 'COACH RETRIEVER COMPLETE',
+      'coach.retrieval.timeout': 'COACH RETRIEVER TIMEOUT', 'coach.retrieval.failed': 'COACH RETRIEVER FAILED',
+      'coach.resolve.started': 'COACH RESOLVE STARTED', 'coach.resolve.completed': 'COACH RESOLVE COMPLETE',
+      'coach.resolve.timeout': 'COACH RESOLVE TIMEOUT', 'coach.resolve.failed': 'COACH RESOLVE FAILED',
+      'coach.applied': 'COACH APPLIED', 'coach.skipped': 'COACH SKIPPED',
       'realtime.connected': 'REALTIME CONNECTED', 'realtime.user_speaking': 'USER SPEAKING',
       'realtime.listening': 'LISTENING', 'realtime.model_thinking': 'AI THINKING',
       'realtime.interrupted': 'INTERRUPTED', 'realtime.hold': 'HOLD', 'realtime.resume': 'RESUME',
@@ -41,6 +51,8 @@ try {
     };
     const metricLabels = {
       candidateCount: '候选', evidenceCount: '证据', selectedEvidenceCount: '选中证据',
+      action: 'Coach Action', retrieve: '需要检索', gateMs: 'Gate', retrievalMs: 'Retriever',
+      resolveMs: 'Resolve', totalMs: '总耗时', packetChars: 'Packet 字符',
       promptTokens: 'Prompt tokens', completionTokens: 'Completion tokens', totalTokens: 'Total tokens',
       fallbackUsed: '降级', fallbackType: '降级方式', skipReason: '跳过原因', errorCode: '错误码',
       model: 'Model', skill: 'Skill', resumeLatencyMs: 'Resume→回复', toolResultLatencyMs: 'Tool Result',
@@ -82,6 +94,10 @@ try {
     };
 
     const expectedMetrics = (event) => {
+      if (event.component === 'realtime-coach-gate') return ['action', 'retrieve', 'gateMs', 'errorCode'];
+      if (event.component === 'realtime-coach-retriever') return ['candidateCount', 'evidenceCount', 'retrievalMs', 'errorCode'];
+      if (event.component === 'realtime-coach-resolve') return ['evidenceCount', 'resolveMs', 'errorCode'];
+      if (event.component === 'realtime-coach') return ['action', 'packetChars', 'totalMs'];
       if (event.category === 'retriever') return ['candidateCount', 'evidenceCount', 'errorCode'];
       if (event.component === 'realtime-context-agent') {
         if (event.eventType === 'agent.started') return ['model', 'skill'];
@@ -99,11 +115,12 @@ try {
     };
 
     const metricValue = (key, value) => {
-      if (['candidateCount', 'evidenceCount', 'selectedEvidenceCount', 'promptTokens', 'completionTokens', 'totalTokens', 'resumeLatencyMs', 'toolResultLatencyMs', 'firstAudioLatencyMs', 'responseBFirstAudioMs', 'toolCallCount'].includes(key)) {
+      if (['candidateCount', 'evidenceCount', 'selectedEvidenceCount', 'promptTokens', 'completionTokens', 'totalTokens', 'resumeLatencyMs', 'toolResultLatencyMs', 'firstAudioLatencyMs', 'responseBFirstAudioMs', 'toolCallCount', 'gateMs', 'retrievalMs', 'resolveMs', 'totalMs', 'packetChars'].includes(key)) {
         return typeof value === 'number' && Number.isFinite(value) && value >= 0
           ? `${Math.round(value)}${key.endsWith('Ms') || key.endsWith('LatencyMs') ? ' ms' : ''}`
           : '暂无数据';
       }
+      if (key === 'retrieve') return typeof value === 'boolean' ? (value ? '是' : '否') : '暂无数据';
       if (key === 'fallbackUsed') return typeof value === 'boolean' ? (value ? '是' : '否') : '暂无数据';
       if (key === 'fallbackType') return value === 'direct_retrieval' ? '直接使用检索证据' : '暂无数据';
       if (key === 'skipReason') return skipReasons[value] || '暂无数据';
@@ -140,6 +157,36 @@ try {
         for (const [key, target] of Object.entries(values)) {
           const label = safeDisplayLabel(event.metadata[key]);
           if (label && target) target.textContent = label;
+        }
+        if (event.eventType === 'runtime.started') {
+          const profile = safeDisplayLabel(event.metadata.voiceProfile);
+          const showCoach = profile === 'stepaudio2_mini';
+          for (const field of panel.querySelectorAll('.tech-observer-coach-field')) field.hidden = !showCoach;
+          if (values.retriever) values.retriever.textContent = 'idle';
+          if (showCoach) {
+            if (values.coach) values.coach.textContent = safeDisplayLabel(event.metadata.coachModel) || 'qwen3-8b';
+            if (values.coachAction) values.coachAction.textContent = 'none';
+            if (values.coachLatency) values.coachLatency.textContent = '暂无数据';
+          }
+        }
+      }
+      if (event.eventType.startsWith('coach.retrieval.') || event.eventType.startsWith('retriever.')) {
+        if (values.retriever) values.retriever.textContent = event.eventType.endsWith('.started')
+          ? 'running'
+          : event.eventType.endsWith('.completed') ? 'completed'
+            : event.eventType.endsWith('.failed') ? 'failed'
+              : event.eventType.endsWith('.timeout') ? 'timeout' : values.retriever.textContent;
+      }
+      if (event.metrics && typeof event.metrics === 'object') {
+        const action = safeDisplayLabel(event.metrics.action);
+        if (action && values.coachAction) values.coachAction.textContent = action;
+        if (event.eventType === 'coach.gate.timeout' || event.eventType === 'coach.gate.failed') {
+          if (values.coachAction) values.coachAction.textContent = 'none';
+        }
+        const latency = event.metrics.totalMs ?? event.metrics.gateMs ?? event.durationMs;
+        if (typeof latency === 'number' && Number.isFinite(latency) && values.coachLatency
+          && event.component?.startsWith('realtime-coach')) {
+          values.coachLatency.textContent = `${Math.round(latency)} ms`;
         }
       }
       if (event.metrics && typeof event.metrics === 'object') {
@@ -189,6 +236,7 @@ try {
         titleText.textContent = eventTitle(event);
         const duration = document.createElement('span');
         const timingEvent = event.component === 'nemo-retriever' || event.component === 'realtime-context-agent'
+          || event.component?.startsWith('realtime-coach')
           || event.component === 'realtime-slow-path' || event.component === 'realtime-tool-cycle'
           || event.component === 'realtime-tool'
           || event.eventType === 'realtime.resume';
@@ -230,6 +278,7 @@ try {
       if (sessionLabel) sessionLabel.textContent = '暂无数据';
       if (traceLabel) traceLabel.textContent = '暂无数据';
       for (const target of Object.values(values)) if (target) target.textContent = '暂无数据';
+      for (const field of panel.querySelectorAll('.tech-observer-coach-field')) field.hidden = true;
       for (const item of panel.querySelectorAll('.tech-observer-flow li')) delete item.dataset.state;
       render();
       setLive('waiting', 'WAITING');
@@ -285,6 +334,7 @@ try {
       if (sessionLabel) sessionLabel.textContent = sessionId ? '当前采访' : '暂无数据';
       if (traceLabel) traceLabel.textContent = sessionId ? '等待事件' : '暂无数据';
       for (const target of Object.values(values)) if (target) target.textContent = '暂无数据';
+      for (const field of panel.querySelectorAll('.tech-observer-coach-field')) field.hidden = true;
       for (const item of panel.querySelectorAll('.tech-observer-flow li')) delete item.dataset.state;
       render();
       if (!panel.hidden) connect();

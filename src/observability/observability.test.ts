@@ -238,11 +238,13 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
 test('runtime start observer metadata identifies the voice profile and memory trigger without content', () => {
   const observation = adaptRealtimeTrace({
     sessionId: 'session-a',
-    provider: 'stepaudio3_quality',
+    provider: 'stepaudio2_mini',
     event: 'session.started',
     fields: {
-      voiceModel: 'StepAudio 3',
+      voiceModel: 'Step-Audio-2-mini',
+      voiceProfile: 'stepaudio2_mini',
       memoryTriggerMode: 'backend_auto',
+      coachModel: 'qwen3-8b',
       retriever: 'enabled',
       contextAgent: 'enabled',
       contextInjection: 'unsupported',
@@ -250,9 +252,11 @@ test('runtime start observer metadata identifies the voice profile and memory tr
     },
   });
   assert.deepEqual(observation?.metadata, {
-    provider: 'stepaudio3_quality',
-    voiceModel: 'StepAudio 3',
-    memoryTriggerMode: 'backend_auto',
+    provider: 'stepaudio2_mini',
+    voiceModel: 'Step-Audio-2-mini',
+    voiceProfile: 'stepaudio2_mini',
+    memoryTriggerMode: 'supervisor_auto',
+    coachModel: 'qwen3-8b',
     retriever: 'enabled',
     contextAgent: 'enabled',
     contextInjection: 'unsupported',

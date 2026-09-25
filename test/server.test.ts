@@ -85,6 +85,8 @@ test('Local interview service exposes current realtime provider states without e
     assert.deepEqual(health.realtimeMemory, {
       voiceModel: 'Step-Audio-2-mini',
       memoryTriggerMode: 'voice_tool',
+      coachModel: 'qwen3-8b',
+      coachConfigured: 'false',
       retriever: 'enabled',
       contextAgent: 'enabled',
       contextInjection: 'supported',

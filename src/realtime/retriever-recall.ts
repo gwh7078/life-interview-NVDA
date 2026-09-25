@@ -20,6 +20,42 @@ export interface RealtimeRetrievalResult {
   latencyMs: number;
 }
 
+export interface BoundedRealtimeQAEvidence {
+  id: string;
+  question: string;
+  answer: string;
+  sourceMessageIds: string[];
+}
+
+const MAX_EVIDENCE_ITEMS = 5;
+const MAX_EVIDENCE_CHARS = 2_000;
+const MAX_EVIDENCE_ITEM_CHARS = 450;
+
+function clipAtSentence(value: string, maxChars: number): string {
+  const characters = Array.from(value.trim());
+  if (characters.length <= maxChars) return characters.join('');
+  const stop = characters.slice(0, maxChars).reduce((latest, character, index) => (
+    /[。！？!?；;\n]/u.test(character) ? index + 1 : latest
+  ), 0);
+  return characters.slice(0, stop >= Math.floor(maxChars * 0.6) ? stop : maxChars).join('');
+}
+
+/** Shared Q+A evidence budget for Coach Pass B and the existing read-only Agent path. */
+export function boundRealtimeQAEvidence(evidence: RealtimeQAEvidence[]): BoundedRealtimeQAEvidence[] {
+  let remaining = MAX_EVIDENCE_CHARS;
+  const bounded: BoundedRealtimeQAEvidence[] = [];
+  for (const item of evidence) {
+    if (remaining <= 0 || bounded.length >= MAX_EVIDENCE_ITEMS) break;
+    const question = clipAtSentence(item.question, Math.min(120, Math.floor(MAX_EVIDENCE_ITEM_CHARS / 3)));
+    const answerBudget = Math.min(MAX_EVIDENCE_ITEM_CHARS - question.length, remaining - question.length);
+    const answer = clipAtSentence(item.answer, answerBudget);
+    if (!answer) continue;
+    bounded.push({ id: item.id, question, answer, sourceMessageIds: item.sourceMessageIds });
+    remaining -= question.length + answer.length;
+  }
+  return bounded;
+}
+
 function evidenceUnits(item: RetrieverEvidence): Array<Omit<RealtimeQAEvidence, 'id' | 'score'>> {
   const currentFormat = [...item.text.matchAll(QA_ENTRY)];
   if (currentFormat.length > 0) {

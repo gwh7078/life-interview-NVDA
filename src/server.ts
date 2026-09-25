@@ -19,13 +19,21 @@ import { createInterviewRuntimeCore, type InterviewStartInput } from './intervie
 import { InterviewContextError } from './interview/context/story-interview-context.js';
 import { createRealtimeInterviewProvider, type RealtimeProviderId, type RealtimeVoiceProvider } from './realtime/provider.js';
 import {
-  DEFAULT_REALTIME_MEMORY_TRIGGER_MODE,
   isRealtimeProviderId,
   parseRealtimeMemoryTriggerMode,
+  resolveRealtimeMemoryTriggerMode,
   realtimeProviderHealthSummary,
   resolveRealtimeProviderConfig,
   type RealtimeMemoryTriggerMode,
 } from './realtime/runtime-config.js';
+import { BailianRealtimeCoach, buildRealtimeCoachGateInput } from './realtime/coach/service.js';
+import { RealtimeCoachPipeline } from './realtime/coach/pipeline.js';
+import { renderMiniCoachPacket } from './realtime/coach/mini-coach-renderer.js';
+import type {
+  CoachConversationMessage,
+  CoachGateResult,
+  RealtimeCoachPort,
+} from './realtime/coach/types.js';
 import {
   STORY_INTERVIEW_COMPLETION_UTTERANCE,
   isAssistantFarewell,
@@ -66,7 +74,7 @@ import {
 } from './realtime/trace.js';
 import { createRealtimeToolCycleTracker } from './realtime/tool-cycle-tracker.js';
 import type { RealtimeInterviewProvider } from './interview/session.js';
-import type { RealtimeInterviewContext } from './realtime/prompt.js';
+import { buildStepAudio2MiniInstructions, type RealtimeInterviewContext } from './realtime/prompt.js';
 import { INTERVIEW_CONTEXT_TOOL_NAME, type NormalizedRealtimeEvent } from './realtime/types.js';
 import {
   beginOnboardingCloseout,
@@ -135,6 +143,12 @@ export interface RuntimeConfig {
   model: string;
   defaultRealtimeProvider?: RealtimeProviderId;
   realtimeMemoryTriggerMode?: RealtimeMemoryTriggerMode;
+  realtimeCoachProvider?: 'openai-compatible';
+  realtimeCoachBaseUrl?: string;
+  realtimeCoachModel?: string;
+  realtimeCoachApiKey?: string;
+  realtimeCoachGateTimeoutMs?: number;
+  realtimeCoachTotalTimeoutMs?: number;
   realtimeRetrieverEnabled?: boolean;
   realtimeContextAgentEnabled?: boolean;
   qwenModel?: string;
@@ -194,6 +208,8 @@ export interface InterviewServiceDependencies {
   realtimeRecall?: RealtimeRecallPort;
   observationBus?: ObservationBus;
   realtimeContextAgentTasks?: AgentTaskPort | null;
+  realtimeCoach?: RealtimeCoachPort | null;
+  realtimeCoachPipeline?: RealtimeCoachPipeline;
 }
 
 interface ProviderTranscriptMessage {
@@ -300,6 +316,18 @@ export function readRuntimeConfig(): RuntimeConfig {
   const userTurnStallTimeoutMs = Number(process.env.REALTIME_USER_TURN_STALL_TIMEOUT_MS ?? DEFAULT_USER_TURN_STALL_TIMEOUT_MS);
   const realtimeSlowDeadlineMs = Number(process.env.REALTIME_SLOW_DEADLINE_MS ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS);
   const realtimeMemoryTriggerMode = parseRealtimeMemoryTriggerMode(process.env.REALTIME_MEMORY_TRIGGER);
+  const realtimeCoachProvider = process.env.REALTIME_COACH_PROVIDER?.trim() || 'openai-compatible';
+  if (realtimeCoachProvider !== 'openai-compatible') {
+    throw new Error('REALTIME_COACH_PROVIDER must be openai-compatible.');
+  }
+  const realtimeCoachBaseUrl = process.env.REALTIME_COACH_BASE_URL?.trim()
+    || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+  const realtimeCoachModel = process.env.REALTIME_COACH_MODEL?.trim() || 'qwen3-8b';
+  const realtimeCoachApiKey = process.env.REALTIME_COACH_API_KEY?.trim()
+    || process.env.BAILIAN_API_KEY?.trim()
+    || undefined;
+  const realtimeCoachGateTimeoutMs = Number(process.env.REALTIME_COACH_GATE_TIMEOUT_MS ?? 1_200);
+  const realtimeCoachTotalTimeoutMs = Number(process.env.REALTIME_COACH_TOTAL_TIMEOUT_MS ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS);
   const realtimeRetrieverEnabled = process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true';
   const contextAgentEnabled = realtimeContextAgentEnabled();
   const realtimeLocalSilenceTimeoutMs = Number(process.env.REALTIME_LOCAL_SILENCE_TIMEOUT_MS ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS);
@@ -335,6 +363,12 @@ export function readRuntimeConfig(): RuntimeConfig {
   }
   if (!Number.isInteger(realtimeSlowDeadlineMs) || realtimeSlowDeadlineMs <= 0 || realtimeSlowDeadlineMs > 5_000) {
     throw new Error('REALTIME_SLOW_DEADLINE_MS must be an integer between 1 and 5000.');
+  }
+  if (!Number.isInteger(realtimeCoachGateTimeoutMs) || realtimeCoachGateTimeoutMs <= 0 || realtimeCoachGateTimeoutMs > 1_200) {
+    throw new Error('REALTIME_COACH_GATE_TIMEOUT_MS must be an integer between 1 and 1200.');
+  }
+  if (!Number.isInteger(realtimeCoachTotalTimeoutMs) || realtimeCoachTotalTimeoutMs <= 0 || realtimeCoachTotalTimeoutMs > 5_000) {
+    throw new Error('REALTIME_COACH_TOTAL_TIMEOUT_MS must be an integer between 1 and 5000.');
   }
   if (!Number.isInteger(realtimeLocalSilenceTimeoutMs) || realtimeLocalSilenceTimeoutMs <= 0 || realtimeLocalSilenceTimeoutMs > 10_000) {
     throw new Error('REALTIME_LOCAL_SILENCE_TIMEOUT_MS must be an integer between 1 and 10000.');
@@ -416,6 +450,12 @@ export function readRuntimeConfig(): RuntimeConfig {
     userTurnStallTimeoutMs,
     realtimeSlowDeadlineMs,
     realtimeMemoryTriggerMode,
+    realtimeCoachProvider,
+    realtimeCoachBaseUrl,
+    realtimeCoachModel,
+    realtimeCoachApiKey,
+    realtimeCoachGateTimeoutMs,
+    realtimeCoachTotalTimeoutMs,
     realtimeRetrieverEnabled,
     realtimeContextAgentEnabled: contextAgentEnabled,
     authSessionSecret,
@@ -450,7 +490,11 @@ function realtimeMemoryHealthSummary(config: RuntimeConfig): Record<string, stri
       : provider === 'modelbest' ? 'ModelBest Realtime' : 'Qwen Realtime';
   return {
     voiceModel,
-    memoryTriggerMode: parseRealtimeMemoryTriggerMode(config.realtimeMemoryTriggerMode),
+    memoryTriggerMode: resolveRealtimeMemoryTriggerMode(provider, config.realtimeMemoryTriggerMode),
+    ...(provider === 'stepaudio2_mini' || provider === 'stepfun' ? {
+      coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
+      coachConfigured: String(Boolean(config.realtimeCoachApiKey)),
+    } : {}),
     retriever: config.realtimeRetrieverEnabled ? 'enabled' : 'disabled',
     contextAgent: config.realtimeContextAgentEnabled ? 'enabled' : 'disabled',
     contextInjection: contextInjectionSupported ? 'supported' : 'unsupported',
@@ -686,6 +730,16 @@ function createStoryWorkflowDependencies(
     ?? (process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true' ? createRetrieverClientFromEnv(process.env) : undefined);
   const realtimeRecall = dependencies.realtimeRecall
     ?? (retriever ? new RealtimeSlowContextPipeline(retriever, realtimeContextAgentTasks) : undefined);
+  const realtimeCoach = dependencies.realtimeCoach === undefined
+    ? config.realtimeCoachApiKey ? new BailianRealtimeCoach({
+        provider: config.realtimeCoachProvider ?? 'openai-compatible',
+        baseUrl: config.realtimeCoachBaseUrl ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        model: config.realtimeCoachModel ?? 'qwen3-8b',
+        apiKey: config.realtimeCoachApiKey,
+      }) : null
+    : dependencies.realtimeCoach;
+  const realtimeCoachPipeline = dependencies.realtimeCoachPipeline
+    ?? (realtimeCoach && retriever ? new RealtimeCoachPipeline(realtimeCoach, retriever) : undefined);
   const retrieverIndex = dependencies.retrieverIndex
     ?? (retriever ? new RetrieverIndexService(config.databasePath, retriever) : undefined);
   const retrievalTokenSecret = process.env.AGENT_RETRIEVAL_TOKEN_SECRET?.trim()
@@ -710,6 +764,8 @@ function createStoryWorkflowDependencies(
     agentTasks,
     ...(retriever ? { retriever } : {}),
     ...(realtimeRecall ? { realtimeRecall } : {}),
+    ...(realtimeCoach ? { realtimeCoach } : {}),
+    ...(realtimeCoachPipeline ? { realtimeCoachPipeline } : {}),
     ...(retrieverIndex ? { retrieverIndex } : {}),
     ...(retrieverScriptGateway ? { retrieverScriptGateway } : {}),
     ...(eraContextScriptGateway ? { eraContextScriptGateway } : {}),
@@ -1971,6 +2027,37 @@ function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+type TimedOutcome<T> =
+  | { status: 'completed'; value: T }
+  | { status: 'failed'; error: unknown }
+  | { status: 'timeout' };
+
+function settleWithin<T>(promise: Promise<T>, timeoutMs: number): Promise<TimedOutcome<T>> {
+  let timeout: NodeJS.Timeout | undefined;
+  const settled = promise.then(
+    (value): TimedOutcome<T> => ({ status: 'completed', value }),
+    (error: unknown): TimedOutcome<T> => ({ status: 'failed', error }),
+  );
+  const deadline = new Promise<TimedOutcome<T>>((resolve) => {
+    timeout = setTimeout(() => resolve({ status: 'timeout' }), Math.max(0, timeoutMs));
+  });
+  return Promise.race([settled, deadline]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
+
+function coachErrorCode(error: unknown): string {
+  const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
+  if (typeof code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/u.test(code)) return code;
+  return error instanceof Error && /^[A-Z][A-Za-z0-9]{0,63}$/u.test(error.name)
+    ? error.name.toUpperCase()
+    : 'REALTIME_COACH_FAILED';
+}
+
+function latestAssistantQuestion(text: string): string | null {
+  return text.match(/[^。！？!?\n]*[？?]/gu)?.at(-1)?.trim() || null;
+}
+
 function createRealtimeHandler(
   config: RuntimeConfig,
   client: WebSocket,
@@ -2192,6 +2279,239 @@ function createRealtimeHandler(
   };
   const traceStageTracker = createRealtimeTraceStageTracker();
   const toolCycleTracker = createRealtimeToolCycleTracker({ record: recordTrace });
+  const miniProfileSelected = (): boolean => selectedProvider === 'stepaudio2_mini' || selectedProvider === 'stepfun';
+  const supervisorAutoSelected = (): boolean => miniProfileSelected()
+    && sessionContext?.memoryTriggerMode === 'supervisor_auto';
+  let activeCoachController: AbortController | undefined;
+  const recentCoachContext: CoachConversationMessage[] = [];
+  let latestUserAnswer = '';
+
+  const sendMiniResponse = (input: {
+    turnId: string;
+    version: number;
+    packet?: string;
+    traceFields: RealtimeTraceFields;
+  }): boolean => {
+    if (!sessionContext || !selectedAdapter?.requestAssistantTurnMessages
+      || phase !== 'active' || currentTurnId !== input.turnId || contextVersion !== input.version) return false;
+    const instructions = buildStepAudio2MiniInstructions(sessionContext, {
+      memoryTriggerMode: 'supervisor_auto',
+      omitOpeningGap: true,
+      ...(input.packet ? { coachPacket: input.packet } : {}),
+    });
+    const messages = selectedAdapter.requestAssistantTurnMessages(instructions);
+    const sent = messages.length > 0 && sendProviderMessages(messages);
+    if (sent && input.packet) {
+      recordTrace('coach.applied', {
+        ...input.traceFields,
+        packetChars: Array.from(input.packet).length,
+      });
+    } else if (!sent) {
+      recordTrace('coach.skipped', { ...input.traceFields, reason: 'response_request_failed' });
+    }
+    return sent;
+  };
+
+  const runSupervisorCoach = (text: string, turnId: string, version: number): void => {
+    const context = sessionContext;
+    if (!supervisorAutoSelected() || !context) return;
+    activeCoachController?.abort('superseded');
+    const controller = new AbortController();
+    activeCoachController = controller;
+    const startedAt = performance.now();
+    const totalBudgetMs = Math.min(config.realtimeCoachTotalTimeoutMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS, DEFAULT_REALTIME_SLOW_DEADLINE_MS);
+    const totalDeadlineAt = startedAt + totalBudgetMs;
+    const baseGate = buildRealtimeCoachGateInput(context, {
+      lastAssistantQuestion: latestAssistantQuestion(lastAssistantText),
+      currentUserAnswer: text,
+      recentContext: recentCoachContext,
+    });
+    const traceFields: RealtimeTraceFields = {
+      scenario: baseGate.scenario,
+      voiceProfile: 'stepaudio2_mini',
+      triggerMode: 'supervisor_auto',
+      coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
+    };
+    const isCurrent = (): boolean => phase === 'active'
+      && currentTurnId === turnId
+      && contextVersion === version
+      && !controller.signal.aborted;
+    const failOpen = (reason: string, fields: RealtimeTraceFields = {}): void => {
+      if (!isCurrent()) return;
+      recordTrace('coach.skipped', { ...traceFields, ...fields, reason });
+      sendMiniResponse({ turnId, version, traceFields: { ...traceFields, ...fields } });
+    };
+
+    if (!dependencies.realtimeCoach) {
+      failOpen('coach_not_configured');
+      return;
+    }
+
+    const gateStartedAt = performance.now();
+    recordTrace('coach.gate.started', traceFields);
+    const gateRemaining = Math.max(0, Math.min(
+      config.realtimeCoachGateTimeoutMs ?? 1_200,
+      totalDeadlineAt - performance.now(),
+    ));
+    void settleWithin(
+      Promise.resolve().then(() => dependencies.realtimeCoach!.evaluate(baseGate, { signal: controller.signal })),
+      gateRemaining,
+    ).then(async (gateOutcome) => {
+      const gateMs = Number((performance.now() - gateStartedAt).toFixed(2));
+      if (!isCurrent()) return;
+      if (gateOutcome.status === 'timeout') {
+        controller.abort('gate-timeout');
+        recordTrace('coach.gate.timeout', { ...traceFields, gate_ms: gateMs, total_ms: gateMs });
+        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
+          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, gate_ms: gateMs, total_ms: gateMs } });
+        }
+        return;
+      }
+      if (gateOutcome.status === 'failed') {
+        controller.abort('gate-failed');
+        recordTrace('coach.gate.failed', {
+          ...traceFields, gate_ms: gateMs, total_ms: gateMs,
+          errorCode: coachErrorCode(gateOutcome.error),
+        });
+        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
+          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, gate_ms: gateMs, total_ms: gateMs } });
+        }
+        return;
+      }
+
+      const gate = gateOutcome.value;
+      recordTrace('coach.gate.completed', {
+        ...traceFields, action: gate.action, retrieve: gate.retrieve,
+        gate_ms: gateMs, total_ms: gateMs,
+      });
+      if (gate.action === 'none') {
+        recordTrace('coach.skipped', {
+          ...traceFields, action: gate.action, retrieve: false,
+          gate_ms: gateMs, total_ms: gateMs, reason: 'normal',
+        });
+        sendMiniResponse({
+          turnId, version,
+          traceFields: { ...traceFields, action: gate.action, retrieve: false, gate_ms: gateMs, total_ms: gateMs },
+        });
+        return;
+      }
+
+      if (!gate.retrieve) {
+        const packet = renderMiniCoachPacket({
+          scenario: baseGate.scenario,
+          currentUserAnswer: text,
+          gate,
+          scenarioState: baseGate.scenarioState,
+        });
+        sendMiniResponse({
+          turnId, version, packet,
+          traceFields: { ...traceFields, action: gate.action, retrieve: false, gate_ms: gateMs, total_ms: Number((performance.now() - startedAt).toFixed(2)) },
+        });
+        return;
+      }
+
+      const storyId = context.interview_type === 'story'
+        && context.task_context?.mode === 'continue'
+        && typeof context.story?.story_id === 'string'
+        ? context.story.story_id.trim()
+        : '';
+      const sessionId = interviewSession?.sessionId;
+      const query = gate.query;
+      if (!dependencies.realtimeCoachPipeline) {
+        failOpen('retriever_or_resolve_not_configured', { action: gate.action, retrieve: true, gate_ms: gateMs });
+        return;
+      }
+      if (baseGate.scenario !== 'story_continue' || !storyId || !sessionId || !query) {
+        failOpen('retrieval_scope_unavailable', { action: gate.action, retrieve: true, gate_ms: gateMs });
+        return;
+      }
+
+      let activeStage: 'retrieval' | 'resolve' = 'retrieval';
+      const pipelinePromise = dependencies.realtimeCoachPipeline.retrieveAndResolve({
+        scenario: baseGate.scenario,
+        currentUserAnswer: text,
+        gate,
+        request: {
+          ownerId: authContext.userId,
+          sessionId,
+          storyId,
+          turnId,
+          contextVersion: version,
+          query,
+          traceContext: { traceId: sessionId, sessionId, storyId, parentSpanId: `coach:${turnId}` },
+        },
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (!isCurrent()) return;
+          activeStage = progress.stage;
+          if (progress.status === 'failed') return;
+          const suffix = progress.status;
+          const durationField = progress.stage === 'retrieval' ? 'retrieval_ms' : 'resolve_ms';
+          recordTrace(`coach.${progress.stage}.${suffix}`, {
+            ...traceFields,
+            action: gate.action,
+            retrieve: true,
+            gate_ms: gateMs,
+            ...(progress.latencyMs === undefined ? {} : { [durationField]: Number(progress.latencyMs.toFixed(2)) }),
+            ...(progress.candidateCount === undefined ? {} : { candidateCount: progress.candidateCount }),
+            ...(progress.evidenceCount === undefined ? {} : { evidenceCount: progress.evidenceCount }),
+            ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
+          });
+        },
+      });
+      const remaining = Math.max(0, totalDeadlineAt - performance.now());
+      const pipelineOutcome = await settleWithin(pipelinePromise, remaining);
+      const totalMs = Number((performance.now() - startedAt).toFixed(2));
+      if (pipelineOutcome.status === 'timeout') {
+        controller.abort('coach-total-timeout');
+        recordTrace(`coach.${activeStage}.timeout`, {
+          ...traceFields, action: gate.action, retrieve: true,
+          gate_ms: gateMs, total_ms: totalMs,
+        });
+        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
+          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, action: gate.action, retrieve: true, gate_ms: gateMs, total_ms: totalMs } });
+        }
+        return;
+      }
+      if (pipelineOutcome.status === 'failed') {
+        controller.abort('coach-pipeline-failed');
+        recordTrace(`coach.${activeStage}.failed`, {
+          ...traceFields, action: gate.action, retrieve: true,
+          gate_ms: gateMs, total_ms: totalMs,
+          errorCode: coachErrorCode(pipelineOutcome.error),
+        });
+        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
+          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, action: gate.action, retrieve: true, gate_ms: gateMs, total_ms: totalMs } });
+        }
+        return;
+      }
+      if (!isCurrent() || performance.now() > totalDeadlineAt) return;
+      const result = pipelineOutcome.value;
+      const packet = renderMiniCoachPacket({
+        scenario: baseGate.scenario,
+        currentUserAnswer: text,
+        gate,
+        packet: result.packet,
+        scenarioState: baseGate.scenarioState,
+      });
+      sendMiniResponse({
+        turnId,
+        version,
+        packet,
+        traceFields: {
+          ...traceFields,
+          action: gate.action,
+          retrieve: true,
+          gate_ms: gateMs,
+          retrieval_ms: Number(result.retrievalMs.toFixed(2)),
+          resolve_ms: Number(result.resolveMs.toFixed(2)),
+          total_ms: Number((performance.now() - startedAt).toFixed(2)),
+        },
+      });
+    }).catch(() => {
+      if (isCurrent()) failOpen('coach_pipeline_failed');
+    });
+  };
 
   const pendingContextForCurrentTurn = () => {
     const pending = pendingNextTurnContext;
@@ -2303,6 +2623,87 @@ function createRealtimeHandler(
     return !activeResponses.has(responseId);
   };
 
+  const runMiniVoiceToolResolve = async (
+    query: string,
+    turnId: string,
+    version: number,
+    deadlineAt: number,
+  ): Promise<{ status: 'completed' | 'timeout' | 'failed'; packet?: string; latencyMs: number }> => {
+    const startedAt = performance.now();
+    const traceFields: RealtimeTraceFields = {
+      scenario: 'story_continue',
+      voiceProfile: 'stepaudio2_mini',
+      triggerMode: 'voice_tool',
+      coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
+    };
+    if (!dependencies.realtimeCoachPipeline || sessionContext?.interview_type !== 'story'
+      || sessionContext.task_context?.mode !== 'continue' || !interviewSession) {
+      recordTrace('coach.skipped', { ...traceFields, reason: 'retriever_or_resolve_not_configured' });
+      return { status: 'failed', latencyMs: performance.now() - startedAt };
+    }
+    const storyId = typeof sessionContext.story?.story_id === 'string' ? sessionContext.story.story_id.trim() : '';
+    const boundedQuery = query.trim();
+    if (!storyId || !boundedQuery) return { status: 'failed', latencyMs: performance.now() - startedAt };
+    const controller = new AbortController();
+    const gate: CoachGateResult = {
+      action: 'guide', retrieve: true, query: boundedQuery, reason: 'history_reference',
+      avoid: null, direction: '使用相关历史，避免重复提问后继续当前故事。',
+    };
+    let activeStage: 'retrieval' | 'resolve' = 'retrieval';
+    const promise = dependencies.realtimeCoachPipeline.retrieveAndResolve({
+      scenario: 'story_continue',
+      currentUserAnswer: latestUserAnswer,
+      gate,
+      request: {
+        ownerId: authContext.userId,
+        sessionId: interviewSession.sessionId,
+        storyId,
+        turnId,
+        contextVersion: version,
+        query: boundedQuery,
+        traceContext: { traceId: interviewSession.sessionId, sessionId: interviewSession.sessionId, storyId, parentSpanId: `tool-coach:${turnId}` },
+      },
+      signal: controller.signal,
+      onProgress: (progress) => {
+        activeStage = progress.stage;
+        if (progress.status === 'failed') return;
+        const durationField = progress.stage === 'retrieval' ? 'retrieval_ms' : 'resolve_ms';
+        recordTrace(`coach.${progress.stage}.${progress.status}`, {
+          ...traceFields,
+          action: gate.action,
+          retrieve: true,
+          ...(progress.latencyMs === undefined ? {} : { [durationField]: Number(progress.latencyMs.toFixed(2)) }),
+          ...(progress.candidateCount === undefined ? {} : { candidateCount: progress.candidateCount }),
+          ...(progress.evidenceCount === undefined ? {} : { evidenceCount: progress.evidenceCount }),
+          ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
+        });
+      },
+    });
+    const outcome = await settleWithin(promise, Math.max(0, deadlineAt - performance.now()));
+    const latencyMs = Number((performance.now() - startedAt).toFixed(2));
+    if (outcome.status === 'timeout') {
+      controller.abort('coach-total-timeout');
+      recordTrace(`coach.${activeStage}.timeout`, { ...traceFields, action: gate.action, retrieve: true, total_ms: latencyMs });
+      return { status: 'timeout', latencyMs };
+    }
+    if (outcome.status === 'failed') {
+      controller.abort('coach-pipeline-failed');
+      recordTrace(`coach.${activeStage}.failed`, {
+        ...traceFields, action: gate.action, retrieve: true,
+        total_ms: latencyMs, errorCode: coachErrorCode(outcome.error),
+      });
+      return { status: 'failed', latencyMs };
+    }
+    if (phase !== 'active' || currentTurnId !== turnId || contextVersion !== version || performance.now() >= deadlineAt) {
+      return { status: 'timeout', latencyMs };
+    }
+    return {
+      status: 'completed',
+      packet: renderMiniCoachPacket({ scenario: 'story_continue', currentUserAnswer: latestUserAnswer, gate, packet: outcome.value.packet }),
+      latencyMs,
+    };
+  };
+
   const runRealtimeMemoryPipeline = (
     query: string,
     turnId: string,
@@ -2381,7 +2782,8 @@ function createRealtimeHandler(
     const turnId = currentTurnId ?? event.itemId ?? event.callId;
     const version = contextVersion;
     const toolAdapter = selectedAdapter;
-    const triggerMode = config.realtimeMemoryTriggerMode ?? DEFAULT_REALTIME_MEMORY_TRIGGER_MODE;
+    const triggerMode = sessionContext?.memoryTriggerMode
+      ?? resolveRealtimeMemoryTriggerMode(selectedProvider, config.realtimeMemoryTriggerMode);
     recordTrace('realtime.tool_call.received', {
       name: event.name,
       callId: event.callId,
@@ -2427,7 +2829,11 @@ function createRealtimeHandler(
       holdStartedAt,
       deadlineAt - Math.min(250, deadlineMs / 4),
     );
-    const pipeline = allowed
+    const miniVoiceTool = allowed && miniProfileSelected();
+    const miniCoachPromise = miniVoiceTool
+      ? runMiniVoiceToolResolve(query, turnId, version, deadlineAt)
+      : undefined;
+    const pipeline = allowed && !miniProfileSelected()
       ? runRealtimeMemoryPipeline(query, turnId, version, pipelineDeadlineAt, 'voice_tool')
       : undefined;
 
@@ -2435,25 +2841,32 @@ function createRealtimeHandler(
       const responseIdlePromise = event.responseId
         ? waitForResponseIdle(event.responseId, resumeBy, () => phase === 'active' && currentTurnId === turnId && contextVersion === version)
         : Promise.resolve(true);
-      const [responseIdle, result] = await Promise.all([
+      const [responseIdle, result, miniCoachResult] = await Promise.all([
         responseIdlePromise,
         pipeline?.promise ?? Promise.resolve(undefined),
+        miniCoachPromise ?? Promise.resolve(undefined),
       ]);
-      const timedOut = !responseIdle || performance.now() >= deadlineAt || result?.status === 'timeout';
+      const timedOut = !responseIdle || performance.now() >= deadlineAt
+        || result?.status === 'timeout' || miniCoachResult?.status === 'timeout';
       const usable = !timedOut
         && result?.status === 'completed'
         && result.hint
         && pipeline?.isCurrent()
         && result.hint.basedOnTurnId === turnId
         && performance.now() < deadlineAt;
-      const output = usable
+      const miniOutput = miniCoachResult
+        ? miniCoachResult.status === 'completed' && miniCoachResult.packet
+          ? { status: 'coach-context', coach_packet: miniCoachResult.packet }
+          : { status: 'no-context' }
+        : undefined;
+      const output = miniOutput ?? (usable
         ? result.hint
         : {
             status: event.name === INTERVIEW_CONTEXT_TOOL_NAME && !scope ? 'unavailable' : 'no-context',
             facts: [],
             possibleConflicts: [],
             interviewHints: [],
-          };
+          });
       if (timedOut) recordTrace('realtime.tool_call.deadline_exceeded', {
         callId: event.callId,
         responseId: event.responseId,
@@ -2476,6 +2889,18 @@ function createRealtimeHandler(
       const outputWrite = writeToolResultMessages(event.callId, outputMessages);
       const resumeWrite = writeToolResultMessages(event.callId, resumeMessages);
       const resumeWritten = resumeWrite.resumeWritten;
+      if (miniCoachResult?.status === 'completed' && miniCoachResult.packet && outputWrite.outputWritten) {
+        recordTrace('coach.applied', {
+          scenario: 'story_continue',
+          voiceProfile: 'stepaudio2_mini',
+          triggerMode: 'voice_tool',
+          coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
+          action: 'guide',
+          retrieve: true,
+          packetChars: Array.from(miniCoachResult.packet).length,
+          total_ms: Number(miniCoachResult.latencyMs.toFixed(2)),
+        });
+      }
 
       const elapsedMs = performance.now() - holdStartedAt;
       toolCycleTracker.setMetrics(event.callId, {
@@ -2505,7 +2930,8 @@ function createRealtimeHandler(
   };
 
   const triggerRealtimeMemory = (text: string, turnId: string, version: number): void => {
-    if ((config.realtimeMemoryTriggerMode ?? DEFAULT_REALTIME_MEMORY_TRIGGER_MODE) !== 'backend_auto') return;
+    if (selectedProvider === 'stepaudio2_mini' || selectedProvider === 'stepfun'
+      || sessionContext?.memoryTriggerMode !== 'supervisor_auto') return;
     const story = sessionContext?.interview_type === 'story' ? sessionContext.story : undefined;
     const storyId = typeof story?.story_id === 'string' ? story.story_id.trim() : '';
     const eligible = sessionContext?.interview_type === 'story'
@@ -2518,7 +2944,7 @@ function createRealtimeHandler(
     }
     const triggerStartedAt = performance.now();
     const deadlineAt = triggerStartedAt + (config.realtimeSlowDeadlineMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS);
-    const pipeline = runRealtimeMemoryPipeline(text.trim(), turnId, version, deadlineAt, 'backend_auto');
+    const pipeline = runRealtimeMemoryPipeline(text.trim(), turnId, version, deadlineAt, 'supervisor_auto');
     if (!pipeline) {
       recordTrace('realtime.memory_trigger.skipped', { turnId, contextVersion: version, reason: 'session_unavailable' });
       return;
@@ -2919,6 +3345,8 @@ function createRealtimeHandler(
 
     if (event.type === 'speech.started') {
       if (!selectedAdapter?.capabilities.manualTurnControl) slowCoordinator.cancel();
+      activeCoachController?.abort('new-speech');
+      activeCoachController = undefined;
       clearUserTurnStallWatchdog();
       userTurnRecoveryAttempted = false;
       pendingSpeech = true;
@@ -3027,6 +3455,7 @@ function createRealtimeHandler(
           providerMessageId,
           providerEventId: event.eventId,
         });
+        latestUserAnswer = text;
         const forwarded = send({ type: 'user_final', itemId: providerMessageId, text });
         recordTrace('provider.user_transcription_completed_forwarded', {
           forwarded,
@@ -3034,7 +3463,10 @@ function createRealtimeHandler(
           deltaCount: userTranscriptDeltaCount,
         });
         if (!isExplicitEndIntent(text, lastAssistantText)) {
-          triggerRealtimeMemory(text, providerMessageId, contextVersion);
+          if (supervisorAutoSelected()) runSupervisorCoach(text, providerMessageId, contextVersion);
+          else triggerRealtimeMemory(text, providerMessageId, contextVersion);
+          recentCoachContext.push({ role: 'user', text });
+          if (recentCoachContext.length > 6) recentCoachContext.splice(0, recentCoachContext.length - 6);
         }
         if (hardLimitReached) {
           acceptingAudio = false;
@@ -3245,6 +3677,8 @@ function createRealtimeHandler(
 
         if (text.trim()) {
           lastAssistantText = text;
+          recentCoachContext.push({ role: 'assistant', text });
+          if (recentCoachContext.length > 6) recentCoachContext.splice(0, recentCoachContext.length - 6);
           assistantEndedInterview = onboarding ? false : isAssistantFarewell(text);
           const endAfterPlayback = userConfirmedEnding || assistantEndedInterview || hardLimitReached || modelComplete;
           if (usedOpeningFallback) {
@@ -3407,6 +3841,8 @@ function createRealtimeHandler(
     if (endingPromise) return endingPromise;
     endingPromise = (async () => {
       slowCoordinator.cancel();
+      activeCoachController?.abort('session-ended');
+      activeCoachController = undefined;
       if (phase === 'connecting') {
         phase = 'failed';
         startupReject?.(new Error('采访连接尚未完成，已取消启动。'));
@@ -3778,17 +4214,15 @@ function createRealtimeHandler(
     let context: RealtimeInterviewContext;
     try {
       const preparedContext = interviewCore.prepare(authContext.userId, target);
-      context = preparedContext.interview_type === 'story'
-        ? {
-            ...preparedContext,
-            memoryTriggerMode: config.realtimeMemoryTriggerMode ?? DEFAULT_REALTIME_MEMORY_TRIGGER_MODE,
-            ...(providerName === 'stepaudio3_quality'
-              ? { voiceProfile: 'stepaudio3_quality' as const }
-              : providerName === 'stepaudio2_mini' || providerName === 'stepfun'
-                ? { voiceProfile: 'stepaudio2_mini' as const }
-                : {}),
-          }
-        : preparedContext;
+      context = {
+        ...preparedContext,
+        memoryTriggerMode: resolveRealtimeMemoryTriggerMode(providerName, config.realtimeMemoryTriggerMode),
+        ...(providerName === 'stepaudio3_quality'
+          ? { voiceProfile: 'stepaudio3_quality' as const }
+          : providerName === 'stepaudio2_mini' || providerName === 'stepfun'
+            ? { voiceProfile: 'stepaudio2_mini' as const }
+            : {}),
+      };
       sessionContext = context;
     } catch (error) {
       phase = 'failed';
@@ -3908,12 +4342,21 @@ function createRealtimeHandler(
       observationProvider = providerName;
       recordTrace('session.started', {
         lifecycle: phase,
+        voiceProfile: providerName === 'stepaudio3_quality'
+          ? 'stepaudio3_quality'
+          : providerName === 'stepaudio2_mini' || providerName === 'stepfun'
+            ? 'stepaudio2_mini'
+            : providerName,
         voiceModel: providerName === 'stepaudio3_quality'
           ? 'StepAudio 3'
           : providerName === 'stepaudio2_mini' || providerName === 'stepfun'
             ? 'Step-Audio-2-mini'
             : providerName,
-        memoryTriggerMode: config.realtimeMemoryTriggerMode ?? DEFAULT_REALTIME_MEMORY_TRIGGER_MODE,
+        memoryTriggerMode: sessionContext?.memoryTriggerMode
+          ?? resolveRealtimeMemoryTriggerMode(providerName, config.realtimeMemoryTriggerMode),
+        ...(providerName === 'stepaudio2_mini' || providerName === 'stepfun'
+          ? { coachModel: config.realtimeCoachModel ?? 'qwen3-8b' }
+          : {}),
         retriever: config.realtimeRetrieverEnabled ? 'enabled' : 'disabled',
         contextAgent: config.realtimeContextAgentEnabled ? 'enabled' : 'disabled',
         contextInjection: selectedAdapter?.capabilities.supportsContextInjection ? 'supported' : 'unsupported',
@@ -4082,17 +4525,21 @@ function createRealtimeHandler(
         ? command.silenceObservedMs
         : Number.NaN;
       const minimumSilenceMs = config.realtimeLocalSilenceTimeoutMs ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS;
+      const supervisorMode = supervisorAutoSelected();
+      const commitSteps = supervisorMode
+        ? selectedAdapter?.commitInputTurn?.()
+        : selectedAdapter?.commitAndRespondToInputTurn?.();
       if (phase !== 'active' || !selectedAdapter?.capabilities.manualTurnControl
-        || !selectedAdapter.commitAndRespondToInputTurn || !pendingSpeech || !awaitingUserTranscript
+        || !commitSteps || commitSteps.length === 0 || !pendingSpeech || !awaitingUserTranscript
         || manualTurnCommitPending || !Number.isFinite(silenceObservedMs) || silenceObservedMs < minimumSilenceMs) return;
       manualTurnCommitPending = true;
       recordTrace('realtime.local_vad_commit_accepted', {
         silenceObservedMs: Math.round(silenceObservedMs),
         silenceThresholdMs: minimumSilenceMs,
       });
-      consumePendingNextTurnContext();
+      if (!supervisorMode) consumePendingNextTurnContext();
       slowCoordinator.cancel();
-      void executeProviderSteps(selectedAdapter.commitAndRespondToInputTurn()).then((sent) => {
+      void executeProviderSteps(commitSteps).then((sent) => {
         manualTurnCommitSent = sent;
         recordTrace('realtime.local_vad_commit_sent', { sent });
       });

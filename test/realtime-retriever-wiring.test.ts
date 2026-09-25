@@ -12,12 +12,14 @@ import { seedDatabase, seedIds } from '../src/db/seed.js';
 import type { AgentTaskPort } from '../src/agent-tasks/ports/agent-task-port.js';
 import { parseQwenServerEvent } from '../src/realtime/qwen.js';
 import type { NormalizedRealtimeEvent } from '../src/realtime/types.js';
+import type { RealtimeCoachPort } from '../src/realtime/coach/types.js';
+import type { CoachGateInput, CoachGateResult, CoachResolveInput, CoachPacket } from '../src/realtime/coach/types.js';
 import type { RetrieverAdapter } from '../src/retriever/types.js';
 import { StoryShareRepository } from '../src/repositories/story-share-repository.js';
 import { createInterviewServiceServer } from '../src/server.js';
 
 type JsonRecord = Record<string, unknown>;
-type TriggerMode = 'voice_tool' | 'backend_auto';
+type TriggerMode = 'voice_tool' | 'supervisor_auto';
 
 const temporaryDirectories: string[] = [];
 
@@ -122,6 +124,11 @@ interface FixtureOptions {
   realtimeSlowDeadlineMs?: number;
   manualTurnControl?: boolean;
   supportsContextInjection?: boolean;
+  provider?: 'qwen' | 'stepaudio2_mini';
+  coach?: RealtimeCoachPort;
+  coachGateTimeoutMs?: number;
+  coachTotalTimeoutMs?: number;
+  retrieverDelayMs?: number;
 }
 
 interface ClientConnection {
@@ -152,6 +159,8 @@ async function createFixture(options: FixtureOptions) {
 
   const searchInputs: Parameters<RetrieverAdapter['searchTranscript']>[0][] = [];
   const agentQueries: string[] = [];
+  const coachGateInputs: CoachGateInput[] = [];
+  const coachResolveInputs: CoachResolveInput[] = [];
   const toolResults: JsonRecord[] = [];
   const injectedHints: Array<{ hint: unknown; at: number }> = [];
   const providerMessages: JsonRecord[] = [];
@@ -166,6 +175,7 @@ async function createFixture(options: FixtureOptions) {
     async indexSessionTranscript() { return { status: 'accepted' }; },
     async searchTranscript(input) {
       searchInputs.push(input);
+      if (options.retrieverDelayMs) await delay(options.retrieverDelayMs);
       if (input.query === 'retriever-failure') throw new Error('RETRIEVER_TEST_FAILURE');
       return [{
         text: '[segment_id=history-message][message_id=history-message][Q+A]\nQuestion (context only): 第一次去北京是什么时候？\nAnswer (user-provided fact): 2013 年春节以后第一次到北京。',
@@ -226,11 +236,32 @@ async function createFixture(options: FixtureOptions) {
     openingResponseTimeoutMs: 500,
     realtimeSlowDeadlineMs: options.realtimeSlowDeadlineMs ?? 800,
     realtimeMemoryTriggerMode: options.realtimeMemoryTriggerMode,
+    realtimeCoachGateTimeoutMs: options.coachGateTimeoutMs,
+    realtimeCoachTotalTimeoutMs: options.coachTotalTimeoutMs,
     wrapUpMs: 100_000,
     maxSessionMs: 200_000,
     closeGraceMs: 2_000,
   }, {
     retriever,
+    realtimeCoach: options.coach ?? {
+      async evaluate(input) {
+        coachGateInputs.push(input);
+        return {
+          action: 'guide', retrieve: false, query: null, reason: 'missing_key_detail',
+          avoid: null, direction: '继续追问刚才这段经历中的关键细节。',
+        };
+      },
+      async resolve(input) {
+        coachResolveInputs.push(input);
+        return {
+          selectedEvidenceIds: ['e1'],
+          known: ['此前说第一次去北京在 2013 年春节后。'],
+          conflict: null,
+          avoid: '不要重复问第一次去北京的时间。',
+          direction: '接着问这次出行的目的。',
+        };
+      },
+    },
     realtimeContextAgentTasks: {
       async run(taskRequest) {
         const query = String(record(taskRequest.payload)?.query ?? '');
@@ -273,7 +304,11 @@ async function createFixture(options: FixtureOptions) {
       setupSession: () => [{ type: 'mock.setup' }],
       initialResponsePlan: () => ({ steps: [{ message: { type: 'mock.opening' } }] }),
       appendAudioMessages: () => [],
-      requestAssistantTurnMessages: () => [],
+      requestAssistantTurnMessages: (instruction: string) => [{
+        type: 'response.create',
+        response: { modalities: ['text', 'audio'], instructions: instruction },
+      }],
+      commitInputTurn: () => [{ message: { type: 'mock.commit' } }],
       commitAndRespondToInputTurn: () => [
         { message: { type: 'mock.commit' } },
         { message: { type: 'response.create' } },
@@ -319,7 +354,7 @@ async function createFixture(options: FixtureOptions) {
     });
     await once(ownerSocket, 'open');
     const owner = observeClient(ownerSocket);
-    ownerSocket.send(JSON.stringify({ type: 'start', story_id: seedIds.firstProject, provider: 'qwen' }));
+    ownerSocket.send(JSON.stringify({ type: 'start', story_id: seedIds.firstProject, provider: options.provider ?? 'qwen' }));
     await waitForMatch(() => owner.messages, (message) => message.type === 'ready', 'story ready');
     ownerSocket.send(JSON.stringify({ type: 'playback_ready' }));
     await waitForMatch(
@@ -352,6 +387,8 @@ async function createFixture(options: FixtureOptions) {
       providerMessages,
       searchInputs,
       agentQueries,
+      coachGateInputs,
+      coachResolveInputs,
       toolResults,
       injectedHints,
       sendProviderEvent: (event: JsonRecord) => sendProviderEvent(providerSockets.at(-1), event),
@@ -420,6 +457,22 @@ function sendUserFinal(fixture: Awaited<ReturnType<typeof createFixture>>, itemI
     item_id: itemId,
     transcript: text,
   });
+}
+
+async function sendManualUserFinal(
+  fixture: Awaited<ReturnType<typeof createFixture>>,
+  itemId: string,
+  text: string,
+): Promise<void> {
+  fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+  await fixture.waitForOwnerMessage((message) => message.type === 'speech_started', 'manual speech start');
+  fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
+  await fixture.waitForProviderMessage((message) => message.type === 'mock.commit', 'manual input commit');
+  sendUserFinal(fixture, itemId, text);
+  await fixture.waitForOwnerMessage(
+    (message) => message.type === 'user_final' && message.itemId === itemId,
+    'manual user final',
+  );
 }
 
 function sendContextToolCall(
@@ -511,128 +564,6 @@ test('voice_tool routes only get_interview_context through one shared Retriever 
   }
 });
 
-test('backend_auto starts once from user final and Tool Call does not start a second pipeline or HOLD early', async () => {
-  const fixture = await createFixture({ realtimeMemoryTriggerMode: 'backend_auto' });
-  try {
-    sendUserFinal(fixture, 'auto-final', '我第一次去北京是什么时候？');
-    await fixture.waitForOwnerMessage((message) => message.type === 'user_final', 'backend_auto user final');
-    await fixture.waitForInjection(1);
-
-    assert.equal(fixture.searchInputs.length, 1);
-    assert.equal(fixture.agentQueries.length, 1);
-    assert.equal(fixture.searchInputs[0]?.query, '我第一次去北京是什么时候？');
-    assert.equal(fixture.agentQueries[0], '我第一次去北京是什么时候？');
-    assert.equal(
-      fixture.providerMessages.some((message) => message.type === 'mock.tool_result'
-        || message.type === 'response.create'),
-      false,
-      'backend_auto without a Tool Call must not enter HOLD or send Tool Result/Resume',
-    );
-
-    sendContextToolCall(fixture, 'auto-unexpected-tool', '后来发生了什么');
-    const toolResult = await fixture.waitForToolResult(1);
-    assert.equal(fixture.searchInputs.length, 1, 'Tool Call must not launch a second Retriever pipeline');
-    assert.equal(fixture.agentQueries.length, 1, 'Tool Call must not launch a second Agent pipeline');
-    assert.equal(fixture.searchInputs[0]?.query, '我第一次去北京是什么时候？');
-    assert.equal(
-      (record(toolResult.output)?.facts as unknown[] | undefined)?.length,
-      0,
-      'backend_auto must not reuse its pending Context Hint to answer an unexpected model Tool Call',
-    );
-    assert.equal(toolResult.resume, true);
-
-    await endStorySession(fixture);
-    const traceDirectory = path.join(fixture.diagnosticsDirectory, 'traces', 'realtime');
-    const traceText = readFileSync(path.join(traceDirectory, readdirSync(traceDirectory)[0]!), 'utf8');
-    const traceRows = traceText.trim().split('\n')
-      .map((line) => JSON.parse(line) as JsonRecord);
-    const recall = traceRows.find((row) => row.event === 'realtime.slow_recall_finished');
-    assert.equal(recall?.status, 'completed');
-    assert.equal(recall?.factCount, 1);
-    assert.equal('factSourceMessageIds' in (recall ?? {}), false);
-    assert.equal('query' in (recall ?? {}), false);
-    assert.equal(traceText.includes('我第一次去北京是什么时候？'), false);
-    assert.equal(traceText.includes('2013 年春节以后第一次到北京。'), false);
-    const cycleEvents = traceRows.filter((row) => String(row.event).startsWith('realtime.tool_cycle_'));
-    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_started'
-      && row.callId === 'auto-unexpected-tool'));
-    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_message_write'
-      && row.messageKind === 'output' && row.sent === true));
-    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_message_write'
-      && row.messageKind === 'resume' && row.sent === true));
-    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_response_started'
-      && row.responseId === 'response-1'));
-    assert.ok(cycleEvents.some((row) => row.event === 'realtime.tool_cycle_terminal'
-      && row.outcome === 'completed'));
-
-    const external = await fixture.openExternalClient();
-    external.socket.send(JSON.stringify({
-      type: 'start',
-      interview_type: 'external_contributor',
-      provider: 'qwen',
-    }));
-    await waitForMatch(
-      () => external.messages,
-      (message) => message.type === 'ready',
-      'external ready',
-    );
-    external.socket.send(JSON.stringify({ type: 'playback_ready' }));
-    sendContextToolCall(fixture, 'external-tool', '外部贡献者不应查询 owner Story');
-    const externalResult = await fixture.waitForToolResult(2);
-    const externalOutput = record(externalResult.output);
-    assert.equal(externalOutput?.status, 'unavailable');
-    assert.deepEqual(externalOutput?.facts, []);
-    assert.equal(externalResult.resume, true);
-    assert.equal(fixture.searchInputs.length, 1, 'external contributor must not run owner Story retrieval');
-
-    const externalEnded = waitForMatch(
-      () => external.messages,
-      (message) => message.type === 'ended',
-      'external ended',
-    );
-    external.socket.send(JSON.stringify({ type: 'end', reason: 'user_confirmed' }));
-    await waitFor(externalEnded, 5_000, 'external ended');
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('backend_auto runs the shared pipeline and reports unsupported when Context Injection is unavailable', async () => {
-  const fixture = await createFixture({
-    realtimeMemoryTriggerMode: 'backend_auto',
-    supportsContextInjection: false,
-  });
-  try {
-    sendUserFinal(fixture, 'unsupported-final', '我第一次去北京是什么时候？');
-    await fixture.waitForAgentQuery('我第一次去北京是什么时候？');
-
-    assert.equal(fixture.searchInputs.length, 1);
-    assert.equal(fixture.agentQueries.length, 1);
-    assert.equal(fixture.injectedHints.length, 0);
-
-    await delay(40);
-    fixture.sendProviderEvent({ type: 'response.created', response: { id: 'unsupported-next-response' } });
-    fixture.sendProviderEvent({
-      type: 'response.done',
-      response: { id: 'unsupported-next-response', status: 'completed' },
-    });
-    await fixture.waitForOwnerMessage(
-      (message) => message.type === 'response_done' && message.responseId === 'unsupported-next-response',
-      'unsupported flow voice response',
-    );
-    await endStorySession(fixture);
-    const traceDirectory = path.join(fixture.diagnosticsDirectory, 'traces', 'realtime');
-    const traceText = readFileSync(path.join(traceDirectory, readdirSync(traceDirectory)[0]!), 'utf8');
-    const traceRows = traceText.trim().split('\n').map((line) => JSON.parse(line) as JsonRecord);
-    assert.ok(traceRows.some((row) => row.event === 'realtime.memory_trigger.unsupported'
-      && row.reason === 'context_injection_unsupported'));
-    assert.ok(traceRows.some((row) => row.event === 'realtime.slow_recall_finished'
-      && row.status === 'unsupported'));
-  } finally {
-    await fixture.close();
-  }
-});
-
 test('voice_tool cancels a stuck response and writes empty Tool Result plus Resume within its deadline', async () => {
   const deadlineMs = 240;
   const fixture = await createFixture({
@@ -660,45 +591,163 @@ test('voice_tool cancels a stuck response and writes empty Tool Result plus Resu
   }
 });
 
-test('backend_auto drops a pending Hint that expires before the next safe manual commit', async () => {
-  const deadlineMs = 250;
+test('stepaudio2_mini supervisor_auto coaches the same user turn before its response.create', async () => {
+  let gateInput: CoachGateInput | undefined;
+  let resolveInput: CoachResolveInput | undefined;
   const fixture = await createFixture({
-    realtimeMemoryTriggerMode: 'backend_auto',
-    realtimeSlowDeadlineMs: deadlineMs,
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
     manualTurnControl: true,
+    coach: {
+      async evaluate(input) {
+        gateInput = input;
+        return {
+          action: 'guide', retrieve: true, query: '第一次去北京的时间', reason: 'history_reference',
+          avoid: null, direction: '核对历史时间后继续追问。',
+        };
+      },
+      async resolve(input) {
+        resolveInput = input;
+        return {
+          selectedEvidenceIds: ['e1'],
+          known: ['此前提到春节后出发。'],
+          conflict: '当前提到的年份可能不同。',
+          avoid: '不要重复问第一次去北京的时间。',
+          direction: '确认这次回忆对应哪次出行。',
+        };
+      },
+    },
   });
   try {
-    const triggerStartedAt = performance.now();
-    sendUserFinal(fixture, 'ttl-final', '需要保存的这一轮上下文。');
-    await fixture.waitForOwnerMessage((message) => message.type === 'user_final', 'TTL user final');
-    const prepared = await fixture.waitForInjection(1);
-    assert.ok(prepared.at - triggerStartedAt < deadlineMs,
-      'the Hint must be generated within the test deadline before expiry is exercised');
+    const answer = '我想起第一次去北京大概是 2012 年。';
+    await sendManualUserFinal(fixture, 'coach-turn-a', answer);
+    await waitForMatch(() => fixture.providerMessages, (message) => (
+      message.type === 'response.create'
+      && String(record(message.response)?.instructions ?? '').includes('确认这次回忆对应哪次出行')
+    ), 'coached response for turn A');
 
-    const expireAfter = prepared.at + deadlineMs + 25;
-    const waitMs = expireAfter - performance.now();
-    if (waitMs > 0) await delay(waitMs);
-    assert.ok(performance.now() > expireAfter, 'the pending Hint must be expired before commit');
+    const response = fixture.providerMessages.find((message) => message.type === 'response.create'
+      && String(record(message.response)?.instructions ?? '').includes('确认这次回忆对应哪次出行'))!;
+    const responseIndex = fixture.providerMessages.indexOf(response);
+    const commitIndex = fixture.providerMessages.findIndex((message) => message.type === 'mock.commit');
+    const instructions = String(record(response.response)?.instructions ?? '');
 
-    fixture.sendProviderEvent({ type: 'response.created', response: { id: 'auto-answer' } });
-    fixture.sendProviderEvent({
-      type: 'response.done',
-      response: { id: 'auto-answer', status: 'completed' },
-    });
+    assert.ok(commitIndex >= 0 && commitIndex < responseIndex);
+    assert.equal(gateInput?.currentUserAnswer, answer);
+    assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.searchInputs[0]?.query, '第一次去北京的时间');
+    assert.equal(fixture.searchInputs[0]?.storyId, seedIds.firstProject);
+    assert.equal(fixture.searchInputs[0]?.sourceType, 'subject');
+    assert.equal(resolveInput?.scenario, 'story_continue');
+    assert.match(instructions, /【采访教练】/);
+    assert.ok(Array.from(instructions).length < 1_600);
+    assert.equal(instructions.includes('2013 年春节以后第一次到北京。'), false);
+    assert.equal(instructions.includes(answer), false);
+    assert.equal(fixture.agentQueries.length, 0, 'Pass B must not run a third OpenClaw/Agent model call');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini voice_tool uses the same Retriever and Pass B and returns only a compact Coach Packet', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'voice_tool',
+    provider: 'stepaudio2_mini',
+  });
+  try {
+    sendUserFinal(fixture, 'mini-voice-tool-turn', '我记得第一次去北京是在春节以后。');
     await fixture.waitForOwnerMessage(
-      (message) => message.type === 'response_done' && message.responseId === 'auto-answer',
-      'automatic answer completed',
+      (message) => message.type === 'user_final' && message.itemId === 'mini-voice-tool-turn',
+      'Mini voice_tool user final',
     );
-    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
-    await fixture.waitForOwnerMessage((message) => message.type === 'speech_started', 'manual turn started');
-    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
-    await fixture.waitForProviderMessage((message) => message.type === 'mock.commit', 'safe manual commit');
+    sendContextToolCall(fixture, 'mini-voice-tool-call', '第一次去北京的时间');
+    const result = await fixture.waitForToolResult(1);
+    await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'Mini voice_tool Resume');
 
-    assert.equal(
-      fixture.providerMessages.some((message) => message.type === 'mock.context_hint'),
-      false,
-      'an expired pending Hint must be dropped instead of injected at the safe manual commit',
-    );
+    const output = record(result.output);
+    assert.equal(output?.status, 'coach-context');
+    assert.match(String(output?.coach_packet ?? ''), /【采访教练】/);
+    assert.equal(JSON.stringify(output).includes('2013 年春节以后第一次到北京'), false);
+    assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.searchInputs[0]?.storyId, seedIds.firstProject);
+    assert.equal(fixture.searchInputs[0]?.sourceType, 'subject');
+    assert.equal(fixture.coachGateInputs.length, 0, 'voice_tool lets the Mini decide whether to retrieve');
+    assert.equal(fixture.coachResolveInputs.length, 1, 'both trigger modes share Pass B');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto skips Retriever for an ordinary answer', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coach: {
+      async evaluate() {
+        return { action: 'none', retrieve: false, query: null, reason: 'normal', avoid: null, direction: null };
+      },
+      async resolve() { throw new Error('Pass B must not run after action=none'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-normal-turn', '后来我又去了北京。');
+    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'normal Coach response');
+    const instructions = String(record(response.response)?.instructions ?? '');
+    assert.match(instructions, /你是人生采访记者/);
+    assert.doesNotMatch(instructions, /方向：/);
+    assert.equal(fixture.searchInputs.length, 0);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto opens the current response on Gate timeout', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coachGateTimeoutMs: 25,
+    coach: {
+      async evaluate() { return new Promise<CoachGateResult>(() => {}); },
+      async resolve() { throw new Error('Pass B must not run after Gate timeout'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-timeout-turn', '普通的新信息。');
+    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'fail-open response');
+    const instructions = String(record(response.response)?.instructions ?? '');
+    assert.match(instructions, /你是人生采访记者/);
+    assert.equal(instructions.includes('继续追问刚才这段经历中的关键细节'), false);
+    assert.equal(fixture.searchInputs.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto opens a normal response when Coach total deadline expires in retrieval', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coachTotalTimeoutMs: 100,
+    retrieverDelayMs: 300,
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve: true, query: '历史时间', reason: 'history_reference',
+          avoid: null, direction: '核对历史后继续。',
+        };
+      },
+      async resolve() { throw new Error('Pass B must not run after total timeout'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-total-timeout-turn', '我想起以前的时间。');
+    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'total-timeout response');
+    assert.equal(String(record(response.response)?.instructions ?? '').includes('核对历史后继续。'), false);
+    assert.equal(fixture.searchInputs.length, 1);
   } finally {
     await fixture.close();
   }

@@ -3,7 +3,12 @@ import { test } from 'node:test';
 import { createRealtimeInterviewProvider } from '../src/realtime/provider.js';
 import { resolveRealtimeProviderConfig } from '../src/realtime/runtime-config.js';
 import { ONBOARDING_COMPLETION_UTTERANCE } from '../src/interview/onboarding/prompt.js';
-import { buildInterviewContextPayload, buildInterviewInstructions, type RealtimeInterviewContext } from '../src/realtime/prompt.js';
+import {
+  buildInterviewContextPayload,
+  buildInterviewInstructions,
+  buildStepAudio2MiniContextPayload,
+  type RealtimeInterviewContext,
+} from '../src/realtime/prompt.js';
 import { buildQwenOnboardingCompletionAcknowledgement, buildQwenRealtimeUrl, buildQwenSessionUpdate, parseQwenServerEvent, parseQwenOnboardingCompletionCall, QWEN_ONBOARDING_COMPLETION_TOOL } from '../src/realtime/qwen.js';
 import {
   buildStepfunSessionUpdate,
@@ -31,7 +36,7 @@ const storyContext = {
 
 function stepfunStoryContext(
   voiceProfile: 'stepaudio3_quality' | 'stepaudio2_mini',
-  memoryTriggerMode: 'voice_tool' | 'backend_auto',
+  memoryTriggerMode: 'voice_tool' | 'supervisor_auto',
 ) {
   return { ...storyContext, voiceProfile, memoryTriggerMode };
 }
@@ -129,6 +134,10 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
   const tools = session.tools as Array<Record<string, unknown>>;
   assert.equal((tools[0]?.function as Record<string, unknown>).name, STEPFUN_CONTEXT_TOOL);
   assert.equal(adapter.appendAudioMessages(Buffer.from([0, 1]))[0]?.type, 'input_audio_buffer.append');
+  assert.deepEqual(adapter.commitInputTurn?.(), [{ message: { type: 'input_audio_buffer.commit' } }]);
+  assert.deepEqual(adapter.commitAndRespondToInputTurn?.().map((step) => step.message.type), [
+    'input_audio_buffer.commit', 'response.create',
+  ]);
   assert.deepEqual(adapter.openingPreludeMessages?.(), []);
   const contextMessages = adapter.injectContextHint?.({
     basedOnTurnId: 'turn-1',
@@ -214,14 +223,14 @@ test('Step-Audio context tool is limited to voice_tool on an existing story cont
   assert.equal('tools' in legacySession, false);
 
   const backendSession = buildStepfunSessionUpdate(
-    stepfunStoryContext('stepaudio2_mini', 'backend_auto'),
+    stepfunStoryContext('stepaudio2_mini', 'supervisor_auto'),
     DEFAULT_STEPFUN_VOICE,
   ).session as Record<string, unknown>;
   assert.equal('tools' in backendSession, false);
 });
 
-test('StepFun Story prompts select one Memory trigger strategy and keep profile-specific scope', () => {
-  const session = (profile: 'stepaudio3_quality' | 'stepaudio2_mini', trigger: 'voice_tool' | 'backend_auto') =>
+test('StepFun Story prompts keep Audio 3 on Voice Tool and register Mini tools only for the A/B mode', () => {
+  const session = (profile: 'stepaudio3_quality' | 'stepaudio2_mini', trigger: 'voice_tool' | 'supervisor_auto') =>
     buildStepfunSessionUpdate(stepfunStoryContext(profile, trigger), DEFAULT_STEPFUN_VOICE).session as Record<string, unknown>;
   const instructions = (value: Record<string, unknown>) => String(value.instructions ?? '');
 
@@ -236,35 +245,29 @@ test('StepFun Story prompts select one Memory trigger strategy and keep profile-
   assert.match(audio3VoiceInstructions, /必须依赖已有 Story Memory/);
   assert.match(audio3VoiceInstructions, /普通新信息不要调用/);
 
-  const audio3Backend = session('stepaudio3_quality', 'backend_auto');
-  const audio3BackendInstructions = instructions(audio3Backend);
-  assert.equal('tools' in audio3Backend, false);
-  assert.match(audio3BackendInstructions, /历史信息判断与检索由后端负责/);
-  assert.doesNotMatch(audio3BackendInstructions, /get_interview_context|调用历史上下文工具|什么时候调用/u);
-  assert.match(audio3BackendInstructions, /每轮必须遵守/);
+  const audio3SupervisorOverride = session('stepaudio3_quality', 'supervisor_auto');
+  assert.ok(Array.isArray(audio3SupervisorOverride.tools), 'Audio 3 remains the Voice Tool profile');
 
   const miniVoice = session('stepaudio2_mini', 'voice_tool');
   const miniVoiceInstructions = instructions(miniVoice);
   assert.ok(Array.isArray(miniVoice.tools));
   assert.match(miniVoiceInstructions, /你是人生采访记者/);
-  assert.match(miniVoiceInstructions, /每次只问一个问题/);
-  assert.match(miniVoiceInstructions, /根据用户刚说的话继续追问/);
-  assert.match(miniVoiceInstructions, /不要替用户回答，不要编造事实/);
-  assert.match(miniVoiceInstructions, /以前聊过的人、事或时间/);
-  assert.match(miniVoiceInstructions, /现在的说法可能和以前矛盾/);
-  assert.match(miniVoiceInstructions, /不确定这个问题以前是否问过/);
-  assert.match(miniVoiceInstructions, /等待结果，再继续采访/);
+  assert.match(miniVoiceInstructions, /每次只问一个具体问题/);
+  assert.match(miniVoiceInstructions, /不要并列追问/);
+  assert.match(miniVoiceInstructions, /根据用户刚说的话继续/);
+  assert.match(miniVoiceInstructions, /不要替用户回答/);
+  assert.match(miniVoiceInstructions, /只有需要确认以前说过的内容|只有在需要核对历史时/u);
   assert.doesNotMatch(miniVoiceInstructions, /明显历史指代|必须依赖已有 Story Memory|每轮必须遵守/u);
 
-  const miniBackend = session('stepaudio2_mini', 'backend_auto');
-  const miniBackendInstructions = instructions(miniBackend);
-  assert.equal('tools' in miniBackend, false);
-  assert.match(miniBackendInstructions, /你是人生采访记者/);
-  assert.match(miniBackendInstructions, /每次只问一个问题/);
-  assert.match(miniBackendInstructions, /根据用户刚说的话继续追问/);
-  assert.match(miniBackendInstructions, /不要替用户回答，不要编造事实/);
-  assert.match(miniBackendInstructions, /本次先聊到这里，再见/);
-  assert.doesNotMatch(miniBackendInstructions, /get_interview_context|Memory Judge|历史上下文工具|判断.*Memory/u);
+  const miniSupervisor = session('stepaudio2_mini', 'supervisor_auto');
+  const miniSupervisorInstructions = instructions(miniSupervisor);
+  assert.equal('tools' in miniSupervisor, false);
+  assert.match(miniSupervisorInstructions, /你是人生采访记者/);
+  assert.match(miniSupervisorInstructions, /每次只问一个具体问题/);
+  assert.match(miniSupervisorInstructions, /不要并列追问/);
+  assert.match(miniSupervisorInstructions, /根据用户刚说的话继续/);
+  assert.match(miniSupervisorInstructions, /收到【采访教练】提示/);
+  assert.doesNotMatch(miniSupervisorInstructions, /get_interview_context|Memory Judge|历史上下文工具|agent_memory/u);
 
   const tool = audio3Voice.tools as Array<Record<string, unknown>>;
   const toolFunction = tool[0]?.function as Record<string, unknown>;
@@ -273,6 +276,55 @@ test('StepFun Story prompts select one Memory trigger strategy and keep profile-
   const parameters = toolFunction.parameters as Record<string, unknown>;
   const query = (parameters.properties as Record<string, Record<string, unknown>>).query;
   assert.equal(query?.description, '用一句简短中文描述要查的历史信息。');
+});
+
+test('Step-Audio-2-mini uses four short scenario prompts and a reduced session context', () => {
+  const onboarding = {
+    ...onboardingContext,
+    profile: { name: '测试用户', birth_place: '天津' },
+    previousOnboardingTranscripts: [{
+      startedAt: '2026-09-01T00:00:00.000Z',
+      messages: [{ role: 'user' as const, text: '很长的历史信息。'.repeat(300) }],
+    }],
+  };
+  const create = {
+    ...storyContext,
+    story: null,
+    task_context: { mode: 'create' as const, target_title: '第一次创业' },
+  };
+  const continuation = {
+    ...storyContext,
+    story: {
+      ...storyContext.story,
+      agent_memory: '不得注入的长期历史。'.repeat(300),
+    },
+    memoryTriggerMode: 'supervisor_auto' as const,
+    voiceProfile: 'stepaudio2_mini' as const,
+  };
+  const contributor = {
+    ...externalContributorContext,
+    contributor_summary: '第三者自己的长期摘要。'.repeat(50),
+  };
+  const contexts: Array<[RealtimeInterviewContext, RegExp]> = [
+    [onboarding, /建立人生时间线/],
+    [create, /围绕当前故事采访/],
+    [continuation, /已有故事的续访/],
+    [contributor, /第三者自己的记忆和视角/],
+  ];
+
+  for (const [context, scenarioRule] of contexts) {
+    const session = buildStepfunSessionUpdate(context, DEFAULT_STEPFUN_VOICE, 'stepaudio2_mini').session as Record<string, unknown>;
+    const instructions = String(session.instructions ?? '');
+    assert.match(instructions, /你是人生采访记者/);
+    assert.match(instructions, scenarioRule);
+    assert.ok(Array.from(instructions).length < 2_000);
+  }
+
+  const miniStory = buildStepAudio2MiniContextPayload(continuation);
+  assert.doesNotMatch(JSON.stringify(miniStory), /不得注入的长期历史/);
+  const miniContributor = buildStepAudio2MiniContextPayload(contributor);
+  assert.match(JSON.stringify(miniContributor), /第三者自己的长期摘要/);
+  assert.equal(JSON.stringify(miniContributor).includes('agent_memory'), false);
 });
 
 test('Realtime interview prompts keep four distinct tasks under the same hard rules', () => {
