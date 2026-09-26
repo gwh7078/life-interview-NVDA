@@ -130,6 +130,8 @@ const DEFAULT_CLOSE_GRACE_MS = 45_000;
 const DEFAULT_OPENING_RESPONSE_TIMEOUT_MS = 8_000;
 const DEFAULT_USER_TURN_STALL_TIMEOUT_MS = 4_000;
 const DEFAULT_REALTIME_SLOW_DEADLINE_MS = 5_000;
+const DEFAULT_REALTIME_COACH_GATE_TIMEOUT_MS = 2_000;
+const DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS = 6_000;
 const DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS = 2_000;
 
 function realtimeContextAgentEnabled(flagValue = process.env.REALTIME_CONTEXT_AGENT_ENABLED, runtimeValue = process.env.AI_TASK_RUNTIME): boolean {
@@ -333,8 +335,8 @@ export function readRuntimeConfig(): RuntimeConfig {
   const realtimeCoachApiKey = process.env.REALTIME_COACH_API_KEY?.trim()
     || process.env.BAILIAN_API_KEY?.trim()
     || undefined;
-  const realtimeCoachGateTimeoutMs = Number(process.env.REALTIME_COACH_GATE_TIMEOUT_MS ?? 1_200);
-  const realtimeCoachTotalTimeoutMs = Number(process.env.REALTIME_COACH_TOTAL_TIMEOUT_MS ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS);
+  const realtimeCoachGateTimeoutMs = Number(process.env.REALTIME_COACH_GATE_TIMEOUT_MS ?? DEFAULT_REALTIME_COACH_GATE_TIMEOUT_MS);
+  const realtimeCoachTotalTimeoutMs = Number(process.env.REALTIME_COACH_TOTAL_TIMEOUT_MS ?? DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS);
   const realtimeRetrieverEnabled = process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true';
   const contextAgentEnabled = realtimeContextAgentEnabled();
   const realtimeLocalSilenceTimeoutMs = Number(process.env.REALTIME_LOCAL_SILENCE_TIMEOUT_MS ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS);
@@ -371,11 +373,11 @@ export function readRuntimeConfig(): RuntimeConfig {
   if (!Number.isInteger(realtimeSlowDeadlineMs) || realtimeSlowDeadlineMs <= 0 || realtimeSlowDeadlineMs > 5_000) {
     throw new Error('REALTIME_SLOW_DEADLINE_MS must be an integer between 1 and 5000.');
   }
-  if (!Number.isInteger(realtimeCoachGateTimeoutMs) || realtimeCoachGateTimeoutMs <= 0 || realtimeCoachGateTimeoutMs > 1_200) {
-    throw new Error('REALTIME_COACH_GATE_TIMEOUT_MS must be an integer between 1 and 1200.');
+  if (!Number.isInteger(realtimeCoachGateTimeoutMs) || realtimeCoachGateTimeoutMs <= 0 || realtimeCoachGateTimeoutMs > DEFAULT_REALTIME_COACH_GATE_TIMEOUT_MS) {
+    throw new Error('REALTIME_COACH_GATE_TIMEOUT_MS must be an integer between 1 and 2000.');
   }
-  if (!Number.isInteger(realtimeCoachTotalTimeoutMs) || realtimeCoachTotalTimeoutMs <= 0 || realtimeCoachTotalTimeoutMs > 5_000) {
-    throw new Error('REALTIME_COACH_TOTAL_TIMEOUT_MS must be an integer between 1 and 5000.');
+  if (!Number.isInteger(realtimeCoachTotalTimeoutMs) || realtimeCoachTotalTimeoutMs <= 0 || realtimeCoachTotalTimeoutMs > DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS) {
+    throw new Error('REALTIME_COACH_TOTAL_TIMEOUT_MS must be an integer between 1 and 6000.');
   }
   if (!Number.isInteger(realtimeLocalSilenceTimeoutMs) || realtimeLocalSilenceTimeoutMs <= 0 || realtimeLocalSilenceTimeoutMs > 10_000) {
     throw new Error('REALTIME_LOCAL_SILENCE_TIMEOUT_MS must be an integer between 1 and 10000.');
@@ -2299,6 +2301,7 @@ function createRealtimeHandler(
   let activeCoachController: AbortController | undefined;
   const recentCoachContext: CoachConversationMessage[] = [];
   let latestUserAnswer = '';
+  const supervisorCoachMessageIds = new Set<string>();
 
   const sendMiniResponse = (input: {
     turnId: string;
@@ -2345,7 +2348,7 @@ function createRealtimeHandler(
     const controller = new AbortController();
     activeCoachController = controller;
     const startedAt = performance.now();
-    const totalBudgetMs = Math.min(config.realtimeCoachTotalTimeoutMs ?? DEFAULT_REALTIME_SLOW_DEADLINE_MS, DEFAULT_REALTIME_SLOW_DEADLINE_MS);
+    const totalBudgetMs = Math.min(config.realtimeCoachTotalTimeoutMs ?? DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS, DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS);
     const totalDeadlineAt = startedAt + totalBudgetMs;
     const baseGate = buildRealtimeCoachGateInput(context, {
       lastAssistantQuestion: latestAssistantQuestion(lastAssistantText),
@@ -2360,14 +2363,33 @@ function createRealtimeHandler(
       turnId,
       contextVersion: version,
     };
-    const isCurrent = (): boolean => phase === 'active'
+    let responseRequested = false;
+    const isTurnCurrent = (): boolean => phase === 'active'
       && currentTurnId === turnId
-      && contextVersion === version
-      && !controller.signal.aborted;
+      && contextVersion === version;
+    const isCurrent = (): boolean => isTurnCurrent() && !controller.signal.aborted && !responseRequested;
+    const respondOnce = (packet: string | undefined, fields: RealtimeTraceFields): boolean => {
+      if (!isTurnCurrent() || responseRequested) return false;
+      responseRequested = true;
+      return sendMiniResponse({
+        turnId, version,
+        ...(packet === undefined ? {} : { packet }),
+        traceFields: fields,
+      });
+    };
     const failOpen = (reason: string, fields: RealtimeTraceFields = {}): void => {
-      if (!isCurrent()) return;
+      if (!isTurnCurrent() || responseRequested) return;
+      controller.abort(reason);
       recordTrace('coach.skipped', { ...traceFields, ...fields, reason });
-      sendMiniResponse({ turnId, version, traceFields: { ...traceFields, ...fields } });
+      respondOnce(undefined, { ...traceFields, ...fields });
+    };
+    const sendCoachResult = (packet: string | undefined, fields: RealtimeTraceFields): void => {
+      if (!isTurnCurrent() || responseRequested) return;
+      if (performance.now() >= totalDeadlineAt) {
+        failOpen('coach_total_timeout', fields);
+        return;
+      }
+      respondOnce(packet, fields);
     };
 
     if (!dependencies.realtimeCoach) {
@@ -2381,33 +2403,34 @@ function createRealtimeHandler(
     if (process.env.DIAGNOSTICS_CAPTURE_CONTENT === '1') {
       traceWriter?.recordContent('coach.gate.prompt', { turnId, ...buildCoachGatePrompt(baseGate) });
     }
-    const gateRemaining = Math.max(0, Math.min(
-      config.realtimeCoachGateTimeoutMs ?? 1_200,
-      totalDeadlineAt - performance.now(),
-    ));
+    const gateBudgetMs = Math.min(
+      config.realtimeCoachGateTimeoutMs ?? DEFAULT_REALTIME_COACH_GATE_TIMEOUT_MS,
+      DEFAULT_REALTIME_COACH_GATE_TIMEOUT_MS,
+    );
+    const gateDeadlineAt = Math.min(startedAt + gateBudgetMs, totalDeadlineAt);
+    const gateRemaining = Math.max(0, gateDeadlineAt - performance.now());
     void settleWithin(
       Promise.resolve().then(() => dependencies.realtimeCoach!.evaluate(baseGate, { signal: controller.signal })),
       gateRemaining,
     ).then(async (gateOutcome) => {
       const gateMs = Number((performance.now() - gateStartedAt).toFixed(2));
       if (!isCurrent()) return;
-      if (gateOutcome.status === 'timeout') {
-        controller.abort('gate-timeout');
+      const gateTraceFields = { ...traceFields, gate_ms: gateMs, total_ms: Number((performance.now() - startedAt).toFixed(2)) };
+      if (performance.now() >= totalDeadlineAt) {
+        failOpen('coach_total_timeout', gateTraceFields);
+        return;
+      }
+      if (gateOutcome.status === 'timeout' || performance.now() >= gateDeadlineAt) {
         recordTrace('coach.gate.timeout', { ...traceFields, gate_ms: gateMs, total_ms: gateMs });
-        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
-          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, gate_ms: gateMs, total_ms: gateMs } });
-        }
+        failOpen('gate_timeout', gateTraceFields);
         return;
       }
       if (gateOutcome.status === 'failed') {
-        controller.abort('gate-failed');
         recordTrace('coach.gate.failed', {
           ...traceFields, gate_ms: gateMs, total_ms: gateMs,
           errorCode: coachErrorCode(gateOutcome.error),
         });
-        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
-          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, gate_ms: gateMs, total_ms: gateMs } });
-        }
+        failOpen('coach_gate_failed', { ...gateTraceFields, errorCode: coachErrorCode(gateOutcome.error) });
         return;
       }
 
@@ -2429,14 +2452,11 @@ function createRealtimeHandler(
           memoryEvidenceCount: 0, eraEvidenceCount: 0,
           gate_ms: gateMs, total_ms: gateMs, reason: 'normal',
         });
-        sendMiniResponse({
-          turnId, version,
-          traceFields: {
-            ...traceFields, turnId, contextVersion: version,
-            action: gate.action, retrieve_memory: false, retrieve_era: false,
-            memoryEvidenceCount: 0, eraEvidenceCount: 0,
-            gate_ms: gateMs, total_ms: gateMs,
-          },
+        sendCoachResult(undefined, {
+          ...traceFields, turnId, contextVersion: version,
+          action: gate.action, retrieve_memory: false, retrieve_era: false,
+          memoryEvidenceCount: 0, eraEvidenceCount: 0,
+          gate_ms: gateMs, total_ms: gateMs,
         });
         return;
       }
@@ -2448,14 +2468,11 @@ function createRealtimeHandler(
           gate,
           scenarioState: baseGate.scenarioState,
         });
-        sendMiniResponse({
-          turnId, version, packet,
-          traceFields: {
-            ...traceFields, turnId, contextVersion: version,
-            action: gate.action, retrieve_memory: false, retrieve_era: false,
-            memoryEvidenceCount: 0, eraEvidenceCount: 0,
-            gate_ms: gateMs, total_ms: Number((performance.now() - startedAt).toFixed(2)),
-          },
+        sendCoachResult(packet, {
+          ...traceFields, turnId, contextVersion: version,
+          action: gate.action, retrieve_memory: false, retrieve_era: false,
+          memoryEvidenceCount: 0, eraEvidenceCount: 0,
+          gate_ms: gateMs, total_ms: Number((performance.now() - startedAt).toFixed(2)),
         });
         return;
       }
@@ -2559,42 +2576,33 @@ function createRealtimeHandler(
       const remaining = Math.max(0, totalDeadlineAt - performance.now());
       const pipelineOutcome = await settleWithin(pipelinePromise, remaining);
       const totalMs = Number((performance.now() - startedAt).toFixed(2));
+      const pipelineTraceFields: RealtimeTraceFields = {
+        ...traceFields, turnId, contextVersion: version,
+        action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+        memoryEvidenceCount: 0, eraEvidenceCount: 0, gate_ms: gateMs, total_ms: totalMs,
+      };
+      if (performance.now() >= totalDeadlineAt) {
+        recordPipelineTimeout(totalMs);
+        failOpen('coach_total_timeout', pipelineTraceFields);
+        return;
+      }
       if (pipelineOutcome.status === 'timeout') {
         recordPipelineTimeout(totalMs);
-        controller.abort('coach-total-timeout');
-        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
-          sendMiniResponse({ turnId, version, traceFields: {
-            ...traceFields, turnId, contextVersion: version,
-            action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
-            memoryEvidenceCount: 0, eraEvidenceCount: 0, gate_ms: gateMs, total_ms: totalMs,
-          } });
-        }
+        failOpen('coach_total_timeout', pipelineTraceFields);
         return;
       }
       if (pipelineOutcome.status === 'failed') {
         pipelineExpired = true;
-        controller.abort('coach-pipeline-failed');
         const failedStage = (['resolve', 'retrieval', 'era_retrieval'] as const)
           .find((stage) => stageStatuses[stage] === 'running');
         recordTrace(failedStage ? `coach.${failedStage}.failed` : 'coach.pipeline.failed', {
           ...stageBaseFields(), total_ms: totalMs,
           errorCode: coachErrorCode(pipelineOutcome.error),
         });
-        if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
-          sendMiniResponse({ turnId, version, traceFields: {
-            ...traceFields, turnId, contextVersion: version,
-            action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
-            memoryEvidenceCount: 0, eraEvidenceCount: 0, gate_ms: gateMs, total_ms: totalMs,
-          } });
-        }
+        failOpen('coach_pipeline_failed', { ...pipelineTraceFields, errorCode: coachErrorCode(pipelineOutcome.error) });
         return;
       }
       if (!isCurrent()) return;
-      if (performance.now() > totalDeadlineAt) {
-        recordPipelineTimeout(totalMs);
-        controller.abort('coach-total-timeout');
-        return;
-      }
       const result = pipelineOutcome.value;
       const packet = renderMiniCoachPacket({
         scenario: baseGate.scenario,
@@ -2603,28 +2611,23 @@ function createRealtimeHandler(
         packet: result.packet,
         scenarioState: baseGate.scenarioState,
       });
-      sendMiniResponse({
+      sendCoachResult(packet, {
+        ...traceFields,
         turnId,
-        version,
-        packet,
-        traceFields: {
-          ...traceFields,
-          turnId,
-          contextVersion: version,
-          action: gate.action,
-          retrieve_memory: gate.retrieve_memory,
-          retrieve_era: gate.retrieve_era,
-          memoryEvidenceCount: result.memoryEvidenceCount,
-          eraEvidenceCount: result.eraEvidenceCount,
-          gate_ms: gateMs,
-          ...(result.memoryRetrievalMs === null ? {} : { memory_retrieval_ms: Number(result.memoryRetrievalMs.toFixed(2)) }),
-          ...(result.eraRetrievalMs === null ? {} : { era_retrieval_ms: Number(result.eraRetrievalMs.toFixed(2)) }),
-          resolve_ms: Number(result.resolveMs.toFixed(2)),
-          total_ms: Number((performance.now() - startedAt).toFixed(2)),
-        },
+        contextVersion: version,
+        action: gate.action,
+        retrieve_memory: gate.retrieve_memory,
+        retrieve_era: gate.retrieve_era,
+        memoryEvidenceCount: result.memoryEvidenceCount,
+        eraEvidenceCount: result.eraEvidenceCount,
+        gate_ms: gateMs,
+        ...(result.memoryRetrievalMs === null ? {} : { memory_retrieval_ms: Number(result.memoryRetrievalMs.toFixed(2)) }),
+        ...(result.eraRetrievalMs === null ? {} : { era_retrieval_ms: Number(result.eraRetrievalMs.toFixed(2)) }),
+        resolve_ms: Number(result.resolveMs.toFixed(2)),
+        total_ms: Number((performance.now() - startedAt).toFixed(2)),
       });
     }).catch(() => {
-      if (isCurrent()) failOpen('coach_pipeline_failed');
+      if (isTurnCurrent()) failOpen('coach_pipeline_failed');
     });
   };
 
@@ -3591,11 +3594,13 @@ function createRealtimeHandler(
     }
 
     if (event.type === 'user.transcript.final') {
+      const text = event.text;
+      const providerMessageId = event.itemId ?? event.eventId ?? `user-${Date.now()}`;
+      if (supervisorAutoSelected() && supervisorCoachMessageIds.has(providerMessageId)) return;
+      if (supervisorAutoSelected() && text.trim()) supervisorCoachMessageIds.add(providerMessageId);
       clearUserTurnStallWatchdog();
       userTurnRecoveryAttempted = false;
       pendingSpeech = false;
-      const text = event.text;
-      const providerMessageId = event.itemId ?? event.eventId ?? `user-${Date.now()}`;
       if (pendingNextTurnContext && pendingNextTurnContext.turnId !== providerMessageId) {
         const stale = pendingNextTurnContext;
         pendingNextTurnContext = undefined;

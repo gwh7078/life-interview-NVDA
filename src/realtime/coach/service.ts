@@ -284,6 +284,8 @@ function stringList(value: unknown, maxItems: number, maxChars: number): string[
   return value.map((item) => clip(item as string, maxChars));
 }
 
+const PERSONAL_ERA_CLAIM = /(?:当事人|用户\s*本人|受访者\s*(?:本人|当时|当年|那时|那时候)|(?:你|我|您)\s*(?:(?:本人|当时|当年|那时|那时候|在|已经|曾(?:经)?|开始|使用|经历|参加|生活|工作|就读|出生|是|成为)|(?:的\s*)?(?:父亲|母亲|父母|爸爸|妈妈|家人|家属|丈夫|妻子|配偶|爱人|儿子|女儿|哥哥|姐姐|弟弟|妹妹)\s*(?:当时|当年|那时|那时候|在|已经|曾(?:经)?|开始|使用|经历|参加|生活|工作|就读|下岗|上学|出生|居住|是|成为))|本人\s*(?:当时|当年|那时|那时候|在|已经|曾(?:经)?|开始|使用|经历|参加|生活|工作|就读|出生|是|成为))/u;
+
 function parsePacket(value: unknown, input: CoachResolveInput): import('./types.js').CoachPacket {
   const object = row(value);
   const keys = ['selected_evidence_ids', 'known', 'background_hint', 'conflict', 'avoid', 'direction'];
@@ -301,7 +303,7 @@ function parsePacket(value: unknown, input: CoachResolveInput): import('./types.
     || new Set(selectedEvidenceIds).size !== selectedEvidenceIds.length
     || selectedEvidenceIds.some((id) => !evidenceIds.has(id))
     || (conflict !== null && selectedEvidenceIds.length === 0)
-    || (backgroundHint !== null && (input.eraEvidence.length === 0 || /(?:你|我|用户|本人|当事人)/u.test(backgroundHint)))) {
+    || (backgroundHint !== null && (input.eraEvidence.length === 0 || PERSONAL_ERA_CLAIM.test(backgroundHint)))) {
     throw Object.assign(new Error('Coach Resolve selected unsupported or oversized evidence.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
   const knownFromPersonalSources = input.eraEvidence.length === 0

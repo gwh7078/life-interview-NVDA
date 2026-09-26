@@ -472,3 +472,45 @@ test('Coach Resolve does not pass Era claims through conflict when both evidence
   assert.equal(packet.conflict, '当前说法与此前记录可能有出入，需要核对。');
   assert.doesNotMatch(packet.conflict ?? '', /国企改革|下岗/u);
 });
+
+test('Coach Resolve permits public Era mentions of users but rejects personalized Era claims', async () => {
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([
+    {
+      selected_evidence_ids: [],
+      known: ['互联网用户快速增长。'],
+      background_hint: '2000 年前后，互联网用户数量快速增长。',
+      conflict: null, avoid: null, direction: '那时你第一次上网是怎样的经历？',
+    },
+    {
+      selected_evidence_ids: [],
+      known: [],
+      background_hint: '你在 2000 年已经开始使用互联网。',
+      conflict: null, avoid: null, direction: '那时你第一次上网是怎样的经历？',
+    },
+    {
+      selected_evidence_ids: [],
+      known: [],
+      background_hint: '你的父亲在 1998 年下岗。',
+      conflict: null, avoid: null, direction: '那时你第一次上网是怎样的经历？',
+    },
+  ], []));
+  const input = {
+    scenario: 'story_continue' as const,
+    currentUserAnswer: '我家那时还没有网络。',
+    gate: gateResults.story_continue,
+    memoryEvidence: [],
+    eraEvidence: [{
+      id: 'era-1', startYear: 1998, endYear: 2002,
+      title: '互联网普及', summary: '互联网用户数量快速增长。',
+    }],
+  };
+
+  const packet = await coach.resolve(input);
+  assert.equal(packet.backgroundHint, '2000 年前后，互联网用户数量快速增长。');
+  assert.deepEqual(packet.known, ['我家那时还没有网络。']);
+  assert.doesNotMatch(packet.known.join('；'), /互联网用户数量快速增长/u);
+  await assert.rejects(coach.resolve(input), /Coach Resolve selected unsupported/u);
+  await assert.rejects(coach.resolve(input), /Coach Resolve selected unsupported/u);
+});

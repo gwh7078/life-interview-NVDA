@@ -29,7 +29,7 @@ export interface RealtimeCoachPipelineProgress {
   memoryEvidenceCount?: number;
   eraEvidenceCount?: number;
   errorCode?: string;
-  skipReason?: 'RETRIEVER_UNAVAILABLE' | 'ERA_CONTEXT_UNAVAILABLE' | 'RETRIEVAL_NOT_REQUESTED';
+  skipReason?: 'RETRIEVER_UNAVAILABLE' | 'ERA_CONTEXT_UNAVAILABLE' | 'RETRIEVAL_NOT_REQUESTED' | 'NO_EVIDENCE';
 }
 
 export interface RealtimeCoachPipelineResult {
@@ -238,12 +238,34 @@ export class RealtimeCoachPipeline {
     };
 
     const [memoryResult, eraResult] = await Promise.allSettled([retrieveMemory(), retrieveEra()]);
+    if (memoryResult.status === 'rejected' && eraResult.status === 'rejected') {
+      throw Object.assign(new Error('Both Realtime Coach retrieval paths failed.'), {
+        code: 'REALTIME_COACH_RETRIEVAL_FAILED',
+      });
+    }
     const memoryEvidence = memoryResult.status === 'fulfilled' ? memoryResult.value : [];
     const eraEvidence = eraResult.status === 'fulfilled' ? eraResult.value : [];
     if (input.signal?.aborted) {
       const error = new Error('Realtime Coach turn was cancelled after retrieval.');
       error.name = 'AbortError';
       throw error;
+    }
+    if (memoryEvidence.length === 0 && eraEvidence.length === 0) {
+      report(input.onProgress, {
+        stage: 'resolve', status: 'skipped', ...trace,
+        memoryEvidenceCount: 0, eraEvidenceCount: 0, skipReason: 'NO_EVIDENCE',
+      });
+      return {
+        packet: {
+          selectedEvidenceIds: [], known: [], backgroundHint: null, conflict: null,
+          avoid: input.gate.avoid, direction: input.gate.direction,
+        },
+        memoryEvidenceCount: 0,
+        eraEvidenceCount: 0,
+        memoryRetrievalMs,
+        eraRetrievalMs,
+        resolveMs: 0,
+      };
     }
 
     const resolveStartedAt = performance.now();

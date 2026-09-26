@@ -1,6 +1,6 @@
 # 人生采访局 NVIDIA 版｜AI 开发、对接、联调与测试环境
 
-版本：2026-09-24
+版本：2026-09-26
 适用对象：Codex、其他 AI 开发 Agent、前后端开发、Agent/Skill 开发、联调与测试人员。
 
 ## 1. 文档目的
@@ -33,15 +33,15 @@ Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不�
 | 第二条正式实时语音 | `stepaudio2_mini` → Step-Audio-2-mini → StepFun Cloud | 使用同一共享 transport，保留 Local VAD / manual turn、Tool Result / Resume；通过 `STEPFUN_REALTIME_MODEL` 配置。未来只替换此 Profile 的执行后端。 |
 | 实验语音 Provider | ModelBest MiniCPM-o Realtime — **Experimental** | 保留独立 adapter，不作为默认路线，也不自动回退。 |
 | OpenClaw Agent 与会后文本任务 | Bailian `qwen3.6-35b-a3b` | Agent 的默认、推理、快速推理、写作 profile 共用此模型；文本任务通过 Model Studio OpenAI-compatible Chat API 调用。 |
-| Realtime Coach / Memory | StepAudio 3 固定 `voice_tool`，不加载 Coach；Step-Audio-2-mini 默认 `supervisor_auto`，`stepfun` 是同一 Mini Profile 的兼容别名。`REALTIME_MEMORY_TRIGGER=voice_tool` 可让 Mini 自主判断并调用工具；`supervisor_auto` 由 Qwen3-8B 先 Gate，只有 Story Continue 可按需检索。 | Mini 的 Onboarding、Story Create、Contributor 不检索。Story Continue 仅查 owner + Current Story + subject Q+A，最多 5 条；Gate、Retriever、Resolve 总计最多 5,000 ms，失败/超时立即用普通 Mini Prompt 响应，结果不留到下一轮。Coach Packet 只通过当前 `response.create` instructions 一次注入。Contributor 不访问主人公私密 Transcript。Mini 两种 Trigger 共用 Retriever、Evidence Bounding 与 Qwen3-8B Resolve。Audio 3 保留现有 Voice Tool → Slow Path → Tool Result → Resume。 |
+| Realtime Coach / Memory | StepAudio 3 固定 `voice_tool`，不加载 Coach；Step-Audio-2-mini 默认 `supervisor_auto`，`stepfun` 是同一 Mini Profile 的兼容别名。`REALTIME_MEMORY_TRIGGER=voice_tool` 可让 Mini 自主判断并调用工具；`supervisor_auto` 由 Qwen3-8B 先 Gate。Gate `action=none` 立即放行 Mini 当前轮；`guide/correct` 不需检索时直接生成短 Coach Packet。只有 Story Continue 可按需检索。 | Mini 的 Onboarding、Story Create、Contributor 不检索。Story Continue Memory 仅查 owner + Current Story + subject Q+A，最多 5 条；Memory 与 Era 并行。Gate 硬超时 2,000 ms；Gate、Memory、Era、Resolve 从用户 final transcript 起共用 6,000 ms 总 Deadline。Gate/Resolve 故障或超时、总 Deadline 到期或两路检索都失败时丢弃 Coach，让 Mini 无 Coach 回答当前轮；单路检索失败不阻断另一路的有效 evidence。两路最终 evidence 都为空时跳过 Resolve，使用 Gate 建议。迟到结果不用于下一轮。Coach Packet 只通过当前 `response.create` instructions 一次注入。Contributor 不访问主人公私密 Transcript。Mini 两种 Trigger 共用 Retriever 与 Evidence Bounding。Audio 3 保留现有 Voice Tool → Slow Path → Tool Result → Resume。 |
 
-Coach 使用独立 OpenAI-compatible 配置，不改变 Closeout / Completion / Generation 的 `qwen3.6-35b-a3b`：`REALTIME_COACH_PROVIDER=openai-compatible`、`REALTIME_COACH_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`、`REALTIME_COACH_MODEL=qwen3-8b`、`REALTIME_COACH_API_KEY`；Coach Key 未设置时可复用 `BAILIAN_API_KEY`。Pass A 超时默认 1,200 ms，整段总超时默认 5,000 ms。`backend_auto` 暂时接受并规范化为 `supervisor_auto`；Trace 与运行状态只记录规范名称。Pass B 复用同一个 Qwen3-8B Service，不经 OpenClaw Agent Runtime。
+Coach 使用独立 OpenAI-compatible 配置，不改变 Closeout / Completion / Generation 的 `qwen3.6-35b-a3b`：`REALTIME_COACH_PROVIDER=openai-compatible`、`REALTIME_COACH_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`、`REALTIME_COACH_MODEL=qwen3-8b`、`REALTIME_COACH_API_KEY`；Coach Key 未设置时可复用 `BAILIAN_API_KEY`。Gate 硬超时默认及上限为 2,000 ms（`REALTIME_COACH_GATE_TIMEOUT_MS` 可设更短值）；Coach 总 Deadline 默认及上限为 6,000 ms（`REALTIME_COACH_TOTAL_TIMEOUT_MS`）。Gate 后的 Memory、Era 与 Resolve 只消费此总 Deadline 的剩余预算。`backend_auto` 暂时接受并规范化为 `supervisor_auto`；Trace 与运行状态只记录规范名称。Pass B 复用同一个 Qwen3-8B Service，不经 OpenClaw Agent Runtime。
 
 `interview.context_hint` 仍是 StepAudio 3 现有 Slow Path 的 Resolve；Mini Coach 不再额外调用该 Agent，避免形成第三次模型调用。`COMPETITION_TECH_PANEL=1` 只控制比赛 WebSocket 面板；SSE 技术观测栏显示 Voice、Trigger、Mini 的 Coach 与 Action、Retriever 状态和 Coach 延迟。Audio 3 隐藏 Coach 字段。两个面板开关相互独立。
 
 StepAudio 3 原有 Realtime Context Agent 配置保持不变：`AGENT_MODEL_REALTIME_CONTEXT` → `AGENT_MODEL_REASONING_FAST` → `AGENT_MODEL_DEFAULT`；最多一次尝试，Task timeout 4.8 秒，并关闭 thinking 与 repair。`interview.context_hint` 仍通过 OpenClaw `infer model run --local --json` 单次推理，运行时传入 `interview-observer` Skill 与固定 Q+A Task Context，不调用工具、脚本、MCP 或数据库。`./deploy/mac/install-skill.sh` 可安装该 Skill；Context Hint 执行不依赖 `openclaw agent` 工具配置。此 Agent 不参与 Mini Coach。
 
-本轮实时验收命令：`bash scripts/codex-node.sh node --env-file-if-exists=.env --import tsx scripts/realtime-coach-live-smoke.ts`。2026-09-25 Story Create 合成语音实测 PASS：ASR final 后 Qwen3-8B Gate 1,117 ms（1,200 ms 内），86 字 Coach Packet 随当前轮 `response.create` 发送，Step-Audio-2-mini 完成音频响应并只问一个问题。复跑记录写入 `runtime/diagnostics/test-artifacts/realtime-coach-live-smoke/`。此实测不覆盖 Story Continue 的真实 Retriever + Pass B 服务链；该路径由定向 integration tests 验证。
+实时语音验收命令：`bash scripts/codex-node.sh node --env-file-if-exists=.env --import tsx scripts/realtime-coach-live-smoke.ts`。2026-09-25 Story Create 合成语音实测是旧阈值下的历史快照：ASR final 后 Qwen3-8B Gate 1,117 ms（当时配置为 1,200 ms），86 字 Coach Packet 随当前轮 `response.create` 发送，Step-Audio-2-mini 完成音频响应并只问一个问题。复跑记录写入 `runtime/diagnostics/test-artifacts/realtime-coach-live-smoke/`。该快照不覆盖 2026-09-26 的 Gate 2,000 ms / Coach 总 Deadline 6,000 ms 实现，也不覆盖 Story Continue 的真实 Retriever + Pass B live 服务链。
 
 2026-09-25 较早 Provider/Agent 实测（历史快照，Coach 架构前）：Step-Audio-2-mini 与 StepAudio 3 均确认 assistant 上下文项、手动 commit、response.create 与音频收发；StepAudio 3 Tool Call、Tool Result、Resume 通过。Mini 的一次历史人物探针注册工具成功，但模型未发出 Tool Call。旧版 Bailian Context Agent smoke 返回 HTTP 403 `Free quota exhausted`；StepAudio 3 语音 E2E 的 CASE A 采访通过，Closeout 返回同一 HTTP 403，CASE B 未运行。这些结果不代表当前 Mini Coach 路径。
 

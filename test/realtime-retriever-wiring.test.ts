@@ -192,6 +192,7 @@ async function createFixture(options: FixtureOptions) {
       searchInputs.push(input);
       if (options.retrieverDelayMs) await delay(options.retrieverDelayMs);
       if (input.query === 'retriever-failure') throw new Error('RETRIEVER_TEST_FAILURE');
+      if (input.query === 'empty-evidence') return [];
       const answer = input.query.includes('拖欠工资')
         ? '1997 年厂里已经开始拖欠工资。'
         : '2013 年春节以后第一次到北京。';
@@ -968,12 +969,15 @@ test('stepaudio2_mini voice_tool uses the same Retriever and Pass B and returns 
 });
 
 test('stepaudio2_mini supervisor_auto skips Retriever for an ordinary answer', async () => {
+  let gateCalls = 0;
   const fixture = await createFixture({
     realtimeMemoryTriggerMode: 'supervisor_auto',
     provider: 'stepaudio2_mini',
     manualTurnControl: true,
     coach: {
       async evaluate() {
+        gateCalls += 1;
+        await delay(50);
         return {
           action: 'none', retrieve_memory: false, memory_query: null,
           retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
@@ -985,47 +989,99 @@ test('stepaudio2_mini supervisor_auto skips Retriever for an ordinary answer', a
   });
   try {
     await sendManualUserFinal(fixture, 'coach-normal-turn', '后来我又去了北京。');
+    sendUserFinal(fixture, 'coach-normal-turn', '后来我又去了北京。');
     const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'normal Coach response');
     const instructions = String(record(response.response)?.instructions ?? '');
     assert.match(instructions, /你是人生采访记者/);
     assert.doesNotMatch(instructions, /方向：/);
     assert.equal(fixture.searchInputs.length, 0);
+    assert.equal(fixture.eraSearchInputs.length, 0);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+    await delay(100);
+    assert.equal(gateCalls, 1, 'a repeated final message ID must not start another Coach turn');
+    assert.equal(fixture.ownerMessages.filter((message) => message.type === 'user_final' && message.itemId === 'coach-normal-turn').length, 1,
+      'a duplicate final must not be forwarded as a second user turn');
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1,
+      'Gate action=none must request exactly one current-turn response');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto fails open at 2s and discards a late Gate result across turns', async () => {
+  let lateGateFinished = false;
+  const normalGate: CoachGateResult = {
+    action: 'none', retrieve_memory: false, memory_query: null,
+    retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+    reason: 'normal', avoid: null, direction: null,
+  };
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coachGateTimeoutMs: 2_000,
+    coach: {
+      async evaluate(input) {
+        if (input.currentUserAnswer === '迟到的 Gate 结果。') {
+          await delay(2_200);
+          lateGateFinished = true;
+          return {
+            action: 'guide', retrieve_memory: true, memory_query: '不应执行的历史检索',
+            retrieve_era: true, era_query: '不应执行的时代检索', era_start_year: 1998, era_end_year: 1999,
+            reason: 'history_reference', avoid: null, direction: '迟到指导不得污染后续回合。',
+          };
+        }
+        return normalGate;
+      },
+      async resolve() { throw new Error('Pass B must not run after Gate timeout'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-timeout-turn', '迟到的 Gate 结果。');
+    const firstResponse = await waitForMatch(
+      () => fixture.providerMessages.filter((message) => message.type === 'response.create'),
+      (_message, index) => index === 0,
+      '2s Gate fail-open response',
+      3_000,
+    );
+    assert.match(String(record(firstResponse.response)?.instructions ?? ''), /你是人生采访记者/u);
+    await fixture.waitForOwnerMessage(
+      (message) => message.type === 'response_done' && message.responseId === 'response-1',
+      'first Mini response completion',
+    );
+
+    await sendManualUserFinal(fixture, 'coach-next-turn', '下一轮正常回答。');
+    const secondResponse = await waitForMatch(
+      () => fixture.providerMessages.filter((message) => message.type === 'response.create'),
+      (_message, index) => index === 1,
+      'next-turn Mini response',
+    );
+    const secondInstructions = String(record(secondResponse.response)?.instructions ?? '');
+    assert.match(secondInstructions, /你是人生采访记者/u);
+    assert.doesNotMatch(secondInstructions, /迟到指导不得污染后续回合/u);
+    await fixture.waitForOwnerMessage(
+      (message) => message.type === 'response_done' && message.responseId === 'response-2',
+      'second Mini response completion',
+    );
+    await delay(300);
+    assert.equal(lateGateFinished, true, 'the test observes the Gate result after the hard timeout');
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 2,
+      'each turn must request one response and the late Gate must not request another');
+    assert.equal(fixture.searchInputs.length, 0);
+    assert.equal(fixture.eraSearchInputs.length, 0);
     assert.equal(fixture.coachResolveInputs.length, 0);
   } finally {
     await fixture.close();
   }
 });
 
-test('stepaudio2_mini supervisor_auto opens the current response on Gate timeout', async () => {
+test('stepaudio2_mini supervisor_auto fails open once when the 6s Coach deadline expires in retrieval', async () => {
   const fixture = await createFixture({
     realtimeMemoryTriggerMode: 'supervisor_auto',
     provider: 'stepaudio2_mini',
     manualTurnControl: true,
-    coachGateTimeoutMs: 25,
-    coach: {
-      async evaluate() { return new Promise<CoachGateResult>(() => {}); },
-      async resolve() { throw new Error('Pass B must not run after Gate timeout'); },
-    },
-  });
-  try {
-    await sendManualUserFinal(fixture, 'coach-timeout-turn', '普通的新信息。');
-    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'fail-open response');
-    const instructions = String(record(response.response)?.instructions ?? '');
-    assert.match(instructions, /你是人生采访记者/);
-    assert.equal(instructions.includes('继续追问刚才这段经历中的关键细节'), false);
-    assert.equal(fixture.searchInputs.length, 0);
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('stepaudio2_mini supervisor_auto opens a normal response when Coach total deadline expires in retrieval', async () => {
-  const fixture = await createFixture({
-    realtimeMemoryTriggerMode: 'supervisor_auto',
-    provider: 'stepaudio2_mini',
-    manualTurnControl: true,
-    coachTotalTimeoutMs: 100,
-    retrieverDelayMs: 300,
+    coachTotalTimeoutMs: 6_000,
+    retrieverDelayMs: 6_200,
     coach: {
       async evaluate() {
         return {
@@ -1039,10 +1095,165 @@ test('stepaudio2_mini supervisor_auto opens a normal response when Coach total d
     },
   });
   try {
+    const startedAt = performance.now();
     await sendManualUserFinal(fixture, 'coach-total-timeout-turn', '我想起以前的时间。');
-    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'total-timeout response');
+    const response = await waitForMatch(
+      () => fixture.providerMessages,
+      (message) => message.type === 'response.create',
+      '6s total-timeout response',
+      7_000,
+    );
     assert.equal(String(record(response.response)?.instructions ?? '').includes('核对历史后继续。'), false);
     assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.coachResolveInputs.length, 0, 'Resolve must not run after the shared 6s deadline');
+    assert.ok(performance.now() - startedAt >= 5_600,
+      'the configured shared Coach budget should remain six seconds after Gate time');
+    await delay(350);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1,
+      'a late retrieval completion must not request a second response');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto fails open when pipeline completion crosses the total deadline', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coachTotalTimeoutMs: 75,
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: '历史时间',
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'history_reference', avoid: null, direction: '临界结果不应应用。',
+        };
+      },
+      async resolve(input) {
+        const after = performance.now() + 125;
+        while (performance.now() < after) { /* Hold the event loop so pipeline completion beats the overdue timer callback. */ }
+        return {
+          selectedEvidenceIds: input.memoryEvidence.map((item) => item.id),
+          known: ['迟到的历史事实。'], backgroundHint: null, conflict: null,
+          avoid: null, direction: '临界结果不应应用。',
+        };
+      },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-deadline-race-turn', '我想起以前的时间。');
+    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'deadline-race fail-open response');
+    const instructions = String(record(response.response)?.instructions ?? '');
+    assert.match(instructions, /你是人生采访记者/u);
+    assert.doesNotMatch(instructions, /临界结果不应应用|迟到的历史事实/u);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1,
+      'completed-at-boundary must still request exactly one Mini response');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto skips Resolve when Memory and Era evidence are both empty', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    eraEnabled: true,
+    eraContext: { async search() { return []; } },
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: 'empty-evidence',
+          retrieve_era: true, era_query: 'empty-era', era_start_year: 1998, era_end_year: 1999,
+          reason: 'missing_key_detail', avoid: '避免引导用户接受某个原因。', direction: '沿着当前回答追问当时的变化。',
+        };
+      },
+      async resolve() { throw new Error('Resolve must be skipped when both retrieval paths are empty'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-empty-evidence-turn', '那段时间确实有些变化。');
+    const response = await fixture.waitForProviderMessage((message) => (
+      message.type === 'response.create'
+      && String(record(message.response)?.instructions ?? '').includes('沿着当前回答追问当时的变化')
+    ), 'deterministic Gate Coach Packet');
+    const instructions = String(record(response.response)?.instructions ?? '');
+    assert.match(instructions, /避免：避免引导用户接受某个原因/u);
+    assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.eraSearchInputs.length, 1);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto answers directly with a short packet for guide without retrieval', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve_memory: false, memory_query: null,
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'direction_drift', avoid: '回到当前故事。', direction: '继续问第一次作决定时的原因。',
+        };
+      },
+      async resolve() { throw new Error('Resolve must not run when Gate requests no retrieval'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-direct-guide-turn', '之后我换了一个选择。');
+    const response = await fixture.waitForProviderMessage((message) => (
+      message.type === 'response.create'
+      && String(record(message.response)?.instructions ?? '').includes('继续问第一次作决定时的原因')
+    ), 'direct Gate Coach Packet');
+    const instructions = String(record(response.response)?.instructions ?? '');
+    assert.match(instructions, /【采访教练】/u);
+    assert.match(instructions, /继续问第一次作决定时的原因/u);
+    assert.equal(fixture.searchInputs.length, 0);
+    assert.equal(fixture.eraSearchInputs.length, 0);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto discards Coach when both requested retrievals fail', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    eraEnabled: true,
+    eraContext: { async search() { throw new Error('ERA_TEST_FAILURE'); } },
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: 'retriever-failure',
+          retrieve_era: true, era_query: 'era-failure', era_start_year: 1998, era_end_year: 1999,
+          reason: 'history_reference', avoid: '不要推断任何未经证实的经历。', direction: '利用历史证据继续追问。',
+        };
+      },
+      async resolve() { throw new Error('Resolve has no evidence after both retrievals fail'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-both-retrievals-fail', '我还记得那段时间。');
+    const response = await fixture.waitForProviderMessage(
+      (message) => message.type === 'response.create',
+      'ordinary Mini response after both retrievals fail',
+    );
+    const instructions = String(record(response.response)?.instructions ?? '');
+    assert.match(instructions, /你是人生采访记者/u);
+    assert.doesNotMatch(instructions, /利用历史证据继续追问|【采访教练】已知：/u);
+    assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.eraSearchInputs.length, 1);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1);
   } finally {
     await fixture.close();
   }

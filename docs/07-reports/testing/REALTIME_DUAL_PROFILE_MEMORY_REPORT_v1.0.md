@@ -5,7 +5,44 @@
 开发基线：`5827a2009878557d4010488371ba3905231897bc`
 总状态：**NOT READY FOR HUMAN ACCEPTANCE**。双 Profile 已接入；2-mini 全流程 E2E PASS。StepAudio 3 续访 Closeout、Context Agent 运行、实时打断及真实 Hint 注入仍有 blocker。
 
-## 实现摘要
+> 下方原始状态与证据是 2026-09-25 / `5827a200` 的历史验收快照。Step-Audio-2-mini `supervisor_auto` 的当前轮 Coach 规则以 2026-09-26 补记为准；历史语音 E2E 结果不代表本次 Coach Deadline 改动已做 live 验收。
+
+## 当前 Mini supervisor_auto Coach 规则（2026-09-26）
+
+本轮开发基于最新 `main@b66a32c`。Step-Audio-2-mini 每个用户 final transcript 都由 Gate 判断当前轮是否需要 Coach：
+
+```text
+Gate action=none
+→ 不调用 Memory、Era 或 Resolve
+→ 立即发送当前轮普通 Mini response.create
+
+Gate guide/correct 且不需要检索
+→ 生成短 Gate Coach Packet
+→ 发送当前轮 Mini response.create
+
+Gate guide/correct 且需要检索
+→ Current Story Memory 与 Era 并行检索
+→ 任一路 evidence 非空才调用 Resolve
+→ 两路 evidence 都为空时跳过 Resolve，使用 Gate 的 avoid/direction
+→ 将短 Coach Packet 随当前轮 response.create 发送
+```
+
+- Gate 硬超时为 **2,000 ms**。Gate 超时或失败立即丢弃 Coach 并 fail-open 到当前轮 Mini 普通回答；不等待总 Deadline，也不启动检索或 Resolve。
+- Coach 总 Deadline 从用户 final transcript 开始，Gate、Memory、Era、Resolve 共用 **6,000 ms**。检索与 Resolve 只使用剩余预算。Gate/Resolve 故障或超时、总 Deadline 到期、或两路检索都失败时丢弃 Coach 并 fail-open；单路检索失败不阻断另一路的有效 evidence。两路最终 evidence 都为空时跳过 Resolve 并使用 Gate Packet。迟到结果不会再次回答或污染后续轮次。
+- `action=none` 与所有 fail-open 路径每轮最多请求一次 Mini response。重复的同一 final `messageId` 不会启动第二次 Coach。
+- Memory 仍严格限制为 `ownerId + current storyId + sourceType=subject`，没有 `storyId` 时 fail closed；Q+A 中只有 Answer 是个人事实。
+- Era 仍只用于 `story_continue` 且须有可靠窄年份范围。它只可成为 `background_hint`；普通公共描述中的“用户”等名词合法，个人化断言无效。Memory / Era 并行，单路失败时保留另一路有效 evidence。
+- 定向 wiring、Coach 与 Era 确定性检查及 typecheck 的本轮结果见下方“2026-09-26 定向验证”。Retriever 健康检查通过不等于真实 Story Continue 检索/Resolve live 验收；该 live 链路仍标为 **NOT TESTED**。
+
+## 2026-09-26 定向验证
+
+- `bash scripts/codex-node.sh npm run typecheck`：**PASS**。
+- `bash scripts/codex-node.sh node --import tsx --test test/realtime-retriever-wiring.test.ts test/realtime-coach.test.ts src/realtime/coach/pipeline.test.ts test/realtime-memory-trigger.test.ts src/realtime/slow-context-pipeline.test.ts src/realtime/slow-coordinator.test.ts`：**49/49 PASS**。覆盖重复 final 去重、Gate 2 秒超时与迟到结果、6 秒总 Deadline、临界完成 fail-open、Gate none/direct guide、双空 evidence 跳过 Resolve、单路检索成功、双路失败 fail-open，以及公共 Era 文本与个人化/亲属断言校验。
+- `bash scripts/check-ai-env.sh`：**PASS**。本机 Retriever、VectorDB、OpenClaw forward 与 MCP 注册可用；该检查只验证服务健康，不触发模型推理。
+- Step-Audio-2-mini 的真实语音及 Story Continue Retriever + Resolve live 验收：**NOT TESTED**。本轮 wiring 使用确定性本地 adapters；没有运行付费 provider E2E。
+- 本地 test runner 收尾时输出了数条 `[realtime-trace] write failed (ENOENT)`（fixture 临时目录已清理）；49 项断言均通过。技术观测实现未改动。
+
+## 2026-09-25 双 Profile 与独立 Memory 实现摘要（历史快照）
 
 - 正式默认 Profile 为 `stepaudio3_quality`，模型 `stepaudio-3-realtime-preview`；第二条正式 Profile 为 `stepaudio2_mini`，模型 `step-audio-2-mini`。当前两者都执行 `stepfun-cloud`。
 - 仓库默认、浏览器默认和当前忽略的 `.env` 都已设为 StepAudio 3；`.env` 保持 `0600`，本轮只更改 provider 选择，没有更改凭据。
@@ -43,7 +80,7 @@ env STORY_INTERVIEW_PROVIDER=stepaudio2_mini \
   bash scripts/codex-node.sh node --env-file=.env --import tsx scripts/real-provider-e2e.ts
 ```
 
-## 验收结果
+## 2026-09-25 验收结果（历史快照）
 
 | 路径 | 结果 | 证据 |
 |---|---|---|
@@ -62,7 +99,7 @@ env STORY_INTERVIEW_PROVIDER=stepaudio2_mini \
 
 `realtime-context` agent 已在 `my-assistant` 注册，模型配置可解析且 OpenClaw 未报告缺失 provider credential；但真实 smoke 仍以 `AGENT_RUNTIME_EXEC_FAILED` 结束。只含合成证据的 gateway/local 诊断显示：显式工具 allowlist 为 `*` / `bundle-mcp`，运行时没有匹配的 callable tools。该 Agent 按当前设计禁止工具，因此不能通过开放 Retriever、MCP 或其他工具来绕过。E2E 中 Agent 因此 fail closed；成功 Hint 的 live 路径尚未验收。
 
-## 自动验证
+## 2026-09-25 自动验证（历史快照）
 
 - `bash scripts/codex-node.sh npm run typecheck`：**PASS**。
 - StepFun Profile capability 及协议契约：**18/18 PASS**。
@@ -70,7 +107,7 @@ env STORY_INTERVIEW_PROVIDER=stepaudio2_mini \
 - `bash scripts/check-ai-env.sh`：**PASS**（在允许本机 loopback 检查的执行环境中）；Retriever、VectorDB、OpenClaw forward HTTP 200。该健康检查不代表 Agent 模型调用成功。
 - `git diff --check`：**PASS**。
 
-## 当前 Blocker
+## 2026-09-25 历史 Blocker
 
 1. OpenClaw Context Agent 的 no-tools 配置与当前工具注册/allowlist 行为冲突；需让受限的无工具 Agent 可以完成一次模型调用，且不开放 Retriever/MCP 工具，然后重新验收 `Hint → next safe turn`。
 2. StepAudio 3 续访 Closeout 在 live run 中三次 source IDs 校验失败；需要保持“仅引用当前 Transcript 用户消息”的数据边界并查明模型输出原因。

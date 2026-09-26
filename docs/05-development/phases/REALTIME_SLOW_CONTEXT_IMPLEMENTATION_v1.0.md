@@ -1,9 +1,9 @@
 # Realtime Slow Context implementation v1.0 — Historical baseline
 
 > Date: 2026-09-24
-> Status: **Historical implementation record; superseded by the 2026-09-25 dual-profile report.** The Tool Call-triggered memory flow below is not current.
-> Current rules: `user.transcript.final` starts an independent Current Story Memory path; Voice does not wait. The 5,000 ms TTL covers retrieval, mandatory Context Agent, and hint preparation. Results enter `pendingNextTurnContext` and are injected once at the next safe response boundary. Native Tool Calls remain separate and receive an empty Tool Result plus Resume on timeout.
-> Current status and evidence: [Realtime Dual Profile and Memory Report](../../07-reports/testing/REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md).
+> Status: **Historical implementation record; superseded by the 2026-09-26 current-turn Mini Coach rules below and the updated dual-profile report.** The Tool Call-triggered memory flow described in this document is historical.
+> Current Step-Audio-2-mini `supervisor_auto` rules: Gate handles each user final in the current turn; `action=none` immediately starts Mini, Gate hard timeout is 2,000 ms, and the full Coach deadline is 6,000 ms. Gate/Resolve failure or timeout and total Deadline expiry discard Coach and fail open to Mini on the current turn. Retrieval paths fail independently; both failed paths fail open, one failed path leaves the other usable, and two empty evidence arrays skip Resolve and use the Gate Packet. Results are never queued for a later turn.
+> Current status and evidence: [Realtime Dual Profile and Memory Report](../../07-reports/testing/REALTIME_DUAL_PROFILE_MEMORY_REPORT_v1.0.md) and [AI development environment](../../AI开发联调环境.md).
 
 This document records the behavior implemented on top of the existing Step-Audio Tool Call → HOLD → Backend → Tool Result → Resume path. The broader proposal remains in [Realtime Fast / Slow architecture v1.6](../../08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md); this document is authoritative for the narrower implementation shipped here.
 
