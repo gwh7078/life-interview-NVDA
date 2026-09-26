@@ -4,11 +4,15 @@
 }
 
 .tech-observer[hidden] { display: none; }
+.tech-observer-compact-bar[hidden], .tech-observer-backdrop[hidden] { display: none; }
+.tech-observer-compact-bar { display: none; }
 .workspace-layout.has-tech-observer { grid-template-columns: minmax(0, 1fr) minmax(400px, 440px); align-items: start; gap: 24px; }
 .workspace-layout.has-tech-observer .tech-observer { grid-column: 2; grid-row: 1; width: 100%; }
 .workspace-main { min-width: 0; }
 .tech-observer { position: sticky; top: 16px; display: flex; width: 100%; max-height: calc(100vh - 32px); flex-direction: column; overflow-y: auto; overscroll-behavior: contain; border: 1px solid rgba(47, 66, 55, .13); border-radius: 20px; background: #fffefa; box-shadow: 0 18px 50px rgba(45, 53, 42, .09); color: #28372d; }
 .tech-observer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 18px 14px; }
+.tech-observer-header-actions { display: flex; align-items: center; gap: 8px; }
+.tech-observer-sheet-close { display: none; width: 30px; height: 30px; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #f1f2eb; color: #506754; cursor: pointer; font-size: 22px; line-height: 1; }
 .tech-observer-header .section-label { margin: 0 0 5px; color: #748076; font-size: 9px; letter-spacing: .15em; }
 .tech-observer-header h2 { margin: 0; font-family: var(--serif); font-size: 20px; }
 .tech-live { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 999px; background: #eef3ed; color: #758177; font-size: 8px; font-weight: 800; letter-spacing: .08em; }
@@ -76,6 +80,24 @@
 .tech-observer-runtime div { display: flex; min-width: 0; justify-content: space-between; gap: 8px; }
 .tech-observer-runtime span { flex: none; color: #818980; font-size: 8px; }
 .tech-observer-runtime strong { min-width: 0; overflow: hidden; color: #37473c; font-size: 8px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1080px) {
+  .workspace-layout.has-tech-observer { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .workspace-layout.has-tech-observer .tech-observer { grid-column: 1; grid-row: auto; }
+  .tech-observer-compact-bar { display: flex; width: 100%; min-height: 46px; align-items: center; gap: 9px; margin: 0 0 12px; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; border: 1px solid rgba(47, 66, 55, .14); border-radius: 14px; background: rgba(255, 254, 250, .94); box-shadow: 0 8px 24px rgba(45, 53, 42, .09); color: #385240; cursor: pointer; font: inherit; text-align: left; backdrop-filter: blur(12px); position: sticky; top: 8px; z-index: 20; }
+  .tech-observer-compact-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #8a938b; }
+  .tech-observer-compact-dot[data-state="live"] { background: #4f9660; box-shadow: 0 0 0 4px rgba(79, 150, 96, .12); }
+  .tech-observer-compact-dot[data-state="warning"], .tech-observer-compact-dot[data-state="reconnecting"] { background: #b27d31; }
+  .tech-observer-compact-dot[data-state="error"] { background: #aa5648; }
+  .tech-observer-compact-state { flex: none; color: #6f7d73; font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+  .tech-observer-compact-label { min-width: 0; flex: 1; overflow: hidden; color: #385240; font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+  .tech-observer-compact-chevron { flex: none; color: #809084; font-size: 22px; line-height: 1; }
+  .tech-observer { position: fixed; right: 12px; bottom: 0; left: 12px; z-index: 41; display: none; width: auto; max-height: 72dvh; border-radius: 22px 22px 0 0; box-shadow: 0 -14px 42px rgba(45, 53, 42, .16); }
+  .tech-observer.is-sheet-open { display: flex; }
+  .tech-observer-sheet-close { display: inline-flex; }
+  .tech-observer-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(40, 55, 45, .16); }
+  .tech-observer-header { position: sticky; top: 0; z-index: 1; background: #fffefa; }
+}
 .workspace-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -251,9 +273,6 @@
 
 @media (max-width: 720px) {
   .app-shell { width: min(100% - 32px, 1040px); padding-top: 22px; }
-  .workspace-layout.has-tech-observer { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .workspace-layout.has-tech-observer .tech-observer { position: static; grid-column: 1; grid-row: 1; max-height: none; margin: 0 0 12px; }
-  .workspace-layout.has-tech-observer .workspace-main { grid-row: 2; }
   .tech-fast-flow { grid-template-columns: minmax(48px, .72fr) 14px minmax(96px, 1.55fr) 14px minmax(58px, .9fr); gap: 4px; }
   .tech-slow-flow { grid-template-columns: minmax(52px, 1fr) 9px minmax(58px, 1.1fr) 9px minmax(54px, 1fr) 9px minmax(62px, 1.12fr); gap: 2px; }
   .tech-node { padding-right: 4px; padding-left: 4px; }
@@ -274,12 +293,6 @@
   .start-button { min-width: 174px; }
   .call-frame { width: calc(100% + 32px); min-height: calc(100vh - 22px); min-height: calc(100dvh - 22px); margin: -22px -16px 0; padding: 22px 19px 18px; padding-bottom: clamp(76px, 12vh, 112px); padding-bottom: calc(clamp(76px, 12vh, 112px) + env(safe-area-inset-bottom, 0px)); border: 0; border-radius: 0; box-shadow: none; }
   .conversation { max-height: none; }
-}
-
-@media (min-width: 721px) and (max-width: 1080px) {
-  .workspace-layout.has-tech-observer { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-  .workspace-layout.has-tech-observer .tech-observer { position: static; grid-column: 1; grid-row: 1; width: min(100%, 760px); max-height: none; margin: 0 auto 14px; }
-  .workspace-layout.has-tech-observer .workspace-main { grid-row: 2; }
 }
 
 @media (max-width: 520px) {
@@ -308,4 +321,9 @@
   .call-footer { grid-template-columns: 1fr; gap: 11px; padding-top: 8px; padding-bottom: 0; }
   .call-timer, .call-timer-spacer { display: none; }
   .call-control { min-width: 64px; min-height: 60px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tech-node, .tech-edge, .tech-return-edge, .tech-observer-compact-bar { transition: none; }
+  .tech-observer-compact-dot { animation: none; }
 }

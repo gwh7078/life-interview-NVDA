@@ -24,10 +24,17 @@
         </a>
         <nav class="site-nav" aria-label="页面导航">
           <a class="button button-quiet" href="/my-life">我的人生</a>
-          <button id="tech-observer-toggle" class="button button-quiet" type="button" aria-controls="tech-observer" aria-expanded="false">技术观测</button>
+          <button id="tech-observer-toggle" class="button button-quiet" type="button" aria-controls="tech-observer tech-observer-compact-bar" aria-expanded="false" aria-pressed="false">技术观测</button>
           <button id="logout-button" class="button button-quiet" type="button" hidden>退出登录</button>
         </nav>
       </header>
+
+      <button id="tech-observer-compact-bar" class="tech-observer-compact-bar" type="button" aria-controls="tech-observer" aria-expanded="false" hidden>
+        <span id="tech-observer-compact-dot" class="tech-observer-compact-dot" aria-hidden="true"></span>
+        <span id="tech-observer-compact-state" class="tech-observer-compact-state">WAITING</span>
+        <span id="tech-observer-compact-label" class="tech-observer-compact-label">技术观测 · 等待采访</span>
+        <span class="tech-observer-compact-chevron" aria-hidden="true">›</span>
+      </button>
 
       <div class="workspace-layout" id="workspace-layout">
         <div class="workspace-main">
@@ -195,13 +202,16 @@
       </section>
         </div>
 
-        <aside id="tech-observer" class="tech-observer" aria-label="Fast Voice 与 Slow Coach 实时链路" hidden>
+        <aside id="tech-observer" class="tech-observer" role="region" aria-labelledby="tech-observer-title" aria-label="Fast Voice 与 Slow Coach 实时链路" tabindex="-1" hidden>
         <header class="tech-observer-header">
           <div>
             <p class="section-label">FAST VOICE + SLOW COACH</p>
-            <h2>技术实时观测</h2>
+            <h2 id="tech-observer-title">技术实时观测</h2>
           </div>
-        <span id="tech-observer-live" class="tech-live" data-state="waiting">WAITING</span>
+          <div class="tech-observer-header-actions">
+            <span id="tech-observer-live" class="tech-live" data-state="waiting">WAITING</span>
+            <button id="tech-observer-sheet-close" class="tech-observer-sheet-close" type="button" aria-label="关闭技术观测详情">×</button>
+          </div>
         </header>
         <div class="tech-observer-topline" aria-label="当前运行">
           <span id="tech-observer-environment">LOCAL</span>
@@ -284,6 +294,8 @@
         </details>
       </aside>
       </div>
+
+      <div id="tech-observer-backdrop" class="tech-observer-backdrop" hidden></div>
 
       <footer class="page-footer debug-only">
         <span>本地页面 → 本机服务 → 服务端配置的实时语音模型</span>
