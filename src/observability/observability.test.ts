@@ -262,6 +262,41 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
   assert.equal(firstAudio?.metrics?.responseBFirstAudioMs, 128);
 });
 
+test('realtime adapter maps Era retrieval outcomes and bounded safe metrics', () => {
+  const statuses = ['started', 'completed', 'failed', 'timeout'] as const;
+  const observations = statuses.map((status) => adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun',
+    event: `coach.era_retrieval.${status}`,
+    fields: {
+      turnId: 'turn-safe', contextVersion: 4, queryChars: 28,
+      startYear: 1996, endYear: 2000, candidateCount: 3, evidenceCount: 2,
+      latencyMs: 84, errorCode: status === 'timeout' ? 'ERA_CONTEXT_TIMEOUT' : undefined,
+      query: 'PRIVATE_ERA_QUERY', summary: 'PRIVATE_ERA_SUMMARY',
+    },
+  }));
+
+  assert.deepEqual(observations.map((item) => [item?.eventType, item?.status]), [
+    ['coach.era_retrieval.started', 'running'],
+    ['coach.era_retrieval.completed', 'success'],
+    ['coach.era_retrieval.failed', 'error'],
+    ['coach.era_retrieval.timeout', 'warning'],
+  ]);
+  assert.equal(observations[1]?.durationMs, 84);
+  assert.deepEqual({
+    queryChars: observations[1]?.metrics?.queryChars,
+    startYear: observations[1]?.metrics?.startYear,
+    endYear: observations[1]?.metrics?.endYear,
+    candidateCount: observations[1]?.metrics?.candidateCount,
+    evidenceCount: observations[1]?.metrics?.evidenceCount,
+    contextVersion: observations[1]?.metrics?.contextVersion,
+  }, {
+    queryChars: 28, startYear: 1996, endYear: 2000,
+    candidateCount: 3, evidenceCount: 2, contextVersion: 4,
+  });
+  assert.equal(observations[3]?.metrics?.errorCode, 'ERA_CONTEXT_TIMEOUT');
+  assert.equal(JSON.stringify(observations).includes('PRIVATE_'), false);
+});
+
 test('runtime start observer metadata identifies the voice profile and memory trigger without content', () => {
   const observation = adaptRealtimeTrace({
     sessionId: 'session-a',

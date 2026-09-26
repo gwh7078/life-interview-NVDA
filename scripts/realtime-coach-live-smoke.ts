@@ -230,7 +230,8 @@ async function main(): Promise<void> {
     const gateMs = Number((performance.now() - gateStartedAt).toFixed(1));
     report.gate = {
       action: gate.action,
-      retrieve: gate.retrieve,
+      retrieve_memory: gate.retrieve_memory,
+      retrieve_era: gate.retrieve_era,
       reason: gate.reason,
       latencyMs: gateMs,
       withinProductionBudget: gateMs <= 1_200,

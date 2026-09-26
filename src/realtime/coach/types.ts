@@ -24,8 +24,12 @@ export interface CoachGateInput {
 
 export interface CoachGateResult {
   action: CoachAction;
-  retrieve: boolean;
-  query: string | null;
+  retrieve_memory: boolean;
+  memory_query: string | null;
+  retrieve_era: boolean;
+  era_query: string | null;
+  era_start_year: number | null;
+  era_end_year: number | null;
   reason: CoachReason;
   avoid: string | null;
   direction: string | null;
@@ -37,16 +41,26 @@ export interface CoachEvidence {
   answer: string;
 }
 
+export interface CoachEraEvidence {
+  id: string;
+  startYear: number;
+  endYear: number;
+  title?: string;
+  summary: string;
+}
+
 export interface CoachResolveInput {
   scenario: CoachScenario;
   currentUserAnswer: string;
   gate: CoachGateResult;
-  evidence: CoachEvidence[];
+  memoryEvidence: CoachEvidence[];
+  eraEvidence: CoachEraEvidence[];
 }
 
 export interface CoachPacket {
   selectedEvidenceIds: string[];
   known: string[];
+  backgroundHint: string | null;
   conflict: string | null;
   avoid: string | null;
   direction: string | null;

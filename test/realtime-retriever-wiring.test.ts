@@ -6,15 +6,19 @@ import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 import { after, test } from 'node:test';
 import WebSocket, { WebSocketServer } from 'ws';
+import { eq } from 'drizzle-orm';
 import { createDatabase } from '../src/db/client.js';
 import { runMigrations } from '../src/db/migrate.js';
 import { seedDatabase, seedIds } from '../src/db/seed.js';
+import { stories } from '../src/db/schema.js';
 import type { AgentTaskPort } from '../src/agent-tasks/ports/agent-task-port.js';
 import { parseQwenServerEvent } from '../src/realtime/qwen.js';
 import type { NormalizedRealtimeEvent } from '../src/realtime/types.js';
 import type { RealtimeCoachPort } from '../src/realtime/coach/types.js';
 import type { CoachGateInput, CoachGateResult, CoachResolveInput, CoachPacket } from '../src/realtime/coach/types.js';
 import type { RetrieverAdapter } from '../src/retriever/types.js';
+import type { EraContextAdapter, EraContextSearchInput } from '../src/era-context/types.js';
+import { EraContextClient } from '../src/era-context/client.js';
 import { StoryShareRepository } from '../src/repositories/story-share-repository.js';
 import { createInterviewServiceServer } from '../src/server.js';
 
@@ -129,6 +133,9 @@ interface FixtureOptions {
   coachGateTimeoutMs?: number;
   coachTotalTimeoutMs?: number;
   retrieverDelayMs?: number;
+  eraEnabled?: boolean;
+  eraContext?: EraContextAdapter;
+  storyAgentMemory?: string;
   autoCompleteResponses?: boolean;
 }
 
@@ -143,14 +150,20 @@ async function createFixture(options: FixtureOptions) {
   const diagnosticsDirectory = path.join(directory, 'diagnostics');
   const previousDiagnosticsDirectory = process.env.DIAGNOSTICS_DIR;
   const previousCaptureContent = process.env.DIAGNOSTICS_CAPTURE_CONTENT;
+  const previousEraContextEnabled = process.env.NEMO_ERA_CONTEXT_ENABLED;
   process.env.DIAGNOSTICS_DIR = diagnosticsDirectory;
   process.env.DIAGNOSTICS_CAPTURE_CONTENT = '1';
+  process.env.NEMO_ERA_CONTEXT_ENABLED = options.eraEnabled === true ? 'true' : 'false';
 
   const databasePath = path.join(directory, 'memoir.db');
   const database = createDatabase(databasePath);
   try {
     runMigrations(database);
     seedDatabase(database);
+    if (options.storyAgentMemory) {
+      database.db.update(stories).set({ agentMemory: options.storyAgentMemory })
+        .where(eq(stories.storyId, seedIds.firstProject)).run();
+    }
   } finally {
     database.close();
   }
@@ -159,6 +172,7 @@ async function createFixture(options: FixtureOptions) {
   assert.ok(share);
 
   const searchInputs: Parameters<RetrieverAdapter['searchTranscript']>[0][] = [];
+  const eraSearchInputs: EraContextSearchInput[] = [];
   const agentQueries: string[] = [];
   const coachGateInputs: CoachGateInput[] = [];
   const coachResolveInputs: CoachResolveInput[] = [];
@@ -178,8 +192,11 @@ async function createFixture(options: FixtureOptions) {
       searchInputs.push(input);
       if (options.retrieverDelayMs) await delay(options.retrieverDelayMs);
       if (input.query === 'retriever-failure') throw new Error('RETRIEVER_TEST_FAILURE');
+      const answer = input.query.includes('拖欠工资')
+        ? '1997 年厂里已经开始拖欠工资。'
+        : '2013 年春节以后第一次到北京。';
       return [{
-        text: '[segment_id=history-message][message_id=history-message][Q+A]\nQuestion (context only): 第一次去北京是什么时候？\nAnswer (user-provided fact): 2013 年春节以后第一次到北京。',
+        text: `[segment_id=history-message][message_id=history-message][Q+A]\nQuestion (context only): ${input.query.includes('拖欠工资') ? '单位什么时候开始拖欠工资？' : '第一次去北京是什么时候？'}\nAnswer (user-provided fact): ${answer}`,
         score: 0.95,
         ownerId: input.ownerId,
         storyId: input.storyId ?? null,
@@ -192,6 +209,12 @@ async function createFixture(options: FixtureOptions) {
     async deleteSessionTranscript(sessionId) { return { documentId: sessionId, status: 'deleted' }; },
     async getIndexStatus(sessionId) { return { documentId: sessionId, status: 'indexed' }; },
   };
+  const eraContextClient: EraContextAdapter | undefined = options.eraContext ? {
+    async search(input) {
+      eraSearchInputs.push(input);
+      return options.eraContext!.search(input);
+    },
+  } : undefined;
 
   const providerHttp = createServer();
   const providerServer = new WebSocketServer({ server: providerHttp });
@@ -246,11 +269,14 @@ async function createFixture(options: FixtureOptions) {
     closeGraceMs: 2_000,
   }, {
     retriever,
+    eraContextClient,
     realtimeCoach: options.coach ?? {
       async evaluate(input) {
         coachGateInputs.push(input);
         return {
-          action: 'guide', retrieve: false, query: null, reason: 'missing_key_detail',
+          action: 'guide', retrieve_memory: false, memory_query: null,
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'missing_key_detail',
           avoid: null, direction: '继续追问刚才这段经历中的关键细节。',
         };
       },
@@ -259,6 +285,7 @@ async function createFixture(options: FixtureOptions) {
         return {
           selectedEvidenceIds: ['e1'],
           known: ['此前说第一次去北京在 2013 年春节后。'],
+          backgroundHint: null,
           conflict: null,
           avoid: '不要重复问第一次去北京的时间。',
           direction: '接着问这次出行的目的。',
@@ -389,6 +416,7 @@ async function createFixture(options: FixtureOptions) {
       ownerMessages: owner.messages,
       providerMessages,
       searchInputs,
+      eraSearchInputs,
       agentQueries,
       coachGateInputs,
       coachResolveInputs,
@@ -443,6 +471,8 @@ async function createFixture(options: FixtureOptions) {
         else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
         if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
         else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
+        if (previousEraContextEnabled === undefined) delete process.env.NEMO_ERA_CONTEXT_ENABLED;
+        else process.env.NEMO_ERA_CONTEXT_ENABLED = previousEraContextEnabled;
       },
     };
   } catch (error) {
@@ -450,6 +480,8 @@ async function createFixture(options: FixtureOptions) {
     else process.env.DIAGNOSTICS_DIR = previousDiagnosticsDirectory;
     if (previousCaptureContent === undefined) delete process.env.DIAGNOSTICS_CAPTURE_CONTENT;
     else process.env.DIAGNOSTICS_CAPTURE_CONTENT = previousCaptureContent;
+    if (previousEraContextEnabled === undefined) delete process.env.NEMO_ERA_CONTEXT_ENABLED;
+    else process.env.NEMO_ERA_CONTEXT_ENABLED = previousEraContextEnabled;
     throw error;
   }
 }
@@ -605,7 +637,9 @@ test('stepaudio2_mini supervisor_auto coaches the same user turn before its resp
       async evaluate(input) {
         gateInput = input;
         return {
-          action: 'guide', retrieve: true, query: '第一次去北京的时间', reason: 'history_reference',
+          action: 'guide', retrieve_memory: true, memory_query: '第一次去北京的时间',
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'history_reference',
           avoid: null, direction: '核对历史时间后继续追问。',
         };
       },
@@ -614,6 +648,7 @@ test('stepaudio2_mini supervisor_auto coaches the same user turn before its resp
         return {
           selectedEvidenceIds: ['e1'],
           known: ['此前提到春节后出发。'],
+          backgroundHint: null,
           conflict: '当前提到的年份可能不同。',
           avoid: '不要重复问第一次去北京的时间。',
           direction: '确认这次回忆对应哪次出行。',
@@ -642,11 +677,210 @@ test('stepaudio2_mini supervisor_auto coaches the same user turn before its resp
     assert.equal(fixture.searchInputs[0]?.storyId, seedIds.firstProject);
     assert.equal(fixture.searchInputs[0]?.sourceType, 'subject');
     assert.equal(resolveInput?.scenario, 'story_continue');
+    assert.equal(resolveInput?.memoryEvidence.length, 1);
+    assert.deepEqual(resolveInput?.eraEvidence, []);
     assert.match(instructions, /【采访教练】/);
     assert.ok(Array.from(instructions).length < 1_600);
     assert.equal(instructions.includes('2013 年春节以后第一次到北京。'), false);
     assert.equal(instructions.includes(answer), false);
     assert.equal(fixture.agentQueries.length, 0, 'Pass B must not run a third OpenClaw/Agent model call');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini retrieves current-story memory and Era Context in parallel through EraContextClient', async () => {
+  let resolveEraStarted!: () => void;
+  const eraStarted = new Promise<void>((resolve) => { resolveEraStarted = resolve; });
+  let requestBody: Record<string, unknown> | undefined;
+  let resolveInput: CoachResolveInput | undefined;
+  let gateInput: CoachGateInput | undefined;
+  const eraRecord = {
+    start_year: 1996,
+    end_year: 2000,
+    category: '工作就业' as const,
+    title: '国企单位经营调整',
+    summary: '1998年前后，一些国企经历经营调整，部分职工面临岗位变化与分流。',
+  };
+  const eraClient = new EraContextClient({
+    endpoint: 'http://retriever.test',
+    collection: 'life-interview-era-context-v1',
+    fetch: async (_input, init) => {
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      resolveEraStarted();
+      return new Response(JSON.stringify({ hits: [{
+        text: JSON.stringify(eraRecord), metadata: eraRecord, _rerank_score: 0.92,
+      }] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    },
+  });
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    retrieverDelayMs: 500,
+    eraEnabled: true,
+    eraContext: eraClient,
+    storyAgentMemory: '1997年厂里已经开始拖欠工资。',
+    coach: {
+      async evaluate(input) {
+        gateInput = input;
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: '历史采访中的拖欠工资',
+          retrieve_era: true, era_query: '1998年前后国企单位经营调整与职工分流',
+          era_start_year: 1996, era_end_year: 2000,
+          reason: 'history_reference', avoid: '不要因时代背景断言用户下岗。',
+          direction: '第一次感到单位可能留不住你时，发生了什么？',
+        };
+      },
+      async resolve(input) {
+        resolveInput = input;
+        return {
+          selectedEvidenceIds: [input.memoryEvidence[0]!.id],
+          known: ['历史采访里提到 1997 年开始拖欠工资。'],
+          backgroundHint: '那几年不少单位也在调整。',
+          conflict: null,
+          avoid: '不要把用户直接归为下岗职工。',
+          direction: '第一次感到工作可能保不住时，单位里发生了什么？',
+        };
+      },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-era-parallel-turn', '第二年情况更严重了。');
+    await waitFor(eraStarted, 200, 'EraContextClient request to start alongside memory retrieval');
+    assert.equal(fixture.searchInputs.length, 1, 'Current Story memory retrieval also started');
+    const currentStory = record(gateInput?.scenarioState.current_story);
+    assert.match(String(currentStory?.agent_memory), /1997年厂里已经开始拖欠工资/u);
+
+    const response = await fixture.waitForProviderMessage((message) => (
+      message.type === 'response.create'
+      && String(record(message.response)?.instructions ?? '').includes('第一次感到工作可能保不住时')
+    ), 'Mini response with the resolved Era-aware Coach Packet');
+    const instructions = String(record(response.response)?.instructions ?? '');
+    assert.equal(fixture.searchInputs[0]?.query, '历史采访中的拖欠工资');
+    assert.equal(fixture.searchInputs[0]?.storyId, seedIds.firstProject);
+    assert.deepEqual(fixture.eraSearchInputs.map(({ query, start_year, end_year }) => ({ query, start_year, end_year })), [{
+      query: '1998年前后国企单位经营调整与职工分流', start_year: 1996, end_year: 2000,
+    }]);
+    assert.equal(requestBody?.collection_name, 'life-interview-era-context-v1');
+    assert.equal(requestBody?.query, '1998年前后国企单位经营调整与职工分流');
+    assert.deepEqual(requestBody?.metadata_filter, {
+      start_year: { $lte: 2000 }, end_year: { $gte: 1996 },
+    });
+    assert.equal(resolveInput?.memoryEvidence.length, 1);
+    assert.equal(resolveInput?.memoryEvidence[0]?.answer.includes('1997'), true);
+    assert.equal(resolveInput?.eraEvidence.length, 1);
+    assert.equal(resolveInput?.eraEvidence[0]?.summary, eraRecord.summary);
+    assert.match(instructions, /背景：那几年不少单位也在调整/u);
+    assert.match(instructions, /不要把用户直接归为下岗职工/u);
+    assert.doesNotMatch(instructions, new RegExp(eraRecord.summary));
+    assert.ok(Array.from(instructions).length < 1_600);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('empty, timed-out, and disabled Era retrieval fail open while Coach Resolve continues', async () => {
+  const cases: Array<{
+    name: string;
+    eraEnabled: boolean;
+    eraContext?: EraContextAdapter;
+    expectedEraCalls: number;
+  }> = [
+    { name: 'no results', eraEnabled: true, eraContext: { async search() { return []; } }, expectedEraCalls: 1 },
+    {
+      name: 'service timeout', eraEnabled: true,
+      eraContext: { async search() { await new Promise<void>(() => {}); return []; } },
+      expectedEraCalls: 1,
+    },
+    { name: 'flag disabled', eraEnabled: false, expectedEraCalls: 0 },
+  ];
+
+  for (const [index, scenario] of cases.entries()) {
+    let resolveInput: CoachResolveInput | undefined;
+    const fixture = await createFixture({
+      realtimeMemoryTriggerMode: 'supervisor_auto',
+      provider: 'stepaudio2_mini',
+      manualTurnControl: true,
+      eraEnabled: scenario.eraEnabled,
+      eraContext: scenario.eraContext,
+      coach: {
+        async evaluate() {
+          return {
+            action: 'guide', retrieve_memory: true, memory_query: 'unit history',
+            retrieve_era: true, era_query: '1998 unit conditions',
+            era_start_year: 1996, era_end_year: 2000,
+            reason: 'missing_key_detail', avoid: null, direction: '询问当时工作环境有什么变化。',
+          };
+        },
+        async resolve(input) {
+          resolveInput = input;
+          return {
+            selectedEvidenceIds: input.memoryEvidence.map((item) => item.id),
+            known: ['用户此前谈过工作经历。'], backgroundHint: null,
+            conflict: null, avoid: null, direction: '询问当时工作环境有什么变化？',
+          };
+        },
+      },
+    });
+    try {
+      await sendManualUserFinal(fixture, `coach-era-fallback-${index}`, '单位效益不好。');
+      const response = await fixture.waitForProviderMessage((message) => (
+        message.type === 'response.create'
+        && String(record(message.response)?.instructions ?? '').includes('询问当时工作环境有什么变化？')
+      ), `${scenario.name} Coach response`);
+      assert.equal(resolveInput?.memoryEvidence.length, 1, `${scenario.name} preserves successful personal retrieval`);
+      assert.deepEqual(resolveInput?.eraEvidence, [], `${scenario.name} gives Resolve no Era evidence`);
+      assert.equal(fixture.eraSearchInputs.length, scenario.expectedEraCalls);
+      assert.match(String(record(response.response)?.instructions ?? ''), /【采访教练】/);
+    } finally {
+      await fixture.close();
+    }
+  }
+});
+
+test('personal retrieval failure does not discard successful Era evidence', async () => {
+  let resolveInput: CoachResolveInput | undefined;
+  const eraRecord = {
+    start_year: 1996, end_year: 2000, category: '工作就业' as const,
+    title: '工作环境变化', summary: '1998年前后，部分单位的经营和岗位安排出现变化。',
+  };
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    eraEnabled: true,
+    eraContext: {
+      async search() { return [{ ...eraRecord, score: 0.9 }]; },
+    },
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: 'retriever-failure',
+          retrieve_era: true, era_query: '1998年单位经营与就业',
+          era_start_year: 1996, era_end_year: 2000,
+          reason: 'missing_key_detail', avoid: '不要断言用户被裁员。',
+          direction: '你第一次觉得工作不稳定时，发生了什么？',
+        };
+      },
+      async resolve(input) {
+        resolveInput = input;
+        return {
+          selectedEvidenceIds: [], known: [], backgroundHint: '那几年部分单位经历调整。',
+          conflict: null, avoid: '不要断言用户被裁员。', direction: '第一次觉得工作不稳定时，发生了什么？',
+        };
+      },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-era-memory-failure-turn', '单位效益不好。');
+    const response = await fixture.waitForProviderMessage((message) => (
+      message.type === 'response.create'
+      && String(record(message.response)?.instructions ?? '').includes('那几年部分单位经历调整')
+    ), 'Era-aware response after Current Story retrieval fails');
+    assert.deepEqual(resolveInput?.memoryEvidence, []);
+    assert.equal(resolveInput?.eraEvidence.length, 1);
+    assert.match(String(record(response.response)?.instructions ?? ''), /那几年部分单位经历调整/u);
   } finally {
     await fixture.close();
   }
@@ -740,7 +974,11 @@ test('stepaudio2_mini supervisor_auto skips Retriever for an ordinary answer', a
     manualTurnControl: true,
     coach: {
       async evaluate() {
-        return { action: 'none', retrieve: false, query: null, reason: 'normal', avoid: null, direction: null };
+        return {
+          action: 'none', retrieve_memory: false, memory_query: null,
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'normal', avoid: null, direction: null,
+        };
       },
       async resolve() { throw new Error('Pass B must not run after action=none'); },
     },
@@ -791,7 +1029,9 @@ test('stepaudio2_mini supervisor_auto opens a normal response when Coach total d
     coach: {
       async evaluate() {
         return {
-          action: 'guide', retrieve: true, query: '历史时间', reason: 'history_reference',
+          action: 'guide', retrieve_memory: true, memory_query: '历史时间',
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'history_reference',
           avoid: null, direction: '核对历史后继续。',
         };
       },

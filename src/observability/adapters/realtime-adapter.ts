@@ -20,7 +20,8 @@ const numericMetrics = [
   'toolResultWriteLatencyMs', 'toolCycleLatencyMs',
   'retriever_ms', 'agent_ms', 'total_slow_ms', 'hold_ms',
   'silenceObservedMs', 'silenceThresholdMs',
-  'gate_ms', 'retrieval_ms', 'resolve_ms', 'total_ms', 'packetChars',
+  'gate_ms', 'retrieval_ms', 'era_retrieval_ms', 'resolve_ms', 'total_ms', 'packetChars',
+  'queryChars', 'startYear', 'endYear', 'contextVersion', 'memoryEvidenceCount', 'eraEvidenceCount',
 ] as const;
 
 const SAFE_FALLBACK_TYPES = new Set(['direct_retrieval']);
@@ -119,7 +120,7 @@ interface Mapping {
 }
 
 function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
-  const coachStage = /^coach\.(gate|retrieval|resolve)\.(started|completed|timeout|failed)$/u.exec(event);
+  const coachStage = /^coach\.(gate|retrieval|era_retrieval|resolve)\.(started|completed|timeout|failed)$/u.exec(event);
   if (coachStage) {
     const [, stage, status] = coachStage;
     if (stage === 'retrieval') return {
@@ -128,6 +129,13 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
       status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : 'running',
       title: status === 'started' ? 'COACH RETRIEVER RUNNING' : `COACH RETRIEVER ${status.toUpperCase()}`,
       component: 'realtime-coach-retriever',
+    };
+    if (stage === 'era_retrieval') return {
+      category: 'retriever',
+      eventType: `coach.era_retrieval.${status}`,
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : 'running',
+      title: status === 'started' ? 'COACH ERA RETRIEVAL RUNNING' : `COACH ERA RETRIEVAL ${status.toUpperCase()}`,
+      component: 'realtime-coach-era-retriever',
     };
     return {
       category: 'runtime',
@@ -241,6 +249,7 @@ export function adaptRealtimeTrace(input: {
     if (value !== undefined) {
       const normalizedKey = key === 'gate_ms' ? 'gateMs'
         : key === 'retrieval_ms' ? 'retrievalMs'
+          : key === 'era_retrieval_ms' ? 'eraRetrievalMs'
           : key === 'resolve_ms' ? 'resolveMs'
             : key === 'total_ms' ? 'totalMs' : key;
       metrics[normalizedKey] = value;
@@ -252,6 +261,8 @@ export function adaptRealtimeTrace(input: {
   if (typeof fields.outcome === 'string') metrics.outcome = safeLabel(fields.outcome) ?? 'unknown';
   if (typeof fields.fallbackUsed === 'boolean') metrics.fallbackUsed = fields.fallbackUsed;
   if (typeof fields.retrieve === 'boolean') metrics.retrieve = fields.retrieve;
+  if (typeof fields.retrieve_memory === 'boolean') metrics.retrieve_memory = fields.retrieve_memory;
+  if (typeof fields.retrieve_era === 'boolean') metrics.retrieve_era = fields.retrieve_era;
   for (const key of ['action', 'scenario', 'reason']) {
     if (safeLabel(fields[key])) metrics[key] = safeLabel(fields[key])!;
   }
@@ -264,7 +275,8 @@ export function adaptRealtimeTrace(input: {
   if (responseStartLatency !== undefined) metrics.resumeLatencyMs = responseStartLatency;
   const firstAudioLatency = numberField(fields, 'toolToFirstAudioMs') ?? numberField(fields, 'responseBFirstAudioMs');
   if (firstAudioLatency !== undefined) metrics.firstAudioLatencyMs = firstAudioLatency;
-  const evidenceCount = numberField(fields, 'retrievalEvidenceCount') ?? numberField(fields, 'factCount');
+  const evidenceCount = numberField(fields, 'evidenceCount')
+    ?? numberField(fields, 'retrievalEvidenceCount') ?? numberField(fields, 'factCount');
   if (evidenceCount !== undefined) metrics.evidenceCount = evidenceCount;
   if (numberField(fields, 'candidateCount') !== undefined) metrics.candidateCount = numberField(fields, 'candidateCount')!;
 
@@ -289,8 +301,10 @@ export function adaptRealtimeTrace(input: {
           ? numberField(fields, 'toolCycleLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs')
           : event.startsWith('coach.gate.')
             ? numberField(fields, 'gate_ms')
-            : event.startsWith('coach.retrieval.')
+          : event.startsWith('coach.retrieval.')
               ? numberField(fields, 'retrieval_ms')
+              : event.startsWith('coach.era_retrieval.')
+                ? numberField(fields, 'latencyMs')
               : event.startsWith('coach.resolve.')
                 ? numberField(fields, 'resolve_ms')
                 : event === 'coach.applied' || event === 'coach.skipped'

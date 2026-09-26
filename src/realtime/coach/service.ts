@@ -5,6 +5,7 @@ import { ONBOARDING_COACH_POLICY } from './prompts/onboarding.js';
 import { REALTIME_COACH_CORE, REALTIME_COACH_GATE_CONTRACT, REALTIME_COACH_RESOLVE } from './prompts/core.js';
 import { STORY_CREATE_COACH_POLICY } from './prompts/story-create.js';
 import { STORY_CONTINUE_COACH_POLICY } from './prompts/story-continue.js';
+import { ERA_CONTEXT_MAX_YEAR, ERA_CONTEXT_MIN_YEAR } from '../../era-context/types.js';
 import type {
   CoachAction,
   CoachEvidence,
@@ -162,20 +163,35 @@ function nullableText(value: unknown, maxChars: number): string | null | undefin
   return clip(value, maxChars);
 }
 
+function nullableYear(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== 'number' || !Number.isInteger(value)
+    || value < ERA_CONTEXT_MIN_YEAR || value > ERA_CONTEXT_MAX_YEAR) return undefined;
+  return value;
+}
+
 function parseGate(value: unknown, scenario: CoachScenario): CoachGateResult {
   const object = row(value);
-  const keys = ['action', 'retrieve', 'query', 'reason', 'avoid', 'direction'];
+  const keys = [
+    'action', 'retrieve_memory', 'memory_query', 'retrieve_era', 'era_query',
+    'era_start_year', 'era_end_year', 'reason', 'avoid', 'direction',
+  ];
   if (!object) throw Object.assign(new Error('Coach Gate output is not an object.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   if (!exactKeys(object, keys)) throw Object.assign(new Error('Coach Gate output has the wrong keys.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   if (!ACTIONS.includes(object.action as CoachAction)
-    || typeof object.retrieve !== 'boolean'
+    || typeof object.retrieve_memory !== 'boolean'
+    || typeof object.retrieve_era !== 'boolean'
     || !REASONS.includes(object.reason as CoachReason)) {
-    throw Object.assign(new Error('Coach Gate output has an invalid action, retrieve, or reason field.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
+    throw Object.assign(new Error('Coach Gate output has an invalid action or retrieval decision.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
-  const query = nullableText(object.query, 200);
+  const memoryQuery = nullableText(object.memory_query, 200);
+  const eraQuery = nullableText(object.era_query, 200);
+  const eraStartYear = nullableYear(object.era_start_year);
+  const eraEndYear = nullableYear(object.era_end_year);
   const avoid = nullableText(object.avoid, 120);
   const direction = nullableText(object.direction, 120);
-  if (query === undefined || avoid === undefined || direction === undefined) {
+  if (memoryQuery === undefined || eraQuery === undefined || eraStartYear === undefined
+    || eraEndYear === undefined || avoid === undefined || direction === undefined) {
     throw Object.assign(new Error('Coach Gate text fields violate their limits.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
   if (direction && !/[\u3400-\u9fff]/u.test(direction)) {
@@ -187,21 +203,42 @@ function parseGate(value: unknown, scenario: CoachScenario): CoachGateResult {
     throw Object.assign(new Error('Coach Gate exposed its own model identity.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
   if (action === 'none') {
-    if (object.retrieve || query !== null || avoid !== null || direction !== null || reason !== 'normal') {
+    if (object.retrieve_memory || memoryQuery !== null || object.retrieve_era || eraQuery !== null
+      || eraStartYear !== null || eraEndYear !== null || avoid !== null || direction !== null || reason !== 'normal') {
       throw Object.assign(new Error('A non-intervening Coach Gate must return the normal empty result.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
     }
   } else {
     const violations = [
       ...(!direction ? ['direction_missing'] : []),
       ...(reason === 'normal' ? ['intervention_reason_is_normal'] : []),
-      ...(object.retrieve && scenario === 'story_continue' && !query ? ['retrieval_query_missing'] : []),
+      ...(object.retrieve_memory && scenario === 'story_continue' && !memoryQuery ? ['memory_query_missing'] : []),
+      ...(object.retrieve_era && scenario === 'story_continue'
+        && (!eraQuery || eraStartYear === null || eraEndYear === null || eraEndYear < eraStartYear)
+        ? ['era_query_or_year_range_missing'] : []),
+      ...(!object.retrieve_memory && memoryQuery !== null ? ['unused_memory_query'] : []),
+      ...(!object.retrieve_era && (eraQuery !== null || eraStartYear !== null || eraEndYear !== null)
+        ? ['unused_era_query_or_year_range'] : []),
     ];
     if (violations.length) {
       throw Object.assign(new Error(`Coach Gate requested an invalid intervention (${violations.join(',')}).`), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
     }
   }
-  const retrieve = action !== 'none' && scenario === 'story_continue' && object.retrieve;
-  return { action, retrieve, query: retrieve ? query : null, reason, avoid, direction };
+  const retrieveMemory = action !== 'none' && scenario === 'story_continue' && object.retrieve_memory;
+  const eraRangeIsNarrow = eraStartYear !== null && eraEndYear !== null && eraEndYear - eraStartYear <= 15;
+  const retrieveEra = action !== 'none' && scenario === 'story_continue'
+    && object.retrieve_era && eraRangeIsNarrow;
+  return {
+    action,
+    retrieve_memory: retrieveMemory,
+    memory_query: retrieveMemory ? memoryQuery : null,
+    retrieve_era: retrieveEra,
+    era_query: retrieveEra ? eraQuery : null,
+    era_start_year: retrieveEra ? eraStartYear : null,
+    era_end_year: retrieveEra ? eraEndYear : null,
+    reason,
+    avoid,
+    direction,
+  };
 }
 
 function stringList(value: unknown, maxItems: number, maxChars: number): string[] | undefined {
@@ -212,22 +249,25 @@ function stringList(value: unknown, maxItems: number, maxChars: number): string[
 
 function parsePacket(value: unknown, input: CoachResolveInput): import('./types.js').CoachPacket {
   const object = row(value);
-  const keys = ['selected_evidence_ids', 'known', 'conflict', 'avoid', 'direction'];
+  const keys = ['selected_evidence_ids', 'known', 'background_hint', 'conflict', 'avoid', 'direction'];
   if (!object || !exactKeys(object, keys)) {
     throw Object.assign(new Error('Coach Resolve output violates its schema.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
   const selectedEvidenceIds = stringList(object.selected_evidence_ids, 2, 20);
   const known = stringList(object.known, 2, 120);
+  const backgroundHint = nullableText(object.background_hint, 80);
   const conflict = nullableText(object.conflict, 120);
   const avoid = nullableText(object.avoid, 120);
   const direction = nullableText(object.direction, 120);
-  const evidenceIds = new Set(input.evidence.map((item) => item.id));
-  if (!selectedEvidenceIds || !known || conflict === undefined || avoid === undefined || direction === undefined
+  const evidenceIds = new Set(input.memoryEvidence.map((item) => item.id));
+  if (!selectedEvidenceIds || !known || backgroundHint === undefined || conflict === undefined || avoid === undefined || direction === undefined
     || new Set(selectedEvidenceIds).size !== selectedEvidenceIds.length
-    || selectedEvidenceIds.some((id) => !evidenceIds.has(id))) {
+    || selectedEvidenceIds.some((id) => !evidenceIds.has(id))
+    || (conflict !== null && selectedEvidenceIds.length === 0)
+    || (backgroundHint !== null && (input.eraEvidence.length === 0 || /(?:你|我|用户|本人|当事人)/u.test(backgroundHint)))) {
     throw Object.assign(new Error('Coach Resolve selected unsupported or oversized evidence.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
-  return { selectedEvidenceIds, known, conflict, avoid, direction };
+  return { selectedEvidenceIds, known, backgroundHint, conflict, avoid, direction };
 }
 
 export function buildCoachGatePrompt(input: CoachGateInput): { system: string; user: string } {

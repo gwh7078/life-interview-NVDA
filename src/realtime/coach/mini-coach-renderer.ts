@@ -7,9 +7,9 @@ function clip(value: string, maxChars: number): string {
   return chars.length <= maxChars ? chars.join('') : chars.slice(0, maxChars).join('');
 }
 
-function knownText(packet: CoachPacket | undefined, currentAnswer: string): string {
+function knownText(packet: CoachPacket | undefined, currentAnswer: string, maxChars = 52): string {
   const known = packet?.known.filter(Boolean).join('；');
-  return clip(known || currentAnswer || '当前回答', 52);
+  return clip(known || currentAnswer || '当前回答', maxChars);
 }
 
 function gapFor(scenario: CoachScenario, reason: CoachGateResult['reason']): string {
@@ -43,12 +43,23 @@ export function renderMiniCoachPacket(input: {
       `方向：${clip(packet?.direction || gate.direction, 80)}`,
     ];
   } else if (scenario === 'story_continue') {
-    lines = [
-      `【采访教练】已知：${knownText(packet, currentUserAnswer)}`,
-      ...(packet?.avoid || gate.avoid ? [`避免：${clip(packet?.avoid || gate.avoid || '', 44)}`] : []),
-      ...(packet?.conflict ? [`冲突：${clip(packet.conflict, 44)}`] : []),
-      `方向：${clip(packet?.direction || gate.direction, 64)}`,
-    ];
+    if (packet?.backgroundHint) {
+      lines = [
+        `【采访教练】已知：${knownText(packet, currentUserAnswer, 28)}`,
+        `背景：${clip(packet.backgroundHint, 24)}`,
+        ...(packet.avoid || gate.avoid
+          ? [`避免：${clip(packet.avoid || gate.avoid || '', 24)}`]
+          : packet.conflict ? [`冲突：${clip(packet.conflict, 24)}`] : []),
+        `方向：${clip(packet.direction || gate.direction, 48)}`,
+      ];
+    } else {
+      lines = [
+        `【采访教练】已知：${knownText(packet, currentUserAnswer)}`,
+        ...(packet?.avoid || gate.avoid ? [`避免：${clip(packet?.avoid || gate.avoid || '', 44)}`] : []),
+        ...(packet?.conflict ? [`冲突：${clip(packet.conflict, 44)}`] : []),
+        `方向：${clip(packet?.direction || gate.direction, 64)}`,
+      ];
+    }
   } else {
     const contributorSummary = typeof input.scenarioState?.contributor_summary === 'string'
       ? input.scenarioState.contributor_summary

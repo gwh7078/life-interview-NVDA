@@ -117,6 +117,7 @@ import { adaptRealtimeTrace, normalizeAgentSkipReasonForObservation } from './ob
 import { RealtimeSlowContextPipeline } from './realtime/slow-context-pipeline.js';
 import { createEraContextClientFromEnv } from './era-context/client.js';
 import { EraContextScriptError, EraContextScriptGateway } from './era-context/script-gateway.js';
+import type { EraContextAdapter } from './era-context/types.js';
 
 const DEFAULT_PORT = 4174;
 const DEFAULT_HOST = '127.0.0.1';
@@ -209,6 +210,7 @@ export interface InterviewServiceDependencies {
   retriever?: RetrieverAdapter;
   retrieverIndex?: RetrieverIndexService;
   retrieverScriptGateway?: RetrieverScriptGateway;
+  eraContextClient?: EraContextAdapter;
   eraContextScriptGateway?: EraContextScriptGateway;
   realtimeRecall?: RealtimeRecallPort;
   observationBus?: ObservationBus;
@@ -733,6 +735,10 @@ function createStoryWorkflowDependencies(
     );
   const retriever = dependencies.retriever
     ?? (process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true' ? createRetrieverClientFromEnv(process.env) : undefined);
+  const eraContextEnabled = process.env.NEMO_ERA_CONTEXT_ENABLED?.trim() === 'true';
+  const eraContextClient = eraContextEnabled
+    ? dependencies.eraContextClient ?? createEraContextClientFromEnv(process.env)
+    : undefined;
   const realtimeRecall = dependencies.realtimeRecall
     ?? (retriever ? new RealtimeSlowContextPipeline(retriever, realtimeContextAgentTasks) : undefined);
   const realtimeCoach = dependencies.realtimeCoach === undefined
@@ -744,7 +750,7 @@ function createStoryWorkflowDependencies(
       }) : null
     : dependencies.realtimeCoach;
   const realtimeCoachPipeline = dependencies.realtimeCoachPipeline
-    ?? (realtimeCoach && retriever ? new RealtimeCoachPipeline(realtimeCoach, retriever) : undefined);
+    ?? (realtimeCoach ? new RealtimeCoachPipeline(realtimeCoach, retriever, eraContextClient) : undefined);
   const retrieverIndex = dependencies.retrieverIndex
     ?? (retriever ? new RetrieverIndexService(config.databasePath, retriever) : undefined);
   const retrievalTokenSecret = process.env.AGENT_RETRIEVAL_TOKEN_SECRET?.trim()
@@ -756,7 +762,7 @@ function createStoryWorkflowDependencies(
     ?? (retriever && retrievalTokenService ? new RetrieverScriptGateway(retriever, retrievalTokenService) : undefined);
   const eraContextScriptGateway = dependencies.eraContextScriptGateway
     ?? (process.env.NEMO_ERA_CONTEXT_ENABLED?.trim() === 'true' && retrievalTokenService
-      ? new EraContextScriptGateway(createEraContextClientFromEnv(process.env), retrievalTokenService)
+      ? new EraContextScriptGateway(eraContextClient ?? createEraContextClientFromEnv(process.env), retrievalTokenService)
       : undefined);
   const retrievalScriptConfig = retrievalTokenService && process.env.AGENT_RETRIEVAL_BASE_URL?.trim()
     ? {
@@ -770,6 +776,7 @@ function createStoryWorkflowDependencies(
     ...(retriever ? { retriever } : {}),
     ...(realtimeRecall ? { realtimeRecall } : {}),
     ...(realtimeCoach ? { realtimeCoach } : {}),
+    ...(eraContextClient ? { eraContextClient } : {}),
     ...(realtimeCoachPipeline ? { realtimeCoachPipeline } : {}),
     ...(retrieverIndex ? { retrieverIndex } : {}),
     ...(retrieverScriptGateway ? { retrieverScriptGateway } : {}),
@@ -2350,6 +2357,8 @@ function createRealtimeHandler(
       voiceProfile: 'stepaudio2_mini',
       triggerMode: 'supervisor_auto',
       coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
+      turnId,
+      contextVersion: version,
     };
     const isCurrent = (): boolean => phase === 'active'
       && currentTurnId === turnId
@@ -2405,24 +2414,34 @@ function createRealtimeHandler(
       const gate = gateOutcome.value;
       traceWriter?.recordContent('coach.gate.output', { turnId, output: gate });
       recordTrace('coach.gate.completed', {
-        ...traceFields, action: gate.action, retrieve: gate.retrieve,
+        ...traceFields, turnId, contextVersion: version,
+        action: gate.action,
+        retrieve_memory: gate.retrieve_memory,
+        retrieve_era: gate.retrieve_era,
         reason: gate.reason,
-        queryChars: gate.query ? Array.from(gate.query).length : 0,
+        queryChars: gate.era_query ? Array.from(gate.era_query).length : gate.memory_query ? Array.from(gate.memory_query).length : 0,
         gate_ms: gateMs, total_ms: gateMs,
       });
       if (gate.action === 'none') {
         recordTrace('coach.skipped', {
-          ...traceFields, action: gate.action, retrieve: false,
+          ...traceFields, turnId, contextVersion: version,
+          action: gate.action, retrieve_memory: false, retrieve_era: false,
+          memoryEvidenceCount: 0, eraEvidenceCount: 0,
           gate_ms: gateMs, total_ms: gateMs, reason: 'normal',
         });
         sendMiniResponse({
           turnId, version,
-          traceFields: { ...traceFields, action: gate.action, retrieve: false, gate_ms: gateMs, total_ms: gateMs },
+          traceFields: {
+            ...traceFields, turnId, contextVersion: version,
+            action: gate.action, retrieve_memory: false, retrieve_era: false,
+            memoryEvidenceCount: 0, eraEvidenceCount: 0,
+            gate_ms: gateMs, total_ms: gateMs,
+          },
         });
         return;
       }
 
-      if (!gate.retrieve) {
+      if (!gate.retrieve_memory && !gate.retrieve_era) {
         const packet = renderMiniCoachPacket({
           scenario: baseGate.scenario,
           currentUserAnswer: text,
@@ -2431,7 +2450,12 @@ function createRealtimeHandler(
         });
         sendMiniResponse({
           turnId, version, packet,
-          traceFields: { ...traceFields, action: gate.action, retrieve: false, gate_ms: gateMs, total_ms: Number((performance.now() - startedAt).toFixed(2)) },
+          traceFields: {
+            ...traceFields, turnId, contextVersion: version,
+            action: gate.action, retrieve_memory: false, retrieve_era: false,
+            memoryEvidenceCount: 0, eraEvidenceCount: 0,
+            gate_ms: gateMs, total_ms: Number((performance.now() - startedAt).toFixed(2)),
+          },
         });
         return;
       }
@@ -2442,17 +2466,25 @@ function createRealtimeHandler(
         ? context.story.story_id.trim()
         : '';
       const sessionId = interviewSession?.sessionId;
-      const query = gate.query;
       if (!dependencies.realtimeCoachPipeline) {
-        failOpen('retriever_or_resolve_not_configured', { action: gate.action, retrieve: true, gate_ms: gateMs });
+        failOpen('coach_pipeline_not_configured', {
+          turnId, contextVersion: version,
+          action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+          memoryEvidenceCount: 0, eraEvidenceCount: 0, gate_ms: gateMs,
+        });
         return;
       }
-      if (baseGate.scenario !== 'story_continue' || !storyId || !sessionId || !query) {
-        failOpen('retrieval_scope_unavailable', { action: gate.action, retrieve: true, gate_ms: gateMs });
+      if (baseGate.scenario !== 'story_continue' || !storyId || !sessionId
+        || (gate.retrieve_memory && !gate.memory_query)) {
+        failOpen('retrieval_scope_unavailable', {
+          turnId, contextVersion: version,
+          action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+          memoryEvidenceCount: 0, eraEvidenceCount: 0, gate_ms: gateMs,
+        });
         return;
       }
 
-      let activeStage: 'retrieval' | 'resolve' = 'retrieval';
+      let activeStage: 'retrieval' | 'era_retrieval' | 'resolve' = gate.retrieve_memory ? 'retrieval' : 'era_retrieval';
       const pipelinePromise = dependencies.realtimeCoachPipeline.retrieveAndResolve({
         scenario: baseGate.scenario,
         currentUserAnswer: text,
@@ -2463,7 +2495,7 @@ function createRealtimeHandler(
           storyId,
           turnId,
           contextVersion: version,
-          query,
+          query: gate.memory_query ?? '',
           traceContext: { traceId: sessionId, sessionId, storyId, parentSpanId: `coach:${turnId}` },
         },
         signal: controller.signal,
@@ -2477,17 +2509,25 @@ function createRealtimeHandler(
         onProgress: (progress) => {
           if (!isCurrent()) return;
           activeStage = progress.stage;
-          if (progress.status === 'failed') return;
-          const suffix = progress.status;
-          const durationField = progress.stage === 'retrieval' ? 'retrieval_ms' : 'resolve_ms';
-          recordTrace(`coach.${progress.stage}.${suffix}`, {
+          if (progress.stage === 'resolve' && progress.status === 'failed') return;
+          const durationField = progress.stage === 'retrieval' ? 'retrieval_ms'
+            : progress.stage === 'resolve' ? 'resolve_ms' : 'latencyMs';
+          recordTrace(`coach.${progress.stage}.${progress.status}`, {
             ...traceFields,
+            turnId: progress.turnId ?? turnId,
+            contextVersion: progress.contextVersion ?? version,
             action: gate.action,
-            retrieve: true,
+            retrieve_memory: gate.retrieve_memory,
+            retrieve_era: gate.retrieve_era,
             gate_ms: gateMs,
             ...(progress.latencyMs === undefined ? {} : { [durationField]: Number(progress.latencyMs.toFixed(2)) }),
+            ...(progress.queryChars === undefined ? {} : { queryChars: progress.queryChars }),
+            ...(progress.startYear === undefined ? {} : { startYear: progress.startYear }),
+            ...(progress.endYear === undefined ? {} : { endYear: progress.endYear }),
             ...(progress.candidateCount === undefined ? {} : { candidateCount: progress.candidateCount }),
             ...(progress.evidenceCount === undefined ? {} : { evidenceCount: progress.evidenceCount }),
+            ...(progress.memoryEvidenceCount === undefined ? {} : { memoryEvidenceCount: progress.memoryEvidenceCount }),
+            ...(progress.eraEvidenceCount === undefined ? {} : { eraEvidenceCount: progress.eraEvidenceCount }),
             ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
           });
         },
@@ -2498,23 +2538,35 @@ function createRealtimeHandler(
       if (pipelineOutcome.status === 'timeout') {
         controller.abort('coach-total-timeout');
         recordTrace(`coach.${activeStage}.timeout`, {
-          ...traceFields, action: gate.action, retrieve: true,
+          ...traceFields, turnId, contextVersion: version,
+          action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+          memoryEvidenceCount: 0, eraEvidenceCount: 0,
           gate_ms: gateMs, total_ms: totalMs,
         });
         if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
-          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, action: gate.action, retrieve: true, gate_ms: gateMs, total_ms: totalMs } });
+          sendMiniResponse({ turnId, version, traceFields: {
+            ...traceFields, turnId, contextVersion: version,
+            action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+            memoryEvidenceCount: 0, eraEvidenceCount: 0, gate_ms: gateMs, total_ms: totalMs,
+          } });
         }
         return;
       }
       if (pipelineOutcome.status === 'failed') {
         controller.abort('coach-pipeline-failed');
         recordTrace(`coach.${activeStage}.failed`, {
-          ...traceFields, action: gate.action, retrieve: true,
+          ...traceFields, turnId, contextVersion: version,
+          action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+          memoryEvidenceCount: 0, eraEvidenceCount: 0,
           gate_ms: gateMs, total_ms: totalMs,
           errorCode: coachErrorCode(pipelineOutcome.error),
         });
         if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
-          sendMiniResponse({ turnId, version, traceFields: { ...traceFields, action: gate.action, retrieve: true, gate_ms: gateMs, total_ms: totalMs } });
+          sendMiniResponse({ turnId, version, traceFields: {
+            ...traceFields, turnId, contextVersion: version,
+            action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+            memoryEvidenceCount: 0, eraEvidenceCount: 0, gate_ms: gateMs, total_ms: totalMs,
+          } });
         }
         return;
       }
@@ -2533,10 +2585,16 @@ function createRealtimeHandler(
         packet,
         traceFields: {
           ...traceFields,
+          turnId,
+          contextVersion: version,
           action: gate.action,
-          retrieve: true,
+          retrieve_memory: gate.retrieve_memory,
+          retrieve_era: gate.retrieve_era,
+          memoryEvidenceCount: result.memoryEvidenceCount,
+          eraEvidenceCount: result.eraEvidenceCount,
           gate_ms: gateMs,
           retrieval_ms: Number(result.retrievalMs.toFixed(2)),
+          era_retrieval_ms: Number(result.eraRetrievalMs.toFixed(2)),
           resolve_ms: Number(result.resolveMs.toFixed(2)),
           total_ms: Number((performance.now() - startedAt).toFixed(2)),
         },
@@ -2661,13 +2719,21 @@ function createRealtimeHandler(
     turnId: string,
     version: number,
     deadlineAt: number,
-  ): Promise<{ status: 'completed' | 'timeout' | 'failed'; packet?: string; latencyMs: number }> => {
+  ): Promise<{
+    status: 'completed' | 'timeout' | 'failed';
+    packet?: string;
+    latencyMs: number;
+    memoryEvidenceCount?: number;
+    eraEvidenceCount?: number;
+  }> => {
     const startedAt = performance.now();
     const traceFields: RealtimeTraceFields = {
       scenario: 'story_continue',
       voiceProfile: 'stepaudio2_mini',
       triggerMode: 'voice_tool',
       coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
+      turnId,
+      contextVersion: version,
     };
     if (!dependencies.realtimeCoachPipeline || sessionContext?.interview_type !== 'story'
       || sessionContext.task_context?.mode !== 'continue' || !interviewSession) {
@@ -2679,10 +2745,12 @@ function createRealtimeHandler(
     if (!storyId || !boundedQuery) return { status: 'failed', latencyMs: performance.now() - startedAt };
     const controller = new AbortController();
     const gate: CoachGateResult = {
-      action: 'guide', retrieve: true, query: boundedQuery, reason: 'history_reference',
+      action: 'guide', retrieve_memory: true, memory_query: boundedQuery,
+      retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+      reason: 'history_reference',
       avoid: null, direction: '使用相关历史，避免重复提问后继续当前故事。',
     };
-    let activeStage: 'retrieval' | 'resolve' = 'retrieval';
+    let activeStage: 'retrieval' | 'era_retrieval' | 'resolve' = 'retrieval';
     const promise = dependencies.realtimeCoachPipeline.retrieveAndResolve({
       scenario: 'story_continue',
       currentUserAnswer: latestUserAnswer,
@@ -2706,15 +2774,22 @@ function createRealtimeHandler(
       onResolveOutput: (output) => traceWriter?.recordContent('coach.resolve.output', { turnId, output }),
       onProgress: (progress) => {
         activeStage = progress.stage;
-        if (progress.status === 'failed') return;
-        const durationField = progress.stage === 'retrieval' ? 'retrieval_ms' : 'resolve_ms';
+        if (progress.stage === 'resolve' && progress.status === 'failed') return;
+        const durationField = progress.stage === 'retrieval' ? 'retrieval_ms'
+          : progress.stage === 'resolve' ? 'resolve_ms' : 'latencyMs';
         recordTrace(`coach.${progress.stage}.${progress.status}`, {
           ...traceFields,
           action: gate.action,
-          retrieve: true,
+          retrieve_memory: gate.retrieve_memory,
+          retrieve_era: gate.retrieve_era,
           ...(progress.latencyMs === undefined ? {} : { [durationField]: Number(progress.latencyMs.toFixed(2)) }),
+          ...(progress.queryChars === undefined ? {} : { queryChars: progress.queryChars }),
+          ...(progress.startYear === undefined ? {} : { startYear: progress.startYear }),
+          ...(progress.endYear === undefined ? {} : { endYear: progress.endYear }),
           ...(progress.candidateCount === undefined ? {} : { candidateCount: progress.candidateCount }),
           ...(progress.evidenceCount === undefined ? {} : { evidenceCount: progress.evidenceCount }),
+          ...(progress.memoryEvidenceCount === undefined ? {} : { memoryEvidenceCount: progress.memoryEvidenceCount }),
+          ...(progress.eraEvidenceCount === undefined ? {} : { eraEvidenceCount: progress.eraEvidenceCount }),
           ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
         });
       },
@@ -2723,13 +2798,18 @@ function createRealtimeHandler(
     const latencyMs = Number((performance.now() - startedAt).toFixed(2));
     if (outcome.status === 'timeout') {
       controller.abort('coach-total-timeout');
-      recordTrace(`coach.${activeStage}.timeout`, { ...traceFields, action: gate.action, retrieve: true, total_ms: latencyMs });
+      recordTrace(`coach.${activeStage}.timeout`, {
+        ...traceFields, action: gate.action,
+        retrieve_memory: true, retrieve_era: false, memoryEvidenceCount: 0, eraEvidenceCount: 0,
+        total_ms: latencyMs,
+      });
       return { status: 'timeout', latencyMs };
     }
     if (outcome.status === 'failed') {
       controller.abort('coach-pipeline-failed');
       recordTrace(`coach.${activeStage}.failed`, {
-        ...traceFields, action: gate.action, retrieve: true,
+        ...traceFields, action: gate.action,
+        retrieve_memory: true, retrieve_era: false, memoryEvidenceCount: 0, eraEvidenceCount: 0,
         total_ms: latencyMs, errorCode: coachErrorCode(outcome.error),
       });
       return { status: 'failed', latencyMs };
@@ -2741,6 +2821,8 @@ function createRealtimeHandler(
       status: 'completed',
       packet: renderMiniCoachPacket({ scenario: 'story_continue', currentUserAnswer: latestUserAnswer, gate, packet: outcome.value.packet }),
       latencyMs,
+      memoryEvidenceCount: outcome.value.memoryEvidenceCount,
+      eraEvidenceCount: outcome.value.eraEvidenceCount,
     };
   };
 
@@ -2940,7 +3022,10 @@ function createRealtimeHandler(
           triggerMode: 'voice_tool',
           coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
           action: 'guide',
-          retrieve: true,
+          retrieve_memory: true,
+          retrieve_era: false,
+          memoryEvidenceCount: miniCoachResult.memoryEvidenceCount ?? 0,
+          eraEvidenceCount: miniCoachResult.eraEvidenceCount ?? 0,
           turnId,
           packetChars: Array.from(miniCoachResult.packet).length,
           total_ms: Number(miniCoachResult.latencyMs.toFixed(2)),
