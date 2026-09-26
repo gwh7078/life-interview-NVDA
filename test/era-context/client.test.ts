@@ -71,6 +71,26 @@ test('era context search prefers Retriever rerank score over distance', async ()
   assert.equal(result[1]?.score, 0.7);
 });
 
+test('era context search removes duplicate records before filling Top-K', async () => {
+  const secondRecord = { ...record, title: '宽带逐渐进入家庭生活' };
+  const client = new EraContextClient({
+    endpoint: 'http://retriever.test',
+    collection: 'life-interview-era-context-v1',
+    fetch: async () => jsonResponse({ hits: [
+      { text: JSON.stringify(record), metadata: record, _rerank_score: 0.95 },
+      { text: JSON.stringify(record), metadata: record, _rerank_score: 0.90 },
+      { text: JSON.stringify(secondRecord), metadata: secondRecord, _rerank_score: 0.85 },
+    ] }),
+  });
+
+  const result = await client.search({ query: '早期互联网生活', start_year: 1998, end_year: 2002, top_k: 2 });
+
+  assert.deepEqual(result.map(({ title, score }) => ({ title, score })), [
+    { title: record.title, score: 0.95 },
+    { title: secondRecord.title, score: 0.85 },
+  ]);
+});
+
 test('era context index uploads the five-field record with protected metadata', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const client = new EraContextClient({

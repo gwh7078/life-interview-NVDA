@@ -192,11 +192,18 @@ export class EraContextClient implements EraContextAdapter {
         },
       }),
     }, normalized.signal);
+    const seen = new Set<string>();
     return rows(payload)
       .map(recordFromRow)
       .filter((item): item is { record: EraContextRecord; score: number } => item !== null)
       .filter(({ record }) => overlapsEraYears(record, normalized.start_year, normalized.end_year))
       .sort((left, right) => right.score - left.score)
+      .filter(({ record }) => {
+        const id = recordId(record);
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      })
       .slice(0, normalized.top_k)
       .map(({ record, score }) => ({ ...record, score }));
   }

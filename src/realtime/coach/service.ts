@@ -170,7 +170,42 @@ function nullableYear(value: unknown): number | null | undefined {
   return value;
 }
 
-function parseGate(value: unknown, scenario: CoachScenario): CoachGateResult {
+function yearsInText(value: string): number[] {
+  return Array.from(value.matchAll(/(?<!\d)(19[7-9]\d|20(?:[01]\d|20))(?!\d)/gu), (match) => Number(match[1]));
+}
+
+function dateYear(value: unknown): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  const match = /^(\d{4})(?:$|[-/])/u.exec(value.trim());
+  const year = match ? Number(match[1]) : NaN;
+  return Number.isInteger(year) && year >= ERA_CONTEXT_MIN_YEAR && year <= ERA_CONTEXT_MAX_YEAR
+    ? year
+    : undefined;
+}
+
+function eraWindowHasReliableYearScope(input: CoachGateInput, startYear: number, endYear: number): boolean {
+  const currentStory = row(input.scenarioState.current_story);
+  const lifeStage = row(input.scenarioState.life_stage);
+  const personalTexts = [
+    input.currentUserAnswer,
+    ...input.boundedRecentContext.filter((message) => message.role === 'user').map((message) => message.text),
+    ...(typeof currentStory?.title === 'string' ? [currentStory.title] : []),
+    ...(typeof currentStory?.agent_memory === 'string' ? [currentStory.agent_memory] : []),
+    ...(typeof lifeStage?.title === 'string' ? [lifeStage.title] : []),
+  ];
+  if (personalTexts.some((text) => yearsInText(text).some((year) => year >= startYear && year <= endYear))) {
+    return true;
+  }
+
+  const stageStart = dateYear(lifeStage?.start_date);
+  const stageEnd = dateYear(lifeStage?.end_date);
+  return stageStart !== undefined && stageEnd !== undefined
+    && stageEnd >= stageStart && stageEnd - stageStart <= 15
+    && startYear === stageStart && endYear === stageEnd;
+}
+
+function parseGate(value: unknown, input: CoachGateInput): CoachGateResult {
+  const scenario = input.scenario;
   const object = row(value);
   const keys = [
     'action', 'retrieve_memory', 'memory_query', 'retrieve_era', 'era_query',
@@ -225,8 +260,10 @@ function parseGate(value: unknown, scenario: CoachScenario): CoachGateResult {
   }
   const retrieveMemory = action !== 'none' && scenario === 'story_continue' && object.retrieve_memory;
   const eraRangeIsNarrow = eraStartYear !== null && eraEndYear !== null && eraEndYear - eraStartYear <= 15;
+  const eraRangeHasReliableYear = eraStartYear !== null && eraEndYear !== null
+    && eraWindowHasReliableYearScope(input, eraStartYear, eraEndYear);
   const retrieveEra = action !== 'none' && scenario === 'story_continue'
-    && object.retrieve_era && eraRangeIsNarrow;
+    && object.retrieve_era && eraRangeIsNarrow && eraRangeHasReliableYear;
   return {
     action,
     retrieve_memory: retrieveMemory,
@@ -267,7 +304,16 @@ function parsePacket(value: unknown, input: CoachResolveInput): import('./types.
     || (backgroundHint !== null && (input.eraEvidence.length === 0 || /(?:你|我|用户|本人|当事人)/u.test(backgroundHint)))) {
     throw Object.assign(new Error('Coach Resolve selected unsupported or oversized evidence.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
-  return { selectedEvidenceIds, known, backgroundHint, conflict, avoid, direction };
+  const knownFromPersonalSources = input.eraEvidence.length === 0
+    ? known
+    : [input.currentUserAnswer, ...selectedEvidenceIds.map((id) => input.memoryEvidence.find((item) => item.id === id)?.answer ?? '')]
+      .filter((text) => text.trim())
+      .slice(0, 2)
+      .map((text) => clip(text, 120));
+  const personalConflict = input.eraEvidence.length > 0 && conflict !== null
+    ? '当前说法与此前记录可能有出入，需要核对。'
+    : conflict;
+  return { selectedEvidenceIds, known: knownFromPersonalSources, backgroundHint, conflict: personalConflict, avoid, direction };
 }
 
 export function buildCoachGatePrompt(input: CoachGateInput): { system: string; user: string } {
@@ -295,7 +341,7 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
       ...buildCoachGatePrompt(input),
       maxTokens: 220,
       signal: options.signal,
-    }).then((output) => parseGate(output, input.scenario));
+    }).then((output) => parseGate(output, input));
   }
 
   resolve(input: CoachResolveInput, options: { signal?: AbortSignal } = {}): Promise<import('./types.js').CoachPacket> {

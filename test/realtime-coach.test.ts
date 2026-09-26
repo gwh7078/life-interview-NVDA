@@ -232,9 +232,9 @@ test('Coach Pass B bounds selected facts, conflict, avoidance and direction to v
 
   assert.deepEqual(packet, {
     selectedEvidenceIds: ['e1'],
-    known: ['此前说第一次去北京在 2013 年春节后。'],
+    known: ['我记得是 2012 年。', '2013 年春节以后第一次到北京。'],
     backgroundHint: '那几年不少人开始迁入城市工作。',
-    conflict: '当前说法与此前年份不同。',
+    conflict: '当前说法与此前记录可能有出入，需要核对。',
     avoid: '不要再问第一次去北京的时间。',
     direction: '确认这次回忆对应的是哪一次出行。',
   });
@@ -332,4 +332,143 @@ test('Coach Gate separates personal and era retrieval and narrows known-year sea
   assert.match(messages[0]?.content ?? '', /小时候很喜欢游泳/u);
   assert.match(messages[0]?.content ?? '', /1998 年厂里开始裁人/u);
   assert.match(messages[0]?.content ?? '', /不要默认搜整个 1970–2020/u);
+});
+
+test('Coach Gate fails closed when Era retrieval has no reliable year in Story, Life Stage or user turns', async () => {
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([{
+    action: 'guide', retrieve_memory: false, memory_query: null,
+    retrieve_era: true, era_query: '童年生活变化', era_start_year: 1990, era_end_year: 1995,
+    reason: 'missing_key_detail', avoid: null, direction: '那段时间家里生活有什么变化？',
+  }], []));
+  const input = gateInput('story_continue');
+  input.currentUserAnswer = '小时候经常跟爸爸去钓鱼。';
+  input.boundedRecentContext = [{ role: 'user', text: input.currentUserAnswer }];
+  (input.scenarioState.current_story as Record<string, unknown>).agent_memory = '此前只记录了钓鱼经历，没有可靠年份。';
+
+  const result = await coach.evaluate(input);
+
+  assert.equal(result.retrieve_era, false);
+  assert.equal(result.era_query, null);
+  assert.equal(result.era_start_year, null);
+  assert.equal(result.era_end_year, null);
+});
+
+test('Coach Gate rejects an Era year window unrelated to explicit Story Continue years', async () => {
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([{
+    action: 'guide', retrieve_memory: false, memory_query: null,
+    retrieve_era: true, era_query: '单位调整与就业变化', era_start_year: 1978, era_end_year: 1985,
+    reason: 'missing_key_detail', avoid: null, direction: '第一次感到工作可能有变化时，发生了什么？',
+  }], []));
+  const input = gateInput('story_continue');
+  input.currentUserAnswer = '1998 年厂里开始裁人。';
+
+  const result = await coach.evaluate(input);
+
+  assert.equal(result.retrieve_era, false);
+  assert.equal(result.era_query, null);
+  assert.equal(result.era_start_year, null);
+  assert.equal(result.era_end_year, null);
+});
+
+test('Coach Gate permits an Era window grounded in a narrow Life Stage date range', async () => {
+  const expected: CoachGateResult = {
+    action: 'guide', retrieve_memory: false, memory_query: null,
+    retrieve_era: true, era_query: '大学时期的校园生活变化', era_start_year: 1983, era_end_year: 1987,
+    reason: 'missing_key_detail', avoid: null, direction: '那几年校园里的生活和现在有什么不同？',
+  };
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([expected], []));
+  const input = gateInput('story_continue');
+  input.currentUserAnswer = '大学那几年，宿舍里常常一起听歌。';
+  input.boundedRecentContext = [{ role: 'user', text: input.currentUserAnswer }];
+  const lifeStage = input.scenarioState.life_stage as Record<string, unknown>;
+  lifeStage.title = '大学时期';
+  lifeStage.start_date = '1983-09-01';
+  lifeStage.end_date = '1987-07-01';
+  (input.scenarioState.current_story as Record<string, unknown>).agent_memory = '此前只记录了宿舍生活，没有具体年份。';
+
+  assert.deepEqual(await coach.evaluate(input), expected);
+});
+
+test('Coach Gate rejects a guessed subrange from a broad Life Stage date range', async () => {
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([{
+    action: 'guide', retrieve_memory: false, memory_query: null,
+    retrieve_era: true, era_query: '青年时期的就业变化', era_start_year: 1990, era_end_year: 1995,
+    reason: 'missing_key_detail', avoid: null, direction: '第一次工作时的环境对你有什么影响？',
+  }], []));
+  const input = gateInput('story_continue');
+  input.currentUserAnswer = '青年时期我常常和同学一起出门。';
+  input.boundedRecentContext = [{ role: 'user', text: input.currentUserAnswer }];
+  const lifeStage = input.scenarioState.life_stage as Record<string, unknown>;
+  lifeStage.start_date = '1970-01-01';
+  lifeStage.end_date = '2000-12-31';
+  (input.scenarioState.current_story as Record<string, unknown>).agent_memory = '此前没有记录这段经历的具体年份。';
+
+  const result = await coach.evaluate(input);
+
+  assert.equal(result.retrieve_era, false);
+  assert.equal(result.era_query, null);
+  assert.equal(result.era_start_year, null);
+  assert.equal(result.era_end_year, null);
+});
+
+test('Coach Resolve builds known only from personal sources when Era evidence is present', async () => {
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([{
+    selected_evidence_ids: ['memory-1'],
+    known: ['那几年不少单位都在调整。'],
+    background_hint: '那几年不少单位也在调整。',
+    conflict: null,
+    avoid: null,
+    direction: '第一次感到工作可能有变化时，发生了什么？',
+  }], []));
+
+  const packet = await coach.resolve({
+    scenario: 'story_continue',
+    currentUserAnswer: '后来我进厂做学徒。',
+    gate: gateResults.story_continue,
+    memoryEvidence: [{ id: 'memory-1', question: '后来做什么工作？', answer: '那时我已经进厂做学徒。' }],
+    eraEvidence: [{
+      id: 'era-1', startYear: 1996, endYear: 2000,
+      title: '单位调整与就业变化', summary: '那几年不少单位都在调整。',
+    }],
+  });
+
+  assert.deepEqual(packet.known, ['后来我进厂做学徒。', '那时我已经进厂做学徒。']);
+  assert.doesNotMatch(packet.known.join('；'), /不少单位都在调整/u);
+});
+
+test('Coach Resolve does not pass Era claims through conflict when both evidence sources are present', async () => {
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([{
+    selected_evidence_ids: ['memory-1'],
+    known: ['后来我进厂做学徒。'],
+    background_hint: '那几年不少单位也在调整。',
+    conflict: '你当时就是因为国企改革下岗。',
+    avoid: null,
+    direction: '第一次感到单位可能留不住你时，发生了什么？',
+  }], []));
+
+  const packet = await coach.resolve({
+    scenario: 'story_continue',
+    currentUserAnswer: '后来我进厂做学徒。',
+    gate: gateResults.story_continue,
+    memoryEvidence: [{ id: 'memory-1', question: '后来做什么工作？', answer: '那时我已经进厂做学徒。' }],
+    eraEvidence: [{
+      id: 'era-1', startYear: 1996, endYear: 2000,
+      title: '国企改革与单位调整', summary: '一些单位在调整组织与用工方式。',
+    }],
+  });
+
+  assert.equal(packet.conflict, '当前说法与此前记录可能有出入，需要核对。');
+  assert.doesNotMatch(packet.conflict ?? '', /国企改革|下岗/u);
 });
