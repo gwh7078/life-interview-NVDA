@@ -35,7 +35,7 @@ export function createRealtimeInterviewSession(
   databasePath: string | undefined,
   userId: string,
   context: StoryInterviewContext,
-  provider: RealtimeInterviewProvider = 'stepaudio3_quality',
+  provider: RealtimeInterviewProvider = 'stepaudio2_mini',
 ): RealtimeInterviewSession {
   const sessionId = randomUUID();
   const startedAt = nowUtcIso();
@@ -78,7 +78,7 @@ export function createExternalContributorInterviewSession(
   databasePath: string | undefined,
   userId: string,
   context: ExternalContributorInterviewContext,
-  provider: RealtimeInterviewProvider = 'stepaudio3_quality',
+  provider: RealtimeInterviewProvider = 'stepaudio2_mini',
 ): RealtimeInterviewSession {
   const sessionId = randomUUID();
   const startedAt = nowUtcIso();

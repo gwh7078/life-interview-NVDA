@@ -43,7 +43,7 @@ test('Existing Story Context opens provider-tagged Sessions and persists final T
   const stepfunSession = core.start(seedIds.user, context, 'stepfun');
   assert.equal(stepfunSession.provider, 'stepfun');
   const defaultSession = core.start(seedIds.user, context);
-  assert.equal(defaultSession.provider, 'stepaudio3_quality');
+  assert.equal(defaultSession.provider, 'stepaudio2_mini');
   const transcripts = new TranscriptRepository(databasePath);
   const stepfunMessage = transcripts.appendForSession(seedIds.user, stepfunSession.sessionId, {
     role: 'user',

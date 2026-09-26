@@ -48,6 +48,7 @@ const END_ONLY = /^(没有(什么)?(要|想)?补(充)?的了|没(什么)?可补�
 export function isExplicitEndIntent(text: string, previousAssistantText = ''): boolean {
   const value = text.trim();
   if (!value) return false;
+  if (/^(?:请|现在|我们)?\s*结束(?:这次)?(?:对话|聊天)[吧了啊呀。！!，,\s]*$/u.test(value)) return true;
   if (/(结束(这次)?(采访|访谈|通话)|今天先到这|先聊到这|先到这里|就到这里|不聊了|下次再聊|挂断|再见)/.test(value)) return true;
   const priorOfferedClosing = /(先到这里|今天先到|到这里|再补|还有.*补充|结束|收尾)/.test(previousAssistantText);
   return priorOfferedClosing && END_ONLY.test(value);

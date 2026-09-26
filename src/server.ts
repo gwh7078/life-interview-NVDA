@@ -26,7 +26,12 @@ import {
   resolveRealtimeProviderConfig,
   type RealtimeMemoryTriggerMode,
 } from './realtime/runtime-config.js';
-import { BailianRealtimeCoach, buildRealtimeCoachGateInput } from './realtime/coach/service.js';
+import {
+  BailianRealtimeCoach,
+  buildCoachGatePrompt,
+  buildCoachResolvePrompt,
+  buildRealtimeCoachGateInput,
+} from './realtime/coach/service.js';
 import { RealtimeCoachPipeline } from './realtime/coach/pipeline.js';
 import { renderMiniCoachPacket } from './realtime/coach/mini-coach-renderer.js';
 import type {
@@ -403,7 +408,7 @@ export function readRuntimeConfig(): RuntimeConfig {
       || interviewTask.provider === 'modelbest'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
-    defaultRealtimeProvider: isRealtimeProviderId(interviewTask.provider) ? interviewTask.provider : 'stepaudio3_quality',
+    defaultRealtimeProvider: isRealtimeProviderId(interviewTask.provider) ? interviewTask.provider : 'stepaudio2_mini',
     qwenModel: interviewTask.provider === 'qwen'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
@@ -477,7 +482,7 @@ function sendJson(response: ServerResponse, status: number, value: unknown, head
 }
 
 function realtimeMemoryHealthSummary(config: RuntimeConfig): Record<string, string> {
-  const provider = config.defaultRealtimeProvider ?? 'stepaudio3_quality';
+  const provider = config.defaultRealtimeProvider ?? 'stepaudio2_mini';
   const contextInjectionSupported = provider === 'stepaudio3_quality'
     ? STEPFUN_REALTIME_PROFILES.stepaudio3_quality.capabilities.supportsContextInjection
     : provider === 'stepaudio2_mini' || provider === 'stepfun'
@@ -1447,7 +1452,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
         try { databaseConnection.sqlite.prepare('SELECT 1').get(); } finally { databaseConnection.close(); }
         sendJson(response, 200, {
           ok: true,
-          defaultProvider: config.defaultRealtimeProvider ?? 'stepaudio3_quality',
+          defaultProvider: config.defaultRealtimeProvider ?? 'stepaudio2_mini',
           realtimeMemory: realtimeMemoryHealthSummary(config),
           providers: realtimeProviderHealthSummary(config),
           closeout: {
@@ -1467,7 +1472,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
       } catch (error) {
         sendJson(response, 503, {
           ok: false,
-          defaultProvider: config.defaultRealtimeProvider ?? 'stepaudio3_quality',
+          defaultProvider: config.defaultRealtimeProvider ?? 'stepaudio2_mini',
           realtimeMemory: realtimeMemoryHealthSummary(config),
           providers: realtimeProviderHealthSummary(config, false),
           closeout: {
@@ -2119,6 +2124,7 @@ function createRealtimeHandler(
   let savedTranscriptCount = 0;
   let lastAssistantText = '';
   let userConfirmedEnding = false;
+  let userFarewellResponseId: string | undefined;
   let assistantEndedInterview = false;
   let hardLimitReached = false;
   let acceptingAudio = true;
@@ -2250,6 +2256,7 @@ function createRealtimeHandler(
       : `系统提示：采访即将进入最后两分钟。请优先补问一个最有价值的缺失细节。若随后判断本轮已经没有明显值得继续追问的关键点，请只说固定结束语：“${STORY_INTERVIEW_COMPLETION_UTTERANCE}”；否则继续自然采访，不要声称内容已经完整。`;
     const requests = selectedAdapter?.requestAssistantTurnMessages(instruction) ?? [];
     if (requests.length === 0 || !sendProviderMessages(requests)) return false;
+    traceWriter?.recordContent(final ? 'session.farewell_instructions' : 'session.wrapup_instructions', instruction);
     recordTrace(final ? 'session.timeout_farewell_requested' : 'session.wrapup_prompt_requested');
     return true;
   };
@@ -2301,9 +2308,21 @@ function createRealtimeHandler(
     });
     const messages = selectedAdapter.requestAssistantTurnMessages(instructions);
     const sent = messages.length > 0 && sendProviderMessages(messages);
+    recordTrace('coach.response_requested', {
+      ...input.traceFields,
+      turnId: input.turnId,
+      sent,
+      chars: Array.from(instructions).length,
+      packetChars: input.packet ? Array.from(input.packet).length : 0,
+    });
+    if (sent) {
+      traceWriter?.recordContent('coach.response_instructions', instructions);
+      if (input.packet) traceWriter?.recordContent('coach.mini_packet', input.packet);
+    }
     if (sent && input.packet) {
       recordTrace('coach.applied', {
         ...input.traceFields,
+        turnId: input.turnId,
         packetChars: Array.from(input.packet).length,
       });
     } else if (!sent) {
@@ -2349,6 +2368,10 @@ function createRealtimeHandler(
 
     const gateStartedAt = performance.now();
     recordTrace('coach.gate.started', traceFields);
+    traceWriter?.recordContent('coach.gate.input', { turnId, input: baseGate });
+    if (process.env.DIAGNOSTICS_CAPTURE_CONTENT === '1') {
+      traceWriter?.recordContent('coach.gate.prompt', { turnId, ...buildCoachGatePrompt(baseGate) });
+    }
     const gateRemaining = Math.max(0, Math.min(
       config.realtimeCoachGateTimeoutMs ?? 1_200,
       totalDeadlineAt - performance.now(),
@@ -2380,8 +2403,11 @@ function createRealtimeHandler(
       }
 
       const gate = gateOutcome.value;
+      traceWriter?.recordContent('coach.gate.output', { turnId, output: gate });
       recordTrace('coach.gate.completed', {
         ...traceFields, action: gate.action, retrieve: gate.retrieve,
+        reason: gate.reason,
+        queryChars: gate.query ? Array.from(gate.query).length : 0,
         gate_ms: gateMs, total_ms: gateMs,
       });
       if (gate.action === 'none') {
@@ -2441,6 +2467,13 @@ function createRealtimeHandler(
           traceContext: { traceId: sessionId, sessionId, storyId, parentSpanId: `coach:${turnId}` },
         },
         signal: controller.signal,
+        onResolveInput: (input) => {
+          traceWriter?.recordContent('coach.resolve.input', { turnId, input });
+          if (process.env.DIAGNOSTICS_CAPTURE_CONTENT === '1') {
+            traceWriter?.recordContent('coach.resolve.prompt', { turnId, ...buildCoachResolvePrompt(input) });
+          }
+        },
+        onResolveOutput: (output) => traceWriter?.recordContent('coach.resolve.output', { turnId, output }),
         onProgress: (progress) => {
           if (!isCurrent()) return;
           activeStage = progress.stage;
@@ -2664,6 +2697,13 @@ function createRealtimeHandler(
         traceContext: { traceId: interviewSession.sessionId, sessionId: interviewSession.sessionId, storyId, parentSpanId: `tool-coach:${turnId}` },
       },
       signal: controller.signal,
+      onResolveInput: (input) => {
+        traceWriter?.recordContent('coach.resolve.input', { turnId, input });
+        if (process.env.DIAGNOSTICS_CAPTURE_CONTENT === '1') {
+          traceWriter?.recordContent('coach.resolve.prompt', { turnId, ...buildCoachResolvePrompt(input) });
+        }
+      },
+      onResolveOutput: (output) => traceWriter?.recordContent('coach.resolve.output', { turnId, output }),
       onProgress: (progress) => {
         activeStage = progress.stage;
         if (progress.status === 'failed') return;
@@ -2890,6 +2930,7 @@ function createRealtimeHandler(
       const resumeWrite = writeToolResultMessages(event.callId, resumeMessages);
       const resumeWritten = resumeWrite.resumeWritten;
       if (miniCoachResult?.status === 'completed' && miniCoachResult.packet && outputWrite.outputWritten) {
+        traceWriter?.recordContent('coach.mini_packet', miniCoachResult.packet);
         recordTrace('coach.applied', {
           scenario: 'story_continue',
           voiceProfile: 'stepaudio2_mini',
@@ -2897,6 +2938,7 @@ function createRealtimeHandler(
           coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
           action: 'guide',
           retrieve: true,
+          turnId,
           packetChars: Array.from(miniCoachResult.packet).length,
           total_ms: Number(miniCoachResult.latencyMs.toFixed(2)),
         });
@@ -3218,7 +3260,7 @@ function createRealtimeHandler(
           const persistedMessage = transcriptRepository.appendForSession(authContext.userId, interviewSession.sessionId, {
             role: message.role,
             text: message.text,
-            provider: selectedProvider ?? 'stepaudio3_quality',
+            provider: selectedProvider ?? 'stepaudio2_mini',
             providerMessageId: message.providerMessageId,
           });
           savedTranscriptCount += 1;
@@ -3444,7 +3486,9 @@ function createRealtimeHandler(
         ...userFinalTrace,
       });
       if (text.trim()) {
-        if (isExplicitEndIntent(text, lastAssistantText)) {
+        const explicitEndIntent = isExplicitEndIntent(text, lastAssistantText);
+        recordTrace('session.end_intent_checked', { turnId: providerMessageId, matched: explicitEndIntent });
+        if (explicitEndIntent) {
           userConfirmedEnding = true;
           recordTrace('session.user_confirmed_ending', { chars: text.length });
         }
@@ -3462,11 +3506,25 @@ function createRealtimeHandler(
           chars: text.length,
           deltaCount: userTranscriptDeltaCount,
         });
-        if (!isExplicitEndIntent(text, lastAssistantText)) {
+        if (explicitEndIntent && supervisorAutoSelected()) {
+          const farewellInstruction = `用户明确要求结束采访。只说“${STORY_INTERVIEW_COMPLETION_UTTERANCE}”，不要再提问。`;
+          const farewell = selectedAdapter?.requestAssistantTurnMessages(farewellInstruction) ?? [];
+          const sent = farewell.length > 0 && sendProviderMessages(farewell);
+          if (sent) traceWriter?.recordContent('session.farewell_instructions', farewellInstruction);
+          recordTrace('session.spoken_end_farewell_requested', { sent, turnId: providerMessageId });
+          if (!sent) void finishSession('user_confirmed');
+        } else if (!explicitEndIntent) {
           if (supervisorAutoSelected()) runSupervisorCoach(text, providerMessageId, contextVersion);
           else triggerRealtimeMemory(text, providerMessageId, contextVersion);
           recentCoachContext.push({ role: 'user', text });
           if (recentCoachContext.length > 6) recentCoachContext.splice(0, recentCoachContext.length - 6);
+        }
+        if (explicitEndIntent && !endingPromise) {
+          if (autoEndFallbackTimer) clearTimeout(autoEndFallbackTimer);
+          autoEndFallbackTimer = setTimeout(() => {
+            recordTrace('session.spoken_end_timeout', { reason: 'farewell_response_missing' });
+            void finishSession('user_confirmed');
+          }, 30_000);
         }
         if (hardLimitReached) {
           acceptingAudio = false;
@@ -3488,6 +3546,10 @@ function createRealtimeHandler(
       clearOpeningResponseWatchdog();
       clearUserTurnStallWatchdog();
       const responseId = event.responseId;
+      if (userConfirmedEnding && !userFarewellResponseId && activeResponses.size === 0) {
+        userFarewellResponseId = responseId;
+        recordTrace('session.spoken_end_response_started', { responseId });
+      }
       toolCycleTracker.markAssistantResponseStarted(responseId);
       activeResponses.add(responseId);
       if (sessionContext?.interview_type === 'onboarding'
@@ -3608,13 +3670,14 @@ function createRealtimeHandler(
       if (pendingOnboardingCompletionRequest?.responseId === responseId) {
         pendingOnboardingCompletionRequest = undefined;
       }
-      if (userConfirmedEnding) void finishSession('user_confirmed');
+      if (userConfirmedEnding && userFarewellResponseId === responseId) void finishSession('user_confirmed');
       return;
     }
 
     if (event.type === 'response.done') {
       const responseId = event.responseId;
       const status = event.status;
+      const userFarewellResponse = userConfirmedEnding && userFarewellResponseId === responseId;
       const manualInputReady = !manualToolCallResponseIds.delete(responseId);
       manualInputReadyForTurn = manualInputReady;
       toolCycleTracker.markAssistantResponseDone(responseId, status);
@@ -3680,7 +3743,7 @@ function createRealtimeHandler(
           recentCoachContext.push({ role: 'assistant', text });
           if (recentCoachContext.length > 6) recentCoachContext.splice(0, recentCoachContext.length - 6);
           assistantEndedInterview = onboarding ? false : isAssistantFarewell(text);
-          const endAfterPlayback = userConfirmedEnding || assistantEndedInterview || hardLimitReached || modelComplete;
+          const endAfterPlayback = userFarewellResponse || assistantEndedInterview || hardLimitReached || modelComplete;
           if (usedOpeningFallback) {
             recordTrace('provider.assistant_transcription_fallback_used', {
               responseId,
@@ -3709,10 +3772,10 @@ function createRealtimeHandler(
           });
         }
         awaitingAssistant = false;
-        const endAfterPlayback = userConfirmedEnding || assistantEndedInterview || hardLimitReached || modelComplete;
+        const endAfterPlayback = userFarewellResponse || assistantEndedInterview || hardLimitReached || modelComplete;
         const endReason = hardLimitReached
           ? 'timeout'
-          : userConfirmedEnding
+          : userFarewellResponse
             ? 'user_confirmed'
             : modelComplete
               ? 'model_complete'
@@ -3759,6 +3822,10 @@ function createRealtimeHandler(
         }
       } else {
         awaitingAssistant = false;
+        if (userFarewellResponse) {
+          recordTrace('session.spoken_end_response_failed', { responseId, status });
+          void finishSession('user_confirmed');
+        }
         if (onboardingCompletionCloseResponseId === responseId) {
           awaitingOnboardingCompletionClose = false;
           onboardingCompletionCloseResponseId = undefined;
@@ -4200,7 +4267,7 @@ function createRealtimeHandler(
       return;
     }
     const requestedId = requestedProvider === undefined
-      ? config.defaultRealtimeProvider ?? 'stepaudio3_quality'
+      ? config.defaultRealtimeProvider ?? 'stepaudio2_mini'
       : requestedProvider;
     if (!isRealtimeProviderId(requestedId)) {
       phase = 'failed';
@@ -4772,7 +4839,7 @@ function startServer(): void {
       host: config.host,
       port,
       databasePath: resolveDatabasePath(config.databasePath),
-      realtimeProvider: config.defaultRealtimeProvider ?? 'stepaudio3_quality',
+      realtimeProvider: config.defaultRealtimeProvider ?? 'stepaudio2_mini',
       qwenConfigured: Boolean(config.apiKey && config.workspaceId),
       stepfunConfigured: Boolean(config.stepfunApiKey),
       stepfunModel: config.stepfunModel ?? DEFAULT_STEPFUN_MODEL,

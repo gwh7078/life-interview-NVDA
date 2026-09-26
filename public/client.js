@@ -166,7 +166,7 @@ const state = {
   autoEndGeneration: 0,
   maxSessionMs: 20 * 60 * 1000,
   providerConfigured: false,
-  realtimeProvider: 'stepaudio3_quality',
+  realtimeProvider: 'stepaudio2_mini',
   providers: {},
   databaseAvailable: false,
   stories: [],
@@ -191,7 +191,7 @@ const precallLastDisclosure = createTextDisclosure({
 const realtimeProviderLabels = {
   qwen: 'Qwen Realtime',
   stepfun: 'Step-Audio-2-mini Realtime',
-  stepaudio3_quality: 'StepAudio 3 Realtime · 高质量默认',
+  stepaudio3_quality: 'StepAudio 3 Realtime',
   stepaudio2_mini: 'Step-Audio-2-mini Realtime',
   modelbest: 'MiniCPM-o 4.5 Realtime · Experimental',
 };

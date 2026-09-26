@@ -14,6 +14,10 @@ import type { StoryCloseoutContext } from '../src/interview/closeout/context-bui
 
 test('ending intent recognizes direct requests and contextual no-more-detail replies', () => {
   assert.equal(isExplicitEndIntent('今天先到这里吧'), true);
+  assert.equal(isExplicitEndIntent('结束对话。'), true);
+  assert.equal(isExplicitEndIntent('结束聊天'), true);
+  assert.equal(isExplicitEndIntent('不要结束对话'), false);
+  assert.equal(isExplicitEndIntent('我想聊聊如何结束对话'), false);
   assert.equal(isExplicitEndIntent('没有什么要补的了', '你想先到这里，还是再补一个片段？'), true);
   assert.equal(isExplicitEndIntent('没有什么要补的了', '当时还有谁在场？'), false);
   assert.equal(isExplicitEndIntent('我后来再也没有去过那里', '后来呢？'), false);

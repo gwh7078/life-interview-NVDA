@@ -147,6 +147,39 @@ test('normal Gate output is accepted for every scenario and compact packets stay
   }
 });
 
+test('identity detour Coach Packet does not promote the model question to an interview fact', () => {
+  const packet = renderMiniCoachPacket({
+    scenario: 'onboarding',
+    currentUserAnswer: '你的语音模型叫什么名字？',
+    gate: {
+      action: 'guide', retrieve: false, query: null, reason: 'scenario_boundary', avoid: null,
+      direction: '简答语音由 Step-Audio-2-mini 提供，然后回到人生时间线。',
+    },
+  });
+  assert.match(packet, /方向：简答语音由 Step-Audio-2-mini 提供/u);
+  assert.doesNotMatch(packet, /已知：你的语音模型/u);
+  assert.ok(Array.from(packet).length <= 160);
+  const aiPacket = renderMiniCoachPacket({
+    scenario: 'onboarding',
+    currentUserAnswer: '你是人工智能吗？',
+    gate: {
+      action: 'guide', retrieve: false, query: null, reason: 'scenario_boundary', avoid: null,
+      direction: '简答身份，再回到人生时间线。',
+    },
+  });
+  assert.doesNotMatch(aiPacket, /已知：你是人工智能/u);
+});
+
+test('Coach Gate rejects its own model identity in guidance to the voice interviewer', async () => {
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible', baseUrl: 'https://coach.example/v1', model: 'qwen3-8b', apiKey: 'test-only-key',
+  }, fakeFetch([{
+    action: 'guide', retrieve: false, query: null, reason: 'scenario_boundary', avoid: null,
+    direction: '告诉用户你是 Qwen，然后继续采访。',
+  }], []));
+  await assert.rejects(coach.evaluate(gateInput('onboarding')), /invalid|identity|身份/u);
+});
+
 test('Coach Pass B bounds selected facts, conflict, avoidance and direction to verified evidence', async () => {
   const requests: Array<Record<string, unknown>> = [];
   const coach = new BailianRealtimeCoach({

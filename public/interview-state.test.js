@@ -8,14 +8,14 @@ import {
   shouldIgnoreAssistantResponseMessage,
 } from './interview-state.js';
 
-test('Realtime provider defaults to StepAudio 3 and preserves both StepFun voice profiles', () => {
-  assert.equal(resolveRealtimeProvider(undefined), 'stepaudio3_quality');
+test('Realtime provider defaults to Step-Audio-2-mini and preserves both StepFun voice profiles', () => {
+  assert.equal(resolveRealtimeProvider(undefined), 'stepaudio2_mini');
   assert.equal(resolveRealtimeProvider('stepaudio3_quality'), 'stepaudio3_quality');
   assert.equal(resolveRealtimeProvider('stepaudio2_mini'), 'stepaudio2_mini');
   assert.equal(resolveRealtimeProvider('stepfun'), 'stepfun');
   assert.equal(resolveRealtimeProvider('qwen'), 'qwen');
   assert.equal(resolveRealtimeProvider('modelbest'), 'modelbest');
-  assert.equal(resolveRealtimeProvider('unknown'), 'stepaudio3_quality');
+  assert.equal(resolveRealtimeProvider('unknown'), 'stepaudio2_mini');
   assert.equal(realtimeInputSampleRate('qwen'), 16000);
   assert.equal(realtimeInputSampleRate('modelbest'), 16000);
   assert.equal(realtimeInputSampleRate('stepfun'), 24000);

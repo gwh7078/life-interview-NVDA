@@ -1,7 +1,14 @@
-import { appendFile, mkdir, readdir, stat, unlink } from 'node:fs/promises';
+import { chmod, mkdir, open, readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { writeDiagnosticLog } from '../diagnostics/logger.js';
+import {
+  prepareRealtimeTraceContent,
+  REALTIME_TRACE_CONTENT_KINDS,
+  type RealtimeTraceContentKind,
+} from './trace-content.js';
+
+export type { RealtimeTraceContentKind } from './trace-content.js';
 
 const SAFE_TRACE_FIELD_KEYS = [
   'callId',
@@ -193,6 +200,7 @@ const SAFE_TRACE_FIELD_KEYS = [
   'eventType',
   'requiresAck',
   'endAfterPlayback',
+  'matched',
   'finishingCurrentUserTurn',
   'closeGraceMs',
   'deliverySemantics',
@@ -217,10 +225,13 @@ export function pcm16Rms(audio: Uint8Array): number {
 const SAFE_TRACE_FIELDS: ReadonlySet<string> = new Set(SAFE_TRACE_FIELD_KEYS);
 
 const TRACE_RETENTION_COUNT = 30;
+const MAX_CONTENT_BYTES_PER_ENTRY = 32 * 1024;
+const MAX_CONTENT_BYTES_PER_SESSION = 512 * 1024;
 
 export interface RealtimeTraceWriter {
   readonly filePath: string;
   record(event: string, fields?: Record<string, unknown>): void;
+  recordContent(kind: RealtimeTraceContentKind, value: unknown): boolean;
   flush(): Promise<void>;
 }
 
@@ -394,6 +405,7 @@ function cleanFields(fields: Record<string, unknown>): {
 
 async function prepareTraceDirectory(directory: string): Promise<void> {
   await mkdir(directory, { recursive: true, mode: 0o700 });
+  await chmod(directory, 0o700);
   const files = await readdir(directory, { withFileTypes: true });
   const traceFiles = await Promise.all(files
     .filter((file) => file.isFile() && /^[0-9a-f-]{36}\.jsonl$/i.test(file.name))
@@ -423,23 +435,21 @@ export function createRealtimeTraceWriter(options: {
   let writeTail = Promise.resolve();
   let directoryReady: Promise<void> | undefined;
   let writeFailureReported = false;
+  let capturedContentBytes = 0;
+  let contentBudgetSkipReported = false;
 
-  const record = (event: string, fields: Record<string, unknown> = {}): void => {
-    const cleaned = cleanFields(fields);
-    const entry = {
-      at: new Date().toISOString(),
-      elapsed_ms: Number((performance.now() - sessionStartedAt).toFixed(2)),
-      session_id: options.sessionId,
-      provider: options.provider,
-      event: event.slice(0, 100),
-      ...cleaned.values,
-      ...(cleaned.rejectedFieldCount > 0 ? { rejectedFieldCount: cleaned.rejectedFieldCount } : {}),
-    };
+  const enqueue = (entry: Record<string, unknown>): void => {
     const line = `${JSON.stringify(entry)}\n`;
     directoryReady ??= prepareTraceDirectory(directory);
     writeTail = writeTail.then(async () => {
       await directoryReady;
-      await appendFile(filePath, line, { encoding: 'utf8', mode: 0o600 });
+      const handle = await open(filePath, 'a', 0o600);
+      try {
+        await handle.chmod(0o600);
+        await handle.writeFile(line, { encoding: 'utf8' });
+      } finally {
+        await handle.close();
+      }
     }).catch((error: unknown) => {
       if (writeFailureReported) return;
       writeFailureReported = true;
@@ -451,5 +461,53 @@ export function createRealtimeTraceWriter(options: {
     });
   };
 
-  return { filePath, record, flush: () => writeTail };
+  const record = (event: string, fields: Record<string, unknown> = {}): void => {
+    const cleaned = cleanFields(fields);
+    enqueue({
+      at: new Date().toISOString(),
+      elapsed_ms: Number((performance.now() - sessionStartedAt).toFixed(2)),
+      session_id: options.sessionId,
+      provider: options.provider,
+      event: event.slice(0, 100),
+      ...cleaned.values,
+      ...(cleaned.rejectedFieldCount > 0 ? { rejectedFieldCount: cleaned.rejectedFieldCount } : {}),
+    });
+  };
+
+  const recordContent = (kind: RealtimeTraceContentKind, value: unknown): boolean => {
+    if (process.env.DIAGNOSTICS_CAPTURE_CONTENT !== '1'
+      || !(REALTIME_TRACE_CONTENT_KINDS as readonly string[]).includes(kind)) return false;
+    const remainingBytes = MAX_CONTENT_BYTES_PER_SESSION - capturedContentBytes;
+    if (remainingBytes <= 0) {
+      if (!contentBudgetSkipReported) {
+        contentBudgetSkipReported = true;
+        record('realtime.content_capture_skipped', { stage: kind, reason: 'content_budget_exhausted' });
+      }
+      return false;
+    }
+
+    const content = prepareRealtimeTraceContent(value, Math.min(MAX_CONTENT_BYTES_PER_ENTRY, remainingBytes));
+    if (!content) {
+      record('realtime.content_capture_skipped', { stage: kind, reason: 'serialization_failed' });
+      return false;
+    }
+    capturedContentBytes += content.bytes;
+    enqueue({
+      at: new Date().toISOString(),
+      elapsed_ms: Number((performance.now() - sessionStartedAt).toFixed(2)),
+      session_id: options.sessionId,
+      provider: options.provider,
+      event: 'realtime.content_captured',
+      content_kind: kind,
+      content_format: content.format,
+      content: content.content,
+      content_chars: content.chars,
+      content_bytes: content.bytes,
+      content_redacted: content.redacted,
+      content_truncated: content.truncated,
+    });
+    return true;
+  };
+
+  return { filePath, record, recordContent, flush: () => writeTail };
 }

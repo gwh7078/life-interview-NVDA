@@ -30,6 +30,10 @@ export function renderMiniCoachPacket(input: {
 }): string {
   const { scenario, currentUserAnswer, gate, packet } = input;
   if (gate.action === 'none' || !gate.direction) return '';
+  if (gate.reason === 'scenario_boundary'
+    && /(身份|模型|采访助手|语音由)/u.test(gate.direction)) {
+    return clip(`【采访教练】方向：${clip(gate.direction, 120)}`, MAX_PACKET_CHARS);
+  }
 
   let lines: string[];
   if (scenario === 'onboarding' || scenario === 'story_create') {

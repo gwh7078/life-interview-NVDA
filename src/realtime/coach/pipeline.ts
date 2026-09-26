@@ -2,7 +2,7 @@ import { performance } from 'node:perf_hooks';
 import type { RetrieverAdapter } from '../../retriever/types.js';
 import { boundRealtimeQAEvidence, RetrieverRealtimeRecall } from '../retriever-recall.js';
 import type { RealtimeRecallRequest } from '../slow-coordinator.js';
-import type { CoachGateResult, CoachPacket, CoachScenario, RealtimeCoachPort } from './types.js';
+import type { CoachGateResult, CoachPacket, CoachResolveInput, CoachScenario, RealtimeCoachPort } from './types.js';
 
 export interface RealtimeCoachPipelineProgress {
   stage: 'retrieval' | 'resolve';
@@ -44,6 +44,8 @@ export class RealtimeCoachPipeline {
     request: RealtimeRecallRequest;
     signal?: AbortSignal;
     onProgress?: (event: RealtimeCoachPipelineProgress) => void;
+    onResolveInput?: (input: CoachResolveInput) => void;
+    onResolveOutput?: (packet: CoachPacket) => void;
   }): Promise<RealtimeCoachPipelineResult> {
     const retrievalStartedAt = performance.now();
     report(input.onProgress, { stage: 'retrieval', status: 'started' });
@@ -77,12 +79,15 @@ export class RealtimeCoachPipeline {
     const resolveStartedAt = performance.now();
     report(input.onProgress, { stage: 'resolve', status: 'started' });
     try {
-      const packet = await this.coach.resolve({
+      const resolveInput: CoachResolveInput = {
         scenario: input.scenario,
         currentUserAnswer: input.currentUserAnswer,
         gate: input.gate,
         evidence,
-      }, { signal: input.signal });
+      };
+      try { input.onResolveInput?.(resolveInput); } catch { /* Trace must not affect Coach. */ }
+      const packet = await this.coach.resolve(resolveInput, { signal: input.signal });
+      try { input.onResolveOutput?.(packet); } catch { /* Trace must not affect Coach. */ }
       const resolveMs = Number((performance.now() - resolveStartedAt).toFixed(2));
       report(input.onProgress, {
         stage: 'resolve', status: 'completed', latencyMs: resolveMs,

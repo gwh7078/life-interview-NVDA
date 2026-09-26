@@ -129,6 +129,7 @@ interface FixtureOptions {
   coachGateTimeoutMs?: number;
   coachTotalTimeoutMs?: number;
   retrieverDelayMs?: number;
+  autoCompleteResponses?: boolean;
 }
 
 interface ClientConnection {
@@ -214,7 +215,9 @@ async function createFixture(options: FixtureOptions) {
       } else if (message.type === 'response.create') {
         const id = 'response-' + (++responseId);
         socket.send(JSON.stringify({ type: 'response.created', response: { id } }));
-        socket.send(JSON.stringify({ type: 'response.done', response: { id, status: 'completed' } }));
+        if (options.autoCompleteResponses !== false) {
+          socket.send(JSON.stringify({ type: 'response.done', response: { id, status: 'completed' } }));
+        }
       }
     });
   });
@@ -644,6 +647,58 @@ test('stepaudio2_mini supervisor_auto coaches the same user turn before its resp
     assert.equal(instructions.includes('2013 年春节以后第一次到北京。'), false);
     assert.equal(instructions.includes(answer), false);
     assert.equal(fixture.agentQueries.length, 0, 'Pass B must not run a third OpenClaw/Agent model call');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini spoken end requests a farewell on the current turn and closes after playback', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+  });
+  try {
+    await sendManualUserFinal(fixture, 'spoken-end-turn', '结束对话。');
+    const response = await fixture.waitForProviderMessage(
+      (message) => message.type === 'response.create',
+      'spoken-end farewell response',
+    );
+    assert.match(String(record(response.response)?.instructions ?? ''), /本次先聊到这里，再见/u);
+    assert.equal(fixture.coachGateInputs.length, 0);
+    const done = await fixture.waitForOwnerMessage(
+      (message) => message.type === 'response_done' && message.responseId === 'response-1',
+      'spoken-end response done',
+    );
+    assert.equal(done.endAfterPlayback, true);
+    assert.equal(done.endReason, 'user_confirmed');
+    fixture.ownerSocket.send(JSON.stringify({ type: 'end', reason: 'user_confirmed' }));
+    const ended = await fixture.waitForOwnerMessage((message) => message.type === 'ended', 'spoken end saved');
+    assert.equal(ended.type, 'ended');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('spoken end ignores an unrelated response and closes if the farewell response fails', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    autoCompleteResponses: false,
+  });
+  try {
+    await sendManualUserFinal(fixture, 'spoken-end-failure-turn', '结束对话。');
+    await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'farewell request');
+    fixture.sendProviderEvent({ type: 'response.done', response: { id: 'unrelated-response', status: 'completed' } });
+    const unrelated = await fixture.waitForOwnerMessage(
+      (message) => message.type === 'response_done' && message.responseId === 'unrelated-response',
+      'unrelated response done',
+    );
+    assert.equal(unrelated.endAfterPlayback, false);
+    fixture.sendProviderEvent({ type: 'response.done', response: { id: 'response-1', status: 'failed' } });
+    const ended = await fixture.waitForOwnerMessage((message) => message.type === 'ended', 'failed farewell saved');
+    assert.equal(ended.type, 'ended');
   } finally {
     await fixture.close();
   }

@@ -20,7 +20,7 @@ export function resolveRealtimeProvider(value) {
   return value === 'qwen' || value === 'stepfun' || value === 'modelbest'
     || value === 'stepaudio3_quality' || value === 'stepaudio2_mini'
     ? value
-    : 'stepaudio3_quality';
+    : 'stepaudio2_mini';
 }
 
 export function realtimeInputSampleRate(provider) {

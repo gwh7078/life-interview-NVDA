@@ -183,6 +183,9 @@ function parseGate(value: unknown, scenario: CoachScenario): CoachGateResult {
   }
   const action = object.action as CoachAction;
   const reason = object.reason as CoachReason;
+  if (/(?:qwen|通义千问)/iu.test(`${avoid ?? ''} ${direction ?? ''}`)) {
+    throw Object.assign(new Error('Coach Gate exposed its own model identity.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
+  }
   if (action === 'none') {
     if (object.retrieve || query !== null || avoid !== null || direction !== null || reason !== 'normal') {
       throw Object.assign(new Error('A non-intervening Coach Gate must return the normal empty result.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
@@ -227,6 +230,20 @@ function parsePacket(value: unknown, input: CoachResolveInput): import('./types.
   return { selectedEvidenceIds, known, conflict, avoid, direction };
 }
 
+export function buildCoachGatePrompt(input: CoachGateInput): { system: string; user: string } {
+  return {
+    system: `${REALTIME_COACH_CORE}\n\n${REALTIME_COACH_GATE_CONTRACT}\n\n${SCENARIO_POLICIES[input.scenario]}`,
+    user: JSON.stringify(input),
+  };
+}
+
+export function buildCoachResolvePrompt(input: CoachResolveInput): { system: string; user: string } {
+  return {
+    system: `${REALTIME_COACH_CORE}\n\n${SCENARIO_POLICIES[input.scenario]}\n\n${REALTIME_COACH_RESOLVE}`,
+    user: JSON.stringify(input),
+  };
+}
+
 export class BailianRealtimeCoach implements RealtimeCoachPort {
   constructor(
     private readonly config: RealtimeCoachConfig,
@@ -235,8 +252,7 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
 
   evaluate(input: CoachGateInput, options: { signal?: AbortSignal } = {}): Promise<CoachGateResult> {
     return this.complete({
-      system: `${REALTIME_COACH_CORE}\n\n${REALTIME_COACH_GATE_CONTRACT}\n\n${SCENARIO_POLICIES[input.scenario]}`,
-      user: JSON.stringify(input),
+      ...buildCoachGatePrompt(input),
       maxTokens: 220,
       signal: options.signal,
     }).then((output) => parseGate(output, input.scenario));
@@ -244,8 +260,7 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
 
   resolve(input: CoachResolveInput, options: { signal?: AbortSignal } = {}): Promise<import('./types.js').CoachPacket> {
     return this.complete({
-      system: `${REALTIME_COACH_CORE}\n\n${SCENARIO_POLICIES[input.scenario]}\n\n${REALTIME_COACH_RESOLVE}`,
-      user: JSON.stringify(input),
+      ...buildCoachResolvePrompt(input),
       maxTokens: 320,
       signal: options.signal,
     }).then((output) => parsePacket(output, input));

@@ -43,7 +43,7 @@ function independentTextTask(
 
 /** Task-specific model routing. Credentials deliberately remain outside this configuration object. */
 export function resolveAiTaskConfig(env: NodeJS.ProcessEnv = process.env): AiTaskConfigMap {
-  const interviewProvider = (env.STORY_INTERVIEW_PROVIDER?.trim() || 'stepaudio3_quality') as RealtimeModelProviderId;
+  const interviewProvider = (env.STORY_INTERVIEW_PROVIDER?.trim() || 'stepaudio2_mini') as RealtimeModelProviderId;
   if (!['qwen', 'stepfun', 'modelbest', 'stepaudio3_quality', 'stepaudio2_mini'].includes(interviewProvider)) {
     throw new Error('STORY_INTERVIEW_PROVIDER must be qwen, stepaudio3_quality, stepaudio2_mini, stepfun or modelbest.');
   }
