@@ -2245,6 +2245,18 @@ function createRealtimeHandler(
     userTurnStallTimer = undefined;
   };
 
+  const releaseAwaitingUserTranscript = (): void => {
+    if (!awaitingUserTranscript) return;
+    clearUserTurnStallWatchdog();
+    userTurnRecoveryAttempted = false;
+    pendingSpeech = false;
+    manualTurnCommitPending = false;
+    manualTurnCommitSent = false;
+    manualInputReadyForTurn = true;
+    awaitingUserTranscript = false;
+    userTranscriptDeltaCount = 0;
+  };
+
   const clearSessionTimers = (): void => {
     clearOpeningResponseWatchdog();
     clearUserTurnStallWatchdog();
@@ -3603,20 +3615,14 @@ function createRealtimeHandler(
           responseActive: activeResponses.size > 0,
           ...microphoneTiming(),
         });
-        if (awaitingUserTranscript) {
-          clearUserTurnStallWatchdog();
-          userTurnRecoveryAttempted = false;
-          pendingSpeech = false;
-          manualTurnCommitPending = false;
-          manualTurnCommitSent = false;
-          manualInputReadyForTurn = true;
-          awaitingUserTranscript = false;
-          userTranscriptDeltaCount = 0;
-        }
+        releaseAwaitingUserTranscript();
         return;
       }
       const providerMessageId = event.itemId ?? event.eventId ?? `user-${Date.now()}`;
-      if (supervisorAutoSelected() && supervisorCoachMessageIds.has(providerMessageId)) return;
+      if (supervisorAutoSelected() && supervisorCoachMessageIds.has(providerMessageId)) {
+        releaseAwaitingUserTranscript();
+        return;
+      }
       if (supervisorAutoSelected()) supervisorCoachMessageIds.add(providerMessageId);
       clearUserTurnStallWatchdog();
       userTurnRecoveryAttempted = false;

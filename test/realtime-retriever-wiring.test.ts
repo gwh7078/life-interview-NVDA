@@ -1094,7 +1094,7 @@ test('stepaudio2_mini supervisor_auto ignores an empty final without invalidatin
   }
 });
 
-test('stepaudio2_mini manual turn accepts another turn after an empty transcript final', async () => {
+test('stepaudio2_mini manual turn recovers after empty and duplicate transcript finals', async () => {
   const fixture = await createFixture({
     realtimeMemoryTriggerMode: 'supervisor_auto',
     provider: 'stepaudio2_mini',
@@ -1144,6 +1144,31 @@ test('stepaudio2_mini manual turn accepts another turn after an empty transcript
     await fixture.waitForOwnerMessage((message) => message.type === 'user_final' && message.itemId === 'valid-turn-after-empty', 'next valid final');
     await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'next valid Mini response');
     assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1);
+
+    await fixture.waitForOwnerMessage((message) => message.type === 'response_done', 'valid response completion');
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await waitForMatch(
+      () => fixture.ownerMessages.filter((message) => message.type === 'speech_started'),
+      (_message, index) => index === 2,
+      'manual speech before duplicate final',
+    );
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
+    await waitForMatch(
+      () => fixture.providerMessages.filter((message) => message.type === 'mock.commit'),
+      (_message, index) => index === 2,
+      'manual commit before duplicate final',
+    );
+    sendUserFinal(fixture, 'valid-turn-after-empty', '迟到的重复 final。');
+    await delay(30);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1,
+      'a duplicate final must not create another Mini response');
+
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await waitForMatch(
+      () => fixture.ownerMessages.filter((message) => message.type === 'speech_started'),
+      (_message, index) => index === 3,
+      'manual speech after duplicate final',
+    );
   } finally {
     await fixture.close();
   }

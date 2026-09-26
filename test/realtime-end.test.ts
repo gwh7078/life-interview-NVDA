@@ -641,6 +641,7 @@ test('StepFun manual turn commits once after local VAD and ignores microphone au
   let resolveSessionCreated!: () => void;
   const sessionCreated = new Promise<void>((resolve) => { resolveSessionCreated = resolve; });
   let manualResponseCount = 0;
+  let manualTranscriptCount = 0;
   const providerMessages: Array<Record<string, unknown>> = [];
   const waitForProviderMessage = async (predicate: (message: Record<string, unknown>) => boolean) => {
     const deadline = Date.now() + 2_000;
@@ -673,7 +674,7 @@ test('StepFun manual turn commits once after local VAD and ignores microphone au
         socket.send(JSON.stringify({ type: 'input_audio_buffer.speech_stopped' }));
         socket.send(JSON.stringify({
           type: 'conversation.item.input_audio_transcription.completed',
-          item_id: 'mock-manual-user',
+          item_id: `mock-manual-user-${++manualTranscriptCount}`,
           transcript: '本地 VAD 控制的测试语句',
         }));
       } else if (message.type === 'response.create') {
