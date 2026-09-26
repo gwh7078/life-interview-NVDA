@@ -2484,7 +2484,31 @@ function createRealtimeHandler(
         return;
       }
 
-      let activeStage: 'retrieval' | 'era_retrieval' | 'resolve' = gate.retrieve_memory ? 'retrieval' : 'era_retrieval';
+      const stageStatuses: Record<'retrieval' | 'era_retrieval' | 'resolve', 'pending' | 'running' | 'completed' | 'failed' | 'timeout' | 'skipped'> = {
+        retrieval: gate.retrieve_memory ? 'pending' : 'skipped',
+        era_retrieval: gate.retrieve_era ? 'pending' : 'skipped',
+        resolve: 'pending',
+      };
+      let pipelineExpired = false;
+      const stageBaseFields = () => ({
+        ...traceFields, turnId, contextVersion: version,
+        action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+        gate_ms: gateMs,
+      });
+      const recordPipelineTimeout = (totalMs: number) => {
+        if (pipelineExpired) return;
+        pipelineExpired = true;
+        for (const stage of ['retrieval', 'era_retrieval', 'resolve'] as const) {
+          if (['completed', 'failed', 'timeout', 'skipped'].includes(stageStatuses[stage])) continue;
+          stageStatuses[stage] = 'timeout';
+          recordTrace(`coach.${stage}.timeout`, {
+            ...stageBaseFields(), total_ms: totalMs, errorCode: 'COACH_TOTAL_TIMEOUT',
+          });
+        }
+        recordTrace('coach.pipeline.timeout', {
+          ...stageBaseFields(), total_ms: totalMs, errorCode: 'COACH_TOTAL_TIMEOUT',
+        });
+      };
       const pipelinePromise = dependencies.realtimeCoachPipeline.retrieveAndResolve({
         scenario: baseGate.scenario,
         currentUserAnswer: text,
@@ -2507,19 +2531,18 @@ function createRealtimeHandler(
         },
         onResolveOutput: (output) => traceWriter?.recordContent('coach.resolve.output', { turnId, output }),
         onProgress: (progress) => {
-          if (!isCurrent()) return;
-          activeStage = progress.stage;
-          if (progress.stage === 'resolve' && progress.status === 'failed') return;
-          const durationField = progress.stage === 'retrieval' ? 'retrieval_ms'
-            : progress.stage === 'resolve' ? 'resolve_ms' : 'latencyMs';
+          if (!isCurrent() || pipelineExpired) return;
+          stageStatuses[progress.stage] = progress.status === 'started'
+            ? 'running'
+            : progress.status === 'completed' ? 'completed'
+              : progress.status === 'failed' ? 'failed'
+                : progress.status === 'timeout' ? 'timeout' : 'skipped';
+          const durationField = progress.stage === 'retrieval' ? 'memory_retrieval_ms'
+            : progress.stage === 'era_retrieval' ? 'era_retrieval_ms' : 'resolve_ms';
           recordTrace(`coach.${progress.stage}.${progress.status}`, {
-            ...traceFields,
+            ...stageBaseFields(),
             turnId: progress.turnId ?? turnId,
             contextVersion: progress.contextVersion ?? version,
-            action: gate.action,
-            retrieve_memory: gate.retrieve_memory,
-            retrieve_era: gate.retrieve_era,
-            gate_ms: gateMs,
             ...(progress.latencyMs === undefined ? {} : { [durationField]: Number(progress.latencyMs.toFixed(2)) }),
             ...(progress.queryChars === undefined ? {} : { queryChars: progress.queryChars }),
             ...(progress.startYear === undefined ? {} : { startYear: progress.startYear }),
@@ -2529,6 +2552,7 @@ function createRealtimeHandler(
             ...(progress.memoryEvidenceCount === undefined ? {} : { memoryEvidenceCount: progress.memoryEvidenceCount }),
             ...(progress.eraEvidenceCount === undefined ? {} : { eraEvidenceCount: progress.eraEvidenceCount }),
             ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
+            ...(progress.skipReason ? { skipReason: progress.skipReason } : {}),
           });
         },
       });
@@ -2536,13 +2560,8 @@ function createRealtimeHandler(
       const pipelineOutcome = await settleWithin(pipelinePromise, remaining);
       const totalMs = Number((performance.now() - startedAt).toFixed(2));
       if (pipelineOutcome.status === 'timeout') {
+        recordPipelineTimeout(totalMs);
         controller.abort('coach-total-timeout');
-        recordTrace(`coach.${activeStage}.timeout`, {
-          ...traceFields, turnId, contextVersion: version,
-          action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
-          memoryEvidenceCount: 0, eraEvidenceCount: 0,
-          gate_ms: gateMs, total_ms: totalMs,
-        });
         if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
           sendMiniResponse({ turnId, version, traceFields: {
             ...traceFields, turnId, contextVersion: version,
@@ -2553,12 +2572,12 @@ function createRealtimeHandler(
         return;
       }
       if (pipelineOutcome.status === 'failed') {
+        pipelineExpired = true;
         controller.abort('coach-pipeline-failed');
-        recordTrace(`coach.${activeStage}.failed`, {
-          ...traceFields, turnId, contextVersion: version,
-          action: gate.action, retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
-          memoryEvidenceCount: 0, eraEvidenceCount: 0,
-          gate_ms: gateMs, total_ms: totalMs,
+        const failedStage = (['resolve', 'retrieval', 'era_retrieval'] as const)
+          .find((stage) => stageStatuses[stage] === 'running');
+        recordTrace(failedStage ? `coach.${failedStage}.failed` : 'coach.pipeline.failed', {
+          ...stageBaseFields(), total_ms: totalMs,
           errorCode: coachErrorCode(pipelineOutcome.error),
         });
         if (phase === 'active' && currentTurnId === turnId && contextVersion === version) {
@@ -2570,7 +2589,12 @@ function createRealtimeHandler(
         }
         return;
       }
-      if (!isCurrent() || performance.now() > totalDeadlineAt) return;
+      if (!isCurrent()) return;
+      if (performance.now() > totalDeadlineAt) {
+        recordPipelineTimeout(totalMs);
+        controller.abort('coach-total-timeout');
+        return;
+      }
       const result = pipelineOutcome.value;
       const packet = renderMiniCoachPacket({
         scenario: baseGate.scenario,
@@ -2593,8 +2617,8 @@ function createRealtimeHandler(
           memoryEvidenceCount: result.memoryEvidenceCount,
           eraEvidenceCount: result.eraEvidenceCount,
           gate_ms: gateMs,
-          retrieval_ms: Number(result.retrievalMs.toFixed(2)),
-          era_retrieval_ms: Number(result.eraRetrievalMs.toFixed(2)),
+          ...(result.memoryRetrievalMs === null ? {} : { memory_retrieval_ms: Number(result.memoryRetrievalMs.toFixed(2)) }),
+          ...(result.eraRetrievalMs === null ? {} : { era_retrieval_ms: Number(result.eraRetrievalMs.toFixed(2)) }),
           resolve_ms: Number(result.resolveMs.toFixed(2)),
           total_ms: Number((performance.now() - startedAt).toFixed(2)),
         },
@@ -2750,7 +2774,28 @@ function createRealtimeHandler(
       reason: 'history_reference',
       avoid: null, direction: '使用相关历史，避免重复提问后继续当前故事。',
     };
-    let activeStage: 'retrieval' | 'era_retrieval' | 'resolve' = 'retrieval';
+    const stageStatuses: Record<'retrieval' | 'era_retrieval' | 'resolve', 'pending' | 'running' | 'completed' | 'failed' | 'timeout' | 'skipped'> = {
+      retrieval: 'pending', era_retrieval: 'skipped', resolve: 'pending',
+    };
+    let pipelineExpired = false;
+    const stageBaseFields = () => ({
+      ...traceFields, action: gate.action,
+      retrieve_memory: gate.retrieve_memory, retrieve_era: gate.retrieve_era,
+    });
+    const recordPipelineTimeout = (latencyMs: number) => {
+      if (pipelineExpired) return;
+      pipelineExpired = true;
+      for (const stage of ['retrieval', 'era_retrieval', 'resolve'] as const) {
+        if (['completed', 'failed', 'timeout', 'skipped'].includes(stageStatuses[stage])) continue;
+        stageStatuses[stage] = 'timeout';
+        recordTrace(`coach.${stage}.timeout`, {
+          ...stageBaseFields(), total_ms: latencyMs, errorCode: 'COACH_TOTAL_TIMEOUT',
+        });
+      }
+      recordTrace('coach.pipeline.timeout', {
+        ...stageBaseFields(), total_ms: latencyMs, errorCode: 'COACH_TOTAL_TIMEOUT',
+      });
+    };
     const promise = dependencies.realtimeCoachPipeline.retrieveAndResolve({
       scenario: 'story_continue',
       currentUserAnswer: latestUserAnswer,
@@ -2773,10 +2818,14 @@ function createRealtimeHandler(
       },
       onResolveOutput: (output) => traceWriter?.recordContent('coach.resolve.output', { turnId, output }),
       onProgress: (progress) => {
-        activeStage = progress.stage;
-        if (progress.stage === 'resolve' && progress.status === 'failed') return;
-        const durationField = progress.stage === 'retrieval' ? 'retrieval_ms'
-          : progress.stage === 'resolve' ? 'resolve_ms' : 'latencyMs';
+        if (pipelineExpired) return;
+        stageStatuses[progress.stage] = progress.status === 'started'
+          ? 'running'
+          : progress.status === 'completed' ? 'completed'
+            : progress.status === 'failed' ? 'failed'
+              : progress.status === 'timeout' ? 'timeout' : 'skipped';
+        const durationField = progress.stage === 'retrieval' ? 'memory_retrieval_ms'
+          : progress.stage === 'era_retrieval' ? 'era_retrieval_ms' : 'resolve_ms';
         recordTrace(`coach.${progress.stage}.${progress.status}`, {
           ...traceFields,
           action: gate.action,
@@ -2791,30 +2840,33 @@ function createRealtimeHandler(
           ...(progress.memoryEvidenceCount === undefined ? {} : { memoryEvidenceCount: progress.memoryEvidenceCount }),
           ...(progress.eraEvidenceCount === undefined ? {} : { eraEvidenceCount: progress.eraEvidenceCount }),
           ...(progress.errorCode ? { errorCode: progress.errorCode } : {}),
+          ...(progress.skipReason ? { skipReason: progress.skipReason } : {}),
         });
       },
     });
     const outcome = await settleWithin(promise, Math.max(0, deadlineAt - performance.now()));
     const latencyMs = Number((performance.now() - startedAt).toFixed(2));
     if (outcome.status === 'timeout') {
+      recordPipelineTimeout(latencyMs);
       controller.abort('coach-total-timeout');
-      recordTrace(`coach.${activeStage}.timeout`, {
-        ...traceFields, action: gate.action,
-        retrieve_memory: true, retrieve_era: false, memoryEvidenceCount: 0, eraEvidenceCount: 0,
-        total_ms: latencyMs,
-      });
       return { status: 'timeout', latencyMs };
     }
     if (outcome.status === 'failed') {
+      pipelineExpired = true;
       controller.abort('coach-pipeline-failed');
-      recordTrace(`coach.${activeStage}.failed`, {
-        ...traceFields, action: gate.action,
-        retrieve_memory: true, retrieve_era: false, memoryEvidenceCount: 0, eraEvidenceCount: 0,
-        total_ms: latencyMs, errorCode: coachErrorCode(outcome.error),
+      const failedStage = (['resolve', 'retrieval', 'era_retrieval'] as const)
+        .find((stage) => stageStatuses[stage] === 'running');
+      recordTrace(failedStage ? `coach.${failedStage}.failed` : 'coach.pipeline.failed', {
+        ...stageBaseFields(), total_ms: latencyMs, errorCode: coachErrorCode(outcome.error),
       });
       return { status: 'failed', latencyMs };
     }
-    if (phase !== 'active' || currentTurnId !== turnId || contextVersion !== version || performance.now() >= deadlineAt) {
+    if (phase !== 'active' || currentTurnId !== turnId || contextVersion !== version) {
+      return { status: 'timeout', latencyMs };
+    }
+    if (performance.now() >= deadlineAt) {
+      recordPipelineTimeout(latencyMs);
+      controller.abort('coach-total-timeout');
       return { status: 'timeout', latencyMs };
     }
     return {

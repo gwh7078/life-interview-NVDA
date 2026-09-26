@@ -17,7 +17,7 @@ const ERA_CONTEXT_TIMEOUT_MS = 1_000;
 
 export interface RealtimeCoachPipelineProgress {
   stage: 'retrieval' | 'era_retrieval' | 'resolve';
-  status: 'started' | 'completed' | 'failed' | 'timeout';
+  status: 'started' | 'completed' | 'failed' | 'timeout' | 'skipped';
   turnId?: string;
   contextVersion?: number;
   latencyMs?: number;
@@ -29,14 +29,15 @@ export interface RealtimeCoachPipelineProgress {
   memoryEvidenceCount?: number;
   eraEvidenceCount?: number;
   errorCode?: string;
+  skipReason?: 'RETRIEVER_UNAVAILABLE' | 'ERA_CONTEXT_UNAVAILABLE' | 'RETRIEVAL_NOT_REQUESTED';
 }
 
 export interface RealtimeCoachPipelineResult {
   packet: CoachPacket;
   memoryEvidenceCount: number;
   eraEvidenceCount: number;
-  retrievalMs: number;
-  eraRetrievalMs: number;
+  memoryRetrievalMs: number | null;
+  eraRetrievalMs: number | null;
   resolveMs: number;
 }
 
@@ -133,13 +134,26 @@ export class RealtimeCoachPipeline {
     onResolveOutput?: (packet: CoachPacket) => void;
   }): Promise<RealtimeCoachPipelineResult> {
     const trace = { turnId: input.request.turnId, contextVersion: input.request.contextVersion };
-    const memoryStartedAt = performance.now();
+    let memoryRetrievalMs: number | null = null;
+    let eraRetrievalMs: number | null = null;
     const retrieveMemory = async (): Promise<CoachEvidence[]> => {
-      if (!input.gate.retrieve_memory) return [];
+      if (!input.gate.retrieve_memory) {
+        report(input.onProgress, {
+          stage: 'retrieval', status: 'skipped', ...trace,
+          skipReason: 'RETRIEVAL_NOT_REQUESTED',
+        });
+        return [];
+      }
+      const memoryStartedAt = performance.now();
       report(input.onProgress, { stage: 'retrieval', status: 'started', ...trace });
       try {
         if (!this.retrieval || !input.gate.memory_query) {
-          throw emptyRetrievalError('Personal memory retrieval is unavailable.', 'RETRIEVER_UNAVAILABLE');
+          report(input.onProgress, {
+            stage: 'retrieval', status: 'skipped', ...trace,
+            skipReason: 'RETRIEVER_UNAVAILABLE',
+            errorCode: 'RETRIEVER_UNAVAILABLE',
+          });
+          return [];
         }
         const retrieved = await this.retrieval.retrieve({
           ...input.request,
@@ -147,27 +161,35 @@ export class RealtimeCoachPipeline {
         }, { signal: input.signal });
         const evidence = boundRealtimeQAEvidence(retrieved.evidence)
           .map(({ id, question, answer }) => ({ id, question, answer }));
+        memoryRetrievalMs = Number((performance.now() - memoryStartedAt).toFixed(2));
         report(input.onProgress, {
           stage: 'retrieval', status: 'completed', ...trace,
-          latencyMs: Number((performance.now() - memoryStartedAt).toFixed(2)),
+          latencyMs: memoryRetrievalMs,
           candidateCount: retrieved.candidateCount, evidenceCount: evidence.length,
         });
         return evidence;
       } catch (error) {
+        memoryRetrievalMs = Number((performance.now() - memoryStartedAt).toFixed(2));
         report(input.onProgress, {
           stage: 'retrieval',
           status: safeErrorCode(error, '') === 'RETRIEVER_TIMEOUT' ? 'timeout' : 'failed',
           ...trace,
-          latencyMs: Number((performance.now() - memoryStartedAt).toFixed(2)),
+          latencyMs: memoryRetrievalMs,
           errorCode: safeErrorCode(error, 'RETRIEVER_FAILED'),
         });
         throw error;
       }
     };
 
-    const eraStartedAt = performance.now();
     const retrieveEra = async (): Promise<CoachEraEvidence[]> => {
-      if (!input.gate.retrieve_era) return [];
+      if (!input.gate.retrieve_era) {
+        report(input.onProgress, {
+          stage: 'era_retrieval', status: 'skipped', ...trace,
+          skipReason: 'RETRIEVAL_NOT_REQUESTED',
+        });
+        return [];
+      }
+      const eraStartedAt = performance.now();
       const query = input.gate.era_query;
       const startYear = input.gate.era_start_year;
       const endYear = input.gate.era_end_year;
@@ -181,9 +203,9 @@ export class RealtimeCoachPipeline {
       if (input.scenario !== 'story_continue' || !this.eraContext || !query
         || startYear === null || endYear === null) {
         report(input.onProgress, {
-          stage: 'era_retrieval', status: 'completed', ...progress,
-          latencyMs: Number((performance.now() - eraStartedAt).toFixed(2)),
-          candidateCount: 0, evidenceCount: 0,
+          stage: 'era_retrieval', status: 'skipped', ...progress,
+          skipReason: 'ERA_CONTEXT_UNAVAILABLE',
+          errorCode: 'ERA_CONTEXT_UNAVAILABLE',
         });
         return [];
       }
@@ -195,18 +217,20 @@ export class RealtimeCoachPipeline {
           top_k: 3,
         }, input.signal);
         const evidence = boundEraEvidence(matches);
+        eraRetrievalMs = Number((performance.now() - eraStartedAt).toFixed(2));
         report(input.onProgress, {
           stage: 'era_retrieval', status: 'completed', ...progress,
-          latencyMs: Number((performance.now() - eraStartedAt).toFixed(2)),
+          latencyMs: eraRetrievalMs,
           candidateCount: matches.length, evidenceCount: evidence.length,
         });
         return evidence;
       } catch (error) {
         const errorCode = safeErrorCode(error, 'ERA_CONTEXT_FAILED');
+        eraRetrievalMs = Number((performance.now() - eraStartedAt).toFixed(2));
         report(input.onProgress, {
           stage: 'era_retrieval', status: errorCode === 'ERA_CONTEXT_TIMEOUT' ? 'timeout' : 'failed',
           ...progress,
-          latencyMs: Number((performance.now() - eraStartedAt).toFixed(2)),
+          latencyMs: eraRetrievalMs,
           candidateCount: 0, evidenceCount: 0, errorCode,
         });
         throw error;
@@ -216,8 +240,6 @@ export class RealtimeCoachPipeline {
     const [memoryResult, eraResult] = await Promise.allSettled([retrieveMemory(), retrieveEra()]);
     const memoryEvidence = memoryResult.status === 'fulfilled' ? memoryResult.value : [];
     const eraEvidence = eraResult.status === 'fulfilled' ? eraResult.value : [];
-    const retrievalMs = Number((performance.now() - memoryStartedAt).toFixed(2));
-    const eraRetrievalMs = Number((performance.now() - eraStartedAt).toFixed(2));
     if (input.signal?.aborted) {
       const error = new Error('Realtime Coach turn was cancelled after retrieval.');
       error.name = 'AbortError';
@@ -250,7 +272,7 @@ export class RealtimeCoachPipeline {
         packet,
         memoryEvidenceCount: memoryEvidence.length,
         eraEvidenceCount: eraEvidence.length,
-        retrievalMs,
+        memoryRetrievalMs,
         eraRetrievalMs,
         resolveMs,
       };

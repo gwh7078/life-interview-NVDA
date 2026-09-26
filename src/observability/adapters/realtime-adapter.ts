@@ -21,11 +21,15 @@ const numericMetrics = [
   'retriever_ms', 'agent_ms', 'total_slow_ms', 'hold_ms',
   'silenceObservedMs', 'silenceThresholdMs',
   'gate_ms', 'retrieval_ms', 'era_retrieval_ms', 'resolve_ms', 'total_ms', 'packetChars',
+  'memory_retrieval_ms',
   'queryChars', 'startYear', 'endYear', 'contextVersion', 'memoryEvidenceCount', 'eraEvidenceCount',
 ] as const;
 
 const SAFE_FALLBACK_TYPES = new Set(['direct_retrieval']);
-const SAFE_SKIP_REASONS = new Set(['no_evidence', 'agent_disabled', 'agent_unavailable', 'agent_not_configured']);
+const SAFE_SKIP_REASONS = new Set([
+  'no_evidence', 'agent_disabled', 'agent_unavailable', 'agent_not_configured',
+  'RETRIEVER_UNAVAILABLE', 'ERA_CONTEXT_UNAVAILABLE', 'RETRIEVAL_NOT_REQUESTED',
+]);
 const SAFE_TOOL_RESULT_STATUSES = new Set(['completed', 'no_context', 'failed']);
 const SAFE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,63}$/u;
 
@@ -120,27 +124,34 @@ interface Mapping {
 }
 
 function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
-  const coachStage = /^coach\.(gate|retrieval|era_retrieval|resolve)\.(started|completed|timeout|failed)$/u.exec(event);
+  const coachStage = /^coach\.(gate|retrieval|era_retrieval|resolve|pipeline)\.(started|completed|timeout|failed|skipped)$/u.exec(event);
   if (coachStage) {
     const [, stage, status] = coachStage;
+    if (stage === 'pipeline') return {
+      category: 'runtime',
+      eventType: `coach.pipeline.${status}`,
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
+      title: status === 'timeout' ? 'COACH PIPELINE TIMEOUT' : `COACH PIPELINE ${status.toUpperCase()}`,
+      component: 'realtime-coach-pipeline',
+    };
     if (stage === 'retrieval') return {
       category: 'retriever',
       eventType: `coach.retrieval.${status}`,
-      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : 'running',
-      title: status === 'started' ? 'COACH RETRIEVER RUNNING' : `COACH RETRIEVER ${status.toUpperCase()}`,
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
+      title: status === 'started' ? 'COACH MEMORY RETRIEVER RUNNING' : `COACH MEMORY RETRIEVER ${status.toUpperCase()}`,
       component: 'realtime-coach-retriever',
     };
     if (stage === 'era_retrieval') return {
       category: 'retriever',
       eventType: `coach.era_retrieval.${status}`,
-      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : 'running',
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
       title: status === 'started' ? 'COACH ERA RETRIEVAL RUNNING' : `COACH ERA RETRIEVAL ${status.toUpperCase()}`,
       component: 'realtime-coach-era-retriever',
     };
     return {
       category: 'runtime',
       eventType: `coach.${stage}.${status}`,
-      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : 'running',
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
       title: `COACH ${stage.toUpperCase()} ${status.toUpperCase()}`,
       component: stage === 'gate' ? 'realtime-coach-gate' : 'realtime-coach-resolve',
     };
@@ -248,7 +259,7 @@ export function adaptRealtimeTrace(input: {
     const value = numberField(fields, key);
     if (value !== undefined) {
       const normalizedKey = key === 'gate_ms' ? 'gateMs'
-        : key === 'retrieval_ms' ? 'retrievalMs'
+        : key === 'retrieval_ms' || key === 'memory_retrieval_ms' ? 'memoryRetrievalMs'
           : key === 'era_retrieval_ms' ? 'eraRetrievalMs'
           : key === 'resolve_ms' ? 'resolveMs'
             : key === 'total_ms' ? 'totalMs' : key;
@@ -260,9 +271,9 @@ export function adaptRealtimeTrace(input: {
     && typeof fields.status === 'string' && SAFE_TOOL_RESULT_STATUSES.has(fields.status)) metrics.resultStatus = fields.status;
   if (typeof fields.outcome === 'string') metrics.outcome = safeLabel(fields.outcome) ?? 'unknown';
   if (typeof fields.fallbackUsed === 'boolean') metrics.fallbackUsed = fields.fallbackUsed;
-  if (typeof fields.retrieve === 'boolean') metrics.retrieve = fields.retrieve;
   if (typeof fields.retrieve_memory === 'boolean') metrics.retrieve_memory = fields.retrieve_memory;
   if (typeof fields.retrieve_era === 'boolean') metrics.retrieve_era = fields.retrieve_era;
+  if (typeof fields.skipReason === 'string' && SAFE_SKIP_REASONS.has(fields.skipReason)) metrics.skipReason = fields.skipReason;
   for (const key of ['action', 'scenario', 'reason']) {
     if (safeLabel(fields[key])) metrics[key] = safeLabel(fields[key])!;
   }
@@ -302,11 +313,13 @@ export function adaptRealtimeTrace(input: {
           : event.startsWith('coach.gate.')
             ? numberField(fields, 'gate_ms')
           : event.startsWith('coach.retrieval.')
-              ? numberField(fields, 'retrieval_ms')
+              ? numberField(fields, 'memory_retrieval_ms') ?? numberField(fields, 'retrieval_ms')
               : event.startsWith('coach.era_retrieval.')
-                ? numberField(fields, 'latencyMs')
+                ? numberField(fields, 'era_retrieval_ms') ?? numberField(fields, 'latencyMs')
               : event.startsWith('coach.resolve.')
                 ? numberField(fields, 'resolve_ms')
+                : event.startsWith('coach.pipeline.')
+                  ? numberField(fields, 'total_ms')
                 : event === 'coach.applied' || event === 'coach.skipped'
                   ? numberField(fields, 'total_ms')
           : numberField(fields, 'slowAgentLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
