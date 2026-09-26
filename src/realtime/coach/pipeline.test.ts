@@ -43,7 +43,7 @@ function retriever(delayMs: number): RetrieverAdapter {
     async searchTranscript() {
       await delay(delayMs);
       return [{
-        text: '[segment_id=segment][Q+A]\nQuestion: 工作经历\nAnswer: 曾经换过工作。',
+        text: '[segment_id=segment][message_id=message][Q+A]\nQuestion (context only):工作经历\nAnswer (user-provided fact):曾经换过工作。',
         score: 0.9, ownerId: 'owner', storyId: 'story', sourceType: 'subject',
         sessionId: 'history', messageIds: ['message'], segmentIds: ['segment'],
       }];
@@ -106,4 +106,37 @@ test('unavailable or unrequested retrieval is skipped without fake duration', as
   ]);
   assert.equal(noRetrievalResult.memoryRetrievalMs, null);
   assert.equal(noRetrievalResult.eraRetrievalMs, null);
+});
+
+test('unavailable or failed requested retrieval is not treated as successful empty evidence', async () => {
+  const emptyEra: EraContextAdapter = { async search() { return []; } };
+  const failedMemory: RetrieverAdapter = {
+    ...retriever(0),
+    async searchTranscript() { throw new Error('Retriever service failed.'); },
+  };
+  const cases: Array<{ name: string; retriever?: RetrieverAdapter }> = [
+    { name: 'unavailable', retriever: undefined },
+    { name: 'failed', retriever: failedMemory },
+  ];
+
+  for (const item of cases) {
+    const progress: RealtimeCoachPipelineProgress[] = [];
+    await assert.rejects(
+      new RealtimeCoachPipeline(coach, item.retriever, emptyEra).retrieveAndResolve({
+        scenario: 'story_continue', currentUserAnswer: '继续回忆。', gate, request,
+        onProgress: (event) => progress.push(event),
+      }),
+      (error: unknown) => error instanceof Error
+        && (error as Error & { code?: string }).code === 'REALTIME_COACH_RETRIEVAL_FAILED',
+      `${item.name} retrieval must fail open when the remaining requested path returns no evidence`,
+    );
+    assert.equal(progress.some((event) => event.stage === 'resolve' && event.status === 'started'), false);
+    const memoryProgress = progress.filter((event) => event.stage === 'retrieval').at(-1);
+    if (item.name === 'unavailable') {
+      assert.equal(memoryProgress?.skipReason, 'RETRIEVER_UNAVAILABLE');
+    } else {
+      assert.equal(memoryProgress?.status, 'failed');
+    }
+    assert.equal(progress.filter((event) => event.stage === 'era_retrieval').at(-1)?.status, 'completed');
+  }
 });

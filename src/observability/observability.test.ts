@@ -199,6 +199,13 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
     fields: { status: 'skipped', slowAgentSkipReason: 'no_evidence' },
   });
   assert.deepEqual([skipped?.eventType, skipped?.status, skipped?.metrics?.skipReason], ['agent.skipped', 'skip', 'no_evidence']);
+  const coachNoEvidence = adaptRealtimeTrace({
+    context, sessionId: 'session-a', provider: 'stepfun', event: 'coach.resolve.skipped',
+    fields: { status: 'skipped', skipReason: 'NO_EVIDENCE', memoryEvidenceCount: 0, eraEvidenceCount: 0 },
+  });
+  assert.deepEqual([
+    coachNoEvidence?.eventType, coachNoEvidence?.status, coachNoEvidence?.metrics?.skipReason,
+  ], ['coach.resolve.skipped', 'skip', 'NO_EVIDENCE']);
 
   const timedOut = adaptRealtimeTrace({
     context, sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_path.slow_agent.failed',
@@ -624,9 +631,18 @@ test('Technical observer keeps the current Fast Voice + Slow Coach turn coherent
   publish({ category: 'realtime', eventType: 'realtime.resume', status: 'success', component: 'realtime-tool-cycle', metadata: { turnKey: 'turn-four', toolCallKey: 'call-four' } });
   assert.equal(elements.get('tech-node-context')?.dataset.state, 'complete');
 
+  publish({ category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', component: 'realtime-provider' });
+  publish({ category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', component: 'realtime-provider', metadata: { turnKey: 'turn-five' } });
+  publish({
+    category: 'runtime', eventType: 'coach.resolve.skipped', status: 'skip', component: 'realtime-coach-resolve',
+    metrics: { skipReason: 'NO_EVIDENCE', evidenceCount: 0, resolveMs: 0 },
+    metadata: { turnKey: 'turn-five', triggerMode: 'supervisor_auto' },
+  });
+  assert.match(collectText(elements.get('tech-observer-events')!), /无检索证据/u);
+
   elements.get('tech-observer-toggle')!.listeners.get('click')?.();
   assert.equal(stream.closed, true);
-  assert.equal(elements.get('tech-observer-turn')?.textContent, 'TURN #4');
+  assert.equal(elements.get('tech-observer-turn')?.textContent, 'TURN #5');
 });
 
 test('high event volume keeps session storage bounded with an asynchronous consumer', async () => {

@@ -94,7 +94,7 @@ try {
       firstAudioLatencyMs: 'Tool→首段语音', responseBFirstAudioMs: '回复→首段语音', toolCallCount: 'Tool calls',
     };
     const skipReasons = {
-      no_evidence: '无检索证据', agent_disabled: 'Agent 未启用',
+      no_evidence: '无检索证据', NO_EVIDENCE: '无检索证据', agent_disabled: 'Agent 未启用',
       agent_unavailable: 'Agent 不可用', agent_not_configured: 'Agent 未配置',
       RETRIEVER_UNAVAILABLE: 'Memory Retriever 不可用', ERA_CONTEXT_UNAVAILABLE: 'Era Retriever 不可用',
       RETRIEVAL_NOT_REQUESTED: '本路未请求',
@@ -195,7 +195,9 @@ try {
       if (event.component === 'realtime-coach-retriever') return ['candidateCount', 'evidenceCount', 'memoryRetrievalMs', 'skipReason', 'errorCode'];
       if (event.component === 'realtime-coach-era-retriever') return ['candidateCount', 'evidenceCount', 'eraRetrievalMs', 'skipReason', 'errorCode'];
       if (event.component === 'realtime-coach-pipeline') return ['totalMs', 'errorCode'];
-      if (event.component === 'realtime-coach-resolve') return ['evidenceCount', 'resolveMs', 'errorCode'];
+      if (event.component === 'realtime-coach-resolve') return event.eventType === 'coach.resolve.skipped'
+        ? ['evidenceCount', 'resolveMs', 'skipReason', 'errorCode']
+        : ['evidenceCount', 'resolveMs', 'errorCode'];
       if (event.component === 'realtime-coach') return ['action', 'packetChars', 'totalMs'];
       if (event.category === 'retriever') return ['candidateCount', 'evidenceCount', 'errorCode'];
       if (event.component === 'realtime-context-agent') {

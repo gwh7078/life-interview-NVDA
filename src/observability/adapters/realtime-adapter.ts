@@ -27,7 +27,7 @@ const numericMetrics = [
 
 const SAFE_FALLBACK_TYPES = new Set(['direct_retrieval']);
 const SAFE_SKIP_REASONS = new Set([
-  'no_evidence', 'agent_disabled', 'agent_unavailable', 'agent_not_configured',
+  'no_evidence', 'NO_EVIDENCE', 'agent_disabled', 'agent_unavailable', 'agent_not_configured',
   'RETRIEVER_UNAVAILABLE', 'ERA_CONTEXT_UNAVAILABLE', 'RETRIEVAL_NOT_REQUESTED',
 ]);
 const SAFE_TOOL_RESULT_STATUSES = new Set(['completed', 'no_context', 'failed']);

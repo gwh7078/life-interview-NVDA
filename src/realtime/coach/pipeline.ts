@@ -41,6 +41,10 @@ export interface RealtimeCoachPipelineResult {
   resolveMs: number;
 }
 
+type RetrievalPathResult<T> =
+  | { status: 'not_requested' | 'unavailable'; evidence: T[] }
+  | { status: 'success'; evidence: T[] };
+
 function report(
   callback: ((event: RealtimeCoachPipelineProgress) => void) | undefined,
   event: RealtimeCoachPipelineProgress,
@@ -136,13 +140,13 @@ export class RealtimeCoachPipeline {
     const trace = { turnId: input.request.turnId, contextVersion: input.request.contextVersion };
     let memoryRetrievalMs: number | null = null;
     let eraRetrievalMs: number | null = null;
-    const retrieveMemory = async (): Promise<CoachEvidence[]> => {
+    const retrieveMemory = async (): Promise<RetrievalPathResult<CoachEvidence>> => {
       if (!input.gate.retrieve_memory) {
         report(input.onProgress, {
           stage: 'retrieval', status: 'skipped', ...trace,
           skipReason: 'RETRIEVAL_NOT_REQUESTED',
         });
-        return [];
+        return { status: 'not_requested', evidence: [] };
       }
       const memoryStartedAt = performance.now();
       report(input.onProgress, { stage: 'retrieval', status: 'started', ...trace });
@@ -153,7 +157,7 @@ export class RealtimeCoachPipeline {
             skipReason: 'RETRIEVER_UNAVAILABLE',
             errorCode: 'RETRIEVER_UNAVAILABLE',
           });
-          return [];
+          return { status: 'unavailable', evidence: [] };
         }
         const retrieved = await this.retrieval.retrieve({
           ...input.request,
@@ -167,7 +171,7 @@ export class RealtimeCoachPipeline {
           latencyMs: memoryRetrievalMs,
           candidateCount: retrieved.candidateCount, evidenceCount: evidence.length,
         });
-        return evidence;
+        return { status: 'success', evidence };
       } catch (error) {
         memoryRetrievalMs = Number((performance.now() - memoryStartedAt).toFixed(2));
         report(input.onProgress, {
@@ -181,13 +185,13 @@ export class RealtimeCoachPipeline {
       }
     };
 
-    const retrieveEra = async (): Promise<CoachEraEvidence[]> => {
+    const retrieveEra = async (): Promise<RetrievalPathResult<CoachEraEvidence>> => {
       if (!input.gate.retrieve_era) {
         report(input.onProgress, {
           stage: 'era_retrieval', status: 'skipped', ...trace,
           skipReason: 'RETRIEVAL_NOT_REQUESTED',
         });
-        return [];
+        return { status: 'not_requested', evidence: [] };
       }
       const eraStartedAt = performance.now();
       const query = input.gate.era_query;
@@ -207,7 +211,7 @@ export class RealtimeCoachPipeline {
           skipReason: 'ERA_CONTEXT_UNAVAILABLE',
           errorCode: 'ERA_CONTEXT_UNAVAILABLE',
         });
-        return [];
+        return { status: 'unavailable', evidence: [] };
       }
       try {
         const matches = await searchEraWithTimeout(this.eraContext, {
@@ -223,7 +227,7 @@ export class RealtimeCoachPipeline {
           latencyMs: eraRetrievalMs,
           candidateCount: matches.length, evidenceCount: evidence.length,
         });
-        return evidence;
+        return { status: 'success', evidence };
       } catch (error) {
         const errorCode = safeErrorCode(error, 'ERA_CONTEXT_FAILED');
         eraRetrievalMs = Number((performance.now() - eraStartedAt).toFixed(2));
@@ -238,19 +242,24 @@ export class RealtimeCoachPipeline {
     };
 
     const [memoryResult, eraResult] = await Promise.allSettled([retrieveMemory(), retrieveEra()]);
-    if (memoryResult.status === 'rejected' && eraResult.status === 'rejected') {
-      throw Object.assign(new Error('Both Realtime Coach retrieval paths failed.'), {
-        code: 'REALTIME_COACH_RETRIEVAL_FAILED',
-      });
-    }
-    const memoryEvidence = memoryResult.status === 'fulfilled' ? memoryResult.value : [];
-    const eraEvidence = eraResult.status === 'fulfilled' ? eraResult.value : [];
+    const memoryOutcome = memoryResult.status === 'fulfilled'
+      ? memoryResult.value : { status: 'failed' as const, evidence: [] };
+    const eraOutcome = eraResult.status === 'fulfilled'
+      ? eraResult.value : { status: 'failed' as const, evidence: [] };
+    const memoryEvidence = memoryOutcome.evidence;
+    const eraEvidence = eraOutcome.evidence;
     if (input.signal?.aborted) {
       const error = new Error('Realtime Coach turn was cancelled after retrieval.');
       error.name = 'AbortError';
       throw error;
     }
     if (memoryEvidence.length === 0 && eraEvidence.length === 0) {
+      if (memoryOutcome.status === 'failed' || memoryOutcome.status === 'unavailable'
+        || eraOutcome.status === 'failed' || eraOutcome.status === 'unavailable') {
+        throw Object.assign(new Error('Requested Realtime Coach retrieval did not complete successfully.'), {
+          code: 'REALTIME_COACH_RETRIEVAL_FAILED',
+        });
+      }
       report(input.onProgress, {
         stage: 'resolve', status: 'skipped', ...trace,
         memoryEvidenceCount: 0, eraEvidenceCount: 0, skipReason: 'NO_EVIDENCE',

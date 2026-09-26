@@ -2378,13 +2378,13 @@ function createRealtimeHandler(
       });
     };
     const failOpen = (reason: string, fields: RealtimeTraceFields = {}): void => {
-      if (!isTurnCurrent() || responseRequested) return;
+      if (!isCurrent()) return;
       controller.abort(reason);
       recordTrace('coach.skipped', { ...traceFields, ...fields, reason });
       respondOnce(undefined, { ...traceFields, ...fields });
     };
     const sendCoachResult = (packet: string | undefined, fields: RealtimeTraceFields): void => {
-      if (!isTurnCurrent() || responseRequested) return;
+      if (!isCurrent()) return;
       if (performance.now() >= totalDeadlineAt) {
         failOpen('coach_total_timeout', fields);
         return;
@@ -3595,9 +3595,29 @@ function createRealtimeHandler(
 
     if (event.type === 'user.transcript.final') {
       const text = event.text;
+      if (!text.trim()) {
+        recordTrace('provider.user_transcription_empty_ignored', {
+          eventId: event.eventId,
+          chars: text.length,
+          deltaCount: userTranscriptDeltaCount,
+          responseActive: activeResponses.size > 0,
+          ...microphoneTiming(),
+        });
+        if (awaitingUserTranscript) {
+          clearUserTurnStallWatchdog();
+          userTurnRecoveryAttempted = false;
+          pendingSpeech = false;
+          manualTurnCommitPending = false;
+          manualTurnCommitSent = false;
+          manualInputReadyForTurn = true;
+          awaitingUserTranscript = false;
+          userTranscriptDeltaCount = 0;
+        }
+        return;
+      }
       const providerMessageId = event.itemId ?? event.eventId ?? `user-${Date.now()}`;
       if (supervisorAutoSelected() && supervisorCoachMessageIds.has(providerMessageId)) return;
-      if (supervisorAutoSelected() && text.trim()) supervisorCoachMessageIds.add(providerMessageId);
+      if (supervisorAutoSelected()) supervisorCoachMessageIds.add(providerMessageId);
       clearUserTurnStallWatchdog();
       userTurnRecoveryAttempted = false;
       pendingSpeech = false;
@@ -3614,13 +3634,11 @@ function createRealtimeHandler(
       contextVersion += 1;
       slowCoordinator.cancel();
       awaitingUserTranscript = false;
-      const userFinalTrace = text.trim()
-        ? traceStageTracker.mark('user_final', {
-            eventId: event.eventId,
-            chars: text.length,
-            textPresent: true,
-          })
-        : {};
+      const userFinalTrace = traceStageTracker.mark('user_final', {
+        eventId: event.eventId,
+        chars: text.length,
+        textPresent: true,
+      });
       recordTrace('provider.user_transcription_completed', {
         turnId: providerMessageId,
         eventId: event.eventId,

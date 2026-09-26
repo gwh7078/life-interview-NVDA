@@ -57,6 +57,7 @@ function normalize(raw: unknown): NormalizedRealtimeEvent[] {
       status: String(response?.status ?? 'completed'),
     }];
   }
+  if (type === 'input_audio_buffer.speech_started') return [{ type: 'speech.started' }];
   if (type === 'conversation.item.input_audio_transcription.completed') {
     return [{
       type: 'user.transcript.final',
@@ -1003,6 +1004,146 @@ test('stepaudio2_mini supervisor_auto skips Retriever for an ordinary answer', a
       'a duplicate final must not be forwarded as a second user turn');
     assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1,
       'Gate action=none must request exactly one current-turn response');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto discards an aborted Coach without speaking over new user speech', async () => {
+  let resolveStarted!: () => void;
+  let resolveAborted!: () => void;
+  let abortObserved = false;
+  const resolveStartedPromise = new Promise<void>((resolve) => { resolveStarted = resolve; });
+  const resolveAbortedPromise = new Promise<void>((resolve) => { resolveAborted = resolve; });
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: '历史工作经历',
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'history_reference', avoid: null, direction: '不应在用户开口时插话。',
+        };
+      },
+      async resolve(_input, options) {
+        resolveStarted();
+        return new Promise<CoachPacket>((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () => {
+            abortObserved = true;
+            resolveAborted();
+            reject(new Error('Coach interrupted by user speech'));
+          }, { once: true });
+        });
+      },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-interrupted-turn', '我还记得以前的工作。');
+    await waitFor(resolveStartedPromise, 1_000, 'Coach Resolve start');
+    fixture.sendProviderEvent({ type: 'input_audio_buffer.speech_started', event_id: 'interrupt-current-coach' });
+    await fixture.waitForOwnerMessage((message) => message.type === 'speech_started', 'new user speech');
+    await waitFor(resolveAbortedPromise, 1_000, 'Coach abort from new user speech');
+    await delay(50);
+
+    assert.equal(abortObserved, true);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 0,
+      'external abort must discard the old Coach silently instead of starting Mini speech');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini supervisor_auto ignores an empty final without invalidating a valid Coach turn', async () => {
+  let gateCalls = 0;
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coach: {
+      async evaluate() {
+        gateCalls += 1;
+        await delay(100);
+        return {
+          action: 'guide', retrieve_memory: false, memory_query: null,
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'missing_key_detail', avoid: null, direction: '继续讲述这段有效回答。',
+        };
+      },
+      async resolve() { throw new Error('Resolve must not run without requested retrieval'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'coach-valid-turn-before-empty', '那年我第一次换了工作。');
+    sendUserFinal(fixture, 'empty-final-must-not-advance-turn', '   ');
+    const response = await fixture.waitForProviderMessage((message) => (
+      message.type === 'response.create'
+      && String(record(message.response)?.instructions ?? '').includes('继续讲述这段有效回答')
+    ), 'response for valid turn after empty final');
+
+    assert.match(String(record(response.response)?.instructions ?? ''), /继续讲述这段有效回答/u);
+    assert.equal(gateCalls, 1);
+    assert.equal(fixture.ownerMessages.filter((message) => (
+      message.type === 'user_final' && message.itemId === 'empty-final-must-not-advance-turn'
+    )).length, 0, 'blank transcript must not become a user turn');
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1,
+      'the valid turn must receive exactly one response');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('stepaudio2_mini manual turn accepts another turn after an empty transcript final', async () => {
+  const fixture = await createFixture({
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coach: {
+      async evaluate() {
+        return {
+          action: 'none', retrieve_memory: false, memory_query: null,
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'normal', avoid: null, direction: null,
+        };
+      },
+      async resolve() { throw new Error('Resolve must not run for action=none'); },
+    },
+  });
+  try {
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await waitForMatch(
+      () => fixture.ownerMessages.filter((message) => message.type === 'speech_started'),
+      (_message, index) => index === 0,
+      'first manual speech start',
+    );
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
+    await waitForMatch(
+      () => fixture.providerMessages.filter((message) => message.type === 'mock.commit'),
+      (_message, index) => index === 0,
+      'empty-turn commit',
+    );
+    sendUserFinal(fixture, 'empty-only-turn', '   ');
+    await delay(30);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 0,
+      'an empty transcript must not create a Mini response');
+
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_started' }));
+    await waitForMatch(
+      () => fixture.ownerMessages.filter((message) => message.type === 'speech_started'),
+      (_message, index) => index === 1,
+      'manual speech after empty transcript',
+    );
+    fixture.ownerSocket.send(JSON.stringify({ type: 'manual_turn_commit', silenceObservedMs: 5_000 }));
+    await waitForMatch(
+      () => fixture.providerMessages.filter((message) => message.type === 'mock.commit'),
+      (_message, index) => index === 1,
+      'next valid-turn commit',
+    );
+    sendUserFinal(fixture, 'valid-turn-after-empty', '下一轮我想继续说。');
+    await fixture.waitForOwnerMessage((message) => message.type === 'user_final' && message.itemId === 'valid-turn-after-empty', 'next valid final');
+    await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'next valid Mini response');
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1);
   } finally {
     await fixture.close();
   }
