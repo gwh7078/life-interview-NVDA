@@ -4593,8 +4593,8 @@ function createRealtimeHandler(
         : Number.NaN;
       const minimumSilenceMs = config.realtimeLocalSilenceTimeoutMs ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS;
       const supervisorMode = supervisorAutoSelected();
-      const commitSteps = supervisorMode
-        ? selectedAdapter?.commitInputTurn?.()
+      const commitSteps = supervisorMode && selectedAdapter?.commitInputTurn
+        ? selectedAdapter.commitInputTurn()
         : selectedAdapter?.commitAndRespondToInputTurn?.();
       if (phase !== 'active' || !selectedAdapter?.capabilities.manualTurnControl
         || !commitSteps || commitSteps.length === 0 || !pendingSpeech || !awaitingUserTranscript

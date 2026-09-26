@@ -246,7 +246,7 @@ test('Local interview service exposes current realtime provider states without e
     assert.doesNotMatch(pageText, /provider-select/);
     assert.match(pageText, /id="auth-card"/);
     assert.match(pageText, /value="create"/);
-    assert.match(pageText, /StepAudio 3 Realtime · 高质量默认/);
+    assert.match(pageText, /Step-Audio-2-mini Realtime · 默认/);
     assert.doesNotMatch(pageText, /Qwen Realtime/);
 
     const onboardingPage = await fetch(`${baseUrl}/onboarding`);

@@ -96,7 +96,8 @@ test('same share_id keeps contributor memory across sessions while owner evidenc
   assert.equal(firstContext.story.title, '第一次独立负责跨团队项目');
 
   const instructions = buildInterviewInstructions(firstContext);
-  assert.match(instructions, /不是主人公本人/);
+  assert.match(instructions, /不是客观真相/);
+  assert.match(instructions, /不得透露主人公的私密访谈内容/);
   assert.match(instructions, /家人当时怎么看这个决定/);
   assert.equal(instructions.includes(seedIds.user), false);
   assert.equal(instructions.includes(created.link.shareId), false);
@@ -582,4 +583,3 @@ test('deleting a Story invalidates its share link but preserves historical contr
     database.close();
   }
 });
-

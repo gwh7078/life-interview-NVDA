@@ -252,10 +252,9 @@ test('StepFun Story prompts keep Audio 3 on Voice Tool and register Mini tools o
   const miniVoiceInstructions = instructions(miniVoice);
   assert.ok(Array.isArray(miniVoice.tools));
   assert.match(miniVoiceInstructions, /你是人生采访记者/);
-  assert.match(miniVoiceInstructions, /每次只问一个具体问题/);
-  assert.match(miniVoiceInstructions, /不要并列追问/);
-  assert.match(miniVoiceInstructions, /根据用户刚说的话继续/);
-  assert.match(miniVoiceInstructions, /不要替用户回答/);
+  assert.match(miniVoiceInstructions, /每轮只问一个具体问题/);
+  assert.match(miniVoiceInstructions, /按用户最新信息追问/);
+  assert.match(miniVoiceInstructions, /不代答或编造/);
   assert.match(miniVoiceInstructions, /只有需要确认以前说过的内容|只有在需要核对历史时/u);
   assert.doesNotMatch(miniVoiceInstructions, /明显历史指代|必须依赖已有 Story Memory|每轮必须遵守/u);
 
@@ -263,10 +262,9 @@ test('StepFun Story prompts keep Audio 3 on Voice Tool and register Mini tools o
   const miniSupervisorInstructions = instructions(miniSupervisor);
   assert.equal('tools' in miniSupervisor, false);
   assert.match(miniSupervisorInstructions, /你是人生采访记者/);
-  assert.match(miniSupervisorInstructions, /每次只问一个具体问题/);
-  assert.match(miniSupervisorInstructions, /不要并列追问/);
-  assert.match(miniSupervisorInstructions, /根据用户刚说的话继续/);
-  assert.match(miniSupervisorInstructions, /收到【采访教练】提示/);
+  assert.match(miniSupervisorInstructions, /每轮只问一个具体问题/);
+  assert.match(miniSupervisorInstructions, /按用户最新信息追问/);
+  assert.match(miniSupervisorInstructions, /按【采访教练】提示调整/);
   assert.doesNotMatch(miniSupervisorInstructions, /get_interview_context|Memory Judge|历史上下文工具|agent_memory/u);
 
   const tool = audio3Voice.tools as Array<Record<string, unknown>>;
