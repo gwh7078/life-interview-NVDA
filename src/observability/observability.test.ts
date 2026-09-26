@@ -68,6 +68,33 @@ test('realtime adapter maps safe lifecycle, slow-path outcomes, and timing field
   assert.equal(observation?.status, 'success');
   assert.equal(observation?.durationMs, 42);
   assert.equal(JSON.stringify(observation).includes('private'), false);
+  const committed = adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: 'provider.user_transcription_completed',
+    fields: { turnId: 'provider-item-secret' },
+  });
+  assert.equal(committed?.eventType, 'realtime.turn_committed');
+  assert.match(String(committed?.metadata?.turnKey), /^[A-Za-z0-9_-]{12}$/u);
+  assert.equal(JSON.stringify(committed).includes('provider-item-secret'), false);
+  const responseStarted = adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: 'provider.response_created',
+    fields: { responseId: 'response-secret' },
+  });
+  assert.match(String(responseStarted?.metadata?.responseKey), /^[A-Za-z0-9_-]{12}$/u);
+  assert.equal(JSON.stringify(responseStarted).includes('response-secret'), false);
+  const allowedTool = adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: 'realtime.tool_call.received',
+    fields: { name: 'get_interview_context', callId: 'call-secret', turnId: 'provider-item-secret' },
+  });
+  assert.equal(allowedTool?.summary, 'memory_recall');
+  assert.match(String(allowedTool?.metadata?.toolCallKey), /^[A-Za-z0-9_-]{12}$/u);
+  assert.equal(JSON.stringify(allowedTool).includes('get_interview_context'), false);
+  assert.equal(JSON.stringify(allowedTool).includes('call-secret'), false);
+  const unknownTool = adaptRealtimeTrace({
+    sessionId: 'session-a', provider: 'stepfun', event: 'realtime.tool_call.received',
+    fields: { name: 'unknown_provider_tool', callId: 'call-2' },
+  });
+  assert.equal(unknownTool?.summary, undefined);
+  assert.equal(unknownTool?.metadata?.tool, undefined);
   assert.equal(adaptRealtimeTrace({
     sessionId: 'session-a', provider: 'stepfun', event: 'realtime.slow_recall_finished', fields: { status: 'indexing' },
   })?.eventType, 'realtime.slow_path.result.unknown');
@@ -354,43 +381,56 @@ test('NAT adapter emits evaluation and validator events without synthetic sessio
   assert.equal(failedEvaluation.at(-1)?.eventType, 'validator.failed');
 });
 
-test('Tech Observer stays isolated and renders only safe fields', () => {
+test('Technical observer keeps the current Fast Voice + Slow Coach turn coherent and safe', () => {
   const source = readFileSync(new URL('../../public/tech-observer.js', import.meta.url), 'utf8');
   assert.doesNotThrow(() => runInNewContext(source, {
     document: { querySelector() { throw new Error('simulated observer DOM failure'); } },
   }));
   const makeElement = (): any => ({
-    dataset: {}, children: [], hidden: true, textContent: '',
+    dataset: {}, children: [], hidden: true, textContent: '', open: false, closed: false,
     classList: { toggle() {} },
-    addEventListener() {}, setAttribute() {},
+    listeners: new Map(),
+    addEventListener(type: string, listener: (event?: unknown) => void) { this.listeners.set(type, listener); },
+    setAttribute(name: string, value: string) { this[name] = value; },
     append(...children: any[]) { this.children.push(...children); },
     replaceChildren(...children: any[]) {
       this.children = children.flatMap((child) => child.isFragment === true ? child.children as Array<Record<string, unknown>> : [child]);
     },
   });
-  const flowItems = ['realtime', 'agent', 'skill', 'tool', 'retriever', 'evidence', 'validator', 'persistence']
-    .map((category) => ({ dataset: { category } }));
   const elements = new Map<string, ReturnType<typeof makeElement>>();
   for (const id of [
-    'tech-observer', 'tech-observer-toggle', 'tech-observer-events', 'tech-observer-live',
-    'tech-observer-session', 'tech-observer-trace', 'tech-observer-count', 'tech-observer-empty',
-    'tech-observer-environment', 'tech-observer-provider', 'tech-observer-agent', 'tech-observer-runtime',
-    'tech-observer-skill', 'tech-observer-tool', 'tech-observer-model',
+    'workspace-layout', 'tech-observer', 'tech-observer-toggle', 'tech-observer-events', 'tech-observer-recent-events',
+    'tech-observer-live', 'tech-observer-session', 'tech-observer-trace', 'tech-observer-count',
+    'tech-observer-empty', 'tech-observer-turn', 'tech-observer-slow-status',
+    'tech-observer-environment', 'tech-observer-provider', 'tech-observer-memory-trigger',
+    'tech-observer-agent', 'tech-observer-runtime', 'tech-observer-skill', 'tech-observer-tool',
+    'tech-observer-model', 'tech-observer-tokens', 'tech-observer-fallback', 'tech-observer-error',
+    'tech-node-user', 'tech-node-voice', 'tech-node-assistant', 'tech-node-trigger',
+    'tech-node-retriever', 'tech-node-coach', 'tech-node-context',
+    'tech-node-user-state', 'tech-node-voice-state', 'tech-node-assistant-state',
+    'tech-node-trigger-state', 'tech-node-retriever-state', 'tech-node-coach-state', 'tech-node-context-state',
+    'tech-node-voice-detail', 'tech-node-trigger-detail', 'tech-node-retriever-detail',
+    'tech-node-coach-detail', 'tech-node-context-detail',
+    'tech-edge-user-voice', 'tech-edge-voice-assistant', 'tech-edge-voice-trigger',
+    'tech-edge-trigger-retriever', 'tech-edge-retriever-coach', 'tech-edge-coach-context',
+    'tech-edge-context-voice', 'tech-metric-first-audio', 'tech-metric-slow-latency',
+    'tech-metric-evidence', 'tech-metric-tool-count',
   ]) elements.set(id, makeElement());
   const panel = elements.get('tech-observer')!;
-  panel.querySelectorAll = (selector: string) => selector === '.tech-observer-flow li' ? flowItems : [];
+  panel.querySelectorAll = () => [];
   const shell = { classList: { toggle() {} } };
   const listeners = new Map<string, (event: { detail?: unknown }) => void>();
   const windowObject = {
     location: { search: '?demo=tech' },
     addEventListener(type: string, listener: (event: { detail?: unknown }) => void) { listeners.set(type, listener); },
   };
-  const streams: Array<{ listeners: Map<string, (event: { data: string }) => void> }> = [];
+  const streams: Array<{ listeners: Map<string, (event: { data: string }) => void>; closed?: boolean }> = [];
   class FakeEventSource {
     listeners = new Map<string, (event: { data: string }) => void>();
+    closed = false;
     constructor(_url: string) { streams.push(this); }
     addEventListener(type: string, listener: (event: { data: string }) => void) { this.listeners.set(type, listener); }
-    close() {}
+    close() { this.closed = true; }
   }
   const documentObject = {
     querySelector(selector: string) { return selector === '.app-shell' ? shell : null; },
@@ -403,36 +443,155 @@ test('Tech Observer stays isolated and renders only safe fields', () => {
     URLSearchParams, Date, requestAnimationFrame: (callback: () => void) => callback(),
   });
   listeners.get('interview:session')?.({ detail: { sessionId: 'session-secret' } });
-  streams[0]?.listeners.get('observation')?.({ data: JSON.stringify({
-    eventId: 'event-secret', timestamp: '2026-09-24T08:00:00.000Z', traceId: 'trace-secret',
-    spanId: 'call-secret', parentSpanId: 'story-secret', sessionId: 'session-secret', storyId: 'story-secret',
-    category: 'agent', eventType: 'agent.timeout', status: 'warning', component: 'realtime-context-agent',
-    title: 'SENSITIVE_TITLE_SENTINEL', summary: 'SENSITIVE_EVIDENCE_SENTINEL',
-    metrics: {
-      errorCode: 'AGENT_RUNTIME_TIMEOUT', fallbackUsed: true, fallbackType: 'direct_retrieval',
-      promptTokens: 40, model: 'sk-secret', query: 'SENSITIVE_QUERY_SENTINEL',
+  const stream = streams[0]!;
+  let eventNumber = 0;
+  const publish = (event: Record<string, unknown>): void => stream.listeners.get('observation')?.({
+    data: JSON.stringify({
+      eventId: `event-${++eventNumber}`, timestamp: `2026-09-24T08:00:${String(eventNumber).padStart(2, '0')}.000Z`,
+      traceId: 'trace-secret', spanId: 'call-secret', parentSpanId: 'story-secret',
+      sessionId: 'session-secret', storyId: 'story-secret', ...event,
+    }),
+  });
+  publish({
+    category: 'runtime', eventType: 'runtime.started', status: 'start', component: 'interview-runtime',
+    title: 'SENSITIVE_TITLE_SENTINEL', metadata: {
+      environment: 'Development', provider: 'stepfun', voiceProfile: 'stepaudio2_mini',
+      voiceModel: 'Step-Audio-2-mini', memoryTriggerMode: 'supervisor_auto', coachModel: 'qwen3-8b',
     },
-    metadata: { agent: 'Interview Agent', provider: 'session-secret', runtime: 'Bearer secret-value' },
-  }) });
-  streams[0]?.listeners.get('observation')?.({ data: JSON.stringify({
-    eventId: 'skip-event', timestamp: '2026-09-24T08:00:01.000Z', traceId: 'trace-secret',
-    spanId: 'call-secret', parentSpanId: 'story-secret', sessionId: 'session-secret', storyId: 'story-secret',
-    category: 'agent', eventType: 'agent.skipped', status: 'skip', component: 'realtime-context-agent',
-    title: 'UNTRUSTED TITLE', metrics: { skipReason: 'agent_disabled', fallbackUsed: true, fallbackType: 'direct_retrieval' },
-  }) });
+  });
+  listeners.get('interview:tech-status')?.({ detail: { stage: 'fast_voice', status: 'completed', model: 'Step-Audio-2-mini' } });
+  publish({ category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', component: 'realtime-provider' });
+  publish({ category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', component: 'realtime-provider', metadata: { turnKey: 'turn-one' } });
+  publish({ category: 'realtime', eventType: 'realtime.model_thinking', status: 'running', component: 'realtime-provider', metadata: { turnKey: 'turn-one', responseKey: 'response-one' } });
+  publish({ category: 'tool', eventType: 'tool.started', status: 'running', component: 'realtime-tool', summary: 'memory_recall', metadata: { turnKey: 'turn-one', toolCallKey: 'call-one', tool: 'memory_recall' } });
+  publish({ category: 'realtime', eventType: 'realtime.hold', status: 'running', component: 'realtime-tool-cycle' });
+  publish({ category: 'retriever', eventType: 'retriever.started', status: 'start', component: 'nemo-retriever' });
+  publish({
+    category: 'retriever', eventType: 'retriever.completed', status: 'success', component: 'nemo-retriever',
+    durationMs: 126, metrics: { candidateCount: 5, evidenceCount: 5 },
+  });
+  publish({ category: 'agent', eventType: 'agent.started', status: 'start', component: 'realtime-context-agent', metadata: { turnKey: 'turn-one' } });
+  publish({
+    category: 'agent', eventType: 'agent.timeout', status: 'warning', component: 'realtime-context-agent',
+    title: 'UNTRUSTED TITLE', summary: 'SENSITIVE_EVIDENCE_SENTINEL', metrics: {
+      errorCode: 'AGENT_RUNTIME_TIMEOUT', fallbackUsed: true, fallbackType: 'direct_retrieval',
+      selectedEvidenceCount: 2, promptTokens: 40, model: 'sk-secret', query: 'SENSITIVE_QUERY_SENTINEL',
+    }, metadata: { agent: 'Interview Agent', runtime: 'Bearer secret-value', turnKey: 'turn-one' },
+  });
+  publish({
+    category: 'evidence', eventType: 'evidence.ready', status: 'success', component: 'realtime-context',
+    metrics: { selectedEvidenceCount: 2, fallbackUsed: true, fallbackType: 'direct_retrieval' }, metadata: { turnKey: 'turn-one' },
+  });
+  assert.equal(elements.get('tech-node-context')?.dataset.state, 'active');
+  assert.match(elements.get('tech-node-context-detail')?.textContent ?? '', /等待注入/u);
+  publish({
+    category: 'tool', eventType: 'tool.completed', status: 'success', component: 'realtime-tool',
+    metadata: { turnKey: 'turn-one', toolCallKey: 'call-one', tool: 'memory_recall' }, metrics: { sent: true, resultStatus: 'completed' },
+  });
+  publish({ category: 'realtime', eventType: 'realtime.resume', status: 'success', component: 'realtime-tool-cycle', metadata: { turnKey: 'turn-one', toolCallKey: 'call-one' } });
+  publish({
+    category: 'runtime', eventType: 'realtime.slow_path.result.completed', status: 'success',
+    component: 'realtime-slow-path', durationMs: 1080, metadata: { turnKey: 'turn-one' },
+  });
+  publish({
+    category: 'realtime', eventType: 'realtime.first_audio', status: 'success', component: 'realtime-tool-cycle',
+    metrics: { firstAudioLatencyMs: 620, responseBFirstAudioMs: 620 }, metadata: { turnKey: 'turn-one', toolCallKey: 'call-one' },
+  });
 
   const collectText = (node: { textContent?: string; children?: Array<Record<string, unknown>> }): string =>
     `${node.textContent ?? ''} ${(node.children ?? []).map((child) => collectText(child as typeof node)).join(' ')}`;
-  const rendered = collectText(elements.get('tech-observer-events')!);
-  assert.match(rendered, /CONTEXT HINT AGENT TIMEOUT/u);
-  assert.match(rendered, /AGENT_RUNTIME_TIMEOUT/u);
-  assert.match(rendered, /直接使用检索证据/u);
-  assert.match(rendered, /Agent 未启用/u);
+  const currentTurn = elements.get('tech-observer-events')!;
+  const firstTurnText = `${collectText(currentTurn)} ${collectText(elements.get('tech-observer-recent-events')!)}`;
+  assert.equal(elements.get('tech-observer-turn')?.textContent, 'TURN #1');
+  assert.equal(elements.get('tech-node-coach')?.dataset.state, 'warning');
+  assert.equal(elements.get('tech-node-context')?.dataset.state, 'complete');
+  assert.match(elements.get('tech-node-context-detail')?.textContent ?? '', /直接使用检索结果/u);
+  assert.equal(elements.get('tech-node-assistant')?.dataset.state, 'active');
+  assert.equal(elements.get('tech-metric-first-audio')?.textContent, '620 ms');
+  assert.match(elements.get('tech-metric-slow-latency')?.textContent ?? '', /1\.08/u);
+  assert.equal(elements.get('tech-metric-evidence')?.textContent, '5 → 2');
+  assert.equal(elements.get('tech-metric-tool-count')?.textContent, '1');
+  assert.ok(elements.get('tech-observer-recent-events')!.children.length <= 6);
+  assert.equal(elements.get('tech-observer-events')!.children.length, eventNumber);
+  assert.match(firstTurnText, /CONTEXT HINT AGENT TIMEOUT/u);
+  assert.match(firstTurnText, /AGENT_RUNTIME_TIMEOUT/u);
+  assert.match(firstTurnText, /Prompt tokens: 40/u);
   for (const secret of ['session-secret', 'story-secret', 'trace-secret', 'call-secret', 'SENSITIVE_', 'sk-secret', 'Bearer']) {
-    assert.equal(rendered.includes(secret), false, `observer leaked ${secret}`);
+    assert.equal(firstTurnText.includes(secret), false, `observer leaked ${secret}`);
   }
   assert.equal(elements.get('tech-observer-session')?.textContent, '当前采访');
   assert.equal(elements.get('tech-observer-trace')?.textContent, '已关联');
+
+  publish({ category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', component: 'realtime-provider' });
+  assert.equal(elements.get('tech-observer-turn')?.textContent, 'TURN #2');
+  assert.equal(elements.get('tech-node-retriever')?.dataset.state, 'waiting');
+  assert.equal(elements.get('tech-node-coach')?.dataset.state, 'waiting');
+  publish({ category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', component: 'realtime-provider', metadata: { turnKey: 'turn-two' } });
+  publish({
+    category: 'agent', eventType: 'agent.timeout', status: 'warning', component: 'realtime-context-agent',
+    metadata: { turnKey: 'turn-one' }, metrics: { fallbackUsed: true, fallbackType: 'direct_retrieval' },
+  });
+  assert.equal(elements.get('tech-node-context')?.dataset.state, 'waiting');
+  assert.equal(elements.get('tech-node-context-detail')?.textContent, '');
+  assert.equal(elements.get('tech-metric-first-audio')?.textContent, '—');
+  assert.equal(elements.get('tech-metric-tool-count')?.textContent, '0');
+  publish({ category: 'realtime', eventType: 'realtime.model_thinking', status: 'running', component: 'realtime-provider', metadata: { turnKey: 'turn-two', responseKey: 'response-two' } });
+  publish({ category: 'realtime', eventType: 'realtime.listening', status: 'success', component: 'realtime-provider', metadata: { responseKey: 'response-one' } });
+  assert.equal(elements.get('tech-node-assistant')?.dataset.state, 'waiting');
+  assert.equal(elements.get('tech-node-voice')?.dataset.state, 'active');
+  publish({
+    category: 'realtime', eventType: 'realtime.first_audio', status: 'success', component: 'realtime-provider',
+    metrics: { firstAudioLatencyMs: 450 },
+  });
+  assert.equal(elements.get('tech-node-retriever')?.dataset.state, 'skipped');
+  assert.equal(elements.get('tech-node-coach')?.dataset.state, 'skipped');
+  assert.equal(elements.get('tech-node-context')?.dataset.state, 'skipped');
+  assert.match(elements.get('tech-observer-slow-status')?.textContent ?? '', /本轮无需检索/u);
+  assert.equal(elements.get('tech-metric-first-audio')?.textContent, '450 ms');
+  assert.equal(elements.get('tech-metric-slow-latency')?.textContent, '—');
+  assert.equal(elements.get('tech-observer-events')!.children.length, eventNumber);
+
+  publish({ category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', component: 'realtime-provider' });
+  publish({ category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', component: 'realtime-provider', metadata: { turnKey: 'turn-three' } });
+  publish({
+    category: 'tool', eventType: 'tool.started', status: 'running', component: 'realtime-tool', summary: 'unknown_provider_tool',
+    metadata: { turnKey: 'turn-three', toolCallKey: 'call-three', tool: 'unknown_provider_tool' },
+  });
+  assert.equal(elements.get('tech-node-trigger-detail')?.textContent, 'Tool Call');
+  publish({
+    category: 'tool', eventType: 'tool.completed', status: 'warning', component: 'realtime-tool',
+    metadata: { turnKey: 'turn-three', toolCallKey: 'call-three', tool: 'unknown_provider_tool' },
+    metrics: { sent: true, resultStatus: 'no_context', fallbackUsed: true },
+  });
+  publish({ category: 'realtime', eventType: 'realtime.resume', status: 'success', component: 'realtime-tool-cycle', metadata: { turnKey: 'turn-three', toolCallKey: 'call-three' } });
+  assert.equal(elements.get('tech-node-context')?.dataset.state, 'skipped');
+  assert.match(elements.get('tech-node-context-detail')?.textContent ?? '', /无可用上下文/u);
+  const allEventText = collectText(elements.get('tech-observer-events')!);
+  assert.equal(allEventText.includes('unknown_provider_tool'), false);
+  assert.equal(allEventText.includes('turn-one'), false);
+  assert.equal(allEventText.includes('call-one'), false);
+
+  publish({ category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', component: 'realtime-provider' });
+  publish({ category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', component: 'realtime-provider', metadata: { turnKey: 'turn-four' } });
+  publish({
+    category: 'tool', eventType: 'tool.started', status: 'running', component: 'realtime-tool', summary: 'memory_recall',
+    metadata: { turnKey: 'turn-four', toolCallKey: 'call-four', tool: 'memory_recall' },
+  });
+  publish({
+    category: 'runtime', eventType: 'coach.applied', status: 'success', component: 'realtime-coach',
+    metadata: { turnKey: 'turn-four', toolCallKey: 'call-four', triggerMode: 'voice_tool' },
+  });
+  publish({
+    category: 'tool', eventType: 'tool.completed', status: 'success', component: 'realtime-tool', summary: 'memory_recall',
+    metadata: { turnKey: 'turn-four', toolCallKey: 'call-four', tool: 'memory_recall' }, metrics: { sent: true, resultStatus: 'completed' },
+  });
+  assert.equal(elements.get('tech-node-context')?.dataset.state, 'active');
+  publish({ category: 'realtime', eventType: 'realtime.resume', status: 'success', component: 'realtime-tool-cycle', metadata: { turnKey: 'turn-four', toolCallKey: 'call-four' } });
+  assert.equal(elements.get('tech-node-context')?.dataset.state, 'complete');
+
+  elements.get('tech-observer-toggle')!.listeners.get('click')?.();
+  assert.equal(stream.closed, true);
+  assert.equal(elements.get('tech-observer-turn')?.textContent, 'TURN #4');
 });
 
 test('high event volume keeps session storage bounded with an asynchronous consumer', async () => {

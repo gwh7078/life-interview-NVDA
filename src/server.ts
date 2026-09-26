@@ -2907,6 +2907,9 @@ function createRealtimeHandler(
             possibleConflicts: [],
             interviewHints: [],
           });
+      const resultStatus = miniOutput
+        ? miniOutput.status === 'coach-context' ? 'completed' : 'no_context'
+        : usable ? 'completed' : 'no_context';
       if (timedOut) recordTrace('realtime.tool_call.deadline_exceeded', {
         callId: event.callId,
         responseId: event.responseId,
@@ -2958,7 +2961,7 @@ function createRealtimeHandler(
         outputWritten: outputWrite.outputWritten,
         resumeWritten,
         fallbackUsed: timedOut,
-        status: timedOut ? 'timeout' : usable ? 'completed' : 'no_context',
+        status: resultStatus,
         latencyMs: elapsedMs,
       });
       sendTechStatus({ stage: 'resume', status: resumeWritten ? 'completed' : 'failed', latencyMs: elapsedMs });
@@ -3477,6 +3480,7 @@ function createRealtimeHandler(
           })
         : {};
       recordTrace('provider.user_transcription_completed', {
+        turnId: providerMessageId,
         eventId: event.eventId,
         chars: text.length,
         deltaCount: userTranscriptDeltaCount,

@@ -1,31 +1,50 @@
 try {
-  const shell = document.querySelector('.app-shell');
   const panel = document.getElementById('tech-observer');
+  const layout = document.getElementById('workspace-layout');
   const toggle = document.getElementById('tech-observer-toggle');
-  const eventList = document.getElementById('tech-observer-events');
-  if (shell && panel && toggle && eventList && typeof EventSource === 'function') {
+  const recentList = document.getElementById('tech-observer-recent-events');
+  const fullList = document.getElementById('tech-observer-events');
+  if (panel && layout && toggle && recentList && fullList && typeof EventSource === 'function') {
+    const ids = (names) => Object.fromEntries(names.map((name) => [name, document.getElementById(`tech-${name}`)]));
     const live = document.getElementById('tech-observer-live');
+    const empty = document.getElementById('tech-observer-empty');
+    const environmentLabel = document.getElementById('tech-observer-environment');
+    const turnLabel = document.getElementById('tech-observer-turn');
+    const modelLabel = document.getElementById('tech-observer-model');
+    const voiceModelLabel = document.getElementById('tech-node-voice-model');
+    const slowStatusLabel = document.getElementById('tech-observer-slow-status');
     const sessionLabel = document.getElementById('tech-observer-session');
     const traceLabel = document.getElementById('tech-observer-trace');
-    const countLabel = document.getElementById('tech-observer-count');
-    const emptyLabel = document.getElementById('tech-observer-empty');
-    const values = {
-      environment: document.getElementById('tech-observer-environment'),
+    const eventCountLabel = document.getElementById('tech-observer-count');
+    const recentCountLabel = document.getElementById('tech-observer-recent-count');
+    const nodeCards = Object.fromEntries(['user', 'voice', 'assistant', 'trigger', 'retriever', 'coach', 'context']
+      .map((name) => [name, document.getElementById(`tech-node-${name}`)]));
+    const nodeStates = Object.fromEntries(['user', 'voice', 'assistant', 'trigger', 'retriever', 'coach', 'context']
+      .map((name) => [name, document.getElementById(`tech-node-${name}-state`)]));
+    const edges = ids(['edge-user-voice', 'edge-voice-assistant', 'edge-voice-trigger', 'edge-trigger-retriever', 'edge-retriever-coach', 'edge-coach-context', 'edge-context-voice']);
+    const metrics = ids(['metric-first-audio', 'metric-slow-latency', 'metric-evidence', 'metric-tool-count']);
+    const detailFields = {
+      environment: document.getElementById('tech-detail-environment'),
       provider: document.getElementById('tech-observer-provider'),
       memoryTriggerMode: document.getElementById('tech-observer-memory-trigger'),
-      coach: document.getElementById('tech-observer-coach'),
-      coachAction: document.getElementById('tech-observer-coach-action'),
-      coachLatency: document.getElementById('tech-observer-coach-latency'),
-      retriever: document.getElementById('tech-observer-retriever'),
-      contextAgent: document.getElementById('tech-observer-context-agent'),
-      contextInjection: document.getElementById('tech-observer-context-injection'),
       agent: document.getElementById('tech-observer-agent'),
       runtime: document.getElementById('tech-observer-runtime'),
-      skill: document.getElementById('tech-observer-skill'),
+      modelSkill: document.getElementById('tech-observer-skill'),
       tool: document.getElementById('tech-observer-tool'),
-      model: document.getElementById('tech-observer-model'),
+      tokens: document.getElementById('tech-observer-tokens'),
+      fallback: document.getElementById('tech-observer-fallback'),
+      error: document.getElementById('tech-observer-error'),
     };
-    const eventTitles = {
+
+    const allowedCategories = new Set(['realtime', 'runtime', 'agent', 'skill', 'tool', 'retriever', 'evidence', 'validator', 'persistence', 'system']);
+    const providerLabels = {
+      stepaudio3_quality: 'StepAudio 3 Realtime',
+      stepaudio2_mini: 'Step-Audio 2 mini Realtime',
+      stepfun: 'Step-Audio 2 mini Realtime',
+      modelbest: 'MiniCPM-o 4.5 Realtime · Experimental',
+      qwen: 'Qwen Realtime',
+    };
+    const titles = {
       'runtime.started': 'SESSION STARTED', 'runtime.ended': 'SESSION ENDED',
       'coach.gate.started': 'COACH GATE STARTED', 'coach.gate.completed': 'COACH GATE COMPLETE',
       'coach.gate.timeout': 'COACH GATE TIMEOUT', 'coach.gate.failed': 'COACH GATE FAILED',
@@ -35,26 +54,31 @@ try {
       'coach.resolve.timeout': 'COACH RESOLVE TIMEOUT', 'coach.resolve.failed': 'COACH RESOLVE FAILED',
       'coach.applied': 'COACH APPLIED', 'coach.skipped': 'COACH SKIPPED',
       'realtime.connected': 'REALTIME CONNECTED', 'realtime.user_speaking': 'USER SPEAKING',
+      'realtime.turn_committed': 'USER TURN COMMITTED',
       'realtime.listening': 'LISTENING', 'realtime.model_thinking': 'AI THINKING',
       'realtime.interrupted': 'INTERRUPTED', 'realtime.hold': 'HOLD', 'realtime.resume': 'RESUME',
-      'realtime.first_audio': 'FIRST AUDIO', 'tool.started': 'TOOL CALL', 'tool.completed': 'TOOL RESULT',
+      'realtime.resumed': 'AI RESUMED', 'realtime.first_audio': 'FIRST AUDIO',
+      'realtime.responding': 'AI SPEAKING', 'realtime.slow_deadline_exceeded': 'SLOW PATH DEADLINE EXCEEDED',
+      'tool.received': 'TOOL CALL', 'tool.started': 'TOOL CALL', 'tool.completed': 'TOOL RESULT',
       'tool.failed': 'TOOL FAILED', 'retriever.started': 'RETRIEVER STARTED',
       'retriever.completed': 'RETRIEVER COMPLETE', 'retriever.failed': 'RETRIEVER FAILED',
-      'retriever.skipped': 'RETRIEVER SKIPPED', 'evidence.ready': 'CONTEXT HINT READY',
-      'agent.started': 'AGENT STARTED', 'agent.completed': 'AGENT COMPLETE',
-      'agent.failed': 'AGENT FAILED', 'agent.timeout': 'AGENT TIMEOUT', 'agent.skipped': 'AGENT SKIPPED',
-      'agent.metrics': 'AGENT METRICS',
-      'skill.started': 'SKILL STARTED', 'skill.completed': 'SKILL COMPLETE', 'skill.failed': 'SKILL FAILED',
+      'retriever.skipped': 'RETRIEVER SKIPPED', 'evidence.ready': 'CONTEXT INJECTION READY',
+      'evidence.injected': 'CONTEXT INJECTED', 'evidence.injection_failed': 'CONTEXT INJECTION FAILED',
+      'evidence.no_context': 'NO CONTEXT', 'agent.started': 'AGENT STARTED',
+      'agent.completed': 'AGENT COMPLETE', 'agent.failed': 'AGENT FAILED',
+      'agent.timeout': 'AGENT TIMEOUT', 'agent.skipped': 'AGENT SKIPPED',
+      'agent.metrics': 'AGENT METRICS', 'skill.started': 'SKILL STARTED',
+      'skill.completed': 'SKILL COMPLETE', 'skill.failed': 'SKILL FAILED',
       'validator.passed': 'VALIDATION PASSED', 'validator.failed': 'VALIDATION FAILED',
       'database.write.started': 'DATABASE WRITE STARTED', 'database.write.completed': 'DATABASE WRITE COMPLETE',
       'database.write.failed': 'DATABASE WRITE FAILED',
     };
     const metricLabels = {
-      candidateCount: '候选', evidenceCount: '证据', selectedEvidenceCount: '选中证据',
+      candidateCount: '候选', evidenceCount: '证据', selectedEvidenceCount: '采用',
       action: 'Coach Action', retrieve: '需要检索', gateMs: 'Gate', retrievalMs: 'Retriever',
       resolveMs: 'Resolve', totalMs: '总耗时', packetChars: 'Packet 字符',
       promptTokens: 'Prompt tokens', completionTokens: 'Completion tokens', totalTokens: 'Total tokens',
-      fallbackUsed: '降级', fallbackType: '降级方式', skipReason: '跳过原因', errorCode: '错误码',
+      fallbackUsed: '降级', fallbackType: '降级方式', skipReason: '跳过原因', errorCode: '错误码', resultStatus: '结果', sent: '已发送',
       model: 'Model', skill: 'Skill', resumeLatencyMs: 'Resume→回复', toolResultLatencyMs: 'Tool Result',
       firstAudioLatencyMs: 'Tool→首段语音', responseBFirstAudioMs: '回复→首段语音', toolCallCount: 'Tool calls',
     };
@@ -62,37 +86,90 @@ try {
       no_evidence: '无检索证据', agent_disabled: 'Agent 未启用',
       agent_unavailable: 'Agent 不可用', agent_not_configured: 'Agent 未配置',
     };
-    const allowedCategories = new Set(['realtime', 'runtime', 'agent', 'skill', 'tool', 'retriever', 'evidence', 'validator', 'persistence', 'system']);
-    const events = [];
+    const numericMetricKeys = new Set([
+      'candidateCount', 'evidenceCount', 'selectedEvidenceCount', 'promptTokens', 'completionTokens', 'totalTokens',
+      'resumeLatencyMs', 'toolResultLatencyMs', 'firstAudioLatencyMs', 'responseBFirstAudioMs', 'toolCallCount',
+      'gateMs', 'retrievalMs', 'resolveMs', 'totalMs', 'packetChars',
+    ]);
+    const state = {
+      sessionId: '',
+      authenticatedUserId: null,
+      voiceModel: '',
+      provider: '',
+      environment: '',
+      memoryTriggerMode: '',
+      agent: '',
+      runtime: '',
+      model: '',
+      skill: '',
+      tool: '',
+      promptTokens: null,
+      completionTokens: null,
+      totalTokens: null,
+      errorCode: '',
+      traceLinked: false,
+      turnNumber: 0,
+      turn: createTurn(0),
+      events: [],
+    };
     const eventIds = new Set();
-    let sessionId = '';
-    let authenticatedUserId = null;
+    const toolCallTurns = new Map();
+    const responseTurns = new Map();
     let source;
-    let renderQueued = false;
 
-    const safeDisplayLabel = (value) => typeof value === 'string'
+    function createTurn(number) {
+      return {
+        number,
+        turnKey: '', fallback: '', contextResultReady: false,
+        user: 'waiting', userLabel: '等待',
+        voice: 'waiting', voiceLabel: '等待', fastState: 'waiting',
+        assistant: 'waiting', assistantLabel: '等待',
+        trigger: 'waiting', triggerLabel: '等待', triggerDetail: '',
+        retriever: 'waiting', retrieverLabel: '等待', retrieverDetail: '',
+        coach: 'waiting', coachLabel: '等待', coachDetail: '',
+        context: 'waiting', contextLabel: '等待', contextDetail: '',
+        userVoiceEdge: 'waiting', voiceAssistantEdge: 'waiting', voiceTriggerEdge: 'waiting',
+        triggerRetrieverEdge: 'waiting', retrieverCoachEdge: 'waiting', coachContextEdge: 'waiting', contextVoiceEdge: 'waiting',
+        slowStatus: '等待本轮信号', slowTriggered: false, assistantActive: false, awaitingUser: false,
+        firstAudioMs: null, slowLatencyMs: null, evidenceCount: null, selectedEvidenceCount: null, toolCount: 0,
+      };
+    }
+
+    const safeLabel = (value) => typeof value === 'string'
       && /^[A-Za-z0-9_][A-Za-z0-9_ .:/+-]{0,63}$/u.test(value.trim())
       && !/(?:\b(?:bearer|token|api[ _-]?key|cookie|authorization|secret)\b|^sk[-_]|^(?:session|sess|story|call|response|run|trace|span)[_:-]|^[0-9a-f]{8}-[0-9a-f-]{27,}$)/iu.test(value.trim())
       ? value.trim()
-      : undefined;
-
+      : '';
+    const safeErrorCode = (value) => typeof value === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/u.test(value) ? value : '';
+    const setLive = (status, label) => {
+      if (!live) return;
+      live.dataset.state = status;
+      live.textContent = label;
+    };
+    const finite = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+    const displayDuration = (value) => {
+      const ms = finite(value);
+      if (ms === null) return '—';
+      if (ms < 1000) return `${Math.round(ms)} ms`;
+      return `${(ms / 1000).toFixed(2).replace(/0+$/u, '').replace(/\.$/u, '')} s`;
+    };
+    const providerLabel = (value) => safeLabel(value) ? providerLabels[value] || safeLabel(value) : '';
     const eventTitle = (event) => {
-      if (event.eventType === 'realtime.listening' && event.status === 'success') return 'RESPONSE COMPLETE';
-      if (event.eventType === 'realtime.responding') return event.component === 'realtime-tool-cycle' ? 'AI RESUMED' : 'AI SPEAKING';
       if (event.component === 'realtime-context-agent') {
-        return eventTitles[event.eventType] === 'AGENT TIMEOUT' || event.eventType === 'agent.timeout'
-          || (event.eventType === 'agent.failed' && typeof event.metrics?.errorCode === 'string' && event.metrics.errorCode.includes('TIMEOUT'))
-          ? 'CONTEXT HINT AGENT TIMEOUT'
-          : `CONTEXT HINT ${eventTitles[event.eventType] || 'AGENT EVENT'}`;
+        const timeout = event.eventType === 'agent.timeout'
+          || event.eventType === 'agent.failed' && String(event.metrics?.errorCode || '').includes('TIMEOUT');
+        if (timeout) return 'CONTEXT HINT AGENT TIMEOUT';
+        return `CONTEXT HINT ${titles[event.eventType] || 'AGENT EVENT'}`;
       }
       if (event.eventType.startsWith('realtime.slow_path.result.')) {
         const result = event.eventType.slice('realtime.slow_path.result.'.length).toUpperCase();
         return ['COMPLETED', 'TIMEOUT', 'FAILED', 'ABORTED', 'STALE', 'UNKNOWN'].includes(result)
           ? `SLOW PATH ${result}` : 'SLOW PATH RESULT';
       }
-      return eventTitles[event.eventType] || 'RUNTIME EVENT';
+      if (event.eventType === 'realtime.responding') return event.component === 'realtime-tool-cycle' ? 'AI RESUMED' : 'AI SPEAKING';
+      if (event.eventType === 'realtime.listening' && event.status === 'success') return 'RESPONSE COMPLETE';
+      return titles[event.eventType] || 'RUNTIME EVENT';
     };
-
     const expectedMetrics = (event) => {
       if (event.component === 'realtime-coach-gate') return ['action', 'retrieve', 'gateMs', 'errorCode'];
       if (event.component === 'realtime-coach-retriever') return ['candidateCount', 'evidenceCount', 'retrievalMs', 'errorCode'];
@@ -105,46 +182,420 @@ try {
         return ['model', 'skill', 'promptTokens', 'completionTokens', 'totalTokens', 'selectedEvidenceCount', 'errorCode', 'fallbackUsed', 'fallbackType'];
       }
       if (event.eventType === 'evidence.ready') return ['selectedEvidenceCount', 'fallbackUsed', 'fallbackType'];
+      if (event.eventType === 'evidence.injected' || event.eventType === 'evidence.injection_failed') return ['sent'];
       if (event.eventType.startsWith('realtime.slow_path.result.')) return ['evidenceCount', 'fallbackUsed', 'fallbackType', 'errorCode'];
       if (event.eventType === 'realtime.responding' && event.component === 'realtime-tool-cycle') return ['resumeLatencyMs'];
       if (event.eventType === 'realtime.resume') return ['resumeLatencyMs'];
       if (event.eventType === 'realtime.first_audio') return ['firstAudioLatencyMs', 'responseBFirstAudioMs'];
-      if (event.eventType === 'tool.completed' && event.component === 'realtime-tool') return ['toolResultLatencyMs'];
+      if (event.eventType === 'tool.completed' && event.component === 'realtime-tool') return ['resultStatus', 'sent', 'toolResultLatencyMs'];
       if (event.eventType === 'agent.completed') return ['toolCallCount'];
       return [];
     };
-
     const metricValue = (key, value) => {
-      if (['candidateCount', 'evidenceCount', 'selectedEvidenceCount', 'promptTokens', 'completionTokens', 'totalTokens', 'resumeLatencyMs', 'toolResultLatencyMs', 'firstAudioLatencyMs', 'responseBFirstAudioMs', 'toolCallCount', 'gateMs', 'retrievalMs', 'resolveMs', 'totalMs', 'packetChars'].includes(key)) {
-        return typeof value === 'number' && Number.isFinite(value) && value >= 0
-          ? `${Math.round(value)}${key.endsWith('Ms') || key.endsWith('LatencyMs') ? ' ms' : ''}`
-          : '暂无数据';
+      if (numericMetricKeys.has(key)) {
+        const number = finite(value);
+        return number === null ? '—' : `${Math.round(number)}${key.endsWith('Ms') || key.endsWith('LatencyMs') ? ' ms' : ''}`;
       }
-      if (key === 'retrieve') return typeof value === 'boolean' ? (value ? '是' : '否') : '暂无数据';
-      if (key === 'fallbackUsed') return typeof value === 'boolean' ? (value ? '是' : '否') : '暂无数据';
-      if (key === 'fallbackType') return value === 'direct_retrieval' ? '直接使用检索证据' : '暂无数据';
-      if (key === 'skipReason') return skipReasons[value] || '暂无数据';
-      if (key === 'errorCode') return typeof value === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/u.test(value) ? value : '暂无数据';
-      return safeDisplayLabel(value) || '暂无数据';
+      if (key === 'retrieve' || key === 'fallbackUsed' || key === 'sent') return typeof value === 'boolean' ? value ? '是' : '否' : '—';
+      if (key === 'fallbackType') return value === 'direct_retrieval' ? '直接使用检索结果' : '—';
+      if (key === 'skipReason') return skipReasons[value] || '—';
+      if (key === 'errorCode') return safeErrorCode(value) || '—';
+      return safeLabel(value) || '—';
     };
 
-    const setLive = (state, label) => {
-      if (!live) return;
-      live.dataset.state = state;
-      live.textContent = label;
+    const setNode = (key, status, label, detail = '') => {
+      const card = nodeCards[key];
+      if (card) card.dataset.state = status;
+      if (nodeStates[key]) nodeStates[key].textContent = label;
+      const detailKey = key === 'voice' ? 'node-voice-detail'
+        : key === 'trigger' ? 'node-trigger-detail'
+          : key === 'retriever' ? 'node-retriever-detail'
+            : key === 'coach' ? 'node-coach-detail'
+              : key === 'context' ? 'node-context-detail' : '';
+      if (detailKey && document.getElementById(`tech-${detailKey}`)) document.getElementById(`tech-${detailKey}`).textContent = detail;
+    };
+    const setEdge = (key, value) => { if (edges[key]) edges[key].dataset.state = value; };
+    const isTimeout = (event) => event.eventType.includes('timeout')
+      || typeof event.metrics?.errorCode === 'string' && event.metrics.errorCode.includes('TIMEOUT');
+    const eventState = (event) => event.status === 'error' ? 'error'
+      : event.status === 'warning' ? 'warning'
+        : event.status === 'skip' ? 'skipped'
+          : event.status === 'success' ? 'complete' : 'active';
+    const updateFallback = (event) => {
+      if (event.metrics?.fallbackUsed !== true && event.metrics?.fallbackType !== 'direct_retrieval') return false;
+      state.turn.fallback = event.metrics.fallbackType === 'direct_retrieval' ? '直接使用检索结果' : '已启用降级';
+      return true;
+    };
+    const skipPendingSlowNodes = (message) => {
+      const turn = state.turn;
+      for (const [key, current, label] of [
+        ['trigger', turn.trigger, '跳过'], ['retriever', turn.retriever, '跳过'],
+        ['coach', turn.coach, '跳过'], ['context', turn.context, '跳过'],
+      ]) {
+        if (current === 'waiting') {
+          turn[key] = 'skipped';
+          turn[`${key}Label`] = label;
+          if (key === 'retriever' || key === 'context') turn[`${key}Detail`] = message;
+        }
+      }
+      turn.slowStatus = message;
+      for (const edge of ['voiceTriggerEdge', 'triggerRetrieverEdge', 'retrieverCoachEdge', 'coachContextEdge']) {
+        if (turn[edge] === 'waiting') turn[edge] = 'skipped';
+      }
+    };
+    const markSlowTimeout = (message, failed = false) => {
+      const turn = state.turn;
+      for (const key of ['trigger', 'retriever', 'coach', 'context']) {
+        if (turn[key] === 'waiting' || turn[key] === 'active') {
+          turn[key] = failed ? 'error' : 'warning';
+          turn[`${key}Label`] = failed ? '失败' : 'Timeout';
+        }
+      }
+      turn.slowStatus = turn.fallback ? `Agent Timeout · ${turn.fallback}` : message;
+    };
+    const beginTurn = () => {
+      state.turnNumber += 1;
+      state.turn = createTurn(state.turnNumber);
+    };
+    const updateIdentity = (event) => {
+      const metadata = event.metadata && typeof event.metadata === 'object' ? event.metadata : {};
+      state.environment ||= safeLabel(metadata.environment);
+      state.provider ||= providerLabel(metadata.provider);
+      state.memoryTriggerMode ||= safeLabel(metadata.memoryTriggerMode || metadata.triggerMode);
+      state.agent ||= safeLabel(metadata.agent);
+      state.runtime ||= safeLabel(metadata.runtime);
+      state.skill ||= safeLabel(metadata.skill || event.metrics?.skill);
+      state.model ||= safeLabel(event.metrics?.model || metadata.coachModel);
+      if (event.category === 'tool' && event.component === 'realtime-tool' && event.summary === 'memory_recall') state.tool = 'memory_recall';
+      state.voiceModel ||= safeLabel(metadata.voiceModel);
+      if (typeof event.traceId === 'string' && (typeof event.spanId === 'string' || typeof event.parentSpanId === 'string')) state.traceLinked = true;
+      if (typeof event.metrics?.promptTokens === 'number') state.promptTokens = finite(event.metrics.promptTokens);
+      if (typeof event.metrics?.completionTokens === 'number') state.completionTokens = finite(event.metrics.completionTokens);
+      if (typeof event.metrics?.totalTokens === 'number') state.totalTokens = finite(event.metrics.totalTokens);
+      const errorCode = safeErrorCode(event.metrics?.errorCode);
+      if (errorCode) state.errorCode = errorCode;
     };
 
-    const updateFlow = (event) => {
-      if (!allowedCategories.has(event.category)) return;
-      const category = event.category === 'realtime' && /^realtime\.(hold|resume)/u.test(event.eventType)
-        ? 'tool'
-        : event.category;
-      const item = [...panel.querySelectorAll('.tech-observer-flow li')].find((node) => node.dataset.category === category);
-      if (!item) return;
-      item.dataset.state = event.status === 'error' ? 'error'
-        : event.status === 'warning' ? 'warning'
-          : event.status === 'skip' ? 'skipped'
-            : event.status === 'success' ? 'complete' : 'active';
+    const applyEvent = (event) => {
+      const turn = state.turn;
+      const { eventType, metrics: eventMetrics = {} } = event;
+      if (eventType === 'realtime.user_speaking') {
+        if (turn.number === 0 || turn.awaitingUser || turn.assistantActive) beginTurn();
+        state.turn.user = 'active';
+        state.turn.userLabel = '正在说话';
+        state.turn.fastState = 'user_speaking';
+        state.turn.awaitingUser = false;
+        state.turn.assistantActive = false;
+        state.turn.userVoiceEdge = 'active';
+      } else if (eventType === 'realtime.turn_committed') {
+        const turnKey = event.metadata?.turnKey;
+        if (typeof turnKey === 'string') turn.turnKey = turnKey;
+        if (turn.user === 'active') turn.userLabel = '已提交';
+      } else if (eventType === 'realtime.connected') {
+        turn.voice = 'complete'; turn.voiceLabel = 'Listening'; turn.fastState = 'listening';
+      } else if (eventType === 'realtime.model_thinking') {
+        turn.user = turn.user === 'active' ? 'complete' : turn.user;
+        turn.userLabel = turn.user === 'complete' ? '已提交' : turn.userLabel;
+        turn.voice = 'active'; turn.voiceLabel = 'Thinking'; turn.fastState = 'thinking';
+        turn.userVoiceEdge = 'complete';
+      } else if (eventType === 'realtime.responding') {
+        turn.voice = 'active'; turn.voiceLabel = 'Speaking'; turn.fastState = 'responding';
+        turn.assistant = 'active'; turn.assistantLabel = '正在回复'; turn.assistantActive = true;
+        turn.voiceAssistantEdge = 'active';
+        if (event.component === 'realtime-tool-cycle' && turn.context !== 'skipped') {
+          if (turn.contextResultReady) {
+            turn.context = 'complete'; turn.contextLabel = '已回注';
+            turn.contextDetail = turn.fallback || '上下文已回到 Voice Model';
+            turn.contextVoiceEdge = 'complete';
+          }
+        }
+      } else if (eventType === 'realtime.listening') {
+        if (event.status === 'success') {
+          turn.voice = 'complete'; turn.voiceLabel = 'Listening'; turn.fastState = 'listening';
+          turn.assistant = 'complete'; turn.assistantLabel = '回复完成'; turn.assistantActive = false; turn.awaitingUser = true;
+          turn.voiceAssistantEdge = 'complete';
+          if (!turn.slowTriggered) skipPendingSlowNodes('本轮无需检索');
+        } else {
+          turn.user = turn.user === 'active' ? 'complete' : turn.user;
+          turn.userLabel = turn.user === 'complete' ? '已提交' : turn.userLabel;
+          turn.voice = 'active'; turn.voiceLabel = 'Listening'; turn.fastState = 'listening';
+        }
+      } else if (eventType === 'realtime.interrupted') {
+        turn.voice = 'warning'; turn.voiceLabel = 'Interrupted'; turn.fastState = 'interrupted';
+        turn.assistant = 'warning'; turn.assistantLabel = '已打断'; turn.assistantActive = true;
+      } else if (eventType === 'realtime.hold') {
+        turn.slowTriggered = true;
+        turn.voice = 'active'; turn.voiceLabel = 'Hold'; turn.fastState = 'hold';
+        turn.trigger = 'complete'; turn.triggerLabel = '已触发';
+        turn.slowStatus = '慢系统运行中';
+      } else if (eventType === 'realtime.resume' || eventType === 'realtime.resumed') {
+        const sent = event.status === 'success';
+        turn.voice = sent ? 'active' : 'error'; turn.voiceLabel = sent ? 'Resuming' : 'Resume 失败'; turn.fastState = sent ? 'resuming' : 'error';
+        turn.assistant = sent ? 'active' : 'error'; turn.assistantLabel = sent ? '正在恢复' : '恢复失败'; turn.assistantActive = sent;
+        if (sent && turn.contextResultReady) {
+          turn.context = 'complete'; turn.contextLabel = '已回注';
+          turn.contextDetail = turn.fallback || '上下文已回到 Voice Model';
+          turn.contextVoiceEdge = 'complete';
+        } else if (!sent && turn.context !== 'skipped') {
+          turn.context = 'error'; turn.contextLabel = '注入失败';
+          turn.contextDetail = 'Resume 写入失败'; turn.contextVoiceEdge = 'error';
+        }
+      } else if (eventType === 'realtime.first_audio') {
+        const latency = finite(eventMetrics.firstAudioLatencyMs ?? eventMetrics.responseBFirstAudioMs ?? event.durationMs);
+        if (latency !== null) turn.firstAudioMs = latency;
+        turn.assistant = 'active'; turn.assistantLabel = '首段语音已到'; turn.assistantActive = true;
+        turn.voiceAssistantEdge = 'active';
+        if (event.component === 'realtime-tool-cycle' && turn.context === 'complete') turn.contextVoiceEdge = 'complete';
+        if (!turn.slowTriggered) skipPendingSlowNodes('本轮无需检索');
+      }
+
+      if (eventType === 'tool.received' || eventType === 'tool.started') {
+        turn.slowTriggered = true;
+        turn.trigger = 'active'; turn.triggerLabel = 'Tool Call';
+        turn.triggerDetail = event.summary === 'memory_recall' ? 'memory_recall' : 'Tool Call';
+        turn.voiceTriggerEdge = 'active'; turn.slowStatus = '等待检索';
+        if (eventType === 'tool.started') turn.toolCount += 1;
+      } else if (eventType === 'tool.completed') {
+        turn.trigger = 'complete'; turn.triggerLabel = 'Tool Result';
+        turn.triggerDetail = event.summary === 'memory_recall' ? 'memory_recall' : turn.triggerDetail || 'Tool Result';
+        turn.voiceTriggerEdge = 'complete';
+        updateFallback(event);
+        if (event.status === 'error' || eventMetrics.sent === false || eventMetrics.resultStatus === 'failed') {
+          turn.context = 'error'; turn.contextLabel = '结果发送失败'; turn.contextDetail = 'Tool Result 未发送';
+          turn.contextResultReady = false; turn.contextVoiceEdge = 'error';
+        } else if (eventMetrics.resultStatus === 'no_context') {
+          turn.context = 'skipped'; turn.contextLabel = '无上下文'; turn.contextDetail = '无可用上下文';
+          turn.contextResultReady = false; turn.contextVoiceEdge = 'skipped'; turn.slowStatus = '无可用上下文';
+        } else if (eventMetrics.resultStatus === 'timeout') {
+          turn.context = 'warning'; turn.contextLabel = 'Timeout'; turn.contextDetail = '超时，未确认有上下文';
+          turn.contextResultReady = false; turn.contextVoiceEdge = 'warning';
+        } else if (eventMetrics.resultStatus === 'completed') {
+          turn.contextResultReady = true;
+          turn.context = 'active'; turn.contextLabel = '等待 Resume';
+          turn.contextDetail = `${turn.fallback ? `${turn.fallback} · ` : ''}结果已发送，等待 Resume`;
+          turn.coachContextEdge = 'complete'; turn.contextVoiceEdge = 'active';
+        }
+      } else if (eventType === 'tool.failed') {
+        turn.trigger = event.status === 'warning' ? 'warning' : 'error';
+        turn.triggerLabel = isTimeout(event) ? 'Timeout' : '失败';
+        turn.triggerDetail = safeErrorCode(eventMetrics.errorCode);
+        if (turn.context !== 'skipped') {
+          turn.context = 'error'; turn.contextLabel = '结果发送失败'; turn.contextDetail = 'Tool Result 未发送';
+          turn.contextResultReady = false; turn.contextVoiceEdge = 'error';
+        }
+      }
+
+      if (eventType.startsWith('retriever.') || eventType.startsWith('coach.retrieval.')) {
+        turn.slowTriggered = true;
+        const status = eventState(event);
+        turn.retriever = status;
+        turn.retrieverLabel = isTimeout(event) ? 'Timeout' : status === 'active' ? '检索中'
+          : status === 'complete' ? '已完成' : status === 'skipped' ? '跳过'
+            : status === 'warning' ? '注意' : status === 'error' ? '失败' : '等待';
+        const evidence = finite(eventMetrics.evidenceCount);
+        const selected = finite(eventMetrics.selectedEvidenceCount);
+        if (evidence !== null) turn.evidenceCount = evidence;
+        if (selected !== null) turn.selectedEvidenceCount = selected;
+        if (event.durationMs !== undefined) turn.retrieverDetail = displayDuration(event.durationMs);
+        else if (status === 'skipped') turn.retrieverDetail = '本轮无需检索';
+        else if (evidence !== null) turn.retrieverDetail = `命中 ${Math.round(evidence)} 条`;
+        turn.trigger = turn.trigger === 'waiting' ? 'complete' : turn.trigger;
+        turn.triggerLabel = turn.trigger === 'complete' && turn.triggerLabel === '等待' ? '已触发' : turn.triggerLabel;
+        turn.triggerRetrieverEdge = status === 'active' ? 'active' : status === 'complete' ? 'complete' : status;
+        if (status === 'skipped') {
+          if (turn.coach === 'waiting') { turn.coach = 'skipped'; turn.coachLabel = '跳过'; }
+          if (turn.context === 'waiting') { turn.context = 'skipped'; turn.contextLabel = '跳过'; turn.contextDetail = '本轮无需检索'; }
+          turn.slowStatus = '本轮无需检索';
+        }
+      }
+
+      const contextAgent = event.component === 'realtime-context-agent';
+      const coachRuntime = typeof event.component === 'string' && event.component.startsWith('realtime-coach');
+      if (contextAgent || coachRuntime || eventType.startsWith('coach.gate.') || eventType.startsWith('coach.resolve.')) {
+        turn.slowTriggered = true;
+        const status = eventState(event);
+        if (eventType === 'coach.gate.started') {
+          turn.trigger = 'complete'; turn.triggerLabel = '已触发';
+          turn.coach = 'active'; turn.coachLabel = '判断检索';
+          turn.coachContextEdge = 'active';
+        } else if (eventType === 'coach.gate.completed' && eventMetrics.retrieve === false) {
+          turn.coach = 'complete'; turn.coachLabel = '无需检索';
+          turn.retriever = 'skipped'; turn.retrieverLabel = '跳过'; turn.retrieverDetail = '本轮无需检索';
+          turn.context = 'skipped'; turn.contextLabel = '跳过'; turn.contextDetail = '本轮无需检索';
+          turn.slowStatus = '本轮无需检索';
+        } else if (eventType === 'coach.applied') {
+          turn.coach = 'complete'; turn.coachLabel = '提示已生成';
+          turn.coachContextEdge = 'complete';
+          if (event.metadata?.triggerMode === 'voice_tool') {
+            turn.contextResultReady = true; turn.context = 'active'; turn.contextLabel = '等待 Resume';
+            turn.contextDetail = 'Coach 提示已就绪，等待 Resume'; turn.contextVoiceEdge = 'active';
+          } else {
+            turn.context = 'complete'; turn.contextLabel = '已注入'; turn.contextDetail = 'Coach 提示已回到 Voice Model';
+            turn.contextVoiceEdge = 'complete';
+          }
+        } else if (eventType === 'coach.skipped') {
+          turn.coach = 'skipped'; turn.coachLabel = '跳过';
+          if (turn.retriever === 'waiting') turn.retriever = 'skipped';
+          if (turn.context === 'waiting') { turn.context = 'skipped'; turn.contextDetail = '本轮无需检索'; }
+          turn.contextLabel = '跳过'; turn.slowStatus = '本轮无需检索';
+        } else {
+          turn.coach = status;
+          turn.coachLabel = isTimeout(event) ? 'Timeout' : status === 'active' ? '分析中'
+            : status === 'complete' ? '已完成' : status === 'warning' ? '注意'
+              : status === 'error' ? '失败' : status === 'skipped' ? '跳过' : '等待';
+          if (safeLabel(eventMetrics.model)) state.model = safeLabel(eventMetrics.model);
+          if (safeLabel(eventMetrics.skill)) state.skill = safeLabel(eventMetrics.skill);
+          if (event.durationMs !== undefined) turn.coachDetail = displayDuration(event.durationMs);
+          const selected = finite(eventMetrics.selectedEvidenceCount);
+          if (selected !== null) turn.selectedEvidenceCount = selected;
+          turn.coachContextEdge = status === 'complete' ? 'complete' : status;
+        }
+        if (updateFallback(event)) {
+          turn.coachDetail = turn.coachDetail || 'Agent 超时';
+          turn.slowStatus = isTimeout(event) ? `Agent Timeout · ${turn.fallback}` : `已回退 · ${turn.fallback}`;
+        }
+      }
+
+      if (eventType === 'evidence.ready') {
+        turn.slowTriggered = true;
+        const selected = finite(eventMetrics.selectedEvidenceCount);
+        if (selected !== null) turn.selectedEvidenceCount = selected;
+        updateFallback(event);
+        turn.context = 'active'; turn.contextLabel = '提示已就绪';
+        turn.contextDetail = `${turn.fallback ? `${turn.fallback} · ` : ''}${selected === null ? '等待注入' : `${Math.round(selected)} 条提示已就绪 · 等待注入`}`;
+        turn.coachContextEdge = 'complete'; turn.slowStatus = turn.fallback ? `已回退 · ${turn.fallback}` : 'Context Hint 已就绪 · 等待注入';
+      } else if (eventType === 'evidence.injected') {
+        turn.context = event.status === 'success' ? 'complete' : 'error';
+        turn.contextLabel = event.status === 'success' ? '已注入' : '注入失败';
+        turn.contextDetail = event.status === 'success' ? turn.fallback || '上下文已发送' : '上下文发送失败';
+        turn.contextVoiceEdge = event.status === 'success' ? 'complete' : 'error';
+        turn.slowStatus = event.status === 'success' ? 'Context Hint 已注入' : 'Context Hint 注入失败';
+      } else if (eventType === 'evidence.injection_failed') {
+        turn.context = 'error'; turn.contextLabel = '注入失败'; turn.contextDetail = '上下文发送失败';
+        turn.contextVoiceEdge = 'error'; turn.slowStatus = 'Context Hint 注入失败';
+      } else if (eventType === 'evidence.no_context') {
+        turn.context = 'skipped'; turn.contextLabel = '无上下文'; turn.contextDetail = '无可用上下文';
+        turn.contextResultReady = false; turn.contextVoiceEdge = 'skipped'; turn.slowStatus = '无可用上下文';
+      }
+
+      if (eventType.startsWith('realtime.slow_path.result.')) {
+        const result = eventType.slice('realtime.slow_path.result.'.length);
+        const duration = finite(event.durationMs ?? eventMetrics.totalMs);
+        if (duration !== null) turn.slowLatencyMs = duration;
+        if (result === 'timeout') markSlowTimeout('Slow Coach Timeout');
+        else if (result === 'failed') markSlowTimeout('Slow Coach 失败 · 快速语音继续', true);
+        else if (result === 'aborted' || result === 'stale') turn.slowStatus = `慢系统已${result === 'stale' ? '丢弃过期结果' : '中止'}`;
+        else if (result === 'completed' && turn.slowStatus === '等待本轮信号') turn.slowStatus = '慢系统已完成';
+      } else if (coachRuntime && finite(eventMetrics.totalMs ?? event.durationMs) !== null) {
+        turn.slowLatencyMs = finite(eventMetrics.totalMs ?? event.durationMs);
+      }
+
+      const directSlowLatency = finite(eventMetrics.totalMs);
+      if (directSlowLatency !== null && (event.component === 'realtime-coach' || eventType === 'coach.applied' || eventType === 'coach.skipped')) {
+        turn.slowLatencyMs = directSlowLatency;
+      }
+      const error = safeErrorCode(eventMetrics.errorCode);
+      if (error) state.errorCode = error;
+    };
+
+    const renderNode = (key, stateKey, labelKey, detailKey) => {
+      const turn = state.turn;
+      setNode(key, turn[stateKey], turn[labelKey], detailKey ? turn[detailKey] : '');
+    };
+    const buildEventRow = (event, detailed) => {
+      const row = document.createElement('li');
+      row.className = 'tech-event';
+      const time = document.createElement('time');
+      const date = new Date(event.timestamp);
+      time.textContent = Number.isNaN(date.getTime()) ? '—' : date.toLocaleTimeString([], { hour12: false });
+      const content = document.createElement('div');
+      content.className = 'tech-event-content';
+      const title = document.createElement('div');
+      title.className = 'tech-event-title';
+      title.dataset.status = ['start', 'running', 'success', 'warning', 'error', 'skip'].includes(event.status) ? event.status : '';
+      const titleText = document.createElement('span');
+      titleText.textContent = eventTitle(event);
+      const timingEvent = event.component === 'nemo-retriever' || event.component === 'realtime-context-agent'
+        || event.component?.startsWith('realtime-coach') || event.component === 'realtime-slow-path'
+        || event.component === 'realtime-tool-cycle' || event.component === 'realtime-tool'
+        || event.eventType === 'realtime.resume';
+      const duration = document.createElement('span');
+      duration.textContent = finite(event.durationMs) !== null ? displayDuration(event.durationMs) : timingEvent ? '—' : '';
+      title.append(titleText, duration);
+      content.append(title);
+      const summary = event.category === 'tool' && event.component === 'realtime-tool' && event.summary === 'memory_recall' ? 'memory_recall' : '';
+      if (summary) {
+        const detail = document.createElement('p');
+        detail.className = 'tech-event-summary';
+        detail.textContent = summary;
+        content.append(detail);
+      }
+      if (detailed) {
+        const keys = expectedMetrics(event);
+        if (keys.length) {
+          const detail = document.createElement('p');
+          detail.className = 'tech-event-metrics';
+          detail.textContent = keys.map((key) => `${metricLabels[key]}: ${metricValue(key, event.metrics?.[key])}`).join(' · ');
+          content.append(detail);
+        }
+      }
+      row.append(time, content);
+      return row;
+    };
+    const render = () => {
+      const turn = state.turn;
+      if (turnLabel) turnLabel.textContent = turn.number > 0 ? `TURN #${turn.number}` : 'TURN —';
+      if (environmentLabel) environmentLabel.textContent = state.environment ? `LOCAL / ${state.environment}` : 'LOCAL';
+      if (modelLabel) modelLabel.textContent = state.voiceModel || 'Voice Model';
+      if (voiceModelLabel) voiceModelLabel.textContent = state.voiceModel || 'Voice Model';
+      if (slowStatusLabel) {
+        slowStatusLabel.textContent = turn.slowStatus;
+        slowStatusLabel.dataset.state = turn.slowStatus.includes('Timeout') || turn.slowStatus.includes('失败') ? 'warning' : 'waiting';
+      }
+      renderNode('user', 'user', 'userLabel');
+      renderNode('voice', 'voice', 'voiceLabel');
+      renderNode('assistant', 'assistant', 'assistantLabel');
+      renderNode('trigger', 'trigger', 'triggerLabel', 'triggerDetail');
+      renderNode('retriever', 'retriever', 'retrieverLabel', 'retrieverDetail');
+      renderNode('coach', 'coach', 'coachLabel', 'coachDetail');
+      renderNode('context', 'context', 'contextLabel', 'contextDetail');
+      setEdge('edge-user-voice', turn.userVoiceEdge);
+      setEdge('edge-voice-assistant', turn.voiceAssistantEdge);
+      setEdge('edge-voice-trigger', turn.voiceTriggerEdge);
+      setEdge('edge-trigger-retriever', turn.triggerRetrieverEdge);
+      setEdge('edge-retriever-coach', turn.retrieverCoachEdge);
+      setEdge('edge-coach-context', turn.coachContextEdge);
+      setEdge('edge-context-voice', turn.contextVoiceEdge);
+      if (metrics['metric-first-audio']) metrics['metric-first-audio'].textContent = displayDuration(turn.firstAudioMs);
+      if (metrics['metric-slow-latency']) metrics['metric-slow-latency'].textContent = displayDuration(turn.slowLatencyMs);
+      if (metrics['metric-evidence']) {
+        const recalled = turn.evidenceCount === null ? '' : String(Math.round(turn.evidenceCount));
+        const selected = turn.selectedEvidenceCount === null ? '' : String(Math.round(turn.selectedEvidenceCount));
+        metrics['metric-evidence'].textContent = recalled && selected ? `${recalled} → ${selected}` : recalled || selected || '—';
+      }
+      if (metrics['metric-tool-count']) metrics['metric-tool-count'].textContent = turn.number > 0 ? String(turn.toolCount) : '—';
+      if (empty) empty.hidden = state.events.length > 0;
+      if (sessionLabel) sessionLabel.textContent = state.sessionId ? '当前采访' : '—';
+      if (traceLabel) traceLabel.textContent = state.traceLinked ? '已关联' : '—';
+      if (eventCountLabel) eventCountLabel.textContent = String(state.events.length);
+      const recent = state.events.slice(-6);
+      if (recentCountLabel) recentCountLabel.textContent = String(recent.length);
+      recentList.replaceChildren(...recent.map((event) => buildEventRow(event, false)));
+      fullList.replaceChildren(...state.events.map((event) => buildEventRow(event, true)));
+      if (detailFields.environment) detailFields.environment.textContent = state.environment || '—';
+      if (detailFields.provider) detailFields.provider.textContent = state.provider || '—';
+      if (detailFields.memoryTriggerMode) detailFields.memoryTriggerMode.textContent = state.memoryTriggerMode || '—';
+      if (detailFields.agent) detailFields.agent.textContent = state.agent || '—';
+      if (detailFields.runtime) detailFields.runtime.textContent = state.runtime || '—';
+      if (detailFields.modelSkill) detailFields.modelSkill.textContent = [state.model, state.skill].filter(Boolean).join(' · ') || '—';
+      if (detailFields.tool) detailFields.tool.textContent = state.tool || turn.triggerDetail || '—';
+      if (detailFields.tokens) {
+        const tokenParts = [['Prompt', state.promptTokens], ['Completion', state.completionTokens], ['Total', state.totalTokens]]
+          .filter(([, value]) => value !== null).map(([label, value]) => `${label} ${Math.round(value)}`);
+        detailFields.tokens.textContent = tokenParts.join(' · ') || '—';
+      }
+      if (detailFields.fallback) detailFields.fallback.textContent = turn.fallback || '—';
+      if (detailFields.error) detailFields.error.textContent = state.errorCode || '—';
     };
 
     const displayEvent = (event) => {
@@ -153,138 +604,86 @@ try {
         if (eventIds.has(event.eventId)) return;
         eventIds.add(event.eventId);
       }
-      if (event.metadata && typeof event.metadata === 'object') {
-        for (const [key, target] of Object.entries(values)) {
-          const label = safeDisplayLabel(event.metadata[key]);
-          if (label && target) target.textContent = label;
-        }
-        if (event.eventType === 'runtime.started') {
-          const profile = safeDisplayLabel(event.metadata.voiceProfile);
-          const showCoach = profile === 'stepaudio2_mini';
-          for (const field of panel.querySelectorAll('.tech-observer-coach-field')) field.hidden = !showCoach;
-          if (values.retriever) values.retriever.textContent = 'idle';
-          if (showCoach) {
-            if (values.coach) values.coach.textContent = safeDisplayLabel(event.metadata.coachModel) || 'qwen3-8b';
-            if (values.coachAction) values.coachAction.textContent = 'none';
-            if (values.coachLatency) values.coachLatency.textContent = '暂无数据';
-          }
-        }
+      const metadata = event.metadata && typeof event.metadata === 'object' ? event.metadata : {};
+      const eventTurnKey = typeof metadata.turnKey === 'string' && /^[A-Za-z0-9_-]{1,64}$/u.test(metadata.turnKey) ? metadata.turnKey : '';
+      const toolCallKey = typeof metadata.toolCallKey === 'string' && /^[A-Za-z0-9_-]{1,64}$/u.test(metadata.toolCallKey) ? metadata.toolCallKey : '';
+      const responseKey = typeof metadata.responseKey === 'string' && /^[A-Za-z0-9_-]{1,64}$/u.test(metadata.responseKey) ? metadata.responseKey : '';
+      if (event.eventType === 'realtime.turn_committed' && eventTurnKey) {
+        if (state.turn.number === 0 || state.turn.awaitingUser || state.turn.assistantActive) beginTurn();
+        state.turn.turnKey = eventTurnKey;
       }
-      if (event.eventType.startsWith('coach.retrieval.') || event.eventType.startsWith('retriever.')) {
-        if (values.retriever) values.retriever.textContent = event.eventType.endsWith('.started')
-          ? 'running'
-          : event.eventType.endsWith('.completed') ? 'completed'
-            : event.eventType.endsWith('.failed') ? 'failed'
-              : event.eventType.endsWith('.timeout') ? 'timeout' : values.retriever.textContent;
+      if ((event.eventType === 'tool.received' || event.eventType === 'tool.started') && eventTurnKey && toolCallKey) {
+        toolCallTurns.set(toolCallKey, eventTurnKey);
+        if (toolCallTurns.size > 100) toolCallTurns.delete(toolCallTurns.keys().next().value);
       }
-      if (event.metrics && typeof event.metrics === 'object') {
-        const action = safeDisplayLabel(event.metrics.action);
-        if (action && values.coachAction) values.coachAction.textContent = action;
-        if (event.eventType === 'coach.gate.timeout' || event.eventType === 'coach.gate.failed') {
-          if (values.coachAction) values.coachAction.textContent = 'none';
-        }
-        const latency = event.metrics.totalMs ?? event.metrics.gateMs ?? event.durationMs;
-        if (typeof latency === 'number' && Number.isFinite(latency) && values.coachLatency
-          && event.component?.startsWith('realtime-coach')) {
-          values.coachLatency.textContent = `${Math.round(latency)} ms`;
-        }
+      const isResponseStart = event.eventType === 'realtime.model_thinking' || event.eventType === 'realtime.responding';
+      let unownedResponseStart = false;
+      if (responseKey && isResponseStart && !responseTurns.has(responseKey)) {
+        const owner = eventTurnKey || (toolCallKey ? toolCallTurns.get(toolCallKey) : '')
+          || (toolCallKey ? '' : state.turn.turnKey);
+        responseTurns.set(responseKey, owner || null);
+        unownedResponseStart = !owner && !toolCallKey && !eventTurnKey;
+        if (responseTurns.size > 100) responseTurns.delete(responseTurns.keys().next().value);
       }
-      if (event.metrics && typeof event.metrics === 'object') {
-        for (const key of ['model', 'skill']) {
-          const label = safeDisplayLabel(event.metrics[key]);
-          if (label && values[key]) values[key].textContent = label;
-        }
+      const responseTurnKey = responseKey && responseTurns.has(responseKey) ? responseTurns.get(responseKey) : '';
+      const correlatedTurnKey = eventTurnKey || (toolCallKey ? toolCallTurns.get(toolCallKey) : '') || responseTurnKey;
+      const requiresCorrelation = Boolean(eventTurnKey || toolCallKey || responseKey);
+      const belongsToCurrentTurn = !requiresCorrelation
+        || Boolean(correlatedTurnKey && state.turn.turnKey && correlatedTurnKey === state.turn.turnKey)
+        || unownedResponseStart;
+      if (belongsToCurrentTurn) {
+        updateIdentity(event);
+        applyEvent(event);
       }
-      if (typeof event.traceId === 'string' && (typeof event.spanId === 'string' || typeof event.parentSpanId === 'string')) {
-        if (traceLabel) traceLabel.textContent = '已关联';
-      }
-      events.push(event);
-      while (events.length > 100) {
-        const removed = events.shift();
+      state.events.push(event);
+      while (state.events.length > 100) {
+        const removed = state.events.shift();
         if (typeof removed?.eventId === 'string') eventIds.delete(removed.eventId);
       }
-      updateFlow(event);
-      if (!renderQueued) {
-        renderQueued = true;
-        requestAnimationFrame(render);
-      }
+      render();
     };
 
-    function render() {
-      renderQueued = false;
-      if (!eventList) return;
-      const fragment = document.createDocumentFragment();
-      const orderedEvents = events.map((event, index) => ({ event, index, time: Date.parse(event.timestamp) }))
-        .sort((left, right) => (Number.isFinite(left.time) ? left.time : 0) - (Number.isFinite(right.time) ? right.time : 0) || left.index - right.index);
-      const seenSpans = new Set();
-      for (const { event } of orderedEvents) {
-        const row = document.createElement('li');
-        row.className = 'tech-event';
-        const related = (typeof event.spanId === 'string' && seenSpans.has(event.spanId))
-          || (typeof event.parentSpanId === 'string' && seenSpans.has(event.parentSpanId));
-        row.dataset.related = String(related);
-        if (typeof event.spanId === 'string') seenSpans.add(event.spanId);
-        const time = document.createElement('time');
-        const date = new Date(event.timestamp);
-        time.textContent = Number.isNaN(date.getTime()) ? '—' : date.toLocaleTimeString([], { hour12: false });
-        const content = document.createElement('div');
-        content.className = 'tech-event-content';
-        const title = document.createElement('div');
-        title.className = 'tech-event-title';
-        title.dataset.status = ['start', 'running', 'success', 'warning', 'error', 'skip'].includes(event.status) ? event.status : '';
-        const titleText = document.createElement('span');
-        titleText.textContent = eventTitle(event);
-        const duration = document.createElement('span');
-        const timingEvent = event.component === 'nemo-retriever' || event.component === 'realtime-context-agent'
-          || event.component?.startsWith('realtime-coach')
-          || event.component === 'realtime-slow-path' || event.component === 'realtime-tool-cycle'
-          || event.component === 'realtime-tool'
-          || event.eventType === 'realtime.resume';
-        duration.textContent = Number.isFinite(event.durationMs) && event.durationMs >= 0
-          ? `${Math.round(event.durationMs)} ms`
-          : timingEvent ? '暂无数据' : '';
-        title.append(titleText, duration);
-        content.append(title);
-        const keys = expectedMetrics(event);
-        if (keys.length) {
-          const metrics = keys.map((key) => `${metricLabels[key]}: ${metricValue(key, event.metrics?.[key])}`).join(' · ');
-          const detail = document.createElement('p');
-          detail.className = 'tech-event-metrics';
-          detail.textContent = metrics;
-          content.append(detail);
-        }
-        row.append(time, content);
-        fragment.append(row);
+    const applyTechStatus = (message) => {
+      if (!message || typeof message !== 'object' || message.stage !== 'fast_voice') return;
+      const model = safeLabel(message.model);
+      if (model && !state.voiceModel) state.voiceModel = model;
+      if (safeLabel(message.skill)) state.skill ||= safeLabel(message.skill);
+      const status = message.status === 'completed' || message.status === 'ready' ? 'complete'
+        : message.status === 'failed' ? 'error' : message.status === 'skipped' ? 'skipped'
+          : message.status === 'started' ? 'active' : '';
+      const turn = state.turn;
+      if (message.stage === 'fast_voice' && status) {
+        turn.voice = status; turn.voiceLabel = status === 'complete' ? '就绪' : status === 'active' ? 'Thinking' : status === 'error' ? '失败' : '跳过';
       }
-      eventList.replaceChildren(fragment);
-      if (countLabel) countLabel.textContent = String(events.length);
-      if (emptyLabel) emptyLabel.hidden = events.length > 0;
-    }
-
-    const stopStream = () => {
-      source?.close();
-      source = undefined;
+      const error = safeErrorCode(message.errorCode);
+      if (error) state.errorCode = error;
+      render();
     };
 
+    const stopStream = () => { source?.close(); source = undefined; };
+    const clearSession = () => {
+      stopStream();
+      eventIds.clear();
+      toolCallTurns.clear();
+      responseTurns.clear();
+      state.events = [];
+      state.voiceModel = ''; state.provider = ''; state.environment = ''; state.memoryTriggerMode = '';
+      state.agent = ''; state.runtime = ''; state.model = ''; state.skill = ''; state.tool = '';
+      state.promptTokens = null; state.completionTokens = null; state.totalTokens = null;
+      state.errorCode = ''; state.traceLinked = false; state.turnNumber = 0; state.turn = createTurn(0);
+    };
     const clearForAuthChange = (detail) => {
       const nextUserId = typeof detail?.userId === 'string' ? detail.userId : null;
-      if (nextUserId === authenticatedUserId) return;
-      authenticatedUserId = nextUserId;
-      stopStream();
-      sessionId = '';
-      events.length = 0;
-      eventIds.clear();
-      eventList.replaceChildren();
-      if (sessionLabel) sessionLabel.textContent = '暂无数据';
-      if (traceLabel) traceLabel.textContent = '暂无数据';
-      for (const target of Object.values(values)) if (target) target.textContent = '暂无数据';
-      for (const field of panel.querySelectorAll('.tech-observer-coach-field')) field.hidden = true;
-      for (const item of panel.querySelectorAll('.tech-observer-flow li')) delete item.dataset.state;
+      if (nextUserId === state.authenticatedUserId) return;
+      state.authenticatedUserId = nextUserId;
+      state.sessionId = '';
+      clearSession();
       render();
       setLive('waiting', 'WAITING');
     };
 
     window.addEventListener('interview:auth-changed', (event) => clearForAuthChange(event.detail));
+    window.addEventListener('interview:tech-status', (event) => applyTechStatus(event.detail));
     let authChannel;
     try {
       if (typeof BroadcastChannel === 'function') {
@@ -296,12 +695,12 @@ try {
 
     const connect = () => {
       stopStream();
-      if (!sessionId || panel.hidden) {
-        setLive('waiting', sessionId ? 'PAUSED' : 'WAITING');
+      if (!state.sessionId || panel.hidden) {
+        setLive('waiting', state.sessionId ? 'PAUSED' : 'WAITING');
         return;
       }
       try {
-        source = new EventSource(`/api/observability/events?sessionId=${encodeURIComponent(sessionId)}`);
+        source = new EventSource(`/api/observability/events?sessionId=${encodeURIComponent(state.sessionId)}`);
         source.onopen = () => setLive('live', 'LIVE');
         source.onerror = () => setLive('reconnecting', 'RECONNECTING');
         source.addEventListener('observation', (message) => {
@@ -311,37 +710,29 @@ try {
         setLive('reconnecting', 'OFFLINE');
       }
     };
-
     const setOpen = (open) => {
       panel.hidden = !open;
-      shell.classList.toggle('tech-observer-active', open);
+      layout.classList.toggle('has-tech-observer', open);
       toggle.setAttribute('aria-expanded', String(open));
       if (open) connect();
       else {
         stopStream();
-        setLive('waiting', sessionId ? 'PAUSED' : 'WAITING');
+        setLive('waiting', state.sessionId ? 'PAUSED' : 'WAITING');
       }
     };
 
     toggle.addEventListener('click', () => setOpen(panel.hidden));
     window.addEventListener('interview:session', (event) => {
       const nextSessionId = typeof event.detail?.sessionId === 'string' ? event.detail.sessionId : '';
-      if (nextSessionId === sessionId) return;
-      sessionId = nextSessionId;
-      events.length = 0;
-      eventIds.clear();
-      eventList.replaceChildren();
-      if (sessionLabel) sessionLabel.textContent = sessionId ? '当前采访' : '暂无数据';
-      if (traceLabel) traceLabel.textContent = sessionId ? '等待事件' : '暂无数据';
-      for (const target of Object.values(values)) if (target) target.textContent = '暂无数据';
-      for (const field of panel.querySelectorAll('.tech-observer-coach-field')) field.hidden = true;
-      for (const item of panel.querySelectorAll('.tech-observer-flow li')) delete item.dataset.state;
+      if (nextSessionId === state.sessionId) return;
+      state.sessionId = nextSessionId;
+      clearSession();
       render();
       if (!panel.hidden) connect();
     });
 
-    const demoMode = new URLSearchParams(window.location.search).get('demo') === 'tech';
-    setOpen(demoMode);
+    render();
+    setOpen(new URLSearchParams(window.location.search).get('demo') === 'tech');
   }
 } catch {
   // The optional observer is isolated from interview controls and audio playback.

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   createObservationContext,
   createObservationEvent,
@@ -5,6 +6,7 @@ import {
   type ObservationEvent,
   type ObservationStatus,
 } from '../observation-event.js';
+import { INTERVIEW_CONTEXT_TOOL_NAME } from '../../realtime/types.js';
 
 type SafeFields = Record<string, unknown>;
 
@@ -23,7 +25,13 @@ const numericMetrics = [
 
 const SAFE_FALLBACK_TYPES = new Set(['direct_retrieval']);
 const SAFE_SKIP_REASONS = new Set(['no_evidence', 'agent_disabled', 'agent_unavailable', 'agent_not_configured']);
+const SAFE_TOOL_RESULT_STATUSES = new Set(['completed', 'no_context', 'failed']);
 const SAFE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,63}$/u;
+
+function correlationKey(sessionId: string, value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 512) return undefined;
+  return createHash('sha256').update(`${sessionId}\0${value}`).digest('base64url').slice(0, 12);
+}
 
 export function normalizeAgentSkipReasonForObservation(
   reason: string | undefined,
@@ -146,6 +154,7 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
   if (event === 'provider.speech_stopped_received' || event === 'provider.speech_stopped_forwarded') return { category: 'realtime', eventType: 'realtime.listening', status: 'running', title: 'LISTENING', component: 'realtime-provider' };
   if (event === 'provider.response_created') return { category: 'realtime', eventType: 'realtime.model_thinking', status: 'running', title: 'AI THINKING', component: 'realtime-provider' };
   if (event === 'provider.audio_started' || event === 'provider.first_audio_received') return { category: 'realtime', eventType: 'realtime.responding', status: 'running', title: 'AI SPEAKING', component: 'realtime-provider' };
+  if (event === 'provider.user_transcription_completed') return { category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', title: 'USER TURN COMMITTED', component: 'realtime-provider' };
   if (event === 'provider.response_done' || event === 'client.playback_response_drained') return { category: 'realtime', eventType: 'realtime.listening', status: 'success', title: 'RESPONSE COMPLETE', component: 'realtime-provider' };
   if (event === 'client.playback_interruption') return { category: 'realtime', eventType: 'realtime.interrupted', status: 'warning', title: 'INTERRUPTED', component: 'realtime-client' };
   if (event === 'realtime.tool_call.received') return { category: 'tool', eventType: 'tool.received', status: 'start', title: 'TOOL CALL', component: 'realtime-tool' };
@@ -155,8 +164,17 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
   if (event === 'realtime.tool_cycle_message_write' && fields.messageKind === 'resume') return { category: 'realtime', eventType: 'realtime.resume', status: fields.sent === true ? 'success' : 'error', title: 'RESUME', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_response_started') return { category: 'realtime', eventType: 'realtime.responding', status: 'success', title: 'AI RESUMED', component: 'realtime-tool-cycle' };
   if (event === 'realtime.tool_cycle_response_first_audio') return { category: 'realtime', eventType: 'realtime.first_audio', status: 'success', title: 'FIRST AUDIO', component: 'realtime-tool-cycle' };
-  if (event === 'realtime.tool_result.sent' || event === 'realtime.tool_result_sent') return { category: 'tool', eventType: 'tool.completed', status: fields.sent === false ? 'error' : 'success', title: 'TOOL RESULT', component: 'realtime-tool' };
+  if (event === 'realtime.tool_result.sent' || event === 'realtime.tool_result_sent') {
+    const noContext = fields.status === 'no_context';
+    return {
+      category: 'tool', eventType: 'tool.completed',
+      status: fields.sent === false ? 'error' : noContext || fields.fallbackUsed === true ? 'warning' : 'success',
+      title: 'TOOL RESULT', component: 'realtime-tool',
+    };
+  }
   if (event === 'realtime.response.resumed') return { category: 'realtime', eventType: 'realtime.resumed', status: 'success', title: 'AI RESUMED', component: 'realtime-tool-cycle' };
+  if (event === 'realtime.context_hint.consumed') return { category: 'evidence', eventType: 'evidence.injected', status: fields.sent === true ? 'success' : 'error', title: 'CONTEXT INJECTED', component: 'realtime-context' };
+  if (event === 'realtime.context_hint.injection_failed') return { category: 'evidence', eventType: 'evidence.injection_failed', status: 'error', title: 'CONTEXT INJECTION FAILED', component: 'realtime-context' };
   if (event === 'slow.no_context') return { category: 'evidence', eventType: 'evidence.no_context', status: 'warning', title: 'NO CONTEXT', component: 'realtime-context' };
   if (event === 'slow.deadline.exceeded') return { category: 'runtime', eventType: 'realtime.slow_deadline_exceeded', status: 'error', title: 'SLOW PATH DEADLINE EXCEEDED', component: 'realtime-slow-path' };
   if (event === 'slow.result.stale_dropped') return { category: 'tool', eventType: 'tool.result_stale_dropped', status: 'warning', title: 'STALE RESULT DROPPED', component: 'realtime-tool-cycle' };
@@ -213,9 +231,10 @@ export function adaptRealtimeTrace(input: {
   const context = input.context ?? createObservationContext({ sessionId: input.sessionId, storyId: input.storyId });
   const toolRunId = safeLabel(fields.toolRunId);
   const runId = safeLabel(fields.runId);
+  const responseKey = correlationKey(input.sessionId, fields.responseId);
   const operationSpan = mapping.category === 'agent' && runId
     ? `agent:${runId}`
-    : toolRunId ?? safeLabel(fields.responseId) ?? runId;
+    : toolRunId ?? (responseKey ? `response:${responseKey}` : runId);
   const metrics: Record<string, number | string | boolean> = {};
   for (const key of numericMetrics) {
     const value = numberField(fields, key);
@@ -228,6 +247,8 @@ export function adaptRealtimeTrace(input: {
     }
   }
   if (typeof fields.sent === 'boolean') metrics.sent = fields.sent;
+  if ((event === 'realtime.tool_result.sent' || event === 'realtime.tool_result_sent')
+    && typeof fields.status === 'string' && SAFE_TOOL_RESULT_STATUSES.has(fields.status)) metrics.resultStatus = fields.status;
   if (typeof fields.outcome === 'string') metrics.outcome = safeLabel(fields.outcome) ?? 'unknown';
   if (typeof fields.fallbackUsed === 'boolean') metrics.fallbackUsed = fields.fallbackUsed;
   if (typeof fields.retrieve === 'boolean') metrics.retrieve = fields.retrieve;
@@ -277,9 +298,11 @@ export function adaptRealtimeTrace(input: {
           : numberField(fields, 'slowAgentLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
   const summary = mapping.category === 'retriever'
     ? [count === undefined ? undefined : `${count} results`, latency === undefined ? undefined : `${Math.round(latency)} ms`].filter(Boolean).join(' · ') || undefined
-    : mapping.category === 'tool' && safeLabel(fields.name)
-      ? safeLabel(fields.name)
+    : mapping.category === 'tool' && fields.name === INTERVIEW_CONTEXT_TOOL_NAME
+      ? 'memory_recall'
       : undefined;
+  const turnKey = correlationKey(input.sessionId, fields.turnId);
+  const toolCallKey = correlationKey(input.sessionId, fields.callId);
 
   return createObservationEvent(context, {
     ...(input.timestamp ? { timestamp: input.timestamp } : {}),
@@ -306,7 +329,10 @@ export function adaptRealtimeTrace(input: {
       ...(safeLabel(fields.retriever) ? { retriever: safeLabel(fields.retriever) } : {}),
       ...(safeLabel(fields.contextAgent) ? { contextAgent: safeLabel(fields.contextAgent) } : {}),
       ...(safeLabel(fields.contextInjection) ? { contextInjection: safeLabel(fields.contextInjection) } : {}),
-      ...(safeLabel(fields.name) ? { tool: safeLabel(fields.name) } : {}),
+      ...(summary === 'memory_recall' ? { tool: 'memory_recall' } : {}),
+      ...(turnKey ? { turnKey } : {}),
+      ...(toolCallKey ? { toolCallKey } : {}),
+      ...(responseKey ? { responseKey } : {}),
       ...(safeLabel(fields.slowAgentModel) ? { model: safeLabel(fields.slowAgentModel) } : {}),
       ...(safeLabel(fields.skill) ? { skill: safeLabel(fields.skill) } : {}),
     },

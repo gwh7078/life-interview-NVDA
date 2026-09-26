@@ -195,81 +195,95 @@
       </section>
         </div>
 
-        <aside class="tech-panel" id="tech-panel" aria-labelledby="tech-panel-title" hidden>
-          <div class="tech-panel-heading">
-            <p class="section-label">COMPETITION TECH PANEL</p>
-            <h2 id="tech-panel-title">实时技术链路</h2>
-            <p id="tech-current" class="tech-current" role="status" aria-live="polite" aria-atomic="true">等待技术状态</p>
-          </div>
-
-          <section class="tech-flow-section" aria-labelledby="tech-flow-title">
-            <h3 id="tech-flow-title" class="tech-section-title">阶段进展</h3>
-            <ol class="tech-stage-flow" id="tech-stage-flow">
-              <li class="tech-stage" data-tech-stage="fast_voice" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">快速语音</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
-              <li class="tech-stage" data-tech-stage="tool_trigger" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">工具触发</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
-              <li class="tech-stage" data-tech-stage="retrieval" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">历史检索</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
-              <li class="tech-stage" data-tech-stage="slow_agent" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">Agent 慢路径</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
-              <li class="tech-stage" data-tech-stage="context_hint" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">上下文提示</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
-              <li class="tech-stage" data-tech-stage="resume" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">恢复对话</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
-              <li class="tech-stage" data-tech-stage="first_audio" data-status="waiting"><span class="tech-stage-marker" aria-hidden="true"></span><span class="tech-stage-name">首段语音</span><span class="tech-stage-status" data-tech-stage-status>等待信号</span></li>
-            </ol>
-          </section>
-
-          <section class="tech-metrics" aria-label="链路指标">
-            <div class="tech-metric"><span class="tech-metric-label">响应延迟</span><strong class="tech-metric-value" id="tech-latency">暂无数据</strong></div>
-            <div class="tech-metric"><span class="tech-metric-label">调用计数</span><strong class="tech-metric-value" id="tech-count">暂无数据</strong></div>
-            <div class="tech-metric tech-metric-wide"><span class="tech-metric-label">模型</span><strong class="tech-metric-value" id="tech-model">暂无数据</strong></div>
-            <div class="tech-metric tech-metric-wide"><span class="tech-metric-label">Skill</span><strong class="tech-metric-value" id="tech-skill">暂无数据</strong></div>
-            <div class="tech-metric tech-metric-wide"><span class="tech-metric-label">DGX Spark / GPU</span><strong class="tech-metric-value">暂无数据</strong></div>
-            <div class="tech-error" id="tech-error" hidden><span class="tech-metric-label">错误代码</span><code id="tech-error-code"></code></div>
-          </section>
-        </aside>
-      </div>
-
-      <aside id="tech-observer" class="tech-observer" aria-label="技术实时观测" hidden>
+        <aside id="tech-observer" class="tech-observer" aria-label="Fast Voice 与 Slow Coach 实时链路" hidden>
         <header class="tech-observer-header">
           <div>
-            <p class="section-label">RUNTIME VIEW</p>
+            <p class="section-label">FAST VOICE + SLOW COACH</p>
             <h2>技术实时观测</h2>
           </div>
         <span id="tech-observer-live" class="tech-live" data-state="waiting">WAITING</span>
         </header>
-        <div class="tech-observer-identity">
-          <div><span>SESSION</span><strong id="tech-observer-session">暂无数据</strong></div>
-          <div><span>TRACE</span><strong id="tech-observer-trace">暂无数据</strong></div>
+        <div class="tech-observer-topline" aria-label="当前运行">
+          <span id="tech-observer-environment">LOCAL</span>
+          <strong id="tech-observer-model">Voice Model</strong>
+          <span id="tech-observer-turn">TURN —</span>
         </div>
-        <section class="tech-observer-runtime" aria-label="运行信息">
-          <div><span>Environment</span><strong id="tech-observer-environment">暂无数据</strong></div>
-          <div><span>Voice</span><strong id="tech-observer-provider">暂无数据</strong></div>
-          <div><span>Trigger</span><strong id="tech-observer-memory-trigger">暂无数据</strong></div>
-          <div class="tech-observer-coach-field"><span>Coach</span><strong id="tech-observer-coach">暂无数据</strong></div>
-          <div class="tech-observer-coach-field"><span>Coach Action</span><strong id="tech-observer-coach-action">暂无数据</strong></div>
-          <div class="tech-observer-coach-field"><span>Coach Latency</span><strong id="tech-observer-coach-latency">暂无数据</strong></div>
-          <div><span>Retriever</span><strong id="tech-observer-retriever">暂无数据</strong></div>
-          <div><span>Context Agent</span><strong id="tech-observer-context-agent">暂无数据</strong></div>
-          <div><span>Context Injection</span><strong id="tech-observer-context-injection">暂无数据</strong></div>
-          <div><span>Agent</span><strong id="tech-observer-agent">暂无数据</strong></div>
-          <div><span>Agent Runtime</span><strong id="tech-observer-runtime">暂无数据</strong></div>
-          <div><span>Model</span><strong id="tech-observer-model">暂无数据</strong></div>
-          <div><span>Skill</span><strong id="tech-observer-skill">暂无数据</strong></div>
-          <div><span>Tool</span><strong id="tech-observer-tool">暂无数据</strong></div>
+        <p id="tech-observer-empty" class="tech-observer-empty" role="status" aria-live="polite">
+          <strong>WAITING</strong>
+          <span>开始采访后，这里会实时展示语音、检索、Agent 与上下文注入链路。</span>
+        </p>
+        <section class="tech-architecture" aria-label="Fast Voice 与 Slow Coach 架构链路">
+          <p class="tech-lane-label">FAST VOICE</p>
+          <div class="tech-fast-flow">
+            <div class="tech-node" id="tech-node-user" data-state="waiting">
+              <span class="tech-node-kicker">USER</span><strong>你</strong><span class="tech-node-state" id="tech-node-user-state">等待</span>
+            </div>
+            <span class="tech-edge" id="tech-edge-user-voice" aria-hidden="true">→</span>
+            <div class="tech-node tech-node-voice" id="tech-node-voice" data-state="waiting">
+              <span class="tech-node-kicker">VOICE MODEL</span><strong id="tech-node-voice-model">Voice Model</strong><span class="tech-node-state" id="tech-node-voice-state">等待</span>
+              <span class="tech-node-detail" id="tech-node-voice-detail"></span>
+            </div>
+            <span class="tech-edge" id="tech-edge-voice-assistant" aria-hidden="true">→</span>
+            <div class="tech-node" id="tech-node-assistant" data-state="waiting">
+              <span class="tech-node-kicker">ASSISTANT</span><strong>AI 回复</strong><span class="tech-node-state" id="tech-node-assistant-state">等待</span>
+            </div>
+          </div>
+          <div class="tech-branch-stem" id="tech-edge-voice-trigger" aria-hidden="true"></div>
+          <p class="tech-lane-label tech-lane-slow">SLOW COACH <span id="tech-observer-slow-status">等待本轮信号</span></p>
+          <div class="tech-slow-flow">
+            <div class="tech-node" id="tech-node-trigger" data-state="waiting">
+              <span class="tech-node-kicker">TOOL TRIGGER</span><strong>Tool Trigger</strong><span class="tech-node-state" id="tech-node-trigger-state">等待</span>
+              <span class="tech-node-detail" id="tech-node-trigger-detail"></span>
+            </div>
+            <span class="tech-edge" id="tech-edge-trigger-retriever" aria-hidden="true">→</span>
+            <div class="tech-node" id="tech-node-retriever" data-state="waiting">
+              <span class="tech-node-kicker">RETRIEVER</span><strong>NeMo Retriever</strong><span class="tech-node-state" id="tech-node-retriever-state">等待</span>
+              <span class="tech-node-detail" id="tech-node-retriever-detail"></span>
+            </div>
+            <span class="tech-edge" id="tech-edge-retriever-coach" aria-hidden="true">→</span>
+            <div class="tech-node" id="tech-node-coach" data-state="waiting">
+              <span class="tech-node-kicker">COACH AGENT</span><strong>Coach Agent</strong><span class="tech-node-state" id="tech-node-coach-state">等待</span>
+              <span class="tech-node-detail" id="tech-node-coach-detail"></span>
+            </div>
+            <span class="tech-edge" id="tech-edge-coach-context" aria-hidden="true">→</span>
+            <div class="tech-node" id="tech-node-context" data-state="waiting">
+              <span class="tech-node-kicker">CONTEXT INJECTION</span><strong>Context Injection</strong><span class="tech-node-state" id="tech-node-context-state">等待</span>
+              <span class="tech-node-detail" id="tech-node-context-detail"></span>
+            </div>
+          </div>
+          <div class="tech-return-edge" id="tech-edge-context-voice" data-state="waiting"><span aria-hidden="true">↶</span> 回注 Voice Model</div>
         </section>
-        <ol class="tech-observer-flow" aria-label="执行链路">
-          <li data-category="realtime">Realtime</li>
-          <li data-category="agent">Agent</li>
-          <li data-category="skill">Skill</li>
-          <li data-category="tool">Tool</li>
-          <li data-category="retriever">Retriever</li>
-          <li data-category="evidence">Evidence</li>
-          <li data-category="validator">Validator</li>
-          <li data-category="persistence">Persistence</li>
-        </ol>
-        <div class="tech-observer-timeline">
-          <div class="tech-observer-timeline-heading"><h3>Event Timeline</h3><span id="tech-observer-count">0</span></div>
-          <p id="tech-observer-empty" class="tech-observer-empty">等待本次采访的运行事件</p>
-          <ol id="tech-observer-events" class="tech-observer-events" aria-live="polite" aria-relevant="additions"></ol>
-        </div>
+        <section class="tech-key-metrics" aria-label="本轮关键指标">
+          <div><span>首段语音</span><strong id="tech-metric-first-audio">—</strong></div>
+          <div><span>慢系统耗时</span><strong id="tech-metric-slow-latency">—</strong></div>
+          <div><span>检索命中 → 采用</span><strong id="tech-metric-evidence">—</strong></div>
+          <div><span>Tool Calls</span><strong id="tech-metric-tool-count">—</strong></div>
+        </section>
+        <section class="tech-recent" aria-labelledby="tech-recent-title">
+          <div class="tech-observer-timeline-heading"><h3 id="tech-recent-title">最近事件</h3><span id="tech-observer-recent-count">0</span></div>
+          <ol id="tech-observer-recent-events" class="tech-observer-events" aria-live="polite" aria-relevant="additions"></ol>
+        </section>
+        <details id="tech-observer-trace-details" class="tech-trace-details">
+          <summary>查看完整 Trace <span id="tech-observer-count">0</span></summary>
+          <section class="tech-observer-runtime" aria-label="详细运行信息">
+            <div><span>Session</span><strong id="tech-observer-session">—</strong></div>
+            <div><span>Trace / Span</span><strong id="tech-observer-trace">—</strong></div>
+            <div><span>Environment</span><strong id="tech-detail-environment">—</strong></div>
+            <div><span>Voice Provider</span><strong id="tech-observer-provider">—</strong></div>
+            <div><span>Memory Trigger</span><strong id="tech-observer-memory-trigger">—</strong></div>
+            <div><span>Context Agent</span><strong id="tech-observer-agent">—</strong></div>
+            <div><span>Agent Runtime</span><strong id="tech-observer-runtime">—</strong></div>
+            <div><span>Model / Skill</span><strong id="tech-observer-skill">—</strong></div>
+            <div><span>Tool</span><strong id="tech-observer-tool">—</strong></div>
+            <div><span>Tokens</span><strong id="tech-observer-tokens">—</strong></div>
+            <div><span>Fallback</span><strong id="tech-observer-fallback">—</strong></div>
+            <div><span>Error Code</span><strong id="tech-observer-error">—</strong></div>
+          </section>
+          <div class="tech-observer-timeline-heading"><h3>完整 Event Timeline</h3></div>
+          <ol id="tech-observer-events" class="tech-observer-events tech-observer-full-events"></ol>
+        </details>
       </aside>
+      </div>
 
       <footer class="page-footer debug-only">
         <span>本地页面 → 本机服务 → 服务端配置的实时语音模型</span>
