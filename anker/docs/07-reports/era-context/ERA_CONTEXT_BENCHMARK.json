@@ -1,0 +1,506 @@
+{
+  "generated_at": "2026-09-22T07:52:05.892Z",
+  "fixtures": 12,
+  "completed": 12,
+  "failed": 0,
+  "retrieval_success_rate": 1,
+  "era_retrieval_relevance": 1,
+  "wrong_year_rate": 0,
+  "latency_p50_ms": 670.23,
+  "latency_p95_ms": 969.65,
+  "rows": [
+    {
+      "query": "刚参加工作时的娱乐生活",
+      "start_year": 1998,
+      "end_year": 2002,
+      "expected_titles": [
+        "网吧成为互联网普及的重要入口",
+        "网吧成为年轻人的公共娱乐空间",
+        "网吧和QQ逐渐普及",
+        "QQ成为即时通信工具"
+      ],
+      "status": "completed",
+      "latency_ms": 969.65,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "网吧成为年轻人的公共娱乐空间：工作场景",
+          "category": "娱乐",
+          "score": 0.8759780731825852
+        },
+        {
+          "title": "电子游戏厅成为城市娱乐空间：工作场景",
+          "category": "娱乐",
+          "score": 0.8612142460481438
+        },
+        {
+          "title": "卡拉OK成为社交娱乐方式：工作场景",
+          "category": "音乐",
+          "score": 0.8507514833629675
+        },
+        {
+          "title": "甲A联赛带来职业足球热：工作场景",
+          "category": "体育",
+          "score": 0.8474401928718862
+        },
+        {
+          "title": "网吧成为年轻人的公共娱乐空间：娱乐方式",
+          "category": "娱乐",
+          "score": 0.8347155108503035
+        }
+      ]
+    },
+    {
+      "query": "小时候家里过年看什么节目",
+      "start_year": 1983,
+      "end_year": 1990,
+      "expected_titles": [
+        "春节看春晚成为家庭节日习惯",
+        "春晚歌曲形成全民记忆"
+      ],
+      "status": "completed",
+      "latency_ms": 622.37,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "春节看春晚成为家庭节日习惯：城市日常",
+          "category": "娱乐",
+          "score": 0.9174518173912782
+        },
+        {
+          "title": "春节看春晚成为家庭节日习惯：乡村日常",
+          "category": "娱乐",
+          "score": 0.9164984044014037
+        },
+        {
+          "title": "春节看春晚成为家庭节日习惯：第一次接触",
+          "category": "娱乐",
+          "score": 0.9071345030083234
+        },
+        {
+          "title": "春节看春晚成为家庭节日习惯：公共空间",
+          "category": "娱乐",
+          "score": 0.9070662865120952
+        },
+        {
+          "title": "春节看春晚成为家庭节日习惯：节庆习惯",
+          "category": "娱乐",
+          "score": 0.9066070876883725
+        }
+      ]
+    },
+    {
+      "query": "九十年代怎么买东西和吃饭",
+      "start_year": 1990,
+      "end_year": 1999,
+      "expected_titles": [
+        "麦当劳等洋快餐进入城市生活",
+        "超市和大型卖场逐渐普及"
+      ],
+      "status": "completed",
+      "latency_ms": 670.23,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "麦当劳等洋快餐进入城市生活：物品与习惯",
+          "category": "消费",
+          "score": 0.8256510207316469
+        },
+        {
+          "title": "百货商店和商场成为城市消费空间：家庭生活",
+          "category": "消费",
+          "score": 0.8236666117693913
+        },
+        {
+          "title": "百货商店和商场成为城市消费空间：消费变化",
+          "category": "消费",
+          "score": 0.8220256606898171
+        },
+        {
+          "title": "麦当劳等洋快餐进入城市生活：城市日常",
+          "category": "消费",
+          "score": 0.8148120631164801
+        },
+        {
+          "title": "百货商店和商场成为城市消费空间：物品与习惯",
+          "category": "消费",
+          "score": 0.814342640479965
+        }
+      ]
+    },
+    {
+      "query": "大学毕业以后找工作的方式",
+      "start_year": 1999,
+      "end_year": 2008,
+      "expected_titles": [
+        "高校扩招改变青年教育路径",
+        "招聘网站改变求职方式"
+      ],
+      "status": "completed",
+      "latency_ms": 823.61,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "招聘网站改变求职方式：校园生活",
+          "category": "工作就业",
+          "score": 0.7726248657648613
+        },
+        {
+          "title": "招聘网站改变求职方式：青年文化",
+          "category": "工作就业",
+          "score": 0.7507988841001461
+        },
+        {
+          "title": "招聘网站改变求职方式：第一次接触",
+          "category": "工作就业",
+          "score": 0.7465872446824188
+        },
+        {
+          "title": "招聘网站改变求职方式：公共空间",
+          "category": "工作就业",
+          "score": 0.727345352273715
+        },
+        {
+          "title": "招聘网站改变求职方式：物品与习惯",
+          "category": "工作就业",
+          "score": 0.7269776971456201
+        }
+      ]
+    },
+    {
+      "query": "小时候听港台歌曲和磁带",
+      "start_year": 1985,
+      "end_year": 1999,
+      "expected_titles": [
+        "港台流行音乐进入大陆生活",
+        "港台流行音乐进入大陆生活"
+      ],
+      "status": "completed",
+      "latency_ms": 678.98,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "港台流行音乐进入大陆生活：家庭生活",
+          "category": "音乐",
+          "score": 0.9782002536938228
+        },
+        {
+          "title": "港台流行音乐进入大陆生活：第一次接触",
+          "category": "音乐",
+          "score": 0.9778698299369338
+        },
+        {
+          "title": "港台流行音乐进入大陆生活：校园生活",
+          "category": "音乐",
+          "score": 0.9766798120094806
+        },
+        {
+          "title": "港台流行音乐进入大陆生活：娱乐方式",
+          "category": "音乐",
+          "score": 0.9752803409949375
+        },
+        {
+          "title": "港台流行音乐进入大陆生活：乡村日常",
+          "category": "音乐",
+          "score": 0.9745185431445674
+        }
+      ]
+    },
+    {
+      "query": "第一次用手机和发短信",
+      "start_year": 1998,
+      "end_year": 2008,
+      "expected_titles": [
+        "手机从奢侈品变成日常用品",
+        "短信祝福形成节庆传播方式"
+      ],
+      "status": "completed",
+      "latency_ms": 686.73,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "BP机到手机完成通信方式转换：第一次接触",
+          "category": "日常生活方式",
+          "score": 0.8359311367798495
+        },
+        {
+          "title": "短信拜年和手机通讯融入节庆：第一次接触",
+          "category": "日常生活方式",
+          "score": 0.7671821506511771
+        },
+        {
+          "title": "短信祝福形成节庆传播方式：第一次接触",
+          "category": "娱乐",
+          "score": 0.7491988206026882
+        },
+        {
+          "title": "BP机到手机完成通信方式转换：物品与习惯",
+          "category": "日常生活方式",
+          "score": 0.7049453467790955
+        },
+        {
+          "title": "BP机到手机完成通信方式转换：青年文化",
+          "category": "日常生活方式",
+          "score": 0.6992896852109913
+        }
+      ]
+    },
+    {
+      "query": "买房装修成为家庭大事",
+      "start_year": 1995,
+      "end_year": 2010,
+      "expected_titles": [
+        "商品房和装修成为家庭大额消费",
+        "城市商品住房逐渐出现"
+      ],
+      "status": "completed",
+      "latency_ms": 639.32,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "商品房和装修成为家庭大额消费：公共空间",
+          "category": "消费",
+          "score": 0.9628744143106382
+        },
+        {
+          "title": "商品房和装修成为家庭大额消费：家庭生活",
+          "category": "消费",
+          "score": 0.961193216042033
+        },
+        {
+          "title": "商品房和装修成为家庭大额消费：城市日常",
+          "category": "消费",
+          "score": 0.9574881371927983
+        },
+        {
+          "title": "商品房和装修成为家庭大额消费：节庆习惯",
+          "category": "消费",
+          "score": 0.9573346436838595
+        },
+        {
+          "title": "商品房和装修成为家庭大额消费：乡村日常",
+          "category": "消费",
+          "score": 0.9571195930483656
+        }
+      ]
+    },
+    {
+      "query": "家里第一次买冰箱彩电洗衣机",
+      "start_year": 1978,
+      "end_year": 1995,
+      "expected_titles": [
+        "家电消费成为家庭改善的重要标志",
+        "冰箱洗衣机空调成为常见家电"
+      ],
+      "status": "completed",
+      "latency_ms": 624.7,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "家电消费成为家庭改善的重要标志：第一次接触",
+          "category": "消费",
+          "score": 0.850140853955115
+        },
+        {
+          "title": "冰箱洗衣机空调成为常见家电：第一次接触",
+          "category": "科技",
+          "score": 0.7856570719779068
+        },
+        {
+          "title": "家电消费成为家庭改善的重要标志：乡村日常",
+          "category": "消费",
+          "score": 0.7439636331824251
+        },
+        {
+          "title": "家电消费成为家庭改善的重要标志：城市日常",
+          "category": "消费",
+          "score": 0.7412967595233502
+        },
+        {
+          "title": "家电消费成为家庭改善的重要标志：青年文化",
+          "category": "消费",
+          "score": 0.7333350879680475
+        }
+      ]
+    },
+    {
+      "query": "网课和线上学习",
+      "start_year": 2019,
+      "end_year": 2020,
+      "expected_titles": [
+        "疫情期间线上学习快速普及"
+      ],
+      "status": "completed",
+      "latency_ms": 655,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "疫情期间线上学习快速普及：青年文化",
+          "category": "教育",
+          "score": 0.8753058046596169
+        },
+        {
+          "title": "疫情期间线上学习快速普及：第一次接触",
+          "category": "教育",
+          "score": 0.8717988108104018
+        },
+        {
+          "title": "疫情期间线上学习快速普及：校园生活",
+          "category": "教育",
+          "score": 0.8677565311447739
+        },
+        {
+          "title": "疫情期间线上学习快速普及：代际记忆",
+          "category": "教育",
+          "score": 0.8632283612967029
+        },
+        {
+          "title": "疫情期间线上学习快速普及：媒体传播",
+          "category": "教育",
+          "score": 0.8627757188188823
+        }
+      ]
+    },
+    {
+      "query": "看奥运和体育比赛",
+      "start_year": 2001,
+      "end_year": 2008,
+      "expected_titles": [
+        "北京奥运会举办",
+        "北京奥运会成为全国体育盛会"
+      ],
+      "status": "completed",
+      "latency_ms": 647.55,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "北京奥运会成为全国体育盛会：第一次接触",
+          "category": "体育",
+          "score": 0.7210621275686232
+        },
+        {
+          "title": "北京奥运会成为全国体育盛会：娱乐方式",
+          "category": "体育",
+          "score": 0.6992651765193351
+        },
+        {
+          "title": "北京奥运会成为全国体育盛会：媒体传播",
+          "category": "体育",
+          "score": 0.6697576420120962
+        },
+        {
+          "title": "刘翔夺冠带来田径热：娱乐方式",
+          "category": "体育",
+          "score": 0.6591350455795517
+        },
+        {
+          "title": "北京奥运会举办：娱乐方式",
+          "category": "时事",
+          "score": 0.6458365519014886
+        }
+      ]
+    },
+    {
+      "query": "农村家庭成员外出打工",
+      "start_year": 1985,
+      "end_year": 2005,
+      "expected_titles": [
+        "农民工群体形成并扩大",
+        "农民工进入制造业和建筑业"
+      ],
+      "status": "completed",
+      "latency_ms": 940.77,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "农村劳动力进入城市工作：家庭生活",
+          "category": "社会",
+          "score": 0.8663301689928182
+        },
+        {
+          "title": "农民工进入制造业和建筑业：家庭生活",
+          "category": "工作就业",
+          "score": 0.8505002263871362
+        },
+        {
+          "title": "农村劳动力进入城市工作：乡村日常",
+          "category": "社会",
+          "score": 0.8238000214434615
+        },
+        {
+          "title": "农村劳动力进入城市工作：城市日常",
+          "category": "社会",
+          "score": 0.8179010986202389
+        },
+        {
+          "title": "农民工进入制造业和建筑业：乡村日常",
+          "category": "工作就业",
+          "score": 0.8103223253012541
+        }
+      ]
+    },
+    {
+      "query": "从BP机到手机联系亲友",
+      "start_year": 1988,
+      "end_year": 2005,
+      "expected_titles": [
+        "BP机成为移动联系工具",
+        "BP机到手机完成通信方式转换"
+      ],
+      "status": "completed",
+      "latency_ms": 670.46,
+      "result_count": 5,
+      "relevant": true,
+      "wrong_year_count": 0,
+      "matches": [
+        {
+          "title": "BP机到手机完成通信方式转换：物品与习惯",
+          "category": "日常生活方式",
+          "score": 0.9088733441188095
+        },
+        {
+          "title": "BP机到手机完成通信方式转换：第一次接触",
+          "category": "日常生活方式",
+          "score": 0.9061209715806863
+        },
+        {
+          "title": "BP机到手机完成通信方式转换：青年文化",
+          "category": "日常生活方式",
+          "score": 0.8932951748054551
+        },
+        {
+          "title": "BP机到手机完成通信方式转换：代际记忆",
+          "category": "日常生活方式",
+          "score": 0.8904514797540362
+        },
+        {
+          "title": "BP机到手机完成通信方式转换：通讯方式",
+          "category": "日常生活方式",
+          "score": 0.8904286517475569
+        }
+      ]
+    }
+  ]
+}

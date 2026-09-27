@@ -1,0 +1,940 @@
+{
+  "id": "9240451e-8476-4e09-998c-7f39423989b3",
+  "prevId": "5cf887db-f566-4a4e-846f-4fe1bca41666",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "interview_sessions": {
+      "name": "interview_sessions",
+      "columns": {
+        "session_id": {
+          "autoincrement": false,
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "openclaw_session_key": {
+          "autoincrement": false,
+          "name": "openclaw_session_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "autoincrement": false,
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage_id": {
+          "autoincrement": false,
+          "name": "stage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "story_id": {
+          "autoincrement": false,
+          "name": "story_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "session_type": {
+          "autoincrement": false,
+          "name": "session_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "default": "'active'",
+          "autoincrement": false,
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "closeout_status": {
+          "default": "'pending'",
+          "autoincrement": false,
+          "name": "closeout_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_summary": {
+          "autoincrement": false,
+          "name": "session_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closeout_result_json": {
+          "autoincrement": false,
+          "name": "closeout_result_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "autoincrement": false,
+          "name": "started_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_at": {
+          "autoincrement": false,
+          "name": "ended_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "autoincrement": false,
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "autoincrement": false,
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transcript_json": {
+          "default": "'[]'",
+          "autoincrement": false,
+          "name": "transcript_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "interview_sessions_status_idx": {
+          "name": "interview_sessions_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "interview_sessions_openclaw_session_key_uq": {
+          "name": "interview_sessions_openclaw_session_key_uq",
+          "columns": [
+            "openclaw_session_key"
+          ],
+          "isUnique": true
+        },
+        "interview_sessions_stage_id_idx": {
+          "name": "interview_sessions_stage_id_idx",
+          "columns": [
+            "stage_id"
+          ],
+          "isUnique": false
+        },
+        "interview_sessions_story_id_idx": {
+          "name": "interview_sessions_story_id_idx",
+          "columns": [
+            "story_id"
+          ],
+          "isUnique": false
+        },
+        "interview_sessions_user_id_idx": {
+          "name": "interview_sessions_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "interview_sessions_story_id_stories_story_id_fk": {
+          "name": "interview_sessions_story_id_stories_story_id_fk",
+          "tableFrom": "interview_sessions",
+          "tableTo": "stories",
+          "columnsFrom": [
+            "story_id"
+          ],
+          "columnsTo": [
+            "story_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        },
+        "interview_sessions_stage_id_life_stages_stage_id_fk": {
+          "name": "interview_sessions_stage_id_life_stages_stage_id_fk",
+          "tableFrom": "interview_sessions",
+          "tableTo": "life_stages",
+          "columnsFrom": [
+            "stage_id"
+          ],
+          "columnsTo": [
+            "stage_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        },
+        "interview_sessions_user_id_users_user_id_fk": {
+          "name": "interview_sessions_user_id_users_user_id_fk",
+          "tableFrom": "interview_sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "life_stages": {
+      "name": "life_stages",
+      "columns": {
+        "stage_id": {
+          "autoincrement": false,
+          "name": "stage_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "autoincrement": false,
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "autoincrement": false,
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "autoincrement": false,
+          "name": "start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_date": {
+          "autoincrement": false,
+          "name": "end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_precision": {
+          "autoincrement": false,
+          "name": "date_precision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "summary": {
+          "autoincrement": false,
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "default": 0,
+          "autoincrement": false,
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "default": "'active'",
+          "autoincrement": false,
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_source_session_id": {
+          "autoincrement": false,
+          "name": "created_source_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "autoincrement": false,
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "autoincrement": false,
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "life_stages_user_sort_order_idx": {
+          "name": "life_stages_user_sort_order_idx",
+          "columns": [
+            "user_id",
+            "sort_order"
+          ],
+          "isUnique": false
+        },
+        "life_stages_user_id_idx": {
+          "name": "life_stages_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "life_stages_user_id_users_user_id_fk": {
+          "name": "life_stages_user_id_users_user_id_fk",
+          "tableFrom": "life_stages",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "memoir_documents": {
+      "name": "memoir_documents",
+      "columns": {
+        "document_id": {
+          "autoincrement": false,
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "autoincrement": false,
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_type": {
+          "autoincrement": false,
+          "name": "scope_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_id": {
+          "autoincrement": false,
+          "name": "scope_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "autoincrement": false,
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "autoincrement": false,
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_number": {
+          "default": 1,
+          "autoincrement": false,
+          "name": "version_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "default": "'draft'",
+          "autoincrement": false,
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_json": {
+          "autoincrement": false,
+          "name": "source_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "autoincrement": false,
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "autoincrement": false,
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "memoir_documents_scope_idx": {
+          "name": "memoir_documents_scope_idx",
+          "columns": [
+            "scope_type",
+            "scope_id"
+          ],
+          "isUnique": false
+        },
+        "memoir_documents_user_id_idx": {
+          "name": "memoir_documents_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "memoir_documents_user_id_users_user_id_fk": {
+          "name": "memoir_documents_user_id_users_user_id_fk",
+          "tableFrom": "memoir_documents",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "memoir_documents_version_number_check": {
+          "name": "memoir_documents_version_number_check",
+          "value": "\"memoir_documents\".\"version_number\" >= 1"
+        }
+      }
+    },
+    "stories": {
+      "name": "stories",
+      "columns": {
+        "story_id": {
+          "autoincrement": false,
+          "name": "story_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "autoincrement": false,
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage_id": {
+          "autoincrement": false,
+          "name": "stage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "autoincrement": false,
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "short_summary": {
+          "autoincrement": false,
+          "name": "short_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "story_state_json": {
+          "default": "'{}'",
+          "autoincrement": false,
+          "name": "story_state_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completeness": {
+          "default": 0,
+          "autoincrement": false,
+          "name": "completeness",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "default": "'pending'",
+          "autoincrement": false,
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "priority": {
+          "default": 0,
+          "autoincrement": false,
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_source_session_id": {
+          "autoincrement": false,
+          "name": "created_source_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "autoincrement": false,
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "autoincrement": false,
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "stories_status_idx": {
+          "name": "stories_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "stories_user_stage_idx": {
+          "name": "stories_user_stage_idx",
+          "columns": [
+            "user_id",
+            "stage_id"
+          ],
+          "isUnique": false
+        },
+        "stories_stage_id_idx": {
+          "name": "stories_stage_id_idx",
+          "columns": [
+            "stage_id"
+          ],
+          "isUnique": false
+        },
+        "stories_user_id_idx": {
+          "name": "stories_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "stories_stage_id_life_stages_stage_id_fk": {
+          "name": "stories_stage_id_life_stages_stage_id_fk",
+          "tableFrom": "stories",
+          "tableTo": "life_stages",
+          "columnsFrom": [
+            "stage_id"
+          ],
+          "columnsTo": [
+            "stage_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "stories_user_id_users_user_id_fk": {
+          "name": "stories_user_id_users_user_id_fk",
+          "tableFrom": "stories",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "stories_completeness_range_check": {
+          "name": "stories_completeness_range_check",
+          "value": "\"stories\".\"completeness\" >= 0 AND \"stories\".\"completeness\" <= 100"
+        }
+      }
+    },
+    "story_candidates": {
+      "name": "story_candidates",
+      "columns": {
+        "candidate_id": {
+          "autoincrement": false,
+          "name": "candidate_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "autoincrement": false,
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_session_id": {
+          "autoincrement": false,
+          "name": "source_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_story_id": {
+          "autoincrement": false,
+          "name": "source_story_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suggested_stage_id": {
+          "autoincrement": false,
+          "name": "suggested_stage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suggested_title": {
+          "autoincrement": false,
+          "name": "suggested_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clue_summary": {
+          "autoincrement": false,
+          "name": "clue_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_refs_json": {
+          "autoincrement": false,
+          "name": "source_refs_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "default": "'pending'",
+          "autoincrement": false,
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_story_id": {
+          "autoincrement": false,
+          "name": "created_story_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "autoincrement": false,
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolved_at": {
+          "autoincrement": false,
+          "name": "resolved_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "story_candidates_source_session_id_idx": {
+          "name": "story_candidates_source_session_id_idx",
+          "columns": [
+            "source_session_id"
+          ],
+          "isUnique": false
+        },
+        "story_candidates_status_idx": {
+          "name": "story_candidates_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "story_candidates_user_id_idx": {
+          "name": "story_candidates_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "story_candidates_created_story_id_stories_story_id_fk": {
+          "name": "story_candidates_created_story_id_stories_story_id_fk",
+          "tableFrom": "story_candidates",
+          "tableTo": "stories",
+          "columnsFrom": [
+            "created_story_id"
+          ],
+          "columnsTo": [
+            "story_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        },
+        "story_candidates_suggested_stage_id_life_stages_stage_id_fk": {
+          "name": "story_candidates_suggested_stage_id_life_stages_stage_id_fk",
+          "tableFrom": "story_candidates",
+          "tableTo": "life_stages",
+          "columnsFrom": [
+            "suggested_stage_id"
+          ],
+          "columnsTo": [
+            "stage_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        },
+        "story_candidates_source_story_id_stories_story_id_fk": {
+          "name": "story_candidates_source_story_id_stories_story_id_fk",
+          "tableFrom": "story_candidates",
+          "tableTo": "stories",
+          "columnsFrom": [
+            "source_story_id"
+          ],
+          "columnsTo": [
+            "story_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        },
+        "story_candidates_source_session_id_interview_sessions_session_id_fk": {
+          "name": "story_candidates_source_session_id_interview_sessions_session_id_fk",
+          "tableFrom": "story_candidates",
+          "tableTo": "interview_sessions",
+          "columnsFrom": [
+            "source_session_id"
+          ],
+          "columnsTo": [
+            "session_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "story_candidates_user_id_users_user_id_fk": {
+          "name": "story_candidates_user_id_users_user_id_fk",
+          "tableFrom": "story_candidates",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "user_id": {
+          "autoincrement": false,
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "autoincrement": false,
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nickname": {
+          "autoincrement": false,
+          "name": "nickname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "autoincrement": false,
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "autoincrement": false,
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birth_date": {
+          "autoincrement": false,
+          "name": "birth_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birth_date_precision": {
+          "autoincrement": false,
+          "name": "birth_date_precision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birth_place": {
+          "autoincrement": false,
+          "name": "birth_place",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_location": {
+          "autoincrement": false,
+          "name": "current_location",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupation_summary": {
+          "autoincrement": false,
+          "name": "occupation_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "family_summary": {
+          "autoincrement": false,
+          "name": "family_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "profile_summary": {
+          "autoincrement": false,
+          "name": "profile_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extra_profile_json": {
+          "autoincrement": false,
+          "name": "extra_profile_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "onboarding_status": {
+          "default": "'not_started'",
+          "autoincrement": false,
+          "name": "onboarding_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "autoincrement": false,
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "autoincrement": false,
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "users_phone_idx": {
+          "name": "users_phone_idx",
+          "columns": [
+            "phone"
+          ],
+          "isUnique": false
+        },
+        "users_email_idx": {
+          "name": "users_email_idx",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

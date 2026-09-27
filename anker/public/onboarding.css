@@ -1,0 +1,51 @@
+body { min-height: 100vh; }
+.page-shell { width: min(720px, calc(100% - 56px)); padding-top: 34px; }
+.site-header { margin-bottom: 55px; }
+.status-card { display: flex; align-items: center; gap: 19px; padding: 26px 28px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255, 254, 250, .92); box-shadow: var(--shadow-soft); }
+.status-indicator { width: 11px; height: 11px; flex: 0 0 11px; border-radius: 50%; background: var(--brand); }
+.status-indicator[data-state="processing"], .status-indicator[data-state="loading"] { width: 30px; height: 30px; flex-basis: 30px; border: 3px solid #e9e2d7; border-top-color: var(--brand); background: transparent; animation: spin 1s linear infinite; }
+.status-indicator[data-state="completed"] { background: var(--brand); }
+.status-indicator[data-state="failed"], .status-indicator[data-state="missing"] { background: var(--danger); }
+.status-copy { min-width: 0; }
+.status-copy h2 { margin: 8px 0 0; font-family: var(--serif); font-size: clamp(24px, 4vw, 31px); line-height: 1.35; }
+.status-copy > p:last-child { margin: 11px 0 0; color: var(--body); font-size: 13px; line-height: 1.85; }
+.notice, .retry-panel { margin-top: 16px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--body); font-size: 12px; line-height: 1.8; }
+.notice-error { border-color: #ecd5cc; background: #fff8f5; color: var(--danger-deep); }
+.retry-panel { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.retry-panel p { margin: 0; }
+.result-profile { margin-top: 16px; padding: 27px 29px; }
+.result-profile h2 { margin: 9px 0 0; font-family: var(--serif); font-size: 28px; }
+.profile-field-label { margin: 20px 0 4px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .06em; }
+.current-status, .profile-summary { margin: 0; color: var(--body); font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
+.panel { margin-top: 16px; padding: 25px 27px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 254, 250, .92); box-shadow: var(--shadow-soft); }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.panel-heading h2 { margin: 7px 0 0; font-family: var(--serif); font-size: 22px; }
+.stage-list { display: grid; gap: 10px; }
+.stage-card { padding: 17px 18px; border-top: 1px solid var(--line); }
+.stage-card:first-child { border-top: 0; padding-top: 0; }
+.stage-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.stage-heading h3 { margin: 0; font-family: var(--serif); font-size: 17px; }
+.stage-date { flex: 0 0 auto; color: var(--muted); font-size: 10px; }
+.stage-summary { margin: 8px 0 0; color: var(--body); font-size: 12px; line-height: 1.8; white-space: pre-wrap; }
+.story-list { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
+.story-item { padding: 10px 0 0; color: var(--body); }
+.story-item strong { display: block; font-size: 12px; font-weight: 700; }
+.story-item p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.empty-copy { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.page-footer { justify-content: flex-end; margin-top: 20px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .page-shell { width: min(100% - 32px, 720px); padding-top: 22px; }
+  .site-header { margin-bottom: 31px; }
+  .status-card { align-items: flex-start; padding: 21px 19px; }
+  .status-copy h2 { font-size: 24px; }
+  .status-copy > p:last-child { font-size: 12px; }
+  .panel, .result-profile { padding: 21px 19px; border-radius: 15px; }
+  .retry-panel { align-items: stretch; flex-direction: column; }
+  .retry-panel .button, .page-footer .button { width: 100%; }
+  .stage-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .status-indicator[data-state="processing"], .status-indicator[data-state="loading"] { animation-duration: .01ms; } }

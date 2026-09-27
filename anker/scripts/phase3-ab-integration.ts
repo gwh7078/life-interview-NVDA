@@ -1,0 +1,568 @@
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
+import { createRetrieverClientFromEnv } from '../src/retriever/client.js';
+
+type GateStatus = 'PASS' | 'FAIL' | 'BLOCKED' | 'NOT_RUN';
+
+interface GateResult {
+  id: string;
+  name: string;
+  status: GateStatus;
+  durationMs: number;
+  summary: string;
+  evidence?: Record<string, unknown>;
+  command?: string;
+}
+
+interface CommandResult {
+  exitCode: number | null;
+  signal: string | null;
+  output: string;
+}
+
+interface BackendGateReport {
+  status: GateStatus;
+  durationMs: number;
+  summary: string;
+  evidence?: Record<string, unknown>;
+}
+
+interface BackendRunReport {
+  status: GateStatus;
+  gates?: Record<string, BackendGateReport>;
+  sessionId?: string;
+  tracePath?: string;
+  error?: string;
+}
+
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const reportPath = process.env.PHASE3_REPORT_PATH?.trim()
+  || path.join(projectRoot, 'docs/07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md');
+const diagnosticsDirectory = path.join(projectRoot, 'runtime/diagnostics');
+const logPath = path.join(diagnosticsDirectory, 'phase3-ab-integration.log');
+const retrieverWaitMs = integerEnv('PHASE3_RETRIEVER_WAIT_MS', 30_000);
+const commandOutputLimit = 120_000;
+
+function integerEnv(name: string, fallback: number): number {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function redact(value: string): string {
+  return value
+    .replace(/Bearer\s+[^\s"']+/gi, 'Bearer <redacted>')
+    .replace(/(API_KEY|TOKEN|PASSWORD|SECRET)=([^\s&]+)/gi, '$1=<redacted>');
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function retrieverUnavailable(error: unknown): boolean {
+  return /\b503\b|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|fetch failed|before receiving a response|did not complete within|timed out/i.test(errorMessage(error));
+}
+
+function commandLine(command: string, args: string[]): string {
+  return [command, ...args].join(' ');
+}
+
+function runCommand(command: string, args: string[], env: NodeJS.ProcessEnv = {}): Promise<CommandResult> {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd: projectRoot,
+      env: { ...process.env, ...env },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let output = '';
+    const collect = (chunk: Buffer): void => {
+      if (output.length < commandOutputLimit) output += chunk.toString();
+    };
+    child.stdout.on('data', collect);
+    child.stderr.on('data', collect);
+    child.on('error', (error) => {
+      output += `\n${errorMessage(error)}\n`;
+      resolve({ exitCode: null, signal: null, output });
+    });
+    child.on('close', (exitCode, signal) => resolve({ exitCode, signal, output }));
+  });
+}
+
+function tail(value: string, limit = 1_500): string {
+  const safe = redact(value).trim();
+  return safe.length <= limit ? safe : `…${safe.slice(-limit)}`;
+}
+
+function safeGateOutput(id: string, value: string): string {
+  if (id !== 'G3') return redact(value);
+  const lines = value.split(/\r?\n/u);
+  const natResults = lines.flatMap((line) => {
+    const markerIndex = line.indexOf('LIFE_INTERVIEW_NAT_RESULT ');
+    if (markerIndex < 0) return [];
+    try {
+      const result = JSON.parse(line.slice(markerIndex + 'LIFE_INTERVIEW_NAT_RESULT '.length)) as Record<string, unknown>;
+      const runtime = result.runtime && typeof result.runtime === 'object' && !Array.isArray(result.runtime)
+        ? result.runtime as Record<string, unknown>
+        : {};
+      const metrics = result.metrics && typeof result.metrics === 'object' && !Array.isArray(result.metrics)
+        ? result.metrics as Record<string, unknown>
+        : {};
+      const validation = result.validation && typeof result.validation === 'object' && !Array.isArray(result.validation)
+        ? result.validation as Record<string, unknown>
+        : {};
+      return [{
+        caseId: result.case_id ?? null,
+        status: result.status ?? null,
+        provider: runtime.provider ?? null,
+        model: runtime.model ?? null,
+        latencyMs: metrics.latency_ms ?? null,
+        attempts: metrics.attempt_count ?? null,
+        repairs: metrics.repair_count ?? null,
+        contractValid: validation.contract_valid ?? null,
+        backendValidation: validation.backend_validation ?? null,
+        semanticValid: validation.semantic_valid ?? null,
+      }];
+    } catch {
+      return [];
+    }
+  });
+  if (natResults.length) return JSON.stringify({ results: natResults });
+
+  try {
+    const report = JSON.parse(readFileSync(
+      path.join(projectRoot, '.tmp/nat/smoke/life_interview_result_output.json'),
+      'utf8',
+    )) as Record<string, unknown>;
+    const items = Array.isArray(report.eval_output_items)
+      ? report.eval_output_items.flatMap((item) => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+          const result = item as Record<string, unknown>;
+          const reasoning = result.reasoning && typeof result.reasoning === 'object' && !Array.isArray(result.reasoning)
+            ? result.reasoning as Record<string, unknown>
+            : {};
+          return [{
+            id: result.id ?? null,
+            score: result.score ?? null,
+            runtimeSuccess: reasoning.runtime_success ?? null,
+            contractValid: reasoning.contract_valid ?? null,
+            backendValidation: reasoning.backend_validation ?? null,
+            semanticValid: reasoning.semantic_valid ?? null,
+          }];
+        })
+      : [];
+    if (items.length) return JSON.stringify({ averageScore: report.average_score ?? null, results: items });
+  } catch {
+    // Keep provider output out of the phase report if NAT did not write a result file.
+  }
+  return 'G3 NAT output omitted from phase3 evidence; no sanitized result was available.';
+}
+
+function addGate(gates: GateResult[], result: GateResult): void {
+  gates.push(result);
+  process.stdout.write(`[${result.status}] ${result.id} ${result.summary}\n`);
+}
+
+async function commandGate(
+  gates: GateResult[],
+  id: string,
+  name: string,
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = {},
+): Promise<CommandResult> {
+  const started = Date.now();
+  const result = await runCommand(command, args, env);
+  const output = safeGateOutput(id, result.output);
+  const status: GateStatus = result.exitCode === 0 ? 'PASS' : 'FAIL';
+  addGate(gates, {
+    id,
+    name,
+    status,
+    durationMs: Date.now() - started,
+    summary: status === 'PASS' ? '命令通过。' : `命令失败（exit=${result.exitCode ?? 'spawn-error'}）。`,
+    command: commandLine(command, args),
+    evidence: {
+      exitCode: result.exitCode,
+      signal: result.signal,
+      outputTail: tail(output),
+    },
+  });
+  return result;
+}
+
+async function runRetrieverSmoke(): Promise<{ status: GateStatus; summary: string; evidence: Record<string, unknown> }> {
+  const ownerId = `phase3-gate-owner-${randomUUID()}`;
+  const storyId = `phase3-gate-story-${randomUUID()}`;
+  const sessionId = `phase3-gate-session-${randomUUID()}`;
+  const messageId = `phase3-gate-message-${randomUUID()}`;
+  const marker = `phase3-retriever-marker-${randomUUID()}`;
+  const client = createRetrieverClientFromEnv(process.env);
+  let reference: { jobId?: string; documentId?: string } | undefined;
+  let cleanup = 'not-needed';
+
+  try {
+    const health = await client.health({ timeoutMs: 5_000 });
+    const indexed = await client.indexSessionTranscript({
+      userId: ownerId,
+      sessionId,
+      storyId,
+      stageId: 'phase3-gate-stage',
+      sessionType: 'story',
+      sourceType: 'subject',
+      endedAt: new Date().toISOString(),
+      contentHash: randomUUID(),
+      transcriptText: [
+        `message_id: ${messageId}`,
+        `phase3 integration smoke marker: ${marker}`,
+        '这是用于验证 ingest、状态查询、scoped query 和消息追溯的临时事实。',
+      ].join('\n'),
+    });
+    reference = { jobId: indexed.jobId, documentId: indexed.documentId };
+
+    const deadline = Date.now() + retrieverWaitMs;
+    let indexStatus = indexed.status;
+    while (Date.now() < deadline) {
+      const status = await client.getIndexStatus(sessionId);
+      indexStatus = status.status;
+      if (/^(indexed|completed|complete|ready|succeeded|success)$/i.test(indexStatus)) break;
+      if (/^(failed|error|cancelled|canceled)$/i.test(indexStatus)) {
+        throw new Error(`Retriever indexing failed with status ${indexStatus}.`);
+      }
+      await sleep(500);
+    }
+    if (!/^(indexed|completed|complete|ready|succeeded|success)$/i.test(indexStatus)) {
+      throw new Error(`Retriever indexing did not complete within ${retrieverWaitMs}ms (status=${indexStatus}).`);
+    }
+
+    const evidence = await client.searchTranscript({
+      ownerId,
+      storyId,
+      sourceType: 'subject',
+      query: marker,
+      topK: 5,
+    });
+    const matched = evidence.some((item) => item.ownerId === ownerId
+      && item.storyId === storyId
+      && item.sourceType === 'subject'
+      && item.sessionId === sessionId
+      && item.messageIds.includes(messageId)
+      && item.text.includes(marker));
+
+    return {
+      status: matched ? 'PASS' : 'FAIL',
+      summary: matched ? '真实 health、ingest、状态查询和 scoped query 通过。' : '查询返回结果，但未能完成 owner/story/session/message 追溯校验。',
+      evidence: {
+        health,
+        jobId: indexed.jobId ?? null,
+        documentId: indexed.documentId ?? null,
+        indexStatus,
+        evidenceCount: evidence.length,
+        matched,
+        evidencePreview: evidence.map((item) => ({
+          ownerId: item.ownerId,
+          storyId: item.storyId,
+          sourceType: item.sourceType,
+          sessionId: item.sessionId,
+          messageIds: item.messageIds,
+          segmentIds: item.segmentIds,
+          textPreview: item.text.slice(0, 300),
+        })),
+        ownerId,
+        storyId,
+        sessionId,
+        messageId,
+      },
+    };
+  } catch (error) {
+    return {
+      status: retrieverUnavailable(error) ? 'BLOCKED' : 'FAIL',
+      summary: retrieverUnavailable(error)
+        ? `真实 Retriever 服务当前不可用：${errorMessage(error)}`
+        : `真实 Retriever smoke 失败：${errorMessage(error)}`,
+      evidence: {
+        ownerId,
+        storyId,
+        sessionId,
+        messageId,
+        error: errorMessage(error),
+      },
+    };
+  } finally {
+    if (reference?.documentId) {
+      try {
+        await client.deleteSessionTranscript(sessionId, { reference });
+        cleanup = 'deleted';
+      } catch (error) {
+        cleanup = `warning: ${errorMessage(error)}`;
+      }
+    }
+    if (cleanup !== 'not-needed') process.stdout.write(`[INFO] Retriever smoke cleanup: ${cleanup}\n`);
+  }
+}
+
+function markdownValue(value: unknown): string {
+  return String(value ?? '').replaceAll('|', '\\|').replaceAll('\n', ' ');
+}
+
+function reportMarkdown(gates: GateResult[], generatedAt: string): string {
+  const overall: GateStatus = gates.some((gate) => gate.status === 'FAIL')
+    ? 'FAIL'
+    : gates.some((gate) => gate.status === 'BLOCKED' || gate.status === 'NOT_RUN')
+      ? 'BLOCKED'
+      : 'PASS';
+  const lines = [
+    '# Phase 3 A+B Integration Gate Report',
+    '',
+    `- Generated at: ${generatedAt}`,
+    `- Overall status: **${overall}**`,
+    '- Scope: Phase 3A Retriever boundary, Phase 3B realtime Tool/HOLD/Resume boundary, Agent runtime safety, and live-provider preflight.',
+    '- Credential values and bearer tokens are omitted from this report.',
+    '',
+    '## Gate results',
+    '',
+    '| Gate | Name | Status | Duration | Summary |',
+    '|---|---|---|---:|---|',
+    ...gates.map((gate) => `| ${gate.id} | ${gate.name} | **${gate.status}** | ${gate.durationMs} ms | ${markdownValue(gate.summary)} |`),
+    '',
+    '## Evidence',
+    '',
+    ...gates.map((gate) => {
+      const evidence = gate.evidence
+        ? ` ${JSON.stringify(gate.evidence).replaceAll('`', '\\`')}`
+        : '';
+      const command = gate.command ? ` Command: \`${gate.command}\`.` : '';
+      return `- **${gate.id}**: ${gate.summary}${command}${evidence}`;
+    }),
+    '',
+    '## Interpretation',
+    '',
+    '- `PASS` means the named automated check completed and its assertions passed.',
+    '- `BLOCKED` means an external dependency or missing live acceptance path prevented a valid conclusion.',
+    '- The real Retriever smoke and provenance checks are required; local wiring tests do not replace them.',
+    '- Real human voice experience acceptance remains a manual final step after all automated gates pass.',
+    '',
+  ];
+  return lines.join('\n');
+}
+
+async function main(): Promise<void> {
+  mkdirSync(diagnosticsDirectory, { recursive: true });
+  const gates: GateResult[] = [];
+  const startedAt = new Date().toISOString();
+  const logHeader = `\n=== Phase 3 A+B Gate ${startedAt} ===\n`;
+  appendFileSync(logPath, logHeader, { mode: 0o600 });
+
+  const preflight = await commandGate(
+    gates,
+    'G0',
+    'AI environment preflight',
+    'bash',
+    ['scripts/check-ai-env.sh'],
+  );
+  if (preflight.exitCode !== 0) {
+    const current = gates.at(-1);
+    if (current && /Retriever.*503|VectorDB.*503/i.test(current.evidence?.outputTail as string || '')) {
+      current.status = 'BLOCKED';
+      current.summary = 'NeMo Retriever/VectorDB 当前返回 HTTP 503，等待外部修复。';
+    }
+  }
+
+  const deterministic = await commandGate(
+    gates,
+    'G1',
+    'Deterministic local regression',
+    'bash',
+    ['scripts/codex-verify.sh'],
+  );
+  if (deterministic.output) appendFileSync(logPath, redact(deterministic.output), { mode: 0o600 });
+
+  const retrieverStarted = Date.now();
+  const retriever = await runRetrieverSmoke();
+  addGate(gates, {
+    id: 'G2',
+    name: 'Real NeMo Retriever ingest/query smoke',
+    status: retriever.status,
+    durationMs: Date.now() - retrieverStarted,
+    summary: retriever.summary,
+    evidence: retriever.evidence,
+    command: 'RetrieverClient: GET /v1/health; POST /v1/ingest/job; POST /v1/ingest/job/{id}/document; GET status; POST /v1/query',
+  });
+
+  if (process.env.PHASE3_SKIP_AGENT_REAL === 'true') {
+    addGate(gates, {
+      id: 'G3',
+      name: 'Real Agent runtime acceptance',
+      status: 'NOT_RUN',
+      durationMs: 0,
+      summary: 'PHASE3_SKIP_AGENT_REAL=true，未执行真实 Agent。',
+    });
+  } else if (!process.env.NEMOCLAW_SANDBOX?.trim()) {
+    addGate(gates, {
+      id: 'G3',
+      name: 'Real Agent runtime acceptance',
+      status: 'NOT_RUN',
+      durationMs: 0,
+      summary: 'NEMOCLAW_SANDBOX 未配置，未执行真实 Agent。',
+    });
+  } else {
+    const agent = await commandGate(
+      gates,
+      'G3',
+      'Real Agent runtime acceptance',
+      'bash',
+      ['scripts/codex-node.sh', 'npm', 'run', 'test:agent:nat:smoke'],
+    );
+    if (agent.output) appendFileSync(logPath, safeGateOutput('G3', agent.output), { mode: 0o600 });
+  }
+
+  if (process.env.PHASE3_SKIP_LIVE === 'true') {
+    addGate(gates, {
+      id: 'G4',
+      name: 'Real Step-Audio Tool/HOLD smoke',
+      status: 'NOT_RUN',
+      durationMs: 0,
+      summary: 'PHASE3_SKIP_LIVE=true，未执行真实 Step-Audio。',
+    });
+  } else if (!process.env.STEPFUN_API_KEY?.trim()) {
+    addGate(gates, {
+      id: 'G4',
+      name: 'Real Step-Audio Tool/HOLD smoke',
+      status: 'NOT_RUN',
+      durationMs: 0,
+      summary: 'STEPFUN_API_KEY 未配置，未执行真实 Step-Audio。',
+    });
+  } else {
+    const stepfunReport = path.join(diagnosticsDirectory, 'phase3-stepfun-positive.json');
+    const stepfun = await commandGate(
+      gates,
+      'G4',
+      'Real Step-Audio Tool/HOLD smoke',
+      'bash',
+      ['scripts/codex-node.sh', 'node', 'scripts/stepfun-realtime-smoke.js'],
+      { STEPFUN_TOOL_TEST_MODE: 'positive', STEPFUN_REPORT_PATH: stepfunReport },
+    );
+    if (stepfun.output) appendFileSync(logPath, redact(stepfun.output), { mode: 0o600 });
+  }
+
+  const backendGateNames: Record<string, string> = {
+    G5: 'Real backend A+B session acceptance',
+    G6: 'Retriever query concurrency and isolation acceptance',
+    G7: 'Latency and slow-path budget acceptance',
+    G8: 'Persisted DB and trace final-state acceptance',
+  };
+  const g2Status = gates.find((gate) => gate.id === 'G2')?.status;
+  const g4Status = gates.find((gate) => gate.id === 'G4')?.status;
+  const addBackendBlocked = (reason: string): void => {
+    addGate(gates, {
+      id: 'G5',
+      name: backendGateNames.G5,
+      status: 'BLOCKED',
+      durationMs: 0,
+      summary: reason,
+      evidence: { deterministicWiringTest: 'test/realtime-retriever-wiring.test.ts' },
+    });
+    addGate(gates, {
+      id: 'G6',
+      name: backendGateNames.G6,
+      status: 'BLOCKED',
+      durationMs: 0,
+      summary: '等待 G5 真实 backend 会话 runner。',
+    });
+    addGate(gates, {
+      id: 'G7',
+      name: backendGateNames.G7,
+      status: 'BLOCKED',
+      durationMs: 0,
+      summary: '等待 G5 真实 trace；不能用本地 fake 或 HTTP 503 推导线上延迟。',
+    });
+    addGate(gates, {
+      id: 'G8',
+      name: backendGateNames.G8,
+      status: 'BLOCKED',
+      durationMs: 0,
+      summary: '等待真实会话完成后检查 SQLite authoritative rows、index state 和 trace counters。',
+    });
+  };
+
+  if (g2Status !== 'PASS') {
+    addBackendBlocked('等待 G2 真实 Retriever ingest/query 通过后，再执行 backend + Step-Audio 联合验收。');
+  } else if (g4Status !== 'PASS') {
+    addBackendBlocked('等待 G4 真实 Step-Audio Tool/HOLD smoke 通过后，再执行 backend + Step-Audio 联合验收。');
+  } else {
+    const backendReportPath = path.join(diagnosticsDirectory, 'phase3-backend-stepfun-e2e.json');
+    const backendStarted = Date.now();
+    const backend = await runCommand(
+      'bash',
+      ['scripts/codex-node.sh', 'npm', 'run', 'test:phase3:backend:live'],
+      { PHASE3_BACKEND_REPORT_PATH: backendReportPath },
+    );
+    if (backend.output) appendFileSync(logPath, redact(backend.output), { mode: 0o600 });
+    let backendReport: BackendRunReport | undefined;
+    try {
+      backendReport = JSON.parse(readFileSync(backendReportPath, 'utf8')) as BackendRunReport;
+    } catch {
+      backendReport = undefined;
+    }
+    const backendReportAccepted = backend.exitCode === 0 && backendReport?.status === 'PASS';
+    for (const id of ['G5', 'G6', 'G7', 'G8']) {
+      const result = backendReport?.gates?.[id];
+      if (result && (result.status === 'PASS' || result.status === 'FAIL' || result.status === 'BLOCKED')) {
+        const status = result.status === 'PASS' && !backendReportAccepted && id === 'G8'
+          ? 'FAIL'
+          : result.status;
+        addGate(gates, {
+          id,
+          name: backendGateNames[id]!,
+          status,
+          durationMs: result.durationMs,
+          summary: status === result.status
+            ? result.summary
+            : `backend runner 未通过整体状态校验：${result.summary}`,
+          evidence: {
+            ...(result.evidence ?? {}),
+            backendExitCode: backend.exitCode,
+            backendReportStatus: backendReport?.status ?? null,
+          },
+          ...(id === 'G5' ? { command: 'bash scripts/codex-node.sh npm run test:phase3:backend:live' } : {}),
+        });
+      } else {
+        addGate(gates, {
+          id,
+          name: backendGateNames[id]!,
+          status: id === 'G5' ? 'FAIL' : 'BLOCKED',
+          durationMs: id === 'G5' ? Date.now() - backendStarted : 0,
+          summary: id === 'G5'
+            ? `backend runner 未生成有效报告（exit=${backend.exitCode ?? 'spawn-error'}）。`
+            : 'backend runner 未提供此 Gate 的有效结果。',
+          evidence: {
+            exitCode: backend.exitCode,
+            reportPath: backendReportPath,
+            outputTail: tail(redact(backend.output)),
+          },
+        });
+      }
+    }
+  }
+
+  const generatedAt = new Date().toISOString();
+  writeFileSync(reportPath, reportMarkdown(gates, generatedAt), { mode: 0o600 });
+  appendFileSync(logPath, `${reportMarkdown(gates, generatedAt)}\n`, { mode: 0o600 });
+  const overall = gates.some((gate) => gate.status === 'FAIL')
+    ? 'FAIL'
+    : gates.some((gate) => gate.status === 'BLOCKED' || gate.status === 'NOT_RUN')
+      ? 'BLOCKED'
+      : 'PASS';
+  process.stdout.write(`PHASE3_AB_GATE_STATUS=${overall}\nREPORT_PATH=${reportPath}\nLOG_PATH=${logPath}\n`);
+  if (overall !== 'PASS') process.exitCode = 1;
+}
+
+void main().catch((error) => {
+  process.stderr.write(`PHASE3_AB_GATE_ERROR=${errorMessage(error)}\n`);
+  process.exitCode = 1;
+});

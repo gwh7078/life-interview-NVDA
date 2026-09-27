@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8f6f1">
+    <title>人生采访局 · 正在整理人生档案</title>
+    <link rel="stylesheet" href="/ui.css">
+    <link rel="stylesheet" href="/onboarding.css">
+    <script type="module" src="/onboarding-processing.js"></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="/onboarding" aria-label="返回人生建档">
+          <span class="brand-mark" aria-hidden="true">人</span>
+          <span class="brand-copy"><span class="eyebrow">LIFE INTERVIEW</span><span class="brand-name">人生采访局</span></span>
+        </a>
+      </header>
+
+      <section class="status-card" role="status" aria-live="polite" aria-atomic="true" aria-labelledby="status-title">
+        <div class="status-indicator" id="status-indicator" data-state="loading" aria-hidden="true"></div>
+        <div class="status-copy">
+          <p class="section-label">刚刚聊完</p>
+          <h2 id="status-title">正在生成你的人生地图…</h2>
+          <p id="status-description">我们正在把刚才聊到的内容整理成档案、人生阶段和故事。你可以先放下手机，完成后再回来。</p>
+        </div>
+      </section>
+
+      <section id="processing-steps" class="processing-steps" aria-labelledby="processing-steps-title" hidden>
+        <p id="processing-steps-title" class="processing-steps-heading">人生地图正在经历这些步骤</p>
+        <ol class="processing-step-list">
+          <li id="processing-step-transcript" class="processing-step" data-state="pending">
+            <span id="processing-step-transcript-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>保存访谈记录</strong><span id="processing-step-transcript-detail">等待确认最后一段字幕</span></span>
+          </li>
+          <li id="processing-step-closeout" class="processing-step" data-state="pending">
+            <span id="processing-step-closeout-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>整理人物档案</strong><span id="processing-step-closeout-detail">等待开始</span></span>
+          </li>
+          <li id="processing-step-story" class="processing-step" data-state="pending">
+            <span id="processing-step-story-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>建立人生阶段与故事</strong><span id="processing-step-story-detail">等待前一步完成</span></span>
+          </li>
+          <li id="processing-step-completion" class="processing-step" data-state="pending">
+            <span id="processing-step-completion-mark" class="processing-step-mark" aria-hidden="true">·</span>
+            <span class="processing-step-copy"><strong>分析以后可以继续聊什么</strong><span id="processing-step-completion-detail">等待前一步完成</span></span>
+          </li>
+        </ol>
+      </section>
+
+      <div id="page-error" class="notice notice-error" role="alert" hidden></div>
+      <div id="retry-panel" class="retry-panel" hidden>
+        <p id="retry-message">整理暂时没有完成。访谈记录会保留，你可以安全重试。</p>
+        <button id="retry-button" class="button button-primary" type="button">重试整理</button>
+      </div>
+      <div id="continue-panel" class="retry-panel" hidden>
+        <p>你可以继续建档；下次完成时会一并整理保留下来的访谈记录。</p>
+        <a class="button button-primary" href="/onboarding">返回继续建档</a>
+      </div>
+    </main>
+  </body>
+</html>

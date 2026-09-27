@@ -1,0 +1,19 @@
+functions:
+  life_interview_agent:
+    _type: life_interview_agent
+    project_root: ${LIFE_INTERVIEW_ROOT:-.}
+    timeout_seconds: 420
+
+workflow:
+  _type: life_interview_agent
+
+eval:
+  general:
+    max_concurrency: 1
+    output_dir: ./.tmp/nat/eval
+    dataset:
+      _type: jsonl
+      file_path: nvidia/nat/datasets/regression.jsonl
+  evaluators:
+    life_interview_result:
+      _type: life_interview_result

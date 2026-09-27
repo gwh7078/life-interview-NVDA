@@ -1,0 +1,1 @@
+ALTER TABLE `stories` ADD `gaps_json` text DEFAULT '[]' NOT NULL;

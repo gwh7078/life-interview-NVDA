@@ -1,0 +1,16 @@
+preset:
+  name: bailian-model-api
+  description: "OpenAI-compatible Alibaba Cloud Model Studio text inference"
+
+network_policies:
+  bailian_model_api:
+    name: bailian_model_api
+    endpoints:
+      - host: dashscope.aliyuncs.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: POST, path: "/compatible-mode/v1/chat/completions" }
+    binaries:
+      - { path: /usr/local/bin/node }
