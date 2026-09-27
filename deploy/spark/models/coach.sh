@@ -4,13 +4,13 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "$DIR/lib/common.sh"
 . "$DIR/lib/ports.sh"
 
-image="${SPARK_VLLM_IMAGE:-vllm/vllm-openai:v0.28.0}"
+image="${SPARK_VLLM_IMAGE:-nvcr.io/nvidia/vllm@sha256:9204569b17ee4c0eff75194b8e6e458479c8aee18953b5ab9cf359fcdac659e2}"
 model="${SPARK_COACH_MODEL:-Qwen/Qwen3-8B}"
 name="${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
 
 case "${1:-status}" in
   prefetch)
-    docker pull "$image"
+    docker_pull_cached "$image"
     hf_prefetch_cache "$model"
     ;;
   start)
