@@ -96,6 +96,11 @@ export function createStepAudio2LocalProvider(config: RealtimeProviderConfig): R
     ...base,
     capabilities,
     connectOptions: () => ({ url, headers: {} }),
+    closePlan: () => ({
+      steps: [{ message: { type: 'session.close' } }],
+      waitFor: 'session.closed',
+      timeoutMs: 3_000,
+    }),
     connectionFailureMessage: localConnectionFailureMessage,
     normalizeServerMessage(raw): NormalizedRealtimeEvent[] {
       const event = parseWireObject(raw);

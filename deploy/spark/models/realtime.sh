@@ -8,6 +8,7 @@ image="${SPARK_STEPAUDIO_IMAGE:-stepfun2025/vllm:step-audio-2-v20250909}"
 backend_name="${SPARK_STEPAUDIO_CONTAINER:-life-interview-spark-stepaudio}"
 bridge_name="${SPARK_STEPAUDIO_BRIDGE_CONTAINER:-life-interview-spark-stepaudio-bridge}"
 source_dir="${SPARK_STEPAUDIO_SOURCE_DIR:-$MODEL_CACHE/sources/Step-Audio2}"
+source_ref="${SPARK_STEPAUDIO_SOURCE_REF:-76e272b56c3917a8d7188f18bbb5a65dfc8a0845}"
 model_dir="${SPARK_STEPAUDIO_MODEL_DIR:-$MODEL_CACHE/stepfun-ai/Step-Audio-2-mini}"
 manifest_file="$SPARK_DIAGNOSTICS_DIR/stepaudio-image-manifest.json"
 
@@ -19,14 +20,14 @@ arm64_image() {
 prefetch() {
   mkdir -p "$(dirname "$source_dir")" "$model_dir"
   if [[ ! -d "$source_dir/.git" ]]; then
-    git clone --depth 1 https://github.com/stepfun-ai/Step-Audio2.git "$source_dir"
-  else
-    git -C "$source_dir" fetch --depth 1 origin main
-    git -C "$source_dir" reset --hard FETCH_HEAD
+    git clone https://github.com/stepfun-ai/Step-Audio2.git "$source_dir"
   fi
+  git -C "$source_dir" fetch --depth 1 origin "$source_ref"
+  git -C "$source_dir" reset --hard "$source_ref"
   if [[ ! -f "$model_dir/config.json" ]]; then
     hf_download "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_dir"
   fi
+  python3 "$DIR/fixtures/generate.py" "$source_dir" "$SPARK_BENCH_DIR/fixtures"
   docker manifest inspect "$image" >"$manifest_file" 2>/dev/null || true
   if arm64_image; then docker pull "$image"; else
     warn "StepFun image does not currently prove linux/arm64 support. Native runtime path remains available via SPARK_STEPAUDIO_NATIVE_START_CMD."
