@@ -127,7 +127,11 @@ era_index() {
   ERA_CONTEXT_ENABLED=true npm run era:index
 }
 
-run_step preflight "$DIR/preflight.sh" --report-only
+if (( dry_run )); then
+  run_step preflight "$DIR/preflight.sh" --report-only
+else
+  run_step preflight "$DIR/preflight.sh"
+fi
 run_step dependencies bootstrap_tools
 if (( ! dry_run )); then
   ensure_local_secret

@@ -40,7 +40,7 @@ text_model=os.getenv("SPARK_TEXT_MODEL","nvidia/Qwen3.6-35B-A3B-NVFP4")
 sandbox=os.getenv("NEMOCLAW_SANDBOX","my-assistant")
 db=os.getenv("DATABASE_PATH","data/memoir.db")
 gates=[
- gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')}"),
+ gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')} && {q(spark_dir/'lib/docker-gpu-smoke.sh')}"),
  gate("G1","Dependencies","node --version && npm --version && python3 --version && docker --version",False,60),
  gate("G2","Local Text Model",f"python3 {q(spark_dir/'lib/openai-smoke.py')} http://127.0.0.1:{os.getenv('SPARK_TEXT_PORT','8000')}/v1 {q(text_model)}",True,180),
  gate("G3","NemoClaw / OpenShell / Skills",f"test \"$({q(spark_dir/'services/nemoclaw.sh')} status)\" = RUNNING && nemoclaw {q(sandbox)} skill list && {q(spark_dir/'services/nemoclaw.sh')} smoke",True,360),

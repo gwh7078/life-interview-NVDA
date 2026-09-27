@@ -119,7 +119,10 @@ report = {
 (out/"preflight.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 (out/"versions.json").write_text(json.dumps(versions,ensure_ascii=False,indent=2),encoding="utf-8")
 print(json.dumps({"architecture":checks["architecture_arm64"],"gpu":checks["nvidia_gpu"],"docker":checks["docker"],"docker_gpu_runtime":checks["docker_gpu_runtime"],"ports":checks["ports"],"credentials":checks["credentials"]},ensure_ascii=False,indent=2))
-hard = ["architecture_arm64","nvidia_gpu","docker","python","node","memory","disk","ports"]
+# Node is deliberately not a hard preflight gate: install.sh can bootstrap a
+# pinned Node 22 runtime after hardware validation. Python is needed to run the
+# installer itself, so it remains hard.
+hard = ["architecture_arm64","nvidia_gpu","docker","python","memory","disk","ports"]
 failed = [k for k in hard if checks[k]["status"] == "FAIL"]
 if failed and not report_only:
     print("preflight failed: "+",".join(failed), file=sys.stderr)

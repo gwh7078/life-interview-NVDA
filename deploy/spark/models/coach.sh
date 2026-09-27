@@ -11,7 +11,7 @@ name="${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
 case "${1:-status}" in
   prefetch)
     docker pull "$image"
-    hf_download "$model" "${SPARK_COACH_MODEL_DIR:-$MODEL_CACHE/Qwen/Qwen3-8B}"
+    hf_prefetch_cache "$model"
     ;;
   start)
     if docker ps --format '{{.Names}}' | grep -qx "$name"; then exit 0; fi

@@ -13,7 +13,7 @@ gpu_util="${SPARK_TEXT_GPU_MEMORY_UTILIZATION:-0.50}"
 case "${1:-status}" in
   prefetch)
     docker pull "$image"
-    hf_download "$model" "${SPARK_TEXT_MODEL_DIR:-$MODEL_CACHE/nvidia/Qwen3.6-35B-A3B-NVFP4}"
+    hf_prefetch_cache "$model"
     ;;
   start)
     if docker ps --format '{{.Names}}' | grep -qx "$name"; then exit 0; fi

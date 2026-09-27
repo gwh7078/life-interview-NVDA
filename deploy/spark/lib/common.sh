@@ -72,6 +72,17 @@ hf_download() {
   fi
 }
 
+hf_prefetch_cache() {
+  local model="$1" venv hfbin
+  venv="$(ensure_tool_venv)"
+  hfbin="$venv/bin/hf"
+  if [[ -x "$hfbin" ]]; then
+    "$hfbin" download "$model" --cache-dir "$MODEL_CACHE"
+  else
+    "$venv/bin/huggingface-cli" download "$model" --cache-dir "$MODEL_CACHE"
+  fi
+}
+
 json_escape() {
   python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'
 }
