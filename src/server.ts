@@ -155,6 +155,7 @@ export interface RuntimeConfig {
   realtimeCoachBaseUrl?: string;
   realtimeCoachModel?: string;
   realtimeCoachApiKey?: string;
+  realtimeCoachRequestDialect?: 'dashscope' | 'vllm';
   realtimeCoachGateTimeoutMs?: number;
   realtimeCoachTotalTimeoutMs?: number;
   realtimeRetrieverEnabled?: boolean;
@@ -339,6 +340,10 @@ export function readRuntimeConfig(): RuntimeConfig {
   const realtimeCoachApiKey = process.env.REALTIME_COACH_API_KEY?.trim()
     || process.env.BAILIAN_API_KEY?.trim()
     || undefined;
+  const realtimeCoachRequestDialect = process.env.REALTIME_COACH_REQUEST_DIALECT?.trim() || 'dashscope';
+  if (realtimeCoachRequestDialect !== 'dashscope' && realtimeCoachRequestDialect !== 'vllm') {
+    throw new Error('REALTIME_COACH_REQUEST_DIALECT must be dashscope or vllm.');
+  }
   const realtimeCoachGateTimeoutMs = Number(process.env.REALTIME_COACH_GATE_TIMEOUT_MS ?? DEFAULT_REALTIME_COACH_GATE_TIMEOUT_MS);
   const realtimeCoachTotalTimeoutMs = Number(process.env.REALTIME_COACH_TOTAL_TIMEOUT_MS ?? DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS);
   const realtimeRetrieverEnabled = process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true';
@@ -482,6 +487,7 @@ export function readRuntimeConfig(): RuntimeConfig {
     realtimeCoachBaseUrl,
     realtimeCoachModel,
     realtimeCoachApiKey,
+    realtimeCoachRequestDialect,
     realtimeCoachGateTimeoutMs,
     realtimeCoachTotalTimeoutMs,
     realtimeRetrieverEnabled,
@@ -768,6 +774,7 @@ function createStoryWorkflowDependencies(
         baseUrl: config.realtimeCoachBaseUrl ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1',
         model: config.realtimeCoachModel ?? 'qwen3-8b',
         apiKey: config.realtimeCoachApiKey,
+        requestDialect: config.realtimeCoachRequestDialect ?? 'dashscope',
       }) : null
     : dependencies.realtimeCoach;
   const realtimeCoachPipeline = dependencies.realtimeCoachPipeline
