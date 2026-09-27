@@ -41,7 +41,7 @@ ensure_sandbox() {
   NEMOCLAW_MODEL="$model" \
   NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
   NEMOCLAW_SANDBOX_NAME="$sandbox" \
-    nemoclaw onboard --non-interactive --gpu --name "$sandbox"
+    nemoclaw onboard --non-interactive --no-gpu --name "$sandbox"
   sandbox_ready || die "NemoClaw sandbox '$sandbox' was not ready after onboarding."
 }
 
@@ -119,8 +119,7 @@ case "${1:-status}" in
   start)
     install_cli
     ensure_sandbox
-    NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
-      nemoclaw inference set --model "$model" --provider vllm --sandbox "$sandbox" >/dev/null
+    NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" nemoclaw inference get >/dev/null
     install_skills
     configure_realtime_context_agent
     apply_policy
@@ -129,7 +128,7 @@ case "${1:-status}" in
     # Preserve sandbox state; product stop must not destroy Agent data.
     ;;
   smoke)
-    npm --prefix "$REPO_ROOT" run agent:smoke
+    (cd "$REPO_ROOT"; printf 'onboarding.closeout\n' | node --import tsx scripts/nat-agent-runner.ts)
     ;;
   status)
     if ! have nemoclaw; then echo STOPPED; exit 0; fi
