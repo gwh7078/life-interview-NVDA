@@ -10,7 +10,7 @@ data_dir="${SPARK_RETRIEVER_DATA_DIR:-$SPARK_RUNTIME_DIR/retriever}"
 mkdir -p "$data_dir"
 
 case "${1:-status}" in
-  prefetch) docker pull "$image" ;;
+  prefetch) docker_pull_cached "$image" ;;
   start)
     if docker ps --format '{{.Names}}' | grep -qx "$name"; then exit 0; fi
     docker rm "$name" >/dev/null 2>&1 || true
