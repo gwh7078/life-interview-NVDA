@@ -2,16 +2,23 @@ export type RealtimeProviderId = 'qwen' | 'stepfun' | 'modelbest' | 'stepaudio3_
 export const INTERVIEW_CONTEXT_TOOL_NAME = 'get_interview_context';
 
 export type RealtimeAudioEncoding = 'pcm_s16le';
+export type RealtimeAudioChunkFormat = 'raw-pcm';
 
 export interface RealtimeAudioSpec {
   input: {
+    codec: RealtimeAudioEncoding;
     encoding: RealtimeAudioEncoding;
     sampleRate: number;
+    channels: number;
+    chunkFormat: RealtimeAudioChunkFormat;
     frameBytes?: number;
   };
   output: {
+    codec: RealtimeAudioEncoding;
     encoding: RealtimeAudioEncoding;
     sampleRate: number;
+    channels: number;
+    chunkFormat: RealtimeAudioChunkFormat;
   };
 }
 
