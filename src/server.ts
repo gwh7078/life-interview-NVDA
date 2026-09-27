@@ -163,6 +163,8 @@ export interface RuntimeConfig {
   stepfunModel?: string;
   stepaudio3Model?: string;
   stepfunApiKey?: string;
+  stepaudio2Execution?: 'stepfun-cloud' | 'local';
+  stepaudio2LocalUrl?: string;
   modelbestModel?: string;
   modelbestApiKey?: string;
   realtimeLocalSilenceTimeoutMs?: number;
@@ -342,6 +344,19 @@ export function readRuntimeConfig(): RuntimeConfig {
   const realtimeRetrieverEnabled = process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true';
   const contextAgentEnabled = realtimeContextAgentEnabled();
   const realtimeLocalSilenceTimeoutMs = Number(process.env.REALTIME_LOCAL_SILENCE_TIMEOUT_MS ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS);
+  const stepaudio2Execution = process.env.STEPAUDIO2_EXECUTION?.trim() || 'stepfun-cloud';
+  if (stepaudio2Execution !== 'stepfun-cloud' && stepaudio2Execution !== 'local') {
+    throw new Error('STEPAUDIO2_EXECUTION must be stepfun-cloud or local.');
+  }
+  const stepaudio2LocalUrl = process.env.STEPAUDIO2_LOCAL_WS_URL?.trim() || 'ws://127.0.0.1:8092/realtime';
+  if (stepaudio2Execution === 'local') {
+    let localVoiceUrl: URL;
+    try { localVoiceUrl = new URL(stepaudio2LocalUrl); }
+    catch { throw new Error('STEPAUDIO2_LOCAL_WS_URL must be a valid ws:// or wss:// URL.'); }
+    if (localVoiceUrl.protocol !== 'ws:' && localVoiceUrl.protocol !== 'wss:') {
+      throw new Error('STEPAUDIO2_LOCAL_WS_URL must use ws:// or wss://.');
+    }
+  }
   const closeoutTimeoutMs = Number(closeoutTask.parameters.timeoutMs ?? 60_000);
   const closeoutApiFormat = String(closeoutTask.parameters.apiFormat ?? 'chat-completions');
   const storyCompletionTimeoutMs = Number(storyCompletionTask.parameters.timeoutMs ?? closeoutTimeoutMs);
@@ -422,6 +437,8 @@ export function readRuntimeConfig(): RuntimeConfig {
       ? interviewTask.model
       : process.env.STEPFUN_REALTIME_MODEL?.trim() || DEFAULT_STEPFUN_MODEL,
     stepfunApiKey: process.env.STEPFUN_API_KEY?.trim() || undefined,
+    stepaudio2Execution,
+    stepaudio2LocalUrl,
     stepaudio3Model: interviewTask.provider === 'stepaudio3_quality'
       ? interviewTask.model
       : process.env.STEPAUDIO3_REALTIME_MODEL?.trim() || DEFAULT_STEPAUDIO3_MODEL,

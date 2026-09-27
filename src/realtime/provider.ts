@@ -11,6 +11,7 @@ import {
 } from './qwen.js';
 import { createStepfunRealtimeProvider } from './stepfun.js';
 import { createModelBestRealtimeProvider } from './modelbest.js';
+import { createStepAudio2LocalProvider, type StepAudio2Execution } from './stepaudio2-local.js';
 import type { RealtimeInterviewContext } from './prompt.js';
 import type { RealtimeContextHint } from './slow-coordinator.js';
 import type {
@@ -37,6 +38,8 @@ export interface RealtimeProviderConfig {
   stepfunApiKey?: string;
   stepaudio3Model?: string;
   modelbestApiKey?: string;
+  stepaudio2Execution?: StepAudio2Execution;
+  stepaudio2LocalUrl?: string;
   apiKey?: string;
   workspaceId?: string;
   region: QwenRealtimeRegion;
@@ -165,6 +168,7 @@ export function createRealtimeInterviewProvider(
   id: RealtimeProviderId,
   config: RealtimeProviderConfig,
 ): RealtimeVoiceProvider {
+  if (id === 'stepaudio2_mini' && config.stepaudio2Execution === 'local') return createStepAudio2LocalProvider(config);
   if (id === 'stepfun' || id === 'stepaudio2_mini') return createStepfunRealtimeProvider(config, 'stepaudio2_mini');
   if (id === 'stepaudio3_quality') return createStepfunRealtimeProvider(config, 'stepaudio3_quality');
   if (id === 'modelbest') return createModelBestRealtimeProvider(config);

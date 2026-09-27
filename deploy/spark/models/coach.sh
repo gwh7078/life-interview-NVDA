@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+. "$DIR/lib/common.sh"
+. "$DIR/lib/ports.sh"
+
+image="${SPARK_VLLM_IMAGE:-vllm/vllm-openai:v0.28.0}"
+model="${SPARK_COACH_MODEL:-Qwen/Qwen3-8B}"
+name="${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
+
+case "${1:-status}" in
+  prefetch)
+    docker pull "$image"
+    hf_download "$model" "${SPARK_COACH_MODEL_DIR:-$MODEL_CACHE/Qwen/Qwen3-8B}"
+    ;;
+  start)
+    if docker ps --format '{{.Names}}' | grep -qx "$name"; then exit 0; fi
+    if docker ps -a --format '{{.Names}}' | grep -qx "$name"; then docker start "$name" >/dev/null; else
+      args=(run -d --name "$name" --gpus all --ipc host --ulimit memlock=-1 --ulimit stack=67108864
+        -p "$SPARK_COACH_PORT:8000" -v "$HF_HOME:/root/.cache/huggingface" --entrypoint "")
+      [[ -n "${HF_TOKEN:-}" ]] && args+=(-e HF_TOKEN)
+      docker "${args[@]}" "$image" vllm serve "$model" --served-model-name "$model"         --max-model-len "${SPARK_COACH_MAX_MODEL_LEN:-8192}"         --gpu-memory-utilization "${SPARK_COACH_GPU_MEMORY_UTILIZATION:-0.18}"
+    fi
+    "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_COACH_PORT/health" "${SPARK_COACH_START_TIMEOUT_S:-900}"
+    ;;
+  stop) docker stop "$name" >/dev/null 2>&1 || true ;;
+  status) curl -fsS --noproxy '*' "http://127.0.0.1:$SPARK_COACH_PORT/health" >/dev/null 2>&1 && echo RUNNING || echo STOPPED ;;
+  *) echo "usage: $0 {prefetch|start|stop|status}" >&2; exit 2 ;;
+esac
