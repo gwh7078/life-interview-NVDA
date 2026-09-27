@@ -11,6 +11,12 @@ SPARK_STATE_DIR="${SPARK_STATE_DIR:-$SPARK_DIAGNOSTICS_DIR/state}"
 SPARK_PID_DIR="${SPARK_PID_DIR:-$SPARK_RUNTIME_DIR/pids/spark}"
 SPARK_BENCH_DIR="${SPARK_BENCH_DIR:-$SPARK_RUNTIME_DIR/benchmarks/spark}"
 
+# Prefer deployment-local bootstrapped tools without mutating the user's system.
+for _spark_bin in "$SPARK_RUNTIME_DIR/tools/node/bin" "$SPARK_RUNTIME_DIR/tools/uv/bin"; do
+  [[ -d "$_spark_bin" ]] && export PATH="$_spark_bin:$PATH"
+done
+unset _spark_bin
+
 load_spark_env() {
   if [[ -f "$SPARK_ENV_FILE" ]]; then
     set -a
