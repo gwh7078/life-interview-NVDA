@@ -17,6 +17,23 @@ test('local Step-Audio-2 starts conservative and accepts explicit bridge capabil
     url: 'ws://127.0.0.1:8092/realtime',
     headers: {},
   });
+  assert.deepEqual(provider.audio, {
+    input: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 24_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+      frameBytes: 960,
+    },
+    output: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 24_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+    },
+  });
   assert.equal(provider.capabilities.fullDuplex, false);
   assert.equal(provider.capabilities.supportsContextInjection, false);
   assert.equal(provider.capabilities.manualTurnControl, false);
