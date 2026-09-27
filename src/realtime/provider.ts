@@ -158,8 +158,21 @@ function qwenCapabilities(): RealtimeProviderCapabilities {
 
 function qwenAudio(): RealtimeAudioSpec {
   return {
-    input: { encoding: 'pcm_s16le', sampleRate: QWEN_INPUT_SAMPLE_RATE, frameBytes: QWEN_PCM_FRAME_BYTES },
-    output: { encoding: QWEN_OUTPUT_ENCODING, sampleRate: QWEN_OUTPUT_SAMPLE_RATE },
+    input: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: QWEN_INPUT_SAMPLE_RATE,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+      frameBytes: QWEN_PCM_FRAME_BYTES,
+    },
+    output: {
+      codec: QWEN_OUTPUT_ENCODING,
+      encoding: QWEN_OUTPUT_ENCODING,
+      sampleRate: QWEN_OUTPUT_SAMPLE_RATE,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+    },
   };
 }
 
