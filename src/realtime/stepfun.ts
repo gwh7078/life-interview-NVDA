@@ -255,8 +255,21 @@ export function parseStepfunServerEvent(raw: unknown): Record<string, unknown> |
 
 function stepfunAudio(): RealtimeAudioSpec {
   return {
-    input: { encoding: 'pcm_s16le', sampleRate: STEPFUN_INPUT_SAMPLE_RATE, frameBytes: STEPFUN_PCM_FRAME_BYTES },
-    output: { encoding: 'pcm_s16le', sampleRate: STEPFUN_OUTPUT_SAMPLE_RATE },
+    input: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: STEPFUN_INPUT_SAMPLE_RATE,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+      frameBytes: STEPFUN_PCM_FRAME_BYTES,
+    },
+    output: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: STEPFUN_OUTPUT_SAMPLE_RATE,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+    },
   };
 }
 
