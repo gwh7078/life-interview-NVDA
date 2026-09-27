@@ -42,6 +42,7 @@ try {
       .map((name) => [name, document.getElementById(`tech-node-${name}-state`)]));
     const edges = ids(['edge-user-voice', 'edge-voice-assistant', 'edge-voice-trigger', 'edge-trigger-retriever', 'edge-retriever-coach', 'edge-coach-context', 'edge-context-voice']);
     const metrics = ids(['metric-first-text', 'metric-first-audio', 'metric-slow-latency', 'metric-evidence', 'metric-tool-count']);
+    const sparkTelemetryFields = [...panel.querySelectorAll('[data-spark-telemetry]')];
     const detailFields = {
       environment: document.getElementById('tech-detail-environment'),
       platform: document.getElementById('tech-detail-platform'),
@@ -943,6 +944,7 @@ try {
         if (!response.ok) return;
         const telemetry = await response.json();
         if (!telemetry || telemetry.available !== true) return;
+        sparkTelemetryFields.forEach((field) => { field.hidden = false; });
         if (detailFields.platform) detailFields.platform.textContent = safeLabel(telemetry.platform) || '—';
         if (detailFields.architecture) detailFields.architecture.textContent = safeLabel(telemetry.architecture) || '—';
         if (detailFields.gpu) {
