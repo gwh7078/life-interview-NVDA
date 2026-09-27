@@ -44,6 +44,11 @@ try {
     const metrics = ids(['metric-first-text', 'metric-first-audio', 'metric-slow-latency', 'metric-evidence', 'metric-tool-count']);
     const detailFields = {
       environment: document.getElementById('tech-detail-environment'),
+      platform: document.getElementById('tech-detail-platform'),
+      architecture: document.getElementById('tech-detail-architecture'),
+      gpu: document.getElementById('tech-detail-gpu'),
+      memory: document.getElementById('tech-detail-memory'),
+      services: document.getElementById('tech-detail-services'),
       provider: document.getElementById('tech-observer-provider'),
       memoryTriggerMode: document.getElementById('tech-observer-memory-trigger'),
       agent: document.getElementById('tech-observer-agent'),
@@ -148,6 +153,7 @@ try {
     const toolCallTurns = new Map();
     const responseTurns = new Map();
     let source;
+    let platformTelemetryTimer;
     let observerEnabled = false;
     let sheetOpen = false;
     let sheetPreviousFocus;
@@ -923,6 +929,49 @@ try {
       render();
     };
 
+    const displayBytes = (value) => {
+      const bytes = finite(value);
+      if (bytes === null) return '—';
+      if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
+      if (bytes >= 1024 ** 2) return `${Math.round(bytes / 1024 ** 2)} MiB`;
+      return `${Math.round(bytes / 1024)} KiB`;
+    };
+    const refreshPlatformTelemetry = async () => {
+      if (!observerEnabled || typeof fetch !== 'function') return;
+      try {
+        const response = await fetch('/api/observability/platform', { cache: 'no-store' });
+        if (!response.ok) return;
+        const telemetry = await response.json();
+        if (!telemetry || telemetry.available !== true) return;
+        if (detailFields.platform) detailFields.platform.textContent = safeLabel(telemetry.platform) || '—';
+        if (detailFields.architecture) detailFields.architecture.textContent = safeLabel(telemetry.architecture) || '—';
+        if (detailFields.gpu) {
+          const utilization = finite(telemetry.gpu?.utilizationPct);
+          const used = finite(telemetry.gpu?.memoryUsedMiB);
+          const total = finite(telemetry.gpu?.memoryTotalMiB);
+          const gpuParts = [
+            utilization === null ? '' : `${Math.round(utilization)}% util`,
+            used === null || total === null ? '' : `${Math.round(used)} / ${Math.round(total)} MiB`,
+          ].filter(Boolean);
+          detailFields.gpu.textContent = gpuParts.join(' · ') || 'unavailable';
+        }
+        if (detailFields.memory) {
+          const memory = telemetry.systemMemory || {};
+          const swap = telemetry.swap || {};
+          detailFields.memory.textContent =
+            `RAM ${displayBytes(memory.availableBytes)} available / ${displayBytes(memory.totalBytes)} · `
+            + `Swap ${displayBytes(swap.totalBytes - swap.freeBytes)} used / ${displayBytes(swap.totalBytes)}`;
+        }
+        if (detailFields.services) {
+          const services = telemetry.services && typeof telemetry.services === 'object' ? telemetry.services : {};
+          detailFields.services.textContent = ['Text Model', 'Coach', 'Voice', 'Retriever', 'NemoClaw']
+            .map((name) => `${name} ${safeLabel(services[name]) || 'UNKNOWN'}`).join(' · ');
+        }
+      } catch {
+        // Platform telemetry is optional and must never affect the interview UI.
+      }
+    };
+
     const stopStream = () => { source?.close(); source = undefined; };
     const clearSession = () => {
       stopStream();
@@ -1013,13 +1062,21 @@ try {
     };
     const setObserverEnabled = (enabled) => {
       observerEnabled = enabled;
+      if (platformTelemetryTimer) {
+        clearInterval(platformTelemetryTimer);
+        platformTelemetryTimer = undefined;
+      }
       if (!enabled) {
         setSheetOpen(false, false);
         stopStream();
         setLive('waiting', state.sessionId ? 'PAUSED' : 'WAITING');
       }
       syncPresentation();
-      if (enabled) connect();
+      if (enabled) {
+        void refreshPlatformTelemetry();
+        platformTelemetryTimer = setInterval(() => void refreshPlatformTelemetry(), 5_000);
+        connect();
+      }
     };
 
     toggle.addEventListener('click', () => setObserverEnabled(!observerEnabled));
@@ -1053,7 +1110,10 @@ try {
     const mediaQuery = window.matchMedia?.('(max-width: 1080px)');
     mediaQuery?.addEventListener?.('change', () => syncPresentation());
     window.addEventListener('resize', () => syncPresentation());
-    window.addEventListener('pagehide', () => stopStream(), { once: true });
+    window.addEventListener('pagehide', () => {
+      stopStream();
+      if (platformTelemetryTimer) clearInterval(platformTelemetryTimer);
+    }, { once: true });
     window.addEventListener('interview:session', (event) => {
       const nextSessionId = typeof event.detail?.sessionId === 'string' ? event.detail.sessionId : '';
       if (nextSessionId === state.sessionId) return;
