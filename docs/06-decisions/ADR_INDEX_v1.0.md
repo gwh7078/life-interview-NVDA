@@ -46,17 +46,17 @@ Old Agent Memory + Current Transcript -> Updated Memory
 
 **Accepted.** Contributor Summary 不自动进入 Story Summary、Agent Memory、Completion 或 Story Generation。
 
-## ADR-009 — Realtime 当前不 Agent 化
+## ADR-009 — Realtime 保持 Voice-first，Coach 不接管采访
 
-**Accepted.** Realtime 主链路继续追求低延迟。未来采用 Fast System + Parallel Slow Agent。
+**Accepted / Refined 2026-09-27.** Realtime 主对话仍由 Voice Model 负责，不由通用 OpenClaw Agent 接管。Step-Audio-2-mini 当前允许 Qwen3-8B Coach 作为低延迟 sidecar 进行 Gate / 纠偏 / 条件检索；StepAudio 3 保留 voice_tool → Context Hint 路线。两者都不得让慢系统阻塞 Voice。
 
 ## ADR-010 — NeMo Retriever 产品集成延期
 
 **Historical decision.** 在 Phase 2 阶段，SQLite 始终是 Source of Truth；Retriever 被定义为未来可重建 Derived Index。当前 Phase 3 集成状态由 ADR-025 记录。
 
-## ADR-011 — 历史文档不删除
+## ADR-011 — 历史证据保留，但退出 Current 文档层
 
-**Accepted.** 新方案创建新版本，旧方案保留为架构演进、测试与比赛开发历程证据。
+**Accepted / Revised 2026-09-27.** 被取代的方案、阶段计划和旧产品基准进入 `docs/archive/` 或 `docs/07-reports/`。Current 文档直接更新，不再通过不断新增“当前版本”堆叠。历史内容不得作为当前开发规范。
 
 ## ADR-012 — 正式 Agent 模式不隐式 fallback
 
@@ -84,7 +84,7 @@ Old Agent Memory + Current Transcript -> Updated Memory
 
 ## ADR-018 — 动态能力只用于运行时增量信息
 
-**Accepted / Refined by ADR-024.** 只有 Agent 推理过程中才发现的额外信息需求才允许动态获取。未来 Memory Search 必须条件触发，不作为每次 Closeout 的固定步骤。
+**Accepted / Refined by ADR-024.** 只有推理过程中才发现的额外信息需求才允许动态获取。Realtime Current Story Memory / Era Context 必须条件触发；Closeout 的动态 Memory Search 同样不得变成无条件固定步骤。
 
 ## ADR-019 — Agent 不调用固定 Submit Tool
 
@@ -153,3 +153,18 @@ Agent
 **Accepted 2026-09-22.** Phase 3 将条件式 Classic Retrieval 接入 Realtime Slow Path：Step-Audio 通过 Tool Call 触发，Backend 负责 HOLD / Resume、scope、超时与结果校验；SQLite 继续保存权威 Transcript，Retriever 只保存可重建的派生索引。
 
 Mac 本机自动 Gate G0–G8 已全部通过，覆盖 Retriever REST / MCP、真实 StepFun 会话、Tool/HOLD/Resume、并发隔离、slow recall 延迟、SQLite Transcript、Retriever index 与 trace 最终状态。Agentic Retrieval 不作为 Realtime 默认路径，人工真实语音体验验收另行完成。
+
+
+## ADR-026 — Current 文档真相层
+
+**Accepted 2026-09-27.** 文档冲突时按以下优先级判断：
+
+```text
+main 代码 / .env.example
+→ docs/CURRENT_STATE.md
+→ Current 专项文档
+→ Reports
+→ Archive
+```
+
+被 Superseded 的文档只保留追溯价值，不允许反向覆盖 Current。

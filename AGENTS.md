@@ -10,7 +10,7 @@
 
 # 人生采访局 NVIDIA 版：AI 开发环境约定
 
-进入本项目开发前，先阅读 `docs/AI开发联调环境.md` 和现有产品、数据库规范。
+进入本项目开发前，先阅读 `docs/CURRENT_STATE.md` 与 `docs/README.md`；再按任务读取 `docs/PRODUCT.md`、`docs/ARCHITECTURE.md`、`docs/REALTIME.md`、`docs/AGENT_RUNTIME.md` 等 Current 文档。涉及本机服务与凭证时再读取 `docs/AI开发联调环境.md`。`docs/archive/` 与历史报告不得作为当前实现规范。
 
 ## 当前本机服务
 
@@ -32,11 +32,12 @@
 5. Retriever 写入失败不能回滚已成功保存的 Transcript；使用 pending/indexed/failed 状态与重试。
 6. 不要把 API Key、token、authenticated dashboard URL 写入代码、文档、日志或 Git。
 
-## Phase 1 边界
+## 当前运行边界
 
-- Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API；当前代码不依赖 Retriever 或 RAG。
-- NeMo Retriever 是本机联调能力和后续 Phase 3 的预留边界，未授权前不要把它接入 Phase 1 的核心用户路径。
-- OpenClaw 不直接读取业务 SQLite；长期状态仍以应用数据库为准。
+- SQLite 是业务 Source of Truth；NeMo Retriever 是可重建派生索引。
+- Step-Audio-2-mini 当前默认使用 `supervisor_auto` Realtime Coach；Story Continue 可按需使用 Current Story Memory 与 Era Context。
+- OpenClaw 不直接读取业务 SQLite；Agent 通过受限 Contract / Tool / Script 边界工作。
+- 不要依据 Phase 1/2/3 历史计划推断当前能力，当前状态统一看 `docs/CURRENT_STATE.md`。
 
 ## 开发前检查
 

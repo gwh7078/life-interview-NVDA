@@ -1,120 +1,88 @@
 # 文档中心
 
-本目录是 life-interview-NVDA 的正式文档入口。
+本目录从 2026-09-27 起采用 **Current / Evidence / Archive** 三层治理，解决历史方案、阶段报告和当前规范混在一起的问题。
 
-## 文档治理原则
+## 1. Current：当前开发唯一入口
 
-本项目刻意保留技术演进过程：
+后续 AI、开发和评审默认只需要读取以下文件：
 
-1. 不删除旧版本；
-2. 新方案新建版本文档；
-3. README 只指向当前推荐版本；
-4. 部署、测试、Benchmark 和失败报告长期保留；
-5. 已实现与 Planned / Future 必须清楚区分；
-6. 早期快照统一归档到 `archive/`，仅供追溯，不作为当前开发依据。
+| 文档 | 用途 |
+|---|---|
+| [CURRENT_STATE.md](CURRENT_STATE.md) | 当前实现状态与已知边界，最高优先级文档 |
+| [PRODUCT.md](PRODUCT.md) | 当前产品模型、业务流程、四类采访场景 |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 当前整体技术架构与职责边界 |
+| [REALTIME.md](REALTIME.md) | Voice / Coach / Memory / Era / Tool 路线 |
+| [AGENT_RUNTIME.md](AGENT_RUNTIME.md) | Agent Task、Skill、Runtime、Contract |
+| [NVIDIA.md](NVIDIA.md) | NemoClaw、Retriever、NAT、DGX Spark 状态 |
+| [TESTING.md](TESTING.md) | 当前自动化、Live Smoke 与人工验收规则 |
 
-## 评委推荐阅读路径
-
-1. [比赛评分对照](00-competition/SCORING_ALIGNMENT_v1.0.md)
-2. [产品基线](product/life-interview-product-tech-data-v1.5.3.md)
-3. [架构演进](02-architecture/ARCHITECTURE_EVOLUTION_v1.0.md)
-4. [当前主架构 v2.3](02-architecture/ARCHITECTURE_v2.3_agent-execution-efficiency.md)
-5. [Agent Task Contract](03-agent/contracts/AGENT_TASK_CONTRACTS_v1.0.md)
-6. [Agent 执行策略](03-agent/AGENT_EXECUTION_POLICY_v1.0.md)
-7. [Skill / Script 映射](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)
-8. [Phase 2B-C 产品 Runtime 与真实 E2E](05-development/phases/PHASE_2B_C_PRODUCT_RUNTIME_INTEGRATION_v1.0.md)
-9. [架构决策 ADR](06-decisions/ADR_INDEX_v1.0.md)
-10. [NVIDIA Integration](04-nvidia/README.md)
-11. [NeMo Agent Toolkit 接入说明](04-nvidia/NEMO_AGENT_TOOLKIT_INTEGRATION_v1.0.md)
-12. [工程报告入口](07-reports/README.md)
-13. [Phase 3 A+B Integration Gate](07-reports/testing/PHASE3_AB_INTEGRATION_REAL_E2E_REPORT_v1.0.md)
-14. [Realtime Slow Context 实现状态](05-development/phases/REALTIME_SLOW_CONTEXT_IMPLEMENTATION_v1.0.md)
-15. [Realtime Fast / Slow 架构基线](08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.6.md)
-16. [UI / UX 设计资料](09-uiux/README.md)
-
-## 当前状态
-
-### Current
-
-- Architecture v2.3 — 低轮次 Agent 执行策略
-- Agent Task Contract v1.0 — Frozen
-- Agent Execution Policy v1.2
-- Phase 2A Contract Scaffold — Completed
-- Phase 2B-C Agent Runtime Integration — Completed / six-path Real Agent E2E 6/6
-- Phase 3A NeMo Retriever + Classic Retrieval — **真实 Mac ingest/query、来源追溯与索引状态验收通过**
-- Phase 3 A+B Integration Gate — **自动 Gate G0–G8 全部 PASS**；人工真实语音体验验收仍待完成
-- Realtime Slow Context Agent — **代码与定向自动测试完成；本机 Agent smoke FAIL，完整语音验收未通过**
-- NAT-1 NeMo Agent Toolkit Evaluation Lane — **真实 Runtime Smoke 6/6；24 条 Synthetic Regression Stub Gate 通过**；Relay / ATIF / Phoenix 仍为 Future
-- 5 个正式 Skill family — 已提交
-
-### Validated Historical Work
-
-- Web 产品完整基线
-- Phase 1 NemoClaw / OpenClaw 真实 Smoke
-- Scoped Tool API
-- Agent Runtime 与 SQLite 隔离
-- Architecture v2.2 Contract-First
-
-### Future / Deferred
-
-- Agentic Retrieval 与时代背景检索
-- Realtime Slow System 的完整真实语音验收
-- 人工真实语音体验验收
-- DGX Spark 最终本地推理与 Benchmark
-- 外部世界事实核查
-
-## 当前 Agent 执行原则
+冲突时按以下顺序判断：
 
 ```text
-固定业务路由
-→ Backend 决定
-
-固定任务上下文
-→ Backend 预取
-
-非确定性理解 / 判断 / 写作
-→ Agent
-
-同一职责内的专项方法
-→ Skill
-
-运行中才发现的额外只读信息需求
-→ Skill Script（受限 exec）
-
-最终 Proposal
-→ Backend Validate / Apply
+当前 main 代码 / .env.example
+        ↓
+CURRENT_STATE.md
+        ↓
+Current 专项文档
+        ↓
+测试报告
+        ↓
+Archive
 ```
 
-目标不是“最多 Agent / 最多 Tool / 最多脚本调用”，而是：
+**Archive 永远不能反向覆盖 Current。**
 
-> **最少调用次数下实现真正必要的 Agent 自主性。**
+## 2. Evidence：保留真实验证证据
 
-## 目录
+以下目录可以长期保留，但它们描述的是某次验证时刻，不是当前规范：
+
+- `07-reports/`：E2E、Benchmark、NAT Eval、失败与收敛报告；
+- `00-competition/`：比赛要求与评分映射；
+- `09-uiux/`：当前 UI/UX 视觉资料；
+- `AI开发联调环境.md`：本机环境与联调细节。
+
+报告中的 PASS 只证明该报告记录的 commit / 环境 / 路径，不自动代表当前 main 全量验收。
+
+## 3. Archive：历史方案
+
+`archive/` 保存：
+
+- 已被代码取代的架构方案；
+- 旧产品基准；
+- 旧模型选型；
+- Deferred 但后来已经实现的计划；
+- 早期 Phase 开发计划；
+- 初始产品快照。
+
+历史内容保留用于追溯，不得作为当前实现依据。
+
+## 4. 专项目录
 
 ```text
 docs/
-├── 00-competition/    评分与提交要求对照
-├── 02-architecture/   当前架构与演进历史
-├── 03-agent/          Agent Contract / Execution Policy / Skills / Eval
-├── 04-nvidia/         NVIDIA Runtime / DGX Spark / Retriever
-├── 05-development/    分阶段开发计划
-├── 06-decisions/      ADR
-├── 07-reports/        测试 / 部署 / Benchmark
-├── 08-future/         已冻结但延期的未来架构
-├── 09-uiux/           UI / UX 视觉基线、设计系统与交互规范
-├── archive/           早期项目快照，仅供历史追溯
-├── nvidia-agent-native/  Phase 0/1 历史资料
-└── product/           Web 产品与验收基线
+├── CURRENT_STATE.md
+├── PRODUCT.md
+├── ARCHITECTURE.md
+├── REALTIME.md
+├── AGENT_RUNTIME.md
+├── NVIDIA.md
+├── TESTING.md
+├── 00-competition/   # 比赛要求与当前评分映射
+├── 03-agent/         # Contracts / 执行策略等底层规范
+├── 04-nvidia/        # NVIDIA 专项参考
+├── 06-decisions/     # ADR
+├── 07-reports/       # 历史验证证据
+├── 09-uiux/          # UI / UX
+└── archive/          # 被取代的设计与历史快照
 ```
 
-## 历史资料
+原 `02-architecture/`、`05-development/`、`08-future/` 中仍存在的旧路径仅用于兼容历史链接；被取代内容应明确指向 Current 文档或 Archive。
 
-原有 `nvidia-agent-native/` 原样保留，包括 BASELINE、API / Schema Inventory、Repository Layout、Feature Matrix、Regression Matrix、Phase 1 Smoke 与 Implementation Report。
+## 5. 文档维护规则
 
-产品基线继续保留在 `product/`。
-
-比赛原始要求、DGX Spark 技术资料与来源清单位于仓库根目录 `../资料库/`。
-
-早期项目文档已归档到 `archive/initial-snapshot/`。这些文件记录项目早期产品、数据库、原型和竞品研究状态，**不得作为当前开发、架构或 Agent 行为的规范来源**；当前实现请始终从本 README 的“评委推荐阅读路径”与 Current 文档进入。
-
-文档版本化的目的不是堆数量，而是让每一次技术判断、验证、失败与收敛都可以追溯。
+- 功能进入 main 后，同一提交或紧邻提交更新 Current 文档。
+- “计划实现”与“已经实现”必须分开。
+- 环境默认值以 `.env.example` 为准，不凭历史报告推断。
+- 模型、Provider、Deadline、Feature Flag 等易变化信息优先写在 `CURRENT_STATE.md` / `REALTIME.md`，不要复制到多份文档。
+- 新增报告时不修改历史报告结论；如被取代，在报告顶部加 superseded 指向。
+- 不再采用“每次方案变化都新增一个 Current 版本文档”的方式。

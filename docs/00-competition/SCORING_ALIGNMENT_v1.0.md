@@ -1,241 +1,119 @@
-# DGX Spark Hackathon Scoring Alignment v1.3
+# DGX Spark Hackathon Scoring Alignment
 
-> Status: Working competition map
->
-> Source requirement: `资料库/DGX_Spark_Hackathon_比赛要求.md`
+> Current working map — 2026-09-27  
+> 比赛原始要求：`资料库/DGX_Spark_Hackathon_比赛要求.md`  
+> 当前实现依据：[CURRENT_STATE.md](../CURRENT_STATE.md)
 
-本文件不是新的比赛规则，而是把仓库已有工作与评分项对应起来，方便后续开发和最终提交时检查证据缺口。
+本文件只做“当前能力 → 评分项”的映射，不把 Planned 写成 Implemented。
 
-必须区分：
-
-- **Implemented / Validated**：已有真实代码、测试或 Smoke；
-- **Current Development**：当前正在接入；
-- **Planned / Future**：已经冻结架构，但不能写成已完成。
-
-## 1. 项目实用性、行业落地价值与技术创新性 — 25%
+## 1. 实用性、行业价值与技术创新 — 25%
 
 当前可展示：
 
-- 已有完整 Web 产品基线，而不是从零开始的比赛 Demo；
-- 面向真实回忆录采访场景；
-- Story / Life Stage / Contributor / Book 完整领域模型；
-- Evidence-aware Story Agent Memory；
-- Agent Reasoning 与 Backend Execution 分权；
-- Contract-First Agentization；
-- Architecture v2.3 低轮次 Agent 执行策略；
-- Realtime Fast / Slow 双系统：Step-Audio 按需 Tool Trigger + Backend Current Story Retrieval + 单次 Context Hint Agent；新 Agent live smoke 尚未通过；
-- Future “个人历史 + 时代背景”双来源检索：既记得用户说过什么，也理解用户生活在什么时代。
+- 已有完整 Web 产品，不是一次性 Demo；
+- 四类采访场景、Story / Life Stage / Contributor / Document / Book 完整领域模型；
+- Transcript 作为证据，Summary / Agent Memory 作为不同层级的整理结果；
+- Fast Voice + Realtime Coach 双系统；
+- Story Continue 的 Current Story Memory 与 Era Context 条件检索；
+- Personal Evidence 与 Public Era Evidence 严格隔离；
+- 小模型能力不足时，由慢系统增强采访质量，而不是直接换成全云端大模型。
 
-差异化重点：
-
-> 不把“更多 Agent / 更多 Tool Call”当成智能程度，而是把自主性放在真正需要语义判断和动态补信息的地方。
-
-Future Retrieval 进一步形成：
+当前差异化：
 
 ```text
-Story Agent Memory
- -> 默认工作记忆
-
-Classic Retrieval
- -> 低延迟普通历史 Recall
- -> Realtime Slow Agent 可用
-
-Agentic Retrieval
- -> 多步 / 多查询 Deep Evidence Search
- -> Post-session / Offline Agent
+Voice Model 负责自然对话
+Coach 负责低频纠偏
+Retriever 负责找回证据
+Era Context 负责公共背景
+Backend 负责事实边界与落库
 ```
 
-这体现的是 **latency-aware / complexity-aware Retrieval Routing**，而不是所有任务统一走最重检索。
-
-另一个 Future 创新方向是“时代背景检索”：
-
-```text
-用户个人历史
- -> Transcript Derived Index
- -> 回忆用户过去说过什么
-
-时代背景
- -> 独立只读公共年代库
- -> 先按年份范围过滤，再根据当前对话语义寻找相关时代话题
-```
-
-时代背景只负责唤起记忆和寻找采访话题，绝不自动成为用户事实。
-
-**注意：个人历史 Classic Retrieval 与原有 Tool/HOLD/Resume 已完成 Phase 3 A+B 自动 Gate。Realtime Context Hint 的代码和定向自动测试已完成，但当前本机 Agent smoke FAIL；不可宣称 Slow Agent 真实链路或人工语音体验验收通过。Agentic Retrieval 与时代背景库仍为 Planned / Future。**
-
-主要证据：
-
-- `docs/product/life-interview-product-tech-data-v1.5.3.md`
-- `docs/02-architecture/ARCHITECTURE_v2.3_agent-execution-efficiency.md`
-- `docs/03-agent/AGENT_EXECUTION_POLICY_v1.0.md`
-- `docs/06-decisions/ADR_INDEX_v1.0.md`
-- `docs/08-future/realtime/REALTIME_FAST_SLOW_ARCHITECTURE_v1.0.md`
-- `docs/08-future/retriever/RETRIEVER_DEFERRED_PLAN_v1.0.md`
-- `docs/08-future/retriever/ERA_CONTEXT_LIBRARY_v1.0.md`
+Era Context **已实现并接线**，但默认模板仍关闭 `NEMO_ERA_CONTEXT_ENABLED`；比赛演示前需确认索引启用与真实效果。
 
 ## 2. 智能体与模型优化技术深度 — 25%
 
-当前已完成：
+当前已有：
 
-- NemoClaw / OpenClaw 真实最小 Smoke；
-- Scoped Tool API；
-- Agent Runtime 与业务数据库隔离；
-- 5 个 Agent Task type（`interview.closeout` 含 3 个 mode）；
-- 5 个正式 Skill family；
-- NemoClawAgentTaskAdapter；
-- Task → Skill / Model Profile 确定性路由；
-- Agent / Skill / Tool 职责分层；
-- 低轮次执行策略已经冻结。
-- Phase 3 A+B 真实 Integration Gate G0–G8；
-- Realtime Tool/HOLD/Resume 与个人历史 Classic Retrieval 真实联调。
-- `interview.context_hint` 的固定 Contract、专用 OpenClaw profile、无工具/无脚本策略及 direct-retrieval fallback 已实现；真实 Agent smoke 尚未通过。
+- Agent Task Contract；
+- NemoClaw / OpenClaw Adapter；
+- onboarding / closeout / context_hint / completion / generation Task；
+- 5 个正式产品 Skill family；
+- Direct / Agent 双 Runtime；
+- Qwen3-8B Mini Realtime Coach；
+- Gate 2s + 全链 6s Deadline；
+- Memory / Era 双路独立触发与并行 Retrieval；
+- bounded evidence / stale protection / fail-open；
+- NeMo Agent Toolkit eval / profiler / regression；
+- Realtime 技术观测。
 
-后续需要补齐：
-
-- Realtime Context Hint Agent 的真实运行通过和完整 Step-Audio voice E2E；
-- Slow Path 成功样本、P50/P95 latency、token usage、fallback rate 与 evidence accuracy benchmark；
-- 条件式个人历史 Classic Memory Search 已通过 Phase 3 Gate；
-- Future Agentic Deep Search；
-- Future 时代背景事件库与 `era_context_search`；
-- 如确有价值，再展示目标不同的多 Agent 协作，而不是为了数量拆 Agent。
-
-推荐技术路径：
-
-```text
-正常任务
-→ 1 Agent Run
-→ 0 Tool Call
-
-普通历史疑点
-→ memory_search
-→ Classic Retrieval
-
-复杂跨历史问题
-→ memory_deep_search
-→ Agentic Retrieval
-```
-
-Agentic Retrieval 必须以真实 Tool 调用、证据质量和 Benchmark 作为加分证据，不能只写在架构图。
+应重点证明“为什么这样拆”以及真实延迟/质量收益，不以 Agent 数量作为深度。
 
 ## 3. 项目完整性 — 20%
 
-已有：
+当前已有：
 
-- 前端；
-- 后端；
-- SQLite；
-- Session / Story / Life Stage / Document；
+- 前端、后端、SQLite；
+- Auth / Session；
+- Onboarding / Life Stage；
+- Story Create / Continue；
+- Contributor Share；
 - Realtime；
-- Closeout；
-- Completion；
-- Contributor；
+- Transcript / Closeout；
+- Summary / Agent Memory；
+- Completion / Gaps；
 - Story Generation；
-- 产品验收测试基线；
-- Agent Contract；
-- 正式 Skills；
-- Phase 2B Adapter boundary。
+- Book / PDF；
+- Retriever；
+- Era Context；
+- Agent Runtime；
+- NAT；
+- Technical Observer。
 
-当前缺口主要是 Agent Eval / Benchmark、DGX Spark 本地运行证据与比赛包装材料；Agentic Retrieval 和时代背景检索仍属于后续范围。
-
-Retriever 不应为了比赛加分破坏已有产品完整性，因此：
-
-> **先完成核心 Agent Runtime，再增加条件式 Retrieval。**
+当前主要缺口是 **真实语音体验收敛 + DGX Spark 实机 + 最终比赛包装**，不是继续扩产品功能。
 
 ## 4. 平台适配性 — 15%
 
 当前：
 
-- NemoClaw / OpenShell / OpenClaw 已进入 Runtime 方案；
-- Mac 开发环境已验证真实 Sandbox Smoke。
-- Mac 已完成 StepFun Realtime + NeMo Retriever Classic Retrieval 的真实 A+B Integration Gate。
+- Mac 已运行 NemoClaw / OpenClaw；
+- Mac 已运行 NeMo Retriever；
+- NAT 已有 smoke / eval / profiler；
+- Step-Audio-2-mini 仍为 StepFun Cloud；
+- 文本 Agent 当前仍为 Bailian Cloud。
 
-后续：
+尚未完成：
 
-- DGX Spark 本地推理；
-- NVIDIA 模型或 NVIDIA 推理能力；
-- DGX Spark 上的 StepFun / NVIDIA 模型正式部署与评测；
-- NeMo Retriever Agentic Retrieval；
-- 本地 Agent 部署说明；
-- 性能与资源 Benchmark。
+- DGX Spark 实机部署；
+- Mini 本地执行后端；
+- Agent 文本模型本地执行；
+- Spark 上 Retriever / Voice / Agent 并发验证；
+- 可复现 Spark 部署文档。
 
-推荐最终 DGX Spark 证据：
+因此比赛材料不能把“目标 Spark 架构”写成“已完成 Spark 实测”。
 
-```text
-Realtime Future
- -> 个人历史 Classic NeMo Retrieval
- -> 时代背景 Classic NeMo Retrieval
+## 5. 模型优化与 Benchmark — 25% 中的关键证据
 
-Offline / Post-session Deep Evidence Agent
- -> 个人历史 Agentic NeMo Retrieval
+最低成本但有效的加分路径：
 
-个人历史 Classic + Agentic
- -> same local Derived Transcript Index
+1. Mini Cloud Baseline vs Spark Local Mini；
+2. 有 Coach vs 无 Coach；
+3. Memory Retrieval on/off；
+4. Era Context on/off；
+5. 指标记录：首字/首音、总 Coach latency、触发率、Evidence 命中/采用、超时率；
+6. 固定访谈 Benchmark，评价重复提问、跑题、上下文遗忘、历史冲突和时代背景追问质量。
 
-时代背景
- -> separate read-only Era Context Index
+不要用合成单测代替真实模型 Benchmark。
 
-All Future Retrieval
- -> DGX Spark local compute
-```
+## 6. 当前禁止夸大的能力
 
-需要分别记录：
+提交材料不要写：
 
-- Classic Retrieval P50 / P95；
-- Agentic Retrieval P50 / P95；
-- evidence quality；
-- Agentic 相比 Classic 的质量提升；
-- GPU / unified memory 占用；
-- Realtime + Retrieval 并发资源竞争。
+- “已完成 DGX Spark 本地部署”；
+- “Era Context 默认生产启用”；
+- “Provider 侧打断完全通过”；
+- “所有 Realtime 都走 Agent”；
+- “NAT 编排产品 Runtime”；
+- “Retriever 是事实源”；
+- “所有 Agent Task 已成为 Web 默认 Runtime”。
 
-未实现内容必须明确标记 Planned / Future。
-
-## 5. 演示效果 — 10%
-
-最终 Demo 建议展示：
-
-1. 一次完整采访；
-2. Closeout 后 Summary / Agent Memory 更新；
-3. Completion gaps；
-4. Story Generation；
-5. Agent Runtime / Skill / Model tracing；
-6. 一次正常“1 Run 0 Tool”的高效路径；
-7. 若个人历史 Classic Retrieval 已实现：展示“发现历史疑点 → memory_search → 继续”；
-8. 若时代背景检索已实现：展示“识别年份范围 → 年份过滤 + 语义检索 → 找到时代话题 → 自然唤起新回忆”，并明确该背景不自动写入用户事实；
-9. 若 Agentic Retrieval 已实现：展示一个明显需要跨 Session / Story 的 Deep Search；
-10. DGX Spark 本地运行证据。
-
-不建议在 Demo 中让 Agentic Retrieval 阻塞实时语音。
-
-## 6. 赛事征文 — 5%
-
-持续保留：
-
-- 架构版本；
-- 失败与修复；
-- Phase 1 Smoke；
-- Contract-First 调整原因；
-- 从“多 Agent”收敛到“低轮次有边界自主性”的设计过程；
-- 为什么 Realtime 不采用 Agentic Retrieval；
-- Classic / Agentic Retrieval latency / quality tradeoff；
-- Mac → DGX Spark；
-- 模型 Benchmark。
-
-这些资料可直接转化为“一日谈”开发历程。
-
-## 7. 提交前检查
-
-- [ ] GitHub README 500 字以上项目说明完整
-- [ ] 部署说明完整
-- [ ] NVIDIA 技术栈说明完整
-- [x] StepFun 使用有真实代码或 Benchmark 证据
-- [x] Skill Markdown 文件齐全
-- [x] 正式 Agent 六路径 E2E
-- [x] Retry / Repair / Format Repair 测试
-- [ ] DGX Spark 本地运行步骤可复现
-- [ ] Agent Eval / Benchmark 有报告
-- [x] Classic Retrieval 如宣称已实现，必须有真实代码 / 测试 / latency 证据
-- [ ] 时代背景检索如宣称已实现，必须有真实数据集 / Index / Tool 调用 / 事实隔离测试 / latency 证据
-- [ ] Agentic Retrieval 如宣称已实现，必须有真实 Tool 调用 / quality / latency 证据
-- [ ] Demo 视频链接
-- [ ] 技术文章链接
-- [ ] 团队资料
+这些结论只有在后续真实验收后才能升级。

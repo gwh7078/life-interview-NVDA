@@ -1,6 +1,6 @@
 # 人生采访局 NVIDIA 版｜AI 开发、对接、联调与测试环境
 
-版本：2026-09-26
+版本：2026-09-27
 适用对象：Codex、其他 AI 开发 Agent、前后端开发、Agent/Skill 开发、联调与测试人员。
 
 ## 1. 文档目的
@@ -25,12 +25,12 @@ Mac
 
 Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不依赖 Retriever 或 RAG。Phase 3 A+B 已将 Retriever 接入 Realtime Slow Path 的条件式 recall，但不改变 Phase 1 核心用户路径；当前自动 Gate G0–G8 已通过。
 
-### 当前模型路由与验收状态（2026-09-25）
+### 当前模型路由与验收状态（2026-09-27）
 
 | 路径 | 当前配置 | 说明 |
 |---|---|---|
-| 默认实时语音 | `stepaudio3_quality` → StepAudio 3 Realtime Preview → StepFun Cloud | 使用共享 StepFun Realtime transport / normalized adapter；通过 `STEPAUDIO3_REALTIME_MODEL` 配置模型，默认 `stepaudio-3-realtime-preview`。 |
-| 第二条正式实时语音 | `stepaudio2_mini` → Step-Audio-2-mini → StepFun Cloud | 使用同一共享 transport，保留 Local VAD / manual turn、Tool Result / Resume；通过 `STEPFUN_REALTIME_MODEL` 配置。未来只替换此 Profile 的执行后端。 |
+| 默认实时语音 | `stepaudio2_mini` → Step-Audio-2-mini → StepFun Cloud | 使用共享 StepFun Realtime transport；Mini 默认 `supervisor_auto`，未来 DGX Spark 只替换该 Profile 的执行后端。 |
+| 正式可选实时语音 | `stepaudio3_quality` → StepAudio 3 Realtime Preview → StepFun Cloud | 使用同一共享 transport；保留 `voice_tool` → Context Hint / Tool Result / Resume 路线，通过 `STEPAUDIO3_REALTIME_MODEL` 配置。 |
 | 实验语音 Provider | ModelBest MiniCPM-o Realtime — **Experimental** | 保留独立 adapter，不作为默认路线，也不自动回退。 |
 | OpenClaw Agent 与会后文本任务 | Bailian `qwen3.6-35b-a3b` | Agent 的默认、推理、快速推理、写作 profile 共用此模型；文本任务通过 Model Studio OpenAI-compatible Chat API 调用。 |
 | Realtime Coach / Memory | StepAudio 3 固定 `voice_tool`，不加载 Coach；Step-Audio-2-mini 默认 `supervisor_auto`，`stepfun` 是同一 Mini Profile 的兼容别名。`REALTIME_MEMORY_TRIGGER=voice_tool` 可让 Mini 自主判断并调用工具。Onboarding 在 `supervisor_auto` 下先立即请求 Mini 回复，再并行运行无检索 Coach；若 Coach 在下一次用户发言前给出指导，最多缓存 30 秒并只注入紧接着的一次 Mini 回复，跨回合、跨 Session 或过期结果丢弃。Story Create、Story Continue、Contributor 的 `supervisor_auto` 仍由 Qwen3-8B 先 Gate；Story Continue 可按需检索。 | Mini 的 Onboarding、Story Create、Contributor 不检索。Story Continue Memory 仅查 owner + Current Story + subject Q+A，最多 5 条；Memory 与 Era 并行。Gate 硬超时 2,000 ms；Gate、Memory、Era、Resolve 从用户 final transcript 起共用 6,000 ms 总 Deadline。Gate/Resolve 故障或超时、总 Deadline 到期或两路检索都失败时丢弃 Coach，让 Mini 无 Coach 回答当前轮；单路检索失败不阻断另一路的有效 evidence。两路最终 evidence 都为空时跳过 Resolve，使用 Gate 建议。除 Onboarding 的下一回合短期指导外，迟到结果不用于后续回合；Coach Packet 通过一次 `response.create` instructions 注入。Contributor 不访问主人公私密 Transcript。Mini 两种 Trigger 共用 Retriever 与 Evidence Bounding。Audio 3 保留现有 Voice Tool → Slow Path → Tool Result → Resume。 |
