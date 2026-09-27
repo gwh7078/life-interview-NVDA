@@ -49,7 +49,7 @@ gates=[
  gate("G6","Coach","npm run test:realtime:coach:live",True,180),
  gate("G7","Step-Audio model load",f"curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_BACKEND_PORT','8010')}/health && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_HEALTH_PORT','8093')}/health",True,60),
  gate("G8","Audio-to-audio / streaming","node --import tsx scripts/spark-realtime-bridge-smoke.ts",True,300),
- gate("G9","Realtime Provider E2E","npm run test:voice:e2e",True,600),
+ gate("G9","Realtime Provider E2E","node --import tsx scripts/spark-realtime-provider-e2e.ts",True,600),
  gate("G10","Backend + Web + DB",f"test -f {q(db)} && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_BACKEND_PORT','4174')}/api/health && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_BACKEND_PORT','4174')}/ >/dev/null",True,60),
  gate("G11","Interview + Closeout","npm run test:closeout:real",True,600),
  gate("G12","Completion / Continue / Contributor / Generation","npm run test:agent:nat:eval",True,900),

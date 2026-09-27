@@ -5,6 +5,10 @@ import { createRealtimeInterviewProvider } from '../src/realtime/provider.js';
 import type { NormalizedRealtimeEvent, RealtimeOutboundStep } from '../src/realtime/types.js';
 import { startFakeStepAudio2Server } from './support/fake-stepaudio2-local-server.js';
 
+function sendMessages(ws: WebSocket, messages: Record<string, unknown>[]): void {
+  for (const message of messages) ws.send(JSON.stringify(message));
+}
+
 function sendSteps(ws: WebSocket, steps: RealtimeOutboundStep[]): void {
   for (const step of steps) ws.send(JSON.stringify(step.message));
 }
@@ -29,7 +33,7 @@ test('local Step-Audio2 transport preserves the shared normalized realtime contr
     ws.send(JSON.stringify({ type: 'session.update', session: { instructions: 'test', turn_detection: null } }));
     await assertEventually(() => events.some((event) => event.type === 'session.configured'));
 
-    sendSteps(ws, provider.appendAudioMessages(Buffer.alloc(960)));
+    sendMessages(ws, provider.appendAudioMessages(Buffer.alloc(960)));
     sendSteps(ws, provider.commitAndRespondToInputTurn?.() ?? []);
     await assertEventually(() => events.some((event) => event.type === 'response.done'));
 
@@ -56,7 +60,7 @@ test('local Step-Audio2 transport preserves the shared normalized realtime contr
       'response.done',
     ]) assert.ok(types.includes(expected as NormalizedRealtimeEvent['type']), `missing normalized event: ${expected}`);
 
-    const close = provider.closePlan?.();
+    const close = provider.closePlan();
     assert.ok(close);
     sendSteps(ws, close.steps);
     await assertEventually(() => events.some((event) => event.type === 'session.closed'));
@@ -65,7 +69,7 @@ test('local Step-Audio2 transport preserves the shared normalized realtime contr
   }
 });
 
-async function assertEventually(check: () => boolean, timeoutMs = 2000): Promise<void> {
+async function assertEventually(check: () => boolean, timeoutMs = 2_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (check()) return;

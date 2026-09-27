@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - spark
       - 'codex/**'
       - 'feature/story-agent-memory'
       - 'nvidia/**'
@@ -43,6 +44,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate Spark deployment scripts
+        run: |
+          bash -n deploy/spark/*.sh deploy/spark/lib/*.sh deploy/spark/models/*.sh deploy/spark/services/*.sh
+          python3 -m py_compile deploy/spark/services/*.py deploy/spark/fixtures/*.py deploy/spark/lib/*.py
+          bash deploy/spark/install.sh --dry-run
 
       - name: Run deterministic verification
         run: bash scripts/codex-verify.sh
