@@ -29,7 +29,7 @@ prefetch() {
   fi
   python3 "$DIR/fixtures/generate.py" "$source_dir" "$SPARK_BENCH_DIR/fixtures"
   docker manifest inspect "$image" >"$manifest_file" 2>/dev/null || true
-  if arm64_image; then docker pull "$image"; else
+  if arm64_image; then docker_pull_cached "$image"; else
     warn "StepFun image does not currently prove linux/arm64 support. Native runtime path remains available via SPARK_STEPAUDIO_NATIVE_START_CMD."
   fi
 }
