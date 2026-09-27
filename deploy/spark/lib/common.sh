@@ -83,6 +83,31 @@ hf_prefetch_cache() {
   fi
 }
 
+docker_pull_cached() {
+  local image="$1" lock_id lock_file
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    return 0
+  fi
+  lock_id="$(printf '%s' "$image" | sha256sum | awk '{print $1}')"
+  lock_file="$SPARK_STATE_DIR/docker-pull-$lock_id.lock"
+  (
+    if command -v flock >/dev/null 2>&1; then
+      flock 9
+    fi
+    docker image inspect "$image" >/dev/null 2>&1 && exit 0
+    if docker pull "$image"; then
+      exit 0
+    fi
+    if [[ "$image" == nvcr.io/* && -n "${NGC_API_KEY:-}" ]]; then
+      printf '%s' "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin >/dev/null
+      docker pull "$image"
+      exit 0
+    fi
+    echo "Docker pull failed for $image. If NGC authentication is required, export NGC_API_KEY and rerun." >&2
+    exit 1
+  ) 9>"$lock_file"
+}
+
 json_escape() {
   python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'
 }
