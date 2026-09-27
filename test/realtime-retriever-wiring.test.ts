@@ -329,8 +329,8 @@ async function createFixture(options: FixtureOptions) {
         manualTurnControl: options.manualTurnControl === true,
       },
       audio: {
-        input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 },
-        output: { encoding: 'pcm_s16le', sampleRate: 24_000 },
+        input: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 16_000, channels: 1, chunkFormat: 'raw-pcm', frameBytes: 640 },
+        output: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 24_000, channels: 1, chunkFormat: 'raw-pcm' },
       },
       connectOptions: () => ({ url: providerUrl, headers: {} }),
       setupSession: () => [{ type: 'mock.setup' }],
