@@ -43,6 +43,8 @@ Shared Product (src/, web/public, agent/, nvidia/)
         |      -> Step-Audio2 vLLM :8010 + Token2Wav
         +-- Retriever contract -> NeMo Retriever :7670 / VectorDB :7671
         +-- Agent Task Contract -> NemoClaw/OpenShell/OpenClaw
+        |      -> signed retrieval scripts -> private proxy :4175
+        |      -> Backend /internal/agent-retrieval/* :4174
         +-- NAT -> eval/profiler/regression only
 ```
 
@@ -63,6 +65,15 @@ The StepFun reference image is probed for an ARM64 manifest before use. If ARM64
 is not proven on the real machine, `models/realtime.sh` refuses x86 emulation and
 uses only an explicit `SPARK_STEPAUDIO_NATIVE_START_CMD` fallback. That remaining
 choice is a true GB10 compatibility task, not a second product implementation.
+
+## Agent retrieval boundary
+
+The product Backend remains bound to loopback. A tiny Spark-only reverse proxy
+binds the host's private address and exposes only the two signed formal-Agent
+retrieval routes. OpenShell policy permits only those routes and Node binaries;
+it does not mount `memoir.db` or the repository into the sandbox. The persistent
+token-signing secret is generated into untracked `deploy/spark/.env`; each Agent
+run still receives only its normal short-lived scoped retrieval token.
 
 ## Lifecycle
 

@@ -6,14 +6,23 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 sandbox="${NEMOCLAW_SANDBOX:-my-assistant}"
 model="${SPARK_TEXT_MODEL:-nvidia/Qwen3.6-35B-A3B-NVFP4}"
-policy_file="$SPARK_DIAGNOSTICS_DIR/life-interview-tool-api.yaml"
+policy_file="$SPARK_DIAGNOSTICS_DIR/life-interview-retrieval-api.yaml"
 
 install_cli() {
   if have nemoclaw; then return 0; fi
   log "Installing NemoClaw from NVIDIA official installer."
-  NEMOCLAW_NO_EXPRESS=1 NEMOCLAW_YES=1 NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1     NEMOCLAW_PROVIDER=vllm NEMOCLAW_MODEL="$model"     bash -c 'curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash'
+  NEMOCLAW_NO_EXPRESS=1 \
+  NEMOCLAW_NON_INTERACTIVE=1 \
+  NEMOCLAW_YES=1 \
+  NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1 \
+  NEMOCLAW_AGENT=openclaw \
+  NEMOCLAW_PROVIDER=vllm \
+  NEMOCLAW_MODEL="$model" \
+  NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
+  NEMOCLAW_SANDBOX_NAME="$sandbox" \
+    bash -c 'curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash'
   export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
-  have nemoclaw || die "NemoClaw installer finished but nemoclaw is not on PATH. Reload shell or add its install bin directory."
+  have nemoclaw || die "NemoClaw installer finished but nemoclaw is not on PATH."
 }
 
 sandbox_ready() {
@@ -23,16 +32,31 @@ sandbox_ready() {
 ensure_sandbox() {
   sandbox_ready && return 0
   log "Creating NemoClaw/OpenClaw sandbox '$sandbox' against the existing local vLLM endpoint."
-  NEMOCLAW_NO_EXPRESS=1 NEMOCLAW_YES=1 NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1     NEMOCLAW_PROVIDER=vllm NEMOCLAW_MODEL="$model"     nemoclaw onboard --gpu --name "$sandbox"
+  NEMOCLAW_NO_EXPRESS=1 \
+  NEMOCLAW_NON_INTERACTIVE=1 \
+  NEMOCLAW_YES=1 \
+  NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1 \
+  NEMOCLAW_AGENT=openclaw \
+  NEMOCLAW_PROVIDER=vllm \
+  NEMOCLAW_MODEL="$model" \
+  NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
+  NEMOCLAW_SANDBOX_NAME="$sandbox" \
+    nemoclaw onboard --non-interactive --gpu --name "$sandbox"
   sandbox_ready || die "NemoClaw sandbox '$sandbox' was not ready after onboarding."
 }
 
 install_skills() {
   local skills=(onboarding-closeout interview-closeout story-completion story-generation interview-observer)
+  local installed
+  installed="$(nemoclaw "$sandbox" skill list 2>/dev/null || true)"
   for skill in "${skills[@]}"; do
     local path="$REPO_ROOT/agent/skills/$skill"
     [[ -d "$path" ]] || die "Missing formal Skill: $path"
-    nemoclaw "$sandbox" skill install "$path"
+    if printf '%s\n' "$installed" | grep -Fq "$skill"; then
+      log "Skill already installed: $skill"
+    else
+      nemoclaw "$sandbox" skill install "$path"
+    fi
   done
 }
 
@@ -64,24 +88,24 @@ for i,item in enumerate(items):
   [[ -n "$index" ]] || die "OpenClaw did not register realtime-context agent."
   nemoclaw "$sandbox" exec -- openclaw config set --strict-json "agents.list[$index].tools.allow" '[]'
   nemoclaw "$sandbox" exec -- openclaw config set --strict-json "agents.list[$index].tools.deny" '["*"]'
-  nemoclaw "$sandbox" exec -- openclaw skills install /sandbox/.openclaw/workspace/skills/interview-observer --agent "$agent_id" --force
+  nemoclaw "$sandbox" exec -- openclaw skills install \
+    /sandbox/.openclaw/workspace/skills/interview-observer --agent "$agent_id" --force
 }
 
 apply_policy() {
   local host_ip
   host_ip="$(safe_host_ip)"
-  python3 - "$REPO_ROOT/nvidia/nemoclaw/openshell-policy/life-interview-tool-api.yaml.example" "$policy_file" "$host_ip" "$SPARK_AGENT_TOOL_PORT" <<'PY'
+  [[ "$host_ip" != "127.0.0.1" ]] || die "Could not determine a private host address for the retrieval policy."
+  python3 - "$DIR/services/retrieval-policy.yaml.template" "$policy_file" "$host_ip" "$SPARK_AGENT_RETRIEVAL_PORT" <<'PY'
 from pathlib import Path
 import sys
 src,dst,host,port=sys.argv[1:]
-text=Path(src).read_text()
-text=text.replace("10.0.0.5",host).replace("port: 4175",f"port: {port}")
+text=Path(src).read_text().replace("__HOST__",host).replace("__PORT__",port)
 Path(dst).write_text(text)
 PY
   chmod 600 "$policy_file"
-  # policy-add is idempotent for the same named preset in current NemoClaw; if a
-  # maintained release changes this behavior, verification will surface it.
-  nemoclaw "$sandbox" policy-add "$policy_file" >/dev/null
+  nemoclaw "$sandbox" policy add --from-file "$policy_file" \
+    --trusted-private-host "$host_ip" --yes >/dev/null
 }
 
 case "${1:-status}" in
@@ -95,13 +119,14 @@ case "${1:-status}" in
   start)
     install_cli
     ensure_sandbox
-    nemoclaw inference set --model "$model" --provider vllm --sandbox "$sandbox" >/dev/null
+    NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
+      nemoclaw inference set --model "$model" --provider vllm --sandbox "$sandbox" >/dev/null
     install_skills
     configure_realtime_context_agent
     apply_policy
     ;;
   stop)
-    # The sandbox is intentionally preserved. Product stop does not destroy user state.
+    # Preserve sandbox state; product stop must not destroy Agent data.
     ;;
   smoke)
     npm --prefix "$REPO_ROOT" run agent:smoke
@@ -111,7 +136,11 @@ case "${1:-status}" in
     if sandbox_ready; then echo RUNNING; else echo DEGRADED; fi
     ;;
   openclaw-status)
-    if have nemoclaw && sandbox_ready && nemoclaw "$sandbox" exec -- openclaw --version >/dev/null 2>&1; then echo RUNNING; else echo STOPPED; fi
+    if have nemoclaw && sandbox_ready && nemoclaw "$sandbox" exec -- openclaw --version >/dev/null 2>&1; then
+      echo RUNNING
+    else
+      echo STOPPED
+    fi
     ;;
   *) echo "usage: $0 {install|start|stop|smoke|status|openclaw-status}" >&2; exit 2 ;;
 esac

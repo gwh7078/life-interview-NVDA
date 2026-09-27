@@ -37,7 +37,8 @@ report,events,started,dry,rc=sys.argv[1:]
 rows=[]
 try:
     rows=[json.loads(x) for x in open(events,encoding="utf-8") if x.strip()]
-except FileNotFoundError: pass
+except FileNotFoundError:
+    pass
 with open(report,"w",encoding="utf-8") as f:
     json.dump({"started_at":started,"finished_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),
                "dry_run":dry=="1","exit_code":int(rc),"steps":rows},f,ensure_ascii=False,indent=2)
@@ -88,19 +89,24 @@ bootstrap_tools() {
   uv sync --project nvidia/nat
 }
 
-ensure_local_secret() {
+ensure_local_secrets() {
   python3 - "$DIR/.env" <<'PY'
 from pathlib import Path
 import secrets,sys
 p=Path(sys.argv[1]); lines=p.read_text().splitlines()
-found=False; out=[]
+keys=("AUTH_SESSION_SECRET","AGENT_RETRIEVAL_TOKEN_SECRET")
+seen=set(); out=[]
 for line in lines:
-    if line.startswith("AUTH_SESSION_SECRET="):
-        found=True
-        if not line.partition("=")[2].strip():
-            line="AUTH_SESSION_SECRET="+secrets.token_urlsafe(48)
+    for key in keys:
+        if line.startswith(key+"="):
+            seen.add(key)
+            if not line.partition("=")[2].strip():
+                line=key+"="+secrets.token_urlsafe(48)
+            break
     out.append(line)
-if not found: out.append("AUTH_SESSION_SECRET="+secrets.token_urlsafe(48))
+for key in keys:
+    if key not in seen:
+        out.append(key+"="+secrets.token_urlsafe(48))
 p.write_text("\n".join(out)+"\n")
 PY
   chmod 600 "$DIR/.env"
@@ -121,11 +127,7 @@ prefetch_all() {
 }
 
 db_migrate() { cd "$REPO_ROOT"; npm run db:migrate; }
-
-era_index() {
-  cd "$REPO_ROOT"
-  ERA_CONTEXT_ENABLED=true npm run era:index
-}
+era_index() { cd "$REPO_ROOT"; npm run era:index; }
 
 if (( dry_run )); then
   run_step preflight "$DIR/preflight.sh" --report-only
@@ -134,9 +136,10 @@ else
 fi
 run_step dependencies bootstrap_tools
 if (( ! dry_run )); then
-  ensure_local_secret
-  # Reload generated secret and any user-provided local overrides without printing them.
-  set -a; . "$DIR/.env"; set +a
+  ensure_local_secrets
+  set -a
+  . "$DIR/.env"
+  set +a
 fi
 run_step model-prefetch prefetch_all
 run_step db-migrate db_migrate

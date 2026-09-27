@@ -9,7 +9,9 @@ SPARK_DIR="$(cd "$(dirname "$0")" && pwd)"
 report_only=0
 [[ "${1:-}" == "--report-only" ]] && report_only=1
 
-python3 - "$SPARK_DIAGNOSTICS_DIR" "$report_only"   "$SPARK_TEXT_PORT" "$SPARK_COACH_PORT" "$SPARK_STEPAUDIO_BACKEND_PORT" "$SPARK_STEPAUDIO_WS_PORT"   "$SPARK_STEPAUDIO_HEALTH_PORT" "$SPARK_RETRIEVER_PORT" "$SPARK_VECTORDB_PORT" "$SPARK_BACKEND_PORT" "$SPARK_AGENT_TOOL_PORT" <<'PY'
+python3 - "$SPARK_DIAGNOSTICS_DIR" "$report_only" \
+  "$SPARK_TEXT_PORT" "$SPARK_COACH_PORT" "$SPARK_STEPAUDIO_BACKEND_PORT" "$SPARK_STEPAUDIO_WS_PORT" \
+  "$SPARK_STEPAUDIO_HEALTH_PORT" "$SPARK_RETRIEVER_PORT" "$SPARK_VECTORDB_PORT" "$SPARK_BACKEND_PORT" "$SPARK_AGENT_RETRIEVAL_PORT" <<'PY'
 import json, os, platform, shutil, socket, subprocess, sys, time, urllib.error, urllib.request
 from pathlib import Path
 
@@ -120,8 +122,7 @@ report = {
 (out/"versions.json").write_text(json.dumps(versions,ensure_ascii=False,indent=2),encoding="utf-8")
 print(json.dumps({"architecture":checks["architecture_arm64"],"gpu":checks["nvidia_gpu"],"docker":checks["docker"],"docker_gpu_runtime":checks["docker_gpu_runtime"],"ports":checks["ports"],"credentials":checks["credentials"]},ensure_ascii=False,indent=2))
 # Node is deliberately not a hard preflight gate: install.sh can bootstrap a
-# pinned Node 22 runtime after hardware validation. Python is needed to run the
-# installer itself, so it remains hard.
+# pinned Node 22 runtime after hardware validation.
 hard = ["architecture_arm64","nvidia_gpu","docker","python","memory","disk","ports"]
 failed = [k for k in hard if checks[k]["status"] == "FAIL"]
 if failed and not report_only:
