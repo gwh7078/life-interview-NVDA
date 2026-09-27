@@ -248,7 +248,7 @@ test('manual end preserves a late user transcript and ignores the provider follo
     realtimeProviderFactory: (id) => ({
       id,
       capabilities: { fullDuplex: true, supportsInterrupt: true, supportsToolCalling: false, supportsContextInjection: false, supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false, manualTurnControl: false },
-      audio: { input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
+      audio: { input: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 16_000, channels: 1, chunkFormat: 'raw-pcm', frameBytes: 640 }, output: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 24_000, channels: 1, chunkFormat: 'raw-pcm' } },
       connectOptions: () => ({ url: providerUrl, headers: {} }),
       setupSession: () => [{ type: 'mock.setup' }],
       normalizeServerMessage: normalizeMockRealtime,
@@ -384,7 +384,7 @@ test('opening response watchdog retries once then ends explicitly when provider 
   providerHttp.listen(0, '127.0.0.1'); await once(providerHttp, 'listening'); const providerAddress = providerHttp.address(); assert.ok(providerAddress && typeof providerAddress === 'object');
   const providerUrl = `ws://127.0.0.1:${providerAddress.port}`;
   providerServer.on('connection', (socket) => socket.on('message', (raw) => { const message = parseQwenServerEvent(raw); if (!message) return; if (message.type === 'mock.setup') socket.send(JSON.stringify({ type: 'session.updated', session: { id: 'mock-opening-watchdog' } })); if (message.type === 'mock.opening') openingRequests += 1; }));
-  const appServer = createInterviewServiceServer({ host:'127.0.0.1',port:0,databasePath,region:'cn-beijing',model:'mock-realtime-model',apiKey:'mock-realtime-key',workspaceId:'mock-workspace',developmentAuthEnabled:true,openingResponseTimeoutMs:30,wrapUpMs:100_000,maxSessionMs:200_000,closeGraceMs:5_000 }, { realtimeProviderFactory:(id)=>({ id,capabilities:{fullDuplex:true,supportsInterrupt:true,supportsToolCalling:false,supportsContextInjection:false,supportsExplicitTurnRequest:true,supportsPlaybackAck:false,supportsExplicitSessionClose:false,manualTurnControl:false},audio:{input:{encoding:'pcm_s16le',sampleRate:16_000,frameBytes:640},output:{encoding:'pcm_s16le',sampleRate:24_000}},connectOptions:()=>({url:providerUrl,headers:{}}),setupSession:()=>[{type:'mock.setup'}],normalizeServerMessage:normalizeMockRealtime,appendAudioMessages:(audio)=>[{type:'mock.audio',bytes:audio.byteLength}],requestAssistantTurnMessages:()=>[{type:'mock.noop'}],stopInputAfterCurrentTurn:()=>[],beginInputShutdown:()=>[],closePlan:()=>null,connectionFailureMessage:()=> 'mock realtime failure',handleControlEvent:()=>[],initialResponsePlan:()=>({steps:[{message:{type:'mock.opening'}}]}) }) });
+  const appServer = createInterviewServiceServer({ host:'127.0.0.1',port:0,databasePath,region:'cn-beijing',model:'mock-realtime-model',apiKey:'mock-realtime-key',workspaceId:'mock-workspace',developmentAuthEnabled:true,openingResponseTimeoutMs:30,wrapUpMs:100_000,maxSessionMs:200_000,closeGraceMs:5_000 }, { realtimeProviderFactory:(id)=>({ id,capabilities:{fullDuplex:true,supportsInterrupt:true,supportsToolCalling:false,supportsContextInjection:false,supportsExplicitTurnRequest:true,supportsPlaybackAck:false,supportsExplicitSessionClose:false,manualTurnControl:false},audio:{input:{codec:'pcm_s16le',encoding:'pcm_s16le',sampleRate:16_000,channels:1,chunkFormat:'raw-pcm',frameBytes:640},output:{codec:'pcm_s16le',encoding:'pcm_s16le',sampleRate:24_000,channels:1,chunkFormat:'raw-pcm'}},connectOptions:()=>({url:providerUrl,headers:{}}),setupSession:()=>[{type:'mock.setup'}],normalizeServerMessage:normalizeMockRealtime,appendAudioMessages:(audio)=>[{type:'mock.audio',bytes:audio.byteLength}],requestAssistantTurnMessages:()=>[{type:'mock.noop'}],stopInputAfterCurrentTurn:()=>[],beginInputShutdown:()=>[],closePlan:()=>null,connectionFailureMessage:()=> 'mock realtime failure',handleControlEvent:()=>[],initialResponsePlan:()=>({steps:[{message:{type:'mock.opening'}}]}) }) });
   appServer.listen(0,'127.0.0.1'); await once(appServer,'listening'); const appAddress=appServer.address(); assert.ok(appAddress && typeof appAddress==='object'); const baseUrl=`http://127.0.0.1:${appAddress.port}`; let clientSocket:WebSocket|undefined;
   try {
     const login=await fetch(`${baseUrl}/api/auth/development/legacy-session`,{method:'POST'}); const cookie=login.headers.get('set-cookie')?.split(';',1)[0]; assert.ok(cookie);
@@ -441,7 +441,7 @@ test('opening waits for playback readiness whether it arrives before or after th
     realtimeProviderFactory: (id) => ({
       id,
       capabilities: { fullDuplex: true, supportsInterrupt: true, supportsToolCalling: false, supportsContextInjection: false, supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false, manualTurnControl: false },
-      audio: { input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
+      audio: { input: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 16_000, channels: 1, chunkFormat: 'raw-pcm', frameBytes: 640 }, output: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 24_000, channels: 1, chunkFormat: 'raw-pcm' } },
       connectOptions: () => ({ url: providerUrl, headers: {} }),
       setupSession: () => [{ type: 'mock.setup' }],
       normalizeServerMessage: normalizeMockRealtime,
@@ -580,7 +580,7 @@ test('user turn stall watchdog requests provider recovery after ASR is idle past
     realtimeProviderFactory: (id) => ({
       id,
       capabilities: { fullDuplex: true, supportsInterrupt: true, supportsToolCalling: false, supportsContextInjection: false, supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false, manualTurnControl: false },
-      audio: { input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
+      audio: { input: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 16_000, channels: 1, chunkFormat: 'raw-pcm', frameBytes: 640 }, output: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 24_000, channels: 1, chunkFormat: 'raw-pcm' } },
       connectOptions: () => ({ url: providerUrl, headers: {} }),
       setupSession: () => [{ type: 'mock.setup' }],
       normalizeServerMessage: normalizeMockRealtime,
@@ -696,7 +696,7 @@ test('StepFun manual turn commits once after local VAD and ignores microphone au
         supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false,
         manualTurnControl: true,
       },
-      audio: { input: { encoding: 'pcm_s16le', sampleRate: 24_000, frameBytes: 960 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
+      audio: { input: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 24_000, channels: 1, chunkFormat: 'raw-pcm', frameBytes: 960 }, output: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 24_000, channels: 1, chunkFormat: 'raw-pcm' } },
       connectOptions: () => ({ url: providerUrl, headers: {} }),
       setupSession: () => [{ type: 'mock.setup' }],
       normalizeServerMessage: normalizeMockRealtime,
