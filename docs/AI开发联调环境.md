@@ -33,7 +33,7 @@ Phase 1 的真实 Agent smoke 使用 NemoClaw/OpenClaw 加只读 Tool API，不�
 | 第二条正式实时语音 | `stepaudio2_mini` → Step-Audio-2-mini → StepFun Cloud | 使用同一共享 transport，保留 Local VAD / manual turn、Tool Result / Resume；通过 `STEPFUN_REALTIME_MODEL` 配置。未来只替换此 Profile 的执行后端。 |
 | 实验语音 Provider | ModelBest MiniCPM-o Realtime — **Experimental** | 保留独立 adapter，不作为默认路线，也不自动回退。 |
 | OpenClaw Agent 与会后文本任务 | Bailian `qwen3.6-35b-a3b` | Agent 的默认、推理、快速推理、写作 profile 共用此模型；文本任务通过 Model Studio OpenAI-compatible Chat API 调用。 |
-| Realtime Coach / Memory | StepAudio 3 固定 `voice_tool`，不加载 Coach；Step-Audio-2-mini 默认 `supervisor_auto`，`stepfun` 是同一 Mini Profile 的兼容别名。`REALTIME_MEMORY_TRIGGER=voice_tool` 可让 Mini 自主判断并调用工具；`supervisor_auto` 由 Qwen3-8B 先 Gate。Gate `action=none` 立即放行 Mini 当前轮；`guide/correct` 不需检索时直接生成短 Coach Packet。只有 Story Continue 可按需检索。 | Mini 的 Onboarding、Story Create、Contributor 不检索。Story Continue Memory 仅查 owner + Current Story + subject Q+A，最多 5 条；Memory 与 Era 并行。Gate 硬超时 2,000 ms；Gate、Memory、Era、Resolve 从用户 final transcript 起共用 6,000 ms 总 Deadline。Gate/Resolve 故障或超时、总 Deadline 到期或两路检索都失败时丢弃 Coach，让 Mini 无 Coach 回答当前轮；单路检索失败不阻断另一路的有效 evidence。两路最终 evidence 都为空时跳过 Resolve，使用 Gate 建议。迟到结果不用于下一轮。Coach Packet 只通过当前 `response.create` instructions 一次注入。Contributor 不访问主人公私密 Transcript。Mini 两种 Trigger 共用 Retriever 与 Evidence Bounding。Audio 3 保留现有 Voice Tool → Slow Path → Tool Result → Resume。 |
+| Realtime Coach / Memory | StepAudio 3 固定 `voice_tool`，不加载 Coach；Step-Audio-2-mini 默认 `supervisor_auto`，`stepfun` 是同一 Mini Profile 的兼容别名。`REALTIME_MEMORY_TRIGGER=voice_tool` 可让 Mini 自主判断并调用工具。Onboarding 在 `supervisor_auto` 下先立即请求 Mini 回复，再并行运行无检索 Coach；若 Coach 在下一次用户发言前给出指导，最多缓存 30 秒并只注入紧接着的一次 Mini 回复，跨回合、跨 Session 或过期结果丢弃。Story Create、Story Continue、Contributor 的 `supervisor_auto` 仍由 Qwen3-8B 先 Gate；Story Continue 可按需检索。 | Mini 的 Onboarding、Story Create、Contributor 不检索。Story Continue Memory 仅查 owner + Current Story + subject Q+A，最多 5 条；Memory 与 Era 并行。Gate 硬超时 2,000 ms；Gate、Memory、Era、Resolve 从用户 final transcript 起共用 6,000 ms 总 Deadline。Gate/Resolve 故障或超时、总 Deadline 到期或两路检索都失败时丢弃 Coach，让 Mini 无 Coach 回答当前轮；单路检索失败不阻断另一路的有效 evidence。两路最终 evidence 都为空时跳过 Resolve，使用 Gate 建议。除 Onboarding 的下一回合短期指导外，迟到结果不用于后续回合；Coach Packet 通过一次 `response.create` instructions 注入。Contributor 不访问主人公私密 Transcript。Mini 两种 Trigger 共用 Retriever 与 Evidence Bounding。Audio 3 保留现有 Voice Tool → Slow Path → Tool Result → Resume。 |
 
 Coach 使用独立 OpenAI-compatible 配置，不改变 Closeout / Completion / Generation 的 `qwen3.6-35b-a3b`：`REALTIME_COACH_PROVIDER=openai-compatible`、`REALTIME_COACH_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`、`REALTIME_COACH_MODEL=qwen3-8b`、`REALTIME_COACH_API_KEY`；Coach Key 未设置时可复用 `BAILIAN_API_KEY`。Gate 硬超时默认及上限为 2,000 ms（`REALTIME_COACH_GATE_TIMEOUT_MS` 可设更短值）；Coach 总 Deadline 默认及上限为 6,000 ms（`REALTIME_COACH_TOTAL_TIMEOUT_MS`）。Gate 后的 Memory、Era 与 Resolve 只消费此总 Deadline 的剩余预算。`backend_auto` 暂时接受并规范化为 `supervisor_auto`；Trace 与运行状态只记录规范名称。Pass B 复用同一个 Qwen3-8B Service，不经 OpenClaw Agent Runtime。
 
@@ -55,6 +55,8 @@ Model Studio 文档确认模型 ID 为 `qwen3.6-35b-a3b`，支持文本输入、
 - `.env`：当前 Mac 的本地地址配置，已由 `.gitignore` 排除。
 - `AGENTS.md`：进入项目的 AI 必须遵守的环境与数据边界。
 - `scripts/check-ai-env.sh`：一键检查 Retriever、VectorDB、OpenClaw 转发和 Codex MCP 注册。
+
+Realtime 人工诊断默认不保存对话正文（`DIAGNOSTICS_CAPTURE_CONTENT=0`）。需要检查 Prompt 或有限的近期问答时，可只在当前 Worktree 的本地 `.env` 临时设为 `1`；内容写入 `runtime/diagnostics/` 下的本地 trace，受单条和单 Session 大小限制，并在任务结束后恢复为 `0`。这不是完整 Transcript 导出；内容含个人经历，分享 trace 前应先检查其内容。
 
 业务代码应从环境变量读取地址，不要硬编码本机端口。
 

@@ -14,7 +14,11 @@ function knownText(packet: CoachPacket | undefined, currentAnswer: string, maxCh
 
 function gapFor(scenario: CoachScenario, reason: CoachGateResult['reason']): string {
   if (scenario === 'onboarding') {
-    return reason === 'direction_drift' ? '人生时间线仍有阶段未覆盖' : '当前人生阶段还未覆盖';
+    if (reason === 'repeated_question') return '避免重复问题';
+    if (reason === 'direction_drift') return '继续未覆盖阶段';
+    if (reason === 'scenario_boundary') return '回到人生时间线';
+    if (reason === 'missing_key_detail') return '补足当前阶段细节';
+    return '确认当前阶段进度';
   }
   if (reason === 'repeated_question') return '这个问题已经问过';
   if (reason === 'direction_drift' || reason === 'scenario_boundary') return '采访需回到当前故事';
@@ -36,7 +40,14 @@ export function renderMiniCoachPacket(input: {
   }
 
   let lines: string[];
-  if (scenario === 'onboarding' || scenario === 'story_create') {
+  if (scenario === 'onboarding') {
+    lines = [
+      '【采访教练】若上一轮已推进或用户改向，忽略旧提示，遵循当前对话。',
+      `已知：${knownText(packet, currentUserAnswer, 28)}`,
+      `缺口：${gapFor(scenario, gate.reason)}`,
+      `方向：${clip(packet?.direction || gate.direction, 28)}`,
+    ];
+  } else if (scenario === 'story_create') {
     lines = [
       `【采访教练】已知：${knownText(packet, currentUserAnswer)}`,
       `缺口：${gapFor(scenario, gate.reason)}`,

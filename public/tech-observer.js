@@ -19,6 +19,19 @@ try {
     const modelLabel = document.getElementById('tech-observer-model');
     const voiceModelLabel = document.getElementById('tech-node-voice-model');
     const slowStatusLabel = document.getElementById('tech-observer-slow-status');
+    const triggerModeLabel = document.getElementById('tech-observer-trigger-mode');
+    const scenarioLabel = document.getElementById('tech-observer-scenario');
+    const triggerKicker = document.getElementById('tech-node-trigger-kicker');
+    const triggerTitle = document.getElementById('tech-node-trigger-title');
+    const resolveKicker = document.getElementById('tech-node-coach-kicker');
+    const resolveTitle = document.getElementById('tech-node-coach-title');
+    const packetKicker = document.getElementById('tech-node-context-kicker');
+    const packetTitle = document.getElementById('tech-node-context-title');
+    const memoryRouteLabel = document.getElementById('tech-node-memory-route');
+    const eraRouteLabel = document.getElementById('tech-node-era-route');
+    const toolResultLabel = document.getElementById('tech-node-tool-result');
+    const resumeLabel = document.getElementById('tech-node-resume');
+    const voiceRouteLabel = document.getElementById('tech-route-voice-label');
     const sessionLabel = document.getElementById('tech-observer-session');
     const traceLabel = document.getElementById('tech-observer-trace');
     const eventCountLabel = document.getElementById('tech-observer-count');
@@ -28,7 +41,7 @@ try {
     const nodeStates = Object.fromEntries(['user', 'voice', 'assistant', 'trigger', 'retriever', 'coach', 'context']
       .map((name) => [name, document.getElementById(`tech-node-${name}-state`)]));
     const edges = ids(['edge-user-voice', 'edge-voice-assistant', 'edge-voice-trigger', 'edge-trigger-retriever', 'edge-retriever-coach', 'edge-coach-context', 'edge-context-voice']);
-    const metrics = ids(['metric-first-audio', 'metric-slow-latency', 'metric-evidence', 'metric-tool-count']);
+    const metrics = ids(['metric-first-text', 'metric-first-audio', 'metric-slow-latency', 'metric-evidence', 'metric-tool-count']);
     const detailFields = {
       environment: document.getElementById('tech-detail-environment'),
       provider: document.getElementById('tech-observer-provider'),
@@ -54,21 +67,24 @@ try {
       'runtime.started': 'SESSION STARTED', 'runtime.ended': 'SESSION ENDED',
       'coach.gate.started': 'COACH GATE STARTED', 'coach.gate.completed': 'COACH GATE COMPLETE',
       'coach.gate.timeout': 'COACH GATE TIMEOUT', 'coach.gate.failed': 'COACH GATE FAILED',
+      'coach.gate.cancelled': 'COACH GATE CANCELLED',
       'coach.retrieval.started': 'COACH MEMORY RETRIEVER RUNNING', 'coach.retrieval.completed': 'COACH MEMORY RETRIEVER COMPLETE',
       'coach.retrieval.timeout': 'COACH MEMORY RETRIEVER TIMEOUT', 'coach.retrieval.failed': 'COACH MEMORY RETRIEVER FAILED',
       'coach.retrieval.skipped': 'COACH MEMORY RETRIEVER SKIPPED',
       'coach.era_retrieval.started': 'COACH ERA RETRIEVER RUNNING', 'coach.era_retrieval.completed': 'COACH ERA RETRIEVER COMPLETE',
       'coach.era_retrieval.timeout': 'COACH ERA RETRIEVER TIMEOUT', 'coach.era_retrieval.failed': 'COACH ERA RETRIEVER FAILED',
       'coach.era_retrieval.skipped': 'COACH ERA RETRIEVER SKIPPED',
-      'coach.pipeline.timeout': 'COACH PIPELINE TIMEOUT',
+      'coach.pipeline.timeout': 'COACH PIPELINE TIMEOUT', 'coach.pipeline.cancelled': 'COACH PIPELINE CANCELLED',
       'coach.resolve.started': 'COACH RESOLVE STARTED', 'coach.resolve.completed': 'COACH RESOLVE COMPLETE',
       'coach.resolve.timeout': 'COACH RESOLVE TIMEOUT', 'coach.resolve.failed': 'COACH RESOLVE FAILED',
       'coach.applied': 'COACH APPLIED', 'coach.skipped': 'COACH SKIPPED',
+      'coach.packet.queued': 'COACH PACKET QUEUED',
+      'coach.packet.consumed': 'COACH PACKET CONSUMED', 'coach.packet.stale_dropped': 'COACH PACKET STALE',
       'realtime.connected': 'REALTIME CONNECTED', 'realtime.user_speaking': 'USER SPEAKING',
       'realtime.turn_committed': 'USER TURN COMMITTED',
       'realtime.listening': 'LISTENING', 'realtime.model_thinking': 'AI THINKING',
       'realtime.interrupted': 'INTERRUPTED', 'realtime.hold': 'HOLD', 'realtime.resume': 'RESUME',
-      'realtime.resumed': 'AI RESUMED', 'realtime.first_audio': 'FIRST AUDIO',
+      'realtime.resumed': 'AI RESUMED', 'realtime.first_text': 'FIRST ASSISTANT TEXT', 'realtime.first_audio': 'FIRST AUDIO',
       'realtime.responding': 'AI SPEAKING', 'realtime.slow_deadline_exceeded': 'SLOW PATH DEADLINE EXCEEDED',
       'tool.received': 'TOOL CALL', 'tool.started': 'TOOL CALL', 'tool.completed': 'TOOL RESULT',
       'tool.failed': 'TOOL FAILED', 'retriever.started': 'RETRIEVER STARTED',
@@ -88,10 +104,13 @@ try {
       candidateCount: '候选', evidenceCount: '证据', selectedEvidenceCount: '采用',
       action: 'Coach Action', retrieve_memory: 'Memory 检索', retrieve_era: 'Era 检索', gateMs: 'Gate', memoryRetrievalMs: 'Memory', eraRetrievalMs: 'Era',
       resolveMs: 'Resolve', totalMs: '总耗时', packetChars: 'Packet 字符',
+      firstTextLatencyMs: '回复→首段文字', firstAudioLatencyMs: 'Tool→首段语音',
+      responseFirstAudioMs: '回复→首段语音', playbackStartLatencyMs: '回复→播放开始',
+      chars: '文字字符数', elapsedMs: '耗时',
       promptTokens: 'Prompt tokens', completionTokens: 'Completion tokens', totalTokens: 'Total tokens',
       fallbackUsed: '降级', fallbackType: '降级方式', skipReason: '跳过原因', errorCode: '错误码', resultStatus: '结果', sent: '已发送',
       model: 'Model', skill: 'Skill', resumeLatencyMs: 'Resume→回复', toolResultLatencyMs: 'Tool Result',
-      firstAudioLatencyMs: 'Tool→首段语音', responseBFirstAudioMs: '回复→首段语音', toolCallCount: 'Tool calls',
+      responseBFirstAudioMs: '恢复回复→首段语音', toolCallCount: 'Tool calls',
     };
     const skipReasons = {
       no_evidence: '无检索证据', NO_EVIDENCE: '无检索证据', agent_disabled: 'Agent 未启用',
@@ -101,7 +120,7 @@ try {
     };
     const numericMetricKeys = new Set([
       'candidateCount', 'evidenceCount', 'selectedEvidenceCount', 'promptTokens', 'completionTokens', 'totalTokens',
-      'resumeLatencyMs', 'toolResultLatencyMs', 'firstAudioLatencyMs', 'responseBFirstAudioMs', 'toolCallCount',
+      'resumeLatencyMs', 'toolResultLatencyMs', 'firstTextLatencyMs', 'firstAudioLatencyMs', 'responseFirstAudioMs', 'playbackStartLatencyMs', 'elapsedMs', 'chars', 'responseBFirstAudioMs', 'toolCallCount',
       'gateMs', 'memoryRetrievalMs', 'eraRetrievalMs', 'resolveMs', 'totalMs', 'packetChars',
     ]);
     const state = {
@@ -140,16 +159,18 @@ try {
         user: 'waiting', userLabel: '等待',
         voice: 'waiting', voiceLabel: '等待', fastState: 'waiting',
         assistant: 'waiting', assistantLabel: '等待',
-        trigger: 'waiting', triggerLabel: '等待', triggerDetail: '',
+        trigger: 'waiting', triggerLabel: '未观测', triggerDetail: '', toolCallObserved: false,
         retriever: 'waiting', retrieverLabel: '等待', retrieverDetail: '',
-        memoryRetriever: 'waiting', memoryRetrieverLabel: '等待', memoryRetrieverDetail: '', memoryRetrievalMs: null, memoryRetrieverRequested: false,
-        eraRetriever: 'waiting', eraRetrieverLabel: '等待', eraRetrieverDetail: '', eraRetrievalMs: null, eraRetrieverRequested: false,
-        coach: 'waiting', coachLabel: '等待', coachDetail: '',
-        context: 'waiting', contextLabel: '等待', contextDetail: '',
+        memoryRetriever: 'waiting', memoryRetrieverLabel: '未观测', memoryRetrieverDetail: '', memoryRetrievalMs: null, memoryRetrieverRequested: null,
+        eraRetriever: 'waiting', eraRetrieverLabel: '未观测', eraRetrieverDetail: '', eraRetrievalMs: null, eraRetrieverRequested: null,
+        coach: 'waiting', coachLabel: '未观测', coachDetail: '',
+        context: 'waiting', contextLabel: '未观测', contextDetail: '',
         userVoiceEdge: 'waiting', voiceAssistantEdge: 'waiting', voiceTriggerEdge: 'waiting',
         triggerRetrieverEdge: 'waiting', retrieverCoachEdge: 'waiting', coachContextEdge: 'waiting', contextVoiceEdge: 'waiting',
+        triggerMode: '', scenario: '', legacySlowPath: false, toolResult: 'waiting', resume: 'waiting',
+        toolResultLabel: '未观测', resumeLabel: '未观测',
         slowStatus: '等待本轮信号', slowTriggered: false, assistantActive: false, awaitingUser: false,
-        firstAudioMs: null, slowLatencyMs: null, evidenceCount: null, selectedEvidenceCount: null, toolCount: 0,
+        firstTextMs: null, firstAudioMs: null, slowLatencyMs: null, evidenceCount: null, selectedEvidenceCount: null, toolCount: 0,
       };
     }
 
@@ -199,6 +220,7 @@ try {
         ? ['evidenceCount', 'resolveMs', 'skipReason', 'errorCode']
         : ['evidenceCount', 'resolveMs', 'errorCode'];
       if (event.component === 'realtime-coach') return ['action', 'packetChars', 'totalMs'];
+      if (event.component === 'realtime-coach-packet') return ['packetChars', 'scenario', 'reason'];
       if (event.category === 'retriever') return ['candidateCount', 'evidenceCount', 'errorCode'];
       if (event.component === 'realtime-context-agent') {
         if (event.eventType === 'agent.started') return ['model', 'skill'];
@@ -210,7 +232,10 @@ try {
       if (event.eventType.startsWith('realtime.slow_path.result.')) return ['evidenceCount', 'fallbackUsed', 'fallbackType', 'errorCode'];
       if (event.eventType === 'realtime.responding' && event.component === 'realtime-tool-cycle') return ['resumeLatencyMs'];
       if (event.eventType === 'realtime.resume') return ['resumeLatencyMs'];
-      if (event.eventType === 'realtime.first_audio') return ['firstAudioLatencyMs', 'responseBFirstAudioMs'];
+      if (event.eventType === 'realtime.responding' && event.component === 'realtime-provider') return ['playbackStartLatencyMs'];
+      if (event.eventType === 'realtime.first_text') return ['firstTextLatencyMs', 'chars'];
+      if (event.eventType === 'realtime.first_audio' && event.component === 'realtime-tool-cycle') return ['firstAudioLatencyMs', 'responseBFirstAudioMs'];
+      if (event.eventType === 'realtime.first_audio') return ['responseFirstAudioMs'];
       if (event.eventType === 'tool.completed' && event.component === 'realtime-tool') return ['resultStatus', 'sent', 'toolResultLatencyMs'];
       if (event.eventType === 'agent.completed') return ['toolCallCount'];
       return [];
@@ -245,32 +270,39 @@ try {
       : event.status === 'warning' ? 'warning'
         : event.status === 'skip' ? 'skipped'
           : event.status === 'success' ? 'complete' : 'active';
-    const routeStatusLabel = (status, event) => isTimeout(event) ? 'Timeout'
+    const routeStatusLabel = (status, event) => event.metrics?.skipReason === 'RETRIEVAL_NOT_REQUESTED' ? 'N/A' : isTimeout(event) ? 'Timeout'
       : status === 'active' ? '检索中'
         : status === 'complete' ? '已完成'
           : status === 'skipped' ? skipReasons[event.metrics?.skipReason] || '跳过'
-            : status === 'warning' ? '注意' : status === 'error' ? '失败' : '等待';
+            : status === 'warning' ? '注意' : status === 'error' ? '失败' : '未观测';
     const syncRetrieverNode = () => {
       const turn = state.turn;
       const routes = [
         { key: 'memoryRetriever', label: 'Memory', duration: turn.memoryRetrievalMs, detail: turn.memoryRetrieverDetail, requested: turn.memoryRetrieverRequested },
         { key: 'eraRetriever', label: 'Era', duration: turn.eraRetrievalMs, detail: turn.eraRetrieverDetail, requested: turn.eraRetrieverRequested },
       ];
-      const visible = routes.filter((route) => route.requested || turn[route.key] !== 'waiting');
+      const visible = routes.filter((route) => route.requested !== null || turn[route.key] !== 'waiting');
       const errors = visible.filter((route) => turn[route.key] === 'error');
       const warnings = visible.filter((route) => turn[route.key] === 'warning');
-      const active = visible.filter((route) => turn[route.key] === 'active' || route.requested && turn[route.key] === 'waiting');
+      const active = visible.filter((route) => turn[route.key] === 'active');
       const finished = visible.length > 0 && visible.every((route) => ['complete', 'error', 'warning', 'skipped'].includes(turn[route.key]));
       const completed = visible.some((route) => turn[route.key] === 'complete');
+      const allNotRequested = routes.every((route) => route.requested === false);
       const aggregate = errors.length ? 'error' : warnings.length ? 'warning' : active.length ? 'active'
         : finished && completed ? 'complete' : finished ? 'skipped' : 'waiting';
       turn.retriever = aggregate;
       turn.retrieverLabel = aggregate === 'active' ? '检索中' : aggregate === 'complete' ? '已完成'
-        : aggregate === 'error' ? '失败' : aggregate === 'warning' ? 'Timeout' : aggregate === 'skipped' ? '跳过' : '等待';
-      turn.retrieverDetail = visible.map((route) => {
+        : aggregate === 'error' ? '失败' : aggregate === 'warning' ? 'Timeout' : aggregate === 'skipped' ? allNotRequested ? 'N/A' : '跳过'
+          : visible.some((route) => route.requested === true) ? '已请求' : allNotRequested ? 'N/A' : '未观测';
+      turn.retrieverDetail = routes.map((route) => {
         const duration = route.duration === null ? '' : displayDuration(route.duration);
         const suffix = duration || route.detail || '';
-        return `${route.label} · ${routeStatusLabel(turn[route.key], { metrics: { skipReason: turn[`${route.key}SkipReason`] }, eventType: '', status: turn[route.key] })}${suffix ? ` · ${suffix}` : ''}`;
+        const routeLabel = turn[route.key] === 'waiting' ? route.requested === false ? 'N/A' : route.requested === true ? '已请求' : '未观测'
+          : routeStatusLabel(turn[route.key], { metrics: { skipReason: turn[`${route.key}SkipReason`] }, eventType: '', status: turn[route.key] });
+        const detail = suffix ? ` · ${suffix}` : '';
+        if (route.label === 'Memory' && memoryRouteLabel) memoryRouteLabel.textContent = `Memory · ${routeLabel}${detail}`;
+        if (route.label === 'Era' && eraRouteLabel) eraRouteLabel.textContent = `Era · ${routeLabel}${detail}`;
+        return `${route.label} · ${routeLabel}${detail}`;
       }).join(' / ');
       turn.triggerRetrieverEdge = aggregate === 'active' ? 'active' : aggregate === 'complete' ? 'complete' : aggregate;
       turn.retrieverCoachEdge = aggregate === 'complete' ? 'complete' : aggregate === 'active' ? 'active' : aggregate;
@@ -279,7 +311,7 @@ try {
       const turn = state.turn;
       turn[routeKey] = status;
       turn[`${routeKey}Label`] = routeStatusLabel(status, event);
-      turn[`${routeKey}Requested`] = event.metrics?.skipReason !== 'RETRIEVAL_NOT_REQUESTED';
+      turn[`${routeKey}Requested`] = event.metrics?.skipReason === 'RETRIEVAL_NOT_REQUESTED' ? false : true;
       const duration = finite(event.durationMs)
         ?? finite(event.metrics?.[routeKey === 'memoryRetriever' ? 'memoryRetrievalMs' : 'eraRetrievalMs']);
       if (routeKey === 'memoryRetriever' && duration !== null) turn.memoryRetrievalMs = duration;
@@ -292,35 +324,24 @@ try {
       turn[`${routeKey}SkipReason`] = event.metrics?.skipReason || '';
       syncRetrieverNode();
     };
+    const markRouteNotRequested = (routeKey) => {
+      const turn = state.turn;
+      turn[routeKey] = 'skipped';
+      turn[`${routeKey}Label`] = 'N/A';
+      turn[`${routeKey}Requested`] = false;
+      turn[`${routeKey}Detail`] = '';
+      turn[`${routeKey}SkipReason`] = 'RETRIEVAL_NOT_REQUESTED';
+      syncRetrieverNode();
+    };
     const updateFallback = (event) => {
       if (event.metrics?.fallbackUsed !== true && event.metrics?.fallbackType !== 'direct_retrieval') return false;
       state.turn.fallback = event.metrics.fallbackType === 'direct_retrieval' ? '直接使用检索结果' : '已启用降级';
       return true;
     };
-    const skipPendingSlowNodes = (message) => {
-      const turn = state.turn;
-      for (const [key, current, label] of [
-        ['trigger', turn.trigger, '跳过'], ['retriever', turn.retriever, '跳过'],
-        ['coach', turn.coach, '跳过'], ['context', turn.context, '跳过'],
-      ]) {
-        if (current === 'waiting') {
-          turn[key] = 'skipped';
-          turn[`${key}Label`] = label;
-          if (key === 'retriever' || key === 'context') turn[`${key}Detail`] = message;
-        }
-      }
-      if (turn.memoryRetriever === 'waiting') turn.memoryRetriever = 'skipped';
-      if (turn.eraRetriever === 'waiting') turn.eraRetriever = 'skipped';
-      syncRetrieverNode();
-      turn.slowStatus = message;
-      for (const edge of ['voiceTriggerEdge', 'triggerRetrieverEdge', 'retrieverCoachEdge', 'coachContextEdge']) {
-        if (turn[edge] === 'waiting') turn[edge] = 'skipped';
-      }
-    };
     const markSlowTimeout = (message, failed = false) => {
       const turn = state.turn;
       for (const key of ['trigger', 'retriever', 'coach', 'context']) {
-        if (turn[key] === 'waiting' || turn[key] === 'active') {
+        if (turn[key] === 'active' || turn.legacySlowPath && turn[key] === 'waiting') {
           turn[key] = failed ? 'error' : 'warning';
           turn[`${key}Label`] = failed ? '失败' : 'Timeout';
         }
@@ -360,6 +381,9 @@ try {
     const applyEvent = (event) => {
       const turn = state.turn;
       const { eventType, metrics: eventMetrics = {} } = event;
+      const metadata = event.metadata && typeof event.metadata === 'object' ? event.metadata : {};
+      turn.triggerMode = safeLabel(metadata.triggerMode || metadata.memoryTriggerMode) || turn.triggerMode;
+      turn.scenario = safeLabel(metadata.scenario || eventMetrics.scenario) || turn.scenario;
       if (eventType === 'realtime.user_speaking') {
         if (turn.number === 0 || turn.awaitingUser || turn.assistantActive) beginTurn();
         state.turn.user = 'active';
@@ -395,7 +419,6 @@ try {
           turn.voice = 'complete'; turn.voiceLabel = 'Listening'; turn.fastState = 'listening';
           turn.assistant = 'complete'; turn.assistantLabel = '回复完成'; turn.assistantActive = false; turn.awaitingUser = true;
           turn.voiceAssistantEdge = 'complete';
-          if (!turn.slowTriggered) skipPendingSlowNodes('本轮无需检索');
         } else {
           turn.user = turn.user === 'active' ? 'complete' : turn.user;
           turn.userLabel = turn.user === 'complete' ? '已提交' : turn.userLabel;
@@ -411,6 +434,8 @@ try {
         turn.slowStatus = '慢系统运行中';
       } else if (eventType === 'realtime.resume' || eventType === 'realtime.resumed') {
         const sent = event.status === 'success';
+        turn.resume = sent ? 'complete' : eventState(event);
+        turn.resumeLabel = sent ? '已恢复' : isTimeout(event) ? 'Timeout' : '失败';
         turn.voice = sent ? 'active' : 'error'; turn.voiceLabel = sent ? 'Resuming' : 'Resume 失败'; turn.fastState = sent ? 'resuming' : 'error';
         turn.assistant = sent ? 'active' : 'error'; turn.assistantLabel = sent ? '正在恢复' : '恢复失败'; turn.assistantActive = sent;
         if (sent && turn.contextResultReady) {
@@ -421,23 +446,37 @@ try {
           turn.context = 'error'; turn.contextLabel = '注入失败';
           turn.contextDetail = 'Resume 写入失败'; turn.contextVoiceEdge = 'error';
         }
+      } else if (eventType === 'realtime.first_text') {
+        const latency = finite(eventMetrics.firstTextLatencyMs ?? eventMetrics.elapsedMs ?? event.durationMs);
+        if (latency !== null) turn.firstTextMs = latency;
+        turn.assistant = 'active'; turn.assistantLabel = '首段文字已到'; turn.assistantActive = true;
+        turn.voiceAssistantEdge = 'active';
       } else if (eventType === 'realtime.first_audio') {
-        const latency = finite(eventMetrics.firstAudioLatencyMs ?? eventMetrics.responseBFirstAudioMs ?? event.durationMs);
-        if (latency !== null) turn.firstAudioMs = latency;
+        if (event.component === 'realtime-provider') {
+          const latency = finite(eventMetrics.responseFirstAudioMs ?? event.durationMs);
+          if (latency !== null) turn.firstAudioMs = latency;
+        }
         turn.assistant = 'active'; turn.assistantLabel = '首段语音已到'; turn.assistantActive = true;
         turn.voiceAssistantEdge = 'active';
         if (event.component === 'realtime-tool-cycle' && turn.context === 'complete') turn.contextVoiceEdge = 'complete';
-        if (!turn.slowTriggered) skipPendingSlowNodes('本轮无需检索');
       }
 
       if (eventType === 'tool.received' || eventType === 'tool.started') {
         turn.slowTriggered = true;
+        turn.triggerMode ||= 'voice_tool';
+        if (event.summary === 'memory_recall') turn.scenario ||= 'story_continue';
         turn.trigger = 'active'; turn.triggerLabel = 'Tool Call';
         turn.triggerDetail = event.summary === 'memory_recall' ? 'memory_recall' : 'Tool Call';
         turn.voiceTriggerEdge = 'active'; turn.slowStatus = '等待检索';
         if (eventType === 'tool.started') turn.toolCount += 1;
       } else if (eventType === 'tool.completed') {
         turn.trigger = 'complete'; turn.triggerLabel = 'Tool Result';
+        turn.toolResult = event.status === 'error' || eventMetrics.sent === false || eventMetrics.resultStatus === 'failed'
+          ? 'error' : eventMetrics.resultStatus === 'no_context' ? 'skipped'
+            : eventMetrics.resultStatus === 'timeout' ? 'warning' : 'complete';
+        turn.toolResultLabel = turn.toolResult === 'complete' ? '已发送'
+          : turn.toolResult === 'skipped' ? '无上下文'
+            : turn.toolResult === 'warning' ? 'Timeout' : turn.toolResult === 'error' ? '失败' : '未观测';
         turn.triggerDetail = event.summary === 'memory_recall' ? 'memory_recall' : turn.triggerDetail || 'Tool Result';
         turn.voiceTriggerEdge = 'complete';
         updateFallback(event);
@@ -460,6 +499,7 @@ try {
         turn.trigger = event.status === 'warning' ? 'warning' : 'error';
         turn.triggerLabel = isTimeout(event) ? 'Timeout' : '失败';
         turn.triggerDetail = safeErrorCode(eventMetrics.errorCode);
+        if (turn.triggerMode === 'voice_tool') { turn.toolResult = 'error'; turn.toolResultLabel = '失败'; }
         if (turn.context !== 'skipped') {
           turn.context = 'error'; turn.contextLabel = '结果发送失败'; turn.contextDetail = 'Tool Result 未发送';
           turn.contextResultReady = false; turn.contextVoiceEdge = 'error';
@@ -476,10 +516,9 @@ try {
         if (evidence !== null) turn.evidenceCount = evidence;
         if (selected !== null) turn.selectedEvidenceCount = selected;
         updateRetrieverRoute(eraRetrieverEvent ? 'eraRetriever' : 'memoryRetriever', event, status);
-        turn.trigger = turn.trigger === 'waiting' ? 'complete' : turn.trigger;
-        turn.triggerLabel = turn.trigger === 'complete' && turn.triggerLabel === '等待' ? '已触发' : turn.triggerLabel;
       }
       if (eventType.startsWith('retriever.') && state.turn.memoryRetriever === 'waiting' && state.turn.eraRetriever === 'waiting') {
+        turn.legacySlowPath = true;
         const status = eventState(event);
         turn.retriever = status;
         turn.retrieverLabel = isTimeout(event) ? 'Timeout' : status === 'active' ? '检索中'
@@ -497,64 +536,112 @@ try {
       const contextAgent = event.component === 'realtime-context-agent';
       const coachRetriever = event.component === 'realtime-coach-retriever' || event.component === 'realtime-coach-era-retriever';
       const coachRuntime = typeof event.component === 'string' && event.component.startsWith('realtime-coach') && !coachRetriever;
-      if (contextAgent || coachRuntime || eventType.startsWith('coach.gate.') || eventType.startsWith('coach.resolve.')) {
+      if (contextAgent) {
+        turn.legacySlowPath = true;
         turn.slowTriggered = true;
         const status = eventState(event);
+        turn.coach = status;
+        turn.coachLabel = isTimeout(event) ? 'Timeout' : status === 'active' ? '运行中'
+          : status === 'complete' ? '已完成' : status === 'warning' ? '注意'
+            : status === 'error' ? '失败' : status === 'skipped' ? '跳过' : '未观测';
+        turn.coachDetail = event.durationMs === undefined ? '' : displayDuration(event.durationMs);
+      }
+      if (eventType.startsWith('coach.gate.') && turn.triggerMode !== 'voice_tool') {
+        turn.slowTriggered = true;
+        const status = eventState(event);
+        turn.trigger = status;
+        turn.voiceTriggerEdge = status;
+        turn.triggerLabel = eventType === 'coach.gate.cancelled' ? '已取消'
+          : isTimeout(event) ? 'Timeout' : status === 'active' ? '判断中'
+            : status === 'complete' ? '已完成' : status === 'error' ? '失败'
+              : status === 'skipped' ? '已跳过' : '未观测';
+        const action = safeLabel(eventMetrics.action);
+        const reason = safeLabel(eventMetrics.reason);
+        const gateDuration = finite(eventMetrics.gateMs ?? event.durationMs);
+        turn.triggerDetail = action ? `action=${action}` : reason || (gateDuration === null ? '' : displayDuration(gateDuration));
         if (eventType === 'coach.gate.completed') {
-          if (typeof eventMetrics.retrieve_memory === 'boolean') turn.memoryRetrieverRequested = eventMetrics.retrieve_memory;
-          if (typeof eventMetrics.retrieve_era === 'boolean') turn.eraRetrieverRequested = eventMetrics.retrieve_era;
-        }
-        if (eventType === 'coach.gate.started') {
-          turn.trigger = 'complete'; turn.triggerLabel = '已触发';
-          turn.coach = 'active'; turn.coachLabel = '判断检索';
-          turn.coachContextEdge = 'active';
-        } else if (eventType === 'coach.gate.completed' && eventMetrics.retrieve_memory === false && eventMetrics.retrieve_era === false) {
-          turn.memoryRetrieverRequested = false;
-          turn.eraRetrieverRequested = false;
-          turn.coach = 'complete'; turn.coachLabel = '无需检索';
-          turn.retriever = 'skipped'; turn.retrieverLabel = '跳过'; turn.retrieverDetail = '本轮无需检索';
-          turn.memoryRetriever = 'skipped'; turn.eraRetriever = 'skipped'; syncRetrieverNode();
-          turn.context = 'skipped'; turn.contextLabel = '跳过'; turn.contextDetail = '本轮无需检索';
-          turn.slowStatus = '本轮无需检索';
-        } else if (eventType === 'coach.pipeline.timeout') {
-          markSlowTimeout('Coach Pipeline Timeout');
-          turn.slowStatus = 'Coach Pipeline Timeout';
-        } else if (eventType === 'coach.applied') {
-          turn.coach = 'complete'; turn.coachLabel = '提示已生成';
-          turn.coachContextEdge = 'complete';
-          if (event.metadata?.triggerMode === 'voice_tool') {
-            turn.contextResultReady = true; turn.context = 'active'; turn.contextLabel = '等待 Resume';
-            turn.contextDetail = 'Coach 提示已就绪，等待 Resume'; turn.contextVoiceEdge = 'active';
-          } else {
-            turn.context = 'complete'; turn.contextLabel = '已注入'; turn.contextDetail = 'Coach 提示已回到 Voice Model';
-            turn.contextVoiceEdge = 'complete';
+          if (typeof eventMetrics.retrieve_memory === 'boolean') {
+            turn.memoryRetrieverRequested = eventMetrics.retrieve_memory;
+            if (!eventMetrics.retrieve_memory) markRouteNotRequested('memoryRetriever');
           }
-        } else if (eventType === 'coach.skipped') {
-          turn.coach = 'skipped'; turn.coachLabel = '跳过';
-          turn.memoryRetrieverRequested = false;
-          turn.eraRetrieverRequested = false;
-          if (turn.retriever === 'waiting') turn.retriever = 'skipped';
-          if (turn.memoryRetriever === 'waiting') turn.memoryRetriever = 'skipped';
-          if (turn.eraRetriever === 'waiting') turn.eraRetriever = 'skipped';
-          syncRetrieverNode();
-          if (turn.context === 'waiting') { turn.context = 'skipped'; turn.contextDetail = '本轮无需检索'; }
-          turn.contextLabel = '跳过'; turn.slowStatus = '本轮无需检索';
+          if (typeof eventMetrics.retrieve_era === 'boolean') {
+            turn.eraRetrieverRequested = eventMetrics.retrieve_era;
+            if (!eventMetrics.retrieve_era) markRouteNotRequested('eraRetriever');
+          }
+          if (eventMetrics.retrieve_memory === false && eventMetrics.retrieve_era === false) {
+            turn.coach = 'skipped'; turn.coachLabel = 'N/A'; turn.coachDetail = '无需证据 Resolve';
+            turn.coachContextEdge = 'skipped';
+            turn.slowStatus = turn.scenario === 'onboarding' ? '快速 Voice · Coach sidecar' : '本轮未请求检索';
+          }
+        } else if (eventType === 'coach.gate.cancelled') {
+          if (turn.scenario === 'onboarding') {
+            markRouteNotRequested('memoryRetriever');
+            markRouteNotRequested('eraRetriever');
+          }
+          turn.coach = 'skipped'; turn.coachLabel = 'N/A'; turn.coachDetail = 'Gate 已取消';
+          turn.coachContextEdge = 'skipped';
+          turn.slowStatus = 'Gate 已取消';
+        } else if (status === 'error' || status === 'warning' || status === 'skipped') {
+          turn.slowStatus = turn.triggerLabel;
+        }
+      }
+      if (eventType.startsWith('coach.resolve.')) {
+        turn.slowTriggered = true;
+        const status = eventState(event);
+        turn.coach = status;
+        turn.coachLabel = isTimeout(event) ? 'Timeout' : status === 'active' ? '处理中'
+          : status === 'complete' ? '已完成' : status === 'warning' ? '注意'
+            : status === 'error' ? '失败' : status === 'skipped' ? '无证据' : '未观测';
+        turn.coachDetail = safeLabel(eventMetrics.skipReason) || (event.durationMs === undefined ? '' : displayDuration(event.durationMs));
+        const selected = finite(eventMetrics.selectedEvidenceCount);
+        if (selected !== null) turn.selectedEvidenceCount = selected;
+      }
+      if (eventType === 'coach.pipeline.timeout' || eventType === 'coach.pipeline.cancelled') {
+        if (eventType === 'coach.pipeline.cancelled') {
+          for (const key of ['memoryRetriever', 'eraRetriever']) {
+            if (turn[`${key}Requested`] === true && ['waiting', 'active'].includes(turn[key])) {
+              turn[key] = 'skipped'; turn[`${key}Label`] = '已取消';
+            }
+          }
+          if (['waiting', 'active'].includes(turn.coach)) { turn.coach = 'skipped'; turn.coachLabel = '已取消'; }
+          if (turn.context === 'waiting') { turn.context = 'skipped'; turn.contextLabel = '未生成'; }
+          turn.coachContextEdge = 'skipped';
+          turn.contextVoiceEdge = 'skipped';
         } else {
-          turn.coach = status;
-          turn.coachLabel = isTimeout(event) ? 'Timeout' : status === 'active' ? '分析中'
-            : status === 'complete' ? '已完成' : status === 'warning' ? '注意'
-              : status === 'error' ? '失败' : status === 'skipped' ? '跳过' : '等待';
-          if (safeLabel(eventMetrics.model)) state.model = safeLabel(eventMetrics.model);
-          if (safeLabel(eventMetrics.skill)) state.skill = safeLabel(eventMetrics.skill);
-          if (event.durationMs !== undefined) turn.coachDetail = displayDuration(event.durationMs);
-          const selected = finite(eventMetrics.selectedEvidenceCount);
-          if (selected !== null) turn.selectedEvidenceCount = selected;
-          turn.coachContextEdge = status === 'complete' ? 'complete' : status;
+          markSlowTimeout('Coach Pipeline Timeout');
         }
-        if (updateFallback(event)) {
-          turn.coachDetail = turn.coachDetail || 'Agent 超时';
-          turn.slowStatus = isTimeout(event) ? `Agent Timeout · ${turn.fallback}` : `已回退 · ${turn.fallback}`;
+        syncRetrieverNode();
+        turn.slowStatus = eventType === 'coach.pipeline.cancelled' ? 'Coach Pipeline 已取消' : 'Coach Pipeline Timeout';
+      }
+      if (eventType === 'coach.applied' || eventType === 'coach.packet.queued'
+        || eventType === 'coach.packet.consumed' || eventType === 'coach.packet.stale_dropped'
+        || eventType === 'coach.skipped') {
+        turn.slowTriggered = true;
+        const reason = safeLabel(eventMetrics.reason);
+        if (eventType === 'coach.packet.queued') {
+          turn.context = 'complete'; turn.contextLabel = '下一轮已排队';
+          turn.contextDetail = 'Onboarding Coach sidecar · 下一轮指导';
+          turn.contextVoiceEdge = 'complete';
+        } else if (eventType === 'coach.packet.consumed') {
+          turn.context = 'complete'; turn.contextLabel = '已消费'; turn.contextDetail = '下一轮 response.create 已使用';
+        } else if (eventType === 'coach.packet.stale_dropped') {
+          turn.context = 'warning'; turn.contextLabel = '已过期丢弃'; turn.contextDetail = reason || 'Packet 已失效';
+        } else if (eventType === 'coach.applied') {
+          turn.context = 'complete'; turn.contextLabel = '已应用';
+          turn.contextDetail = turn.triggerMode === 'voice_tool' ? 'Coach Packet · 等待 Tool Result'
+            : 'Coach Packet 随 response.create 应用';
+        } else if (reason === 'normal' || eventMetrics.action === 'none') {
+          turn.context = 'skipped'; turn.contextLabel = 'N/A'; turn.contextDetail = 'Gate 未生成 Coach Packet';
+        } else {
+          turn.context = 'skipped'; turn.contextLabel = '未生成'; turn.contextDetail = reason || 'Coach 已跳过';
         }
+        turn.contextVoiceEdge = event.status === 'warning' ? 'warning' : event.status === 'skip' ? 'skipped' : 'complete';
+        if (eventType === 'coach.skipped' && (reason === 'normal' || eventMetrics.action === 'none')) turn.slowStatus = 'Coach 未介入';
+      }
+      if (coachRuntime) {
+        turn.slowTriggered = true;
+        updateFallback(event);
+        if (finite(eventMetrics.totalMs ?? event.durationMs) !== null) turn.slowLatencyMs = finite(eventMetrics.totalMs ?? event.durationMs);
       }
 
       if (eventType === 'evidence.ready') {
@@ -653,7 +740,9 @@ try {
       const timingEvent = event.component === 'nemo-retriever' || event.component === 'realtime-context-agent'
         || event.component?.startsWith('realtime-coach') || event.component === 'realtime-slow-path'
         || event.component === 'realtime-tool-cycle' || event.component === 'realtime-tool'
-        || event.eventType === 'realtime.resume';
+        || event.eventType === 'realtime.resume' || event.eventType === 'realtime.responding'
+        || event.eventType === 'realtime.first_text'
+        || event.eventType === 'realtime.first_audio';
       const duration = document.createElement('span');
       duration.textContent = finite(event.durationMs) !== null ? displayDuration(event.durationMs) : timingEvent ? '—' : '';
       title.append(titleText, duration);
@@ -679,6 +768,40 @@ try {
     };
     const render = () => {
       const turn = state.turn;
+      const mode = turn.triggerMode || state.memoryTriggerMode;
+      const scenarioNames = {
+        onboarding: 'Onboarding', story_create: 'Story Create', story_continue: 'Story Continue', contributor: 'Contributor',
+      };
+      const scenarioName = scenarioNames[turn.scenario] || '未知';
+      const voiceToolEligible = mode === 'voice_tool' && turn.scenario === 'story_continue';
+      if (triggerModeLabel) triggerModeLabel.textContent = mode === 'supervisor_auto' || mode === 'voice_tool' ? mode : '未知';
+      if (scenarioLabel) scenarioLabel.textContent = scenarioName;
+      if (triggerKicker) triggerKicker.textContent = turn.legacySlowPath ? 'REALTIME SLOW PATH'
+        : mode === 'supervisor_auto' ? 'SUPERVISOR GATE' : mode === 'voice_tool' ? 'VOICE TOOL' : 'TRIGGER';
+      if (triggerTitle) triggerTitle.textContent = turn.legacySlowPath ? 'Slow Path'
+        : mode === 'supervisor_auto' ? 'Gate' : mode === 'voice_tool' ? voiceToolEligible ? 'Tool Call' : 'N/A' : '未知';
+      if (resolveKicker) resolveKicker.textContent = turn.legacySlowPath ? 'CONTEXT AGENT' : 'COACH RESOLVE';
+      if (resolveTitle) resolveTitle.textContent = turn.legacySlowPath ? 'Context Agent'
+        : turn.scenario === 'onboarding' ? 'N/A · Onboarding' : 'Resolve';
+      if (packetKicker) packetKicker.textContent = voiceToolEligible ? 'TOOL RESULT / RESUME' : 'COACH PACKET';
+      if (packetTitle) packetTitle.textContent = voiceToolEligible ? 'Tool Result' : 'Coach Packet';
+      if (toolResultLabel) toolResultLabel.textContent = `Tool Result · ${turn.toolResultLabel}`;
+      if (resumeLabel) resumeLabel.textContent = `Resume · ${turn.resumeLabel}`;
+      if (voiceRouteLabel) voiceRouteLabel.textContent = turn.legacySlowPath
+        ? 'Realtime Slow Path → Context Hint → Voice'
+        : mode === 'supervisor_auto' && turn.scenario === 'onboarding'
+          ? turn.contextLabel === '下一轮已排队' ? 'Mini 本轮立即回复 · Coach 指导已排到下一轮' : 'Mini 立即回复 · Coach 旁路分析'
+          : mode === 'supervisor_auto' && turn.scenario === 'story_continue'
+            ? 'Gate → 按需 Memory / Era → Resolve → Coach Packet → Voice'
+            : mode === 'supervisor_auto' ? 'Gate → Coach Packet → response.create'
+              : voiceToolEligible ? 'Tool Call → Memory → Resolve → Tool Result → Resume'
+                : mode === 'voice_tool' ? '本场景不启用检索 Tool' : 'Voice 路径未观测';
+      if (turn.legacySlowPath) {
+        if (memoryRouteLabel) memoryRouteLabel.textContent = `Memory · ${turn.retrieverLabel || '未观测'}`;
+        if (eraRouteLabel) eraRouteLabel.textContent = 'Era · N/A';
+      } else {
+        syncRetrieverNode();
+      }
       if (turnLabel) turnLabel.textContent = turn.number > 0 ? `TURN #${turn.number}` : 'TURN —';
       if (environmentLabel) environmentLabel.textContent = state.environment ? `LOCAL / ${state.environment}` : 'LOCAL';
       if (modelLabel) modelLabel.textContent = state.voiceModel || 'Voice Model';
@@ -701,6 +824,7 @@ try {
       setEdge('edge-retriever-coach', turn.retrieverCoachEdge);
       setEdge('edge-coach-context', turn.coachContextEdge);
       setEdge('edge-context-voice', turn.contextVoiceEdge);
+      if (metrics['metric-first-text']) metrics['metric-first-text'].textContent = displayDuration(turn.firstTextMs);
       if (metrics['metric-first-audio']) metrics['metric-first-audio'].textContent = displayDuration(turn.firstAudioMs);
       if (metrics['metric-slow-latency']) metrics['metric-slow-latency'].textContent = displayDuration(turn.slowLatencyMs);
       if (metrics['metric-evidence']) {

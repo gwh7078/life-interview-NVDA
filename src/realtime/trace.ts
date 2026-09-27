@@ -52,6 +52,8 @@ const SAFE_TRACE_FIELD_KEYS = [
   'voiceModel',
   'voiceProfile',
   'coachModel',
+  'coachSourceTurnId',
+  'coachSourceContextVersion',
   'scenario',
   'action',
   'retrieve_memory',

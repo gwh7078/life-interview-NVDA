@@ -20,7 +20,7 @@ const numericMetrics = [
   'toolResultWriteLatencyMs', 'toolCycleLatencyMs',
   'retriever_ms', 'agent_ms', 'total_slow_ms', 'hold_ms',
   'silenceObservedMs', 'silenceThresholdMs',
-  'gate_ms', 'retrieval_ms', 'era_retrieval_ms', 'resolve_ms', 'total_ms', 'packetChars',
+  'gate_ms', 'retrieval_ms', 'era_retrieval_ms', 'resolve_ms', 'total_ms', 'packetChars', 'elapsedMs', 'chars',
   'memory_retrieval_ms',
   'queryChars', 'startYear', 'endYear', 'contextVersion', 'memoryEvidenceCount', 'eraEvidenceCount',
 ] as const;
@@ -124,39 +124,42 @@ interface Mapping {
 }
 
 function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
-  const coachStage = /^coach\.(gate|retrieval|era_retrieval|resolve|pipeline)\.(started|completed|timeout|failed|skipped)$/u.exec(event);
+  const coachStage = /^coach\.(gate|retrieval|era_retrieval|resolve|pipeline)\.(started|completed|timeout|failed|skipped|cancelled)$/u.exec(event);
   if (coachStage) {
     const [, stage, status] = coachStage;
     if (stage === 'pipeline') return {
       category: 'runtime',
       eventType: `coach.pipeline.${status}`,
-      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' || status === 'cancelled' ? 'skip' : 'running',
       title: status === 'timeout' ? 'COACH PIPELINE TIMEOUT' : `COACH PIPELINE ${status.toUpperCase()}`,
       component: 'realtime-coach-pipeline',
     };
     if (stage === 'retrieval') return {
       category: 'retriever',
       eventType: `coach.retrieval.${status}`,
-      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' || status === 'cancelled' ? 'skip' : 'running',
       title: status === 'started' ? 'COACH MEMORY RETRIEVER RUNNING' : `COACH MEMORY RETRIEVER ${status.toUpperCase()}`,
       component: 'realtime-coach-retriever',
     };
     if (stage === 'era_retrieval') return {
       category: 'retriever',
       eventType: `coach.era_retrieval.${status}`,
-      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' || status === 'cancelled' ? 'skip' : 'running',
       title: status === 'started' ? 'COACH ERA RETRIEVAL RUNNING' : `COACH ERA RETRIEVAL ${status.toUpperCase()}`,
       component: 'realtime-coach-era-retriever',
     };
     return {
       category: 'runtime',
       eventType: `coach.${stage}.${status}`,
-      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' ? 'skip' : 'running',
-      title: `COACH ${stage.toUpperCase()} ${status.toUpperCase()}`,
+      status: status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'timeout' ? 'warning' : status === 'skipped' || status === 'cancelled' ? 'skip' : 'running',
+      title: stage === 'gate' && status === 'cancelled' ? 'COACH GATE CANCELLED' : `COACH ${stage.toUpperCase()} ${status.toUpperCase()}`,
       component: stage === 'gate' ? 'realtime-coach-gate' : 'realtime-coach-resolve',
     };
   }
   if (event === 'coach.applied') return { category: 'runtime', eventType: event, status: 'success', title: 'COACH APPLIED', component: 'realtime-coach' };
+  if (event === 'coach.packet.queued') return { category: 'runtime', eventType: event, status: 'success', title: 'COACH PACKET QUEUED', component: 'realtime-coach-packet' };
+  if (event === 'coach.packet.consumed') return { category: 'runtime', eventType: event, status: 'success', title: 'COACH PACKET CONSUMED', component: 'realtime-coach-packet' };
+  if (event === 'coach.packet.stale_dropped') return { category: 'runtime', eventType: event, status: 'warning', title: 'COACH PACKET STALE', component: 'realtime-coach-packet' };
   if (event === 'coach.skipped') return { category: 'runtime', eventType: event, status: 'warning', title: 'COACH SKIPPED', component: 'realtime-coach' };
   const slowStage = slowStageMapping(event);
   if (slowStage) return slowStage;
@@ -172,7 +175,9 @@ function mapTrace(event: string, fields: SafeFields): Mapping | undefined {
   if (event === 'provider.speech_started') return { category: 'realtime', eventType: 'realtime.user_speaking', status: 'running', title: 'USER SPEAKING', component: 'realtime-provider' };
   if (event === 'provider.speech_stopped_received' || event === 'provider.speech_stopped_forwarded') return { category: 'realtime', eventType: 'realtime.listening', status: 'running', title: 'LISTENING', component: 'realtime-provider' };
   if (event === 'provider.response_created') return { category: 'realtime', eventType: 'realtime.model_thinking', status: 'running', title: 'AI THINKING', component: 'realtime-provider' };
-  if (event === 'provider.audio_started' || event === 'provider.first_audio_received') return { category: 'realtime', eventType: 'realtime.responding', status: 'running', title: 'AI SPEAKING', component: 'realtime-provider' };
+  if (event === 'provider.first_assistant_transcript_received') return { category: 'realtime', eventType: 'realtime.first_text', status: 'success', title: 'FIRST ASSISTANT TEXT', component: 'realtime-provider' };
+  if (event === 'provider.audio_started') return { category: 'realtime', eventType: 'realtime.responding', status: 'running', title: 'AI SPEAKING', component: 'realtime-provider' };
+  if (event === 'provider.first_audio_received') return { category: 'realtime', eventType: 'realtime.first_audio', status: 'success', title: 'FIRST AUDIO', component: 'realtime-provider' };
   if (event === 'provider.user_transcription_completed') return { category: 'realtime', eventType: 'realtime.turn_committed', status: 'success', title: 'USER TURN COMMITTED', component: 'realtime-provider' };
   if (event === 'provider.response_done' || event === 'client.playback_response_drained') return { category: 'realtime', eventType: 'realtime.listening', status: 'success', title: 'RESPONSE COMPLETE', component: 'realtime-provider' };
   if (event === 'client.playback_interruption') return { category: 'realtime', eventType: 'realtime.interrupted', status: 'warning', title: 'INTERRUPTED', component: 'realtime-client' };
@@ -271,6 +276,18 @@ export function adaptRealtimeTrace(input: {
     && typeof fields.status === 'string' && SAFE_TOOL_RESULT_STATUSES.has(fields.status)) metrics.resultStatus = fields.status;
   if (typeof fields.outcome === 'string') metrics.outcome = safeLabel(fields.outcome) ?? 'unknown';
   if (typeof fields.fallbackUsed === 'boolean') metrics.fallbackUsed = fields.fallbackUsed;
+  if (event === 'provider.first_assistant_transcript_received') {
+    const elapsedMs = numberField(fields, 'elapsedMs');
+    if (elapsedMs !== undefined) metrics.firstTextLatencyMs = elapsedMs;
+  }
+  if (event === 'provider.first_audio_received') {
+    const elapsedMs = numberField(fields, 'elapsedMs');
+    if (elapsedMs !== undefined) metrics.responseFirstAudioMs = elapsedMs;
+  }
+  if (event === 'provider.audio_started') {
+    const elapsedMs = numberField(fields, 'elapsedMs');
+    if (elapsedMs !== undefined) metrics.playbackStartLatencyMs = elapsedMs;
+  }
   if (typeof fields.retrieve_memory === 'boolean') metrics.retrieve_memory = fields.retrieve_memory;
   if (typeof fields.retrieve_era === 'boolean') metrics.retrieve_era = fields.retrieve_era;
   if (typeof fields.skipReason === 'string' && SAFE_SKIP_REASONS.has(fields.skipReason)) metrics.skipReason = fields.skipReason;
@@ -292,7 +309,9 @@ export function adaptRealtimeTrace(input: {
   if (numberField(fields, 'candidateCount') !== undefined) metrics.candidateCount = numberField(fields, 'candidateCount')!;
 
   const count = numberField(fields, 'factCount');
-  const latency = event.startsWith('slow.retriever.')
+  const latency = event === 'provider.first_assistant_transcript_received' || event === 'provider.audio_started' || event === 'provider.first_audio_received'
+    ? numberField(fields, 'elapsedMs')
+    : event.startsWith('slow.retriever.')
     ? numberField(fields, 'retriever_ms') ?? numberField(fields, 'latencyMs')
     : event.startsWith('slow.agent.')
       ? numberField(fields, 'agent_ms') ?? numberField(fields, 'latencyMs')
@@ -320,7 +339,7 @@ export function adaptRealtimeTrace(input: {
                 ? numberField(fields, 'resolve_ms')
                 : event.startsWith('coach.pipeline.')
                   ? numberField(fields, 'total_ms')
-                : event === 'coach.applied' || event === 'coach.skipped'
+                : event === 'coach.applied' || event === 'coach.packet.queued' || event === 'coach.skipped'
                   ? numberField(fields, 'total_ms')
           : numberField(fields, 'slowAgentLatencyMs') ?? numberField(fields, 'slowRecallLatencyMs') ?? numberField(fields, 'latencyMs');
   const summary = mapping.category === 'retriever'
@@ -352,6 +371,7 @@ export function adaptRealtimeTrace(input: {
       ...(safeLabel(fields.voiceProfile) ? { voiceProfile: safeLabel(fields.voiceProfile) } : {}),
       ...(normalizedTrigger(fields.memoryTriggerMode) ? { memoryTriggerMode: normalizedTrigger(fields.memoryTriggerMode) } : {}),
       ...(normalizedTrigger(fields.triggerMode) ? { triggerMode: normalizedTrigger(fields.triggerMode) } : {}),
+      ...(safeLabel(fields.scenario) ? { scenario: safeLabel(fields.scenario) } : {}),
       ...(safeLabel(fields.coachModel) ? { coachModel: safeLabel(fields.coachModel) } : {}),
       ...(safeLabel(fields.retriever) ? { retriever: safeLabel(fields.retriever) } : {}),
       ...(safeLabel(fields.contextAgent) ? { contextAgent: safeLabel(fields.contextAgent) } : {}),

@@ -241,6 +241,8 @@ interface ProviderAudioTrace {
   chunks: number;
   bytes: number;
   responseStartedAt: number;
+  firstTranscriptAt?: number;
+  firstAudioStartedAt?: number;
   firstDeltaAt?: number;
   lastDeltaAt?: number;
   maxGapMs: number;
@@ -2311,14 +2313,62 @@ function createRealtimeHandler(
   const supervisorAutoSelected = (): boolean => miniProfileSelected()
     && sessionContext?.memoryTriggerMode === 'supervisor_auto';
   let activeCoachController: AbortController | undefined;
+  let activeCoachTraceFields: RealtimeTraceFields | undefined;
+  let activeCoachStage: 'gate' | 'pipeline' | undefined;
+  let pendingOnboardingCoachPacket: {
+    packet: string;
+    sourceTurnId: string;
+    sourceContextVersion: number;
+    sessionId: string;
+    expiresAt: number;
+  } | undefined;
   const recentCoachContext: CoachConversationMessage[] = [];
   let latestUserAnswer = '';
   const supervisorCoachMessageIds = new Set<string>();
+
+  const consumePendingOnboardingCoachPacket = (
+    turnId: string,
+    version: number,
+    traceFields: RealtimeTraceFields,
+  ): { packet: string; sourceTurnId: string; sourceContextVersion: number } | undefined => {
+    const pending = pendingOnboardingCoachPacket;
+    if (!pending) return undefined;
+    pendingOnboardingCoachPacket = undefined;
+    const currentSessionId = interviewSession?.sessionId;
+    const reason = performance.now() >= pending.expiresAt
+      ? 'expired'
+      : currentSessionId !== pending.sessionId ? 'session_changed'
+        : pending.sourceContextVersion + 1 !== version ? 'next_turn_mismatch' : undefined;
+    if (reason) {
+      recordTrace('coach.packet.stale_dropped', {
+        ...traceFields,
+        turnId,
+        coachSourceTurnId: pending.sourceTurnId,
+        coachSourceContextVersion: pending.sourceContextVersion,
+        reason,
+      });
+      return undefined;
+    }
+    recordTrace('coach.packet.consumed', {
+      ...traceFields,
+      turnId,
+      coachSourceTurnId: pending.sourceTurnId,
+      coachSourceContextVersion: pending.sourceContextVersion,
+      packetChars: Array.from(pending.packet).length,
+    });
+    return {
+      packet: pending.packet,
+      sourceTurnId: pending.sourceTurnId,
+      sourceContextVersion: pending.sourceContextVersion,
+    };
+  };
 
   const sendMiniResponse = (input: {
     turnId: string;
     version: number;
     packet?: string;
+    coachSourceTurnId?: string;
+    coachSourceContextVersion?: number;
     traceFields: RealtimeTraceFields;
   }): boolean => {
     if (!sessionContext || !selectedAdapter?.requestAssistantTurnMessages
@@ -2345,6 +2395,8 @@ function createRealtimeHandler(
       recordTrace('coach.applied', {
         ...input.traceFields,
         turnId: input.turnId,
+        ...(input.coachSourceTurnId ? { coachSourceTurnId: input.coachSourceTurnId } : {}),
+        ...(input.coachSourceContextVersion === undefined ? {} : { coachSourceContextVersion: input.coachSourceContextVersion }),
         packetChars: Array.from(input.packet).length,
       });
     } else if (!sent) {
@@ -2356,9 +2408,19 @@ function createRealtimeHandler(
   const runSupervisorCoach = (text: string, turnId: string, version: number): void => {
     const context = sessionContext;
     if (!supervisorAutoSelected() || !context) return;
-    activeCoachController?.abort('superseded');
+    if (activeCoachController && !activeCoachController.signal.aborted) {
+      activeCoachController.abort('superseded');
+      recordTrace(activeCoachStage === 'pipeline' ? 'coach.pipeline.cancelled' : 'coach.gate.cancelled', {
+        ...(activeCoachTraceFields ?? {}),
+        reason: 'new_user_turn_started',
+      });
+    }
+    activeCoachController = undefined;
+    activeCoachTraceFields = undefined;
+    activeCoachStage = undefined;
     const controller = new AbortController();
     activeCoachController = controller;
+    activeCoachStage = 'gate';
     const startedAt = performance.now();
     const totalBudgetMs = Math.min(config.realtimeCoachTotalTimeoutMs ?? DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS, DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS);
     const totalDeadlineAt = startedAt + totalBudgetMs;
@@ -2375,11 +2437,15 @@ function createRealtimeHandler(
       turnId,
       contextVersion: version,
     };
+    activeCoachTraceFields = traceFields;
+    const immediateOnboarding = baseGate.scenario === 'onboarding';
     let responseRequested = false;
+    let fastResponseSent = false;
     const isTurnCurrent = (): boolean => phase === 'active'
       && currentTurnId === turnId
       && contextVersion === version;
-    const isCurrent = (): boolean => isTurnCurrent() && !controller.signal.aborted && !responseRequested;
+    const isCurrent = (): boolean => isTurnCurrent() && !controller.signal.aborted
+      && (fastResponseSent || !responseRequested);
     const respondOnce = (packet: string | undefined, fields: RealtimeTraceFields): boolean => {
       if (!isTurnCurrent() || responseRequested) return false;
       responseRequested = true;
@@ -2401,11 +2467,59 @@ function createRealtimeHandler(
         failOpen('coach_total_timeout', fields);
         return;
       }
+      if (fastResponseSent) {
+        if (!packet) return;
+        const sessionId = interviewSession?.sessionId;
+        if (!sessionId) {
+          recordTrace('coach.skipped', { ...traceFields, ...fields, reason: 'onboarding_packet_scope_unavailable' });
+          return;
+        }
+        pendingOnboardingCoachPacket = {
+          packet,
+          sourceTurnId: turnId,
+          sourceContextVersion: version,
+          sessionId,
+          expiresAt: performance.now() + 30_000,
+        };
+        recordTrace('coach.packet.queued', {
+          ...traceFields,
+          ...fields,
+          turnId,
+          coachSourceTurnId: turnId,
+          coachSourceContextVersion: version,
+          packetChars: Array.from(packet).length,
+        });
+        return;
+      }
       respondOnce(packet, fields);
     };
 
+    if (immediateOnboarding) {
+      const pendingPacket = consumePendingOnboardingCoachPacket(turnId, version, traceFields);
+      fastResponseSent = sendMiniResponse({
+        turnId,
+        version,
+        ...(pendingPacket ? {
+          packet: pendingPacket.packet,
+          coachSourceTurnId: pendingPacket.sourceTurnId,
+          coachSourceContextVersion: pendingPacket.sourceContextVersion,
+        } : {}),
+        traceFields,
+      });
+      responseRequested = fastResponseSent;
+    }
+
     if (!dependencies.realtimeCoach) {
-      failOpen('coach_not_configured');
+      if (immediateOnboarding && fastResponseSent) {
+        recordTrace('coach.skipped', { ...traceFields, reason: 'coach_not_configured' });
+      } else {
+        failOpen('coach_not_configured');
+      }
+      if (activeCoachController === controller) {
+        activeCoachController = undefined;
+        activeCoachTraceFields = undefined;
+        activeCoachStage = undefined;
+      }
       return;
     }
 
@@ -2585,6 +2699,7 @@ function createRealtimeHandler(
           });
         },
       });
+      activeCoachStage = 'pipeline';
       const remaining = Math.max(0, totalDeadlineAt - performance.now());
       const pipelineOutcome = await settleWithin(pipelinePromise, remaining);
       const totalMs = Number((performance.now() - startedAt).toFixed(2));
@@ -2640,6 +2755,12 @@ function createRealtimeHandler(
       });
     }).catch(() => {
       if (isTurnCurrent()) failOpen('coach_pipeline_failed');
+    }).finally(() => {
+      if (activeCoachController === controller) {
+        activeCoachController = undefined;
+        activeCoachTraceFields = undefined;
+        activeCoachStage = undefined;
+      }
     });
   };
 
@@ -3542,8 +3663,16 @@ function createRealtimeHandler(
 
     if (event.type === 'speech.started') {
       if (!selectedAdapter?.capabilities.manualTurnControl) slowCoordinator.cancel();
-      activeCoachController?.abort('new-speech');
+      if (activeCoachController && !activeCoachController.signal.aborted) {
+        activeCoachController.abort('new-speech');
+        recordTrace(activeCoachStage === 'pipeline' ? 'coach.pipeline.cancelled' : 'coach.gate.cancelled', {
+          ...(activeCoachTraceFields ?? {}),
+          reason: 'next_user_speech_started',
+        });
+      }
       activeCoachController = undefined;
+      activeCoachTraceFields = undefined;
+      activeCoachStage = undefined;
       clearUserTurnStallWatchdog();
       userTurnRecoveryAttempted = false;
       pendingSpeech = true;
@@ -3754,6 +3883,18 @@ function createRealtimeHandler(
       response.partialText += event.delta;
       if (event.itemId) response.itemId = event.itemId;
       assistantResponses.set(responseId, response);
+      if (event.delta.trim()) {
+        const stats = getProviderAudioTrace(responseId);
+        if (stats.firstTranscriptAt === undefined) {
+          stats.firstTranscriptAt = performance.now();
+          recordTrace('provider.first_assistant_transcript_received', {
+            responseId,
+            eventId: event.eventId,
+            chars: event.delta.length,
+            elapsedMs: stats.firstTranscriptAt - stats.responseStartedAt,
+          });
+        }
+      }
       recordTrace('provider.assistant_transcript_delta_received', {
         responseId,
         eventId: event.eventId,
@@ -3796,7 +3937,13 @@ function createRealtimeHandler(
     }
 
     if (event.type === 'assistant.audio.started') {
-      recordTrace('provider.audio_started', { responseId: event.responseId, ttsType: event.ttsType });
+      const stats = getProviderAudioTrace(event.responseId);
+      if (stats.firstAudioStartedAt === undefined) stats.firstAudioStartedAt = performance.now();
+      recordTrace('provider.audio_started', {
+        responseId: event.responseId,
+        ttsType: event.ttsType,
+        elapsedMs: stats.firstAudioStartedAt - stats.responseStartedAt,
+      });
       send({ type: 'assistant_audio_started', responseId: event.responseId, ttsType: event.ttsType });
       return;
     }
@@ -4579,6 +4726,9 @@ function createRealtimeHandler(
       observationProvider = providerName;
       recordTrace('session.started', {
         lifecycle: phase,
+        scenario: sessionContext?.interview_type === 'onboarding' ? 'onboarding'
+          : sessionContext?.interview_type === 'external_contributor' ? 'contributor'
+            : sessionContext?.task_context?.mode !== 'create' && sessionContext?.story ? 'story_continue' : 'story_create',
         voiceProfile: providerName === 'stepaudio3_quality'
           ? 'stepaudio3_quality'
           : providerName === 'stepaudio2_mini' || providerName === 'stepfun'

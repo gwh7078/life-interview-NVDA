@@ -222,7 +222,7 @@
           <strong>WAITING</strong>
           <span>开始采访后，这里会实时展示语音、检索、Agent 与上下文注入链路。</span>
         </p>
-        <section class="tech-architecture" aria-label="Fast Voice 与 Slow Coach 架构链路">
+        <section class="tech-architecture" aria-label="Fast Voice 与 Realtime Coach 架构链路">
           <p class="tech-lane-label">FAST VOICE</p>
           <div class="tech-fast-flow">
             <div class="tech-node" id="tech-node-user" data-state="waiting">
@@ -239,32 +239,36 @@
             </div>
           </div>
           <div class="tech-branch-stem" id="tech-edge-voice-trigger" aria-hidden="true"></div>
-          <p class="tech-lane-label tech-lane-slow">SLOW COACH <span id="tech-observer-slow-status">等待本轮信号</span></p>
+          <p class="tech-lane-label tech-lane-slow">COACH ROUTE <span>触发 <strong id="tech-observer-trigger-mode">未知</strong> · 场景 <strong id="tech-observer-scenario">未知</strong></span></p>
+          <p class="tech-lane-label"><span id="tech-observer-slow-status">等待本轮信号</span></p>
           <div class="tech-slow-flow">
             <div class="tech-node" id="tech-node-trigger" data-state="waiting">
-              <span class="tech-node-kicker">TOOL TRIGGER</span><strong>Tool Trigger</strong><span class="tech-node-state" id="tech-node-trigger-state">等待</span>
+              <span class="tech-node-kicker" id="tech-node-trigger-kicker">TRIGGER</span><strong id="tech-node-trigger-title">未知</strong><span class="tech-node-state" id="tech-node-trigger-state">未观测</span>
               <span class="tech-node-detail" id="tech-node-trigger-detail"></span>
             </div>
             <span class="tech-edge" id="tech-edge-trigger-retriever" aria-hidden="true">→</span>
             <div class="tech-node" id="tech-node-retriever" data-state="waiting">
-              <span class="tech-node-kicker">RETRIEVER</span><strong>NeMo Retriever</strong><span class="tech-node-state" id="tech-node-retriever-state">等待</span>
-              <span class="tech-node-detail" id="tech-node-retriever-detail"></span>
+              <span class="tech-node-kicker">RETRIEVALS</span><strong>Memory / Era</strong><span class="tech-node-state" id="tech-node-retriever-state">未观测</span>
+              <span class="tech-node-detail" id="tech-node-memory-route">Memory · 未观测</span>
+              <span class="tech-node-detail" id="tech-node-era-route">Era · 未观测</span>
             </div>
             <span class="tech-edge" id="tech-edge-retriever-coach" aria-hidden="true">→</span>
             <div class="tech-node" id="tech-node-coach" data-state="waiting">
-              <span class="tech-node-kicker">COACH AGENT</span><strong>Coach Agent</strong><span class="tech-node-state" id="tech-node-coach-state">等待</span>
+              <span class="tech-node-kicker" id="tech-node-coach-kicker">COACH RESOLVE</span><strong id="tech-node-coach-title">Resolve</strong><span class="tech-node-state" id="tech-node-coach-state">未观测</span>
               <span class="tech-node-detail" id="tech-node-coach-detail"></span>
             </div>
             <span class="tech-edge" id="tech-edge-coach-context" aria-hidden="true">→</span>
             <div class="tech-node" id="tech-node-context" data-state="waiting">
-              <span class="tech-node-kicker">CONTEXT INJECTION</span><strong>Context Injection</strong><span class="tech-node-state" id="tech-node-context-state">等待</span>
+              <span class="tech-node-kicker" id="tech-node-context-kicker">COACH PACKET</span><strong id="tech-node-context-title">Coach Packet</strong><span class="tech-node-state" id="tech-node-context-state">未观测</span>
               <span class="tech-node-detail" id="tech-node-context-detail"></span>
+              <span class="tech-node-detail" id="tech-node-tool-result">Tool Result · 未观测</span>
+              <span class="tech-node-detail" id="tech-node-resume">Resume · 未观测</span>
             </div>
           </div>
-          <div class="tech-return-edge" id="tech-edge-context-voice" data-state="waiting"><span aria-hidden="true">↶</span> 回注 Voice Model</div>
+          <div class="tech-return-edge" id="tech-edge-context-voice" data-state="waiting"><span aria-hidden="true">↶</span> <span id="tech-route-voice-label">Voice 路径未观测</span></div>
         </section>
         <section class="tech-key-metrics" aria-label="本轮关键指标">
-          <div><span>首段语音</span><strong id="tech-metric-first-audio">—</strong></div>
+          <div><span>回复→首段文字 · 回复→首段语音</span><strong><span id="tech-metric-first-text">—</span> · <span id="tech-metric-first-audio">—</span></strong></div>
           <div><span>慢系统耗时</span><strong id="tech-metric-slow-latency">—</strong></div>
           <div><span>检索命中 → 采用</span><strong id="tech-metric-evidence">—</strong></div>
           <div><span>Tool Calls</span><strong id="tech-metric-tool-count">—</strong></div>

@@ -79,6 +79,8 @@ function scenarioState(context: RealtimeInterviewContext): Record<string, unknow
     return {
       mode: context.taskContext.mode,
       profile: definedText(context.profile, ['name', 'birth_place', 'birth_date', 'current_city', 'current_status', 'occupation'], 100),
+      timeline_route: ['早年环境/家庭', '学校', '青少年/大学/职业训练（适用时）', '工作', '重要城市/职业/家庭/身份变化', '当前生活'],
+      timeline_progress_rule: '只凭 onboarding_history 与近期问答判断当前、已覆盖或未知；profile 不证明阶段已覆盖，不推断未提及事实。',
       onboarding_history: onboardingHistory(context),
     };
   }
