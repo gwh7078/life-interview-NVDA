@@ -936,6 +936,64 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
       return;
     }
 
+    if (url.pathname === '/api/observability/platform' && request.method === 'GET') {
+      const authContext = authService.resolveToken(readAuthCookie(request.headers.cookie));
+      if (!authContext) {
+        sendJson(response, 401, { error: '请先登录。', errorCode: 'AUTH_REQUIRED' });
+        return;
+      }
+      const telemetryPath = process.env.SPARK_TELEMETRY_PATH?.trim();
+      if (!telemetryPath) {
+        sendJson(response, 404, { available: false, errorCode: 'PLATFORM_TELEMETRY_UNAVAILABLE' });
+        return;
+      }
+      try {
+        const raw = JSON.parse(readFileSync(path.resolve(telemetryPath), 'utf8')) as unknown;
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('invalid telemetry');
+        const telemetry = raw as Record<string, unknown>;
+        const object = (value: unknown): Record<string, unknown> =>
+          value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+        const finiteOrNull = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isFinite(value) ? value : null;
+        const textOrNull = (value: unknown): string | null =>
+          typeof value === 'string' && value.length <= 120 ? value : null;
+        const gpu = object(telemetry.gpu);
+        const memory = object(telemetry.system_memory);
+        const swap = object(telemetry.swap);
+        const services = object(telemetry.services);
+        const allowedServices = ['Text Model', 'Coach', 'Voice', 'Retriever', 'NemoClaw'] as const;
+        const safeServices = Object.fromEntries(allowedServices.map((name) => {
+          const value = services[name];
+          return [name, value === 'RUNNING' || value === 'DEGRADED' || value === 'STOPPED' || value === 'UNKNOWN'
+            ? value : 'UNKNOWN'];
+        }));
+        response.setHeader('Cache-Control', 'no-store');
+        sendJson(response, 200, {
+          available: true,
+          capturedAt: textOrNull(telemetry.captured_at),
+          platform: textOrNull(telemetry.platform),
+          architecture: textOrNull(telemetry.architecture),
+          gpu: {
+            utilizationPct: finiteOrNull(gpu.utilization_pct),
+            memoryUsedMiB: finiteOrNull(gpu.memory_used_mib),
+            memoryTotalMiB: finiteOrNull(gpu.memory_total_mib),
+          },
+          systemMemory: {
+            totalBytes: finiteOrNull(memory.total_bytes),
+            availableBytes: finiteOrNull(memory.available_bytes),
+          },
+          swap: {
+            totalBytes: finiteOrNull(swap.total_bytes),
+            freeBytes: finiteOrNull(swap.free_bytes),
+          },
+          services: safeServices,
+        });
+      } catch {
+        sendJson(response, 503, { available: false, errorCode: 'PLATFORM_TELEMETRY_UNAVAILABLE' });
+      }
+      return;
+    }
+
     if (url.pathname === '/api/observability/events' && request.method === 'GET') {
       const authToken = readAuthCookie(request.headers.cookie);
       const authContext = authService.resolveToken(authToken);
