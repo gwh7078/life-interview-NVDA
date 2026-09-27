@@ -71,6 +71,7 @@ choice is a true GB10 compatibility task, not a second product implementation.
 ./deploy/spark/start.sh
 ./deploy/spark/status.sh
 ./deploy/spark/restart.sh
+./deploy/spark/benchmark.sh
 ./deploy/spark/stop.sh
 ```
 
@@ -88,7 +89,7 @@ Retriever data, model caches, NemoClaw sandboxes or user data.
 6. Coach
 7. Step-Audio2 Local
 8. backend/full stack
-9. `benchmark.sh`
+9. `benchmark.sh` → text / coach / retriever / realtime / concurrency evidence
 10. clean-clone one-command replay
 11. retain `runtime/diagnostics/spark/` and `runtime/benchmarks/spark/` as evidence
 

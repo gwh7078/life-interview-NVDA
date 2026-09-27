@@ -38,7 +38,8 @@
     "test:spark:voice:contract": "tsx --test test/stepaudio2-local-provider.test.ts test/stepaudio2-local-e2e.test.ts",
     "spark:retriever:smoke": "node --env-file-if-exists=.env --import tsx scripts/spark-retriever-smoke.ts",
     "spark:realtime:smoke": "node --env-file-if-exists=.env --import tsx scripts/spark-realtime-bridge-smoke.ts",
-    "test:spark:realtime:e2e": "node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-provider-e2e.ts"
+    "test:spark:realtime:e2e": "node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-provider-e2e.ts",
+    "spark:benchmark": "bash deploy/spark/benchmark.sh"
   },
   "dependencies": {
     "@ricky0123/vad-web": "^0.0.31",
