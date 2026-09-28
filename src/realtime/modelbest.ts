@@ -232,8 +232,21 @@ export function createModelBestRealtimeProvider(config: RealtimeProviderConfig):
       manualTurnControl: false,
     },
     audio: {
-      input: { encoding: 'pcm_s16le', sampleRate: MODELBEST_INPUT_SAMPLE_RATE, frameBytes: MODELBEST_PCM_FRAME_BYTES },
-      output: { encoding: 'pcm_s16le', sampleRate: MODELBEST_OUTPUT_SAMPLE_RATE },
+      input: {
+        codec: 'pcm_s16le',
+        encoding: 'pcm_s16le',
+        sampleRate: MODELBEST_INPUT_SAMPLE_RATE,
+        channels: 1,
+        chunkFormat: 'raw-pcm',
+        frameBytes: MODELBEST_PCM_FRAME_BYTES,
+      },
+      output: {
+        codec: 'pcm_s16le',
+        encoding: 'pcm_s16le',
+        sampleRate: MODELBEST_OUTPUT_SAMPLE_RATE,
+        channels: 1,
+        chunkFormat: 'raw-pcm',
+      },
     },
     connectOptions() {
       const apiKey = config.modelbestApiKey?.trim();

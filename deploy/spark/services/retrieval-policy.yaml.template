@@ -1,0 +1,19 @@
+preset:
+  name: life-interview-retrieval-api
+  description: "Least-privilege Life Interview retrieval API for formal Agent Skill scripts"
+
+network_policies:
+  life_interview_retrieval_api:
+    name: life_interview_retrieval_api
+    endpoints:
+      - host: __HOST__
+        port: __PORT__
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/health" }
+          - allow: { method: POST, path: "/internal/agent-retrieval/memory-search" }
+          - allow: { method: POST, path: "/internal/agent-retrieval/era-context-search" }
+    binaries:
+      - { path: /usr/local/bin/node }
+      - { path: /usr/bin/node }

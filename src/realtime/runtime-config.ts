@@ -4,6 +4,7 @@ import {
 } from './qwen.js';
 import { DEFAULT_STEPFUN_MODEL, DEFAULT_STEPAUDIO3_MODEL } from './stepfun.js';
 import { DEFAULT_MODELBEST_MODEL } from './modelbest.js';
+import { DEFAULT_STEPAUDIO2_LOCAL_WS_URL, type StepAudio2Execution } from './stepaudio2-local.js';
 import type { RealtimeProviderConfig } from './provider.js';
 import type { RealtimeProviderId } from './types.js';
 
@@ -36,6 +37,8 @@ export interface RealtimeProviderRuntimeSource {
   stepaudio3Model?: string;
   modelbestApiKey?: string;
   modelbestModel?: string;
+  stepaudio2Execution?: StepAudio2Execution;
+  stepaudio2LocalUrl?: string;
 }
 
 export function isRealtimeProviderId(value: unknown): value is RealtimeProviderId {
@@ -54,7 +57,16 @@ export function resolveRealtimeProviderConfig(
       model: source.stepaudio3Model ?? DEFAULT_STEPAUDIO3_MODEL,
     };
   }
-  if (id === 'stepfun' || id === 'stepaudio2_mini') {
+  if (id === 'stepaudio2_mini') {
+    return {
+      stepfunApiKey: source.stepfunApiKey,
+      stepaudio2Execution: source.stepaudio2Execution ?? 'stepfun-cloud',
+      stepaudio2LocalUrl: source.stepaudio2LocalUrl ?? DEFAULT_STEPAUDIO2_LOCAL_WS_URL,
+      region: source.region,
+      model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL,
+    };
+  }
+  if (id === 'stepfun') {
     return {
       stepfunApiKey: source.stepfunApiKey,
       region: source.region,
@@ -97,8 +109,16 @@ export function realtimeProviderHealthSummary(
       ...(detailed ? { model: source.stepaudio3Model ?? DEFAULT_STEPAUDIO3_MODEL, execution: 'stepfun-cloud' } : {}),
     },
     stepaudio2_mini: {
-      configured: Boolean(source.stepfunApiKey),
-      ...(detailed ? { model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL, execution: 'stepfun-cloud' } : {}),
+      configured: (source.stepaudio2Execution ?? 'stepfun-cloud') === 'local'
+        ? Boolean(source.stepaudio2LocalUrl ?? DEFAULT_STEPAUDIO2_LOCAL_WS_URL)
+        : Boolean(source.stepfunApiKey),
+      ...(detailed ? {
+        model: source.stepfunModel ?? DEFAULT_STEPFUN_MODEL,
+        execution: source.stepaudio2Execution ?? 'stepfun-cloud',
+        ...((source.stepaudio2Execution ?? 'stepfun-cloud') === 'local'
+          ? { endpoint: source.stepaudio2LocalUrl ?? DEFAULT_STEPAUDIO2_LOCAL_WS_URL }
+          : {}),
+      } : {}),
     },
     modelbest: {
       configured: Boolean(source.modelbestApiKey),

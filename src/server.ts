@@ -163,6 +163,7 @@ export interface RuntimeConfig {
   realtimeCoachBaseUrl?: string;
   realtimeCoachModel?: string;
   realtimeCoachApiKey?: string;
+  realtimeCoachRequestDialect?: 'dashscope' | 'vllm';
   realtimeCoachGateTimeoutMs?: number;
   realtimeCoachTotalTimeoutMs?: number;
   realtimeRetrieverEnabled?: boolean;
@@ -171,6 +172,8 @@ export interface RuntimeConfig {
   stepfunModel?: string;
   stepaudio3Model?: string;
   stepfunApiKey?: string;
+  stepaudio2Execution?: 'stepfun-cloud' | 'local';
+  stepaudio2LocalUrl?: string;
   modelbestModel?: string;
   modelbestApiKey?: string;
   realtimeLocalSilenceTimeoutMs?: number;
@@ -346,6 +349,10 @@ export function readRuntimeConfig(): RuntimeConfig {
   const realtimeCoachApiKey = process.env.REALTIME_COACH_API_KEY?.trim()
     || process.env.BAILIAN_API_KEY?.trim()
     || undefined;
+  const realtimeCoachRequestDialect = process.env.REALTIME_COACH_REQUEST_DIALECT?.trim() || 'dashscope';
+  if (realtimeCoachRequestDialect !== 'dashscope' && realtimeCoachRequestDialect !== 'vllm') {
+    throw new Error('REALTIME_COACH_REQUEST_DIALECT must be dashscope or vllm.');
+  }
   const realtimeRetrieverEnabled = process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true';
   const interviewProvider = isRealtimeProviderId(interviewTask.provider) ? interviewTask.provider : undefined;
   assertInterviewBenchmarkCompatible(interviewBenchmarkVariant, {
@@ -359,6 +366,19 @@ export function readRuntimeConfig(): RuntimeConfig {
   const realtimeCoachTotalTimeoutMs = Number(process.env.REALTIME_COACH_TOTAL_TIMEOUT_MS ?? DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS);
   const contextAgentEnabled = realtimeContextAgentEnabled();
   const realtimeLocalSilenceTimeoutMs = Number(process.env.REALTIME_LOCAL_SILENCE_TIMEOUT_MS ?? DEFAULT_REALTIME_LOCAL_SILENCE_TIMEOUT_MS);
+  const stepaudio2Execution = process.env.STEPAUDIO2_EXECUTION?.trim() || 'stepfun-cloud';
+  if (stepaudio2Execution !== 'stepfun-cloud' && stepaudio2Execution !== 'local') {
+    throw new Error('STEPAUDIO2_EXECUTION must be stepfun-cloud or local.');
+  }
+  const stepaudio2LocalUrl = process.env.STEPAUDIO2_LOCAL_WS_URL?.trim() || 'ws://127.0.0.1:8092/realtime';
+  if (stepaudio2Execution === 'local') {
+    let localVoiceUrl: URL;
+    try { localVoiceUrl = new URL(stepaudio2LocalUrl); }
+    catch { throw new Error('STEPAUDIO2_LOCAL_WS_URL must be a valid ws:// or wss:// URL.'); }
+    if (localVoiceUrl.protocol !== 'ws:' && localVoiceUrl.protocol !== 'wss:') {
+      throw new Error('STEPAUDIO2_LOCAL_WS_URL must use ws:// or wss://.');
+    }
+  }
   const closeoutTimeoutMs = Number(closeoutTask.parameters.timeoutMs ?? 60_000);
   const closeoutApiFormat = String(closeoutTask.parameters.apiFormat ?? 'chat-completions');
   const storyCompletionTimeoutMs = Number(storyCompletionTask.parameters.timeoutMs ?? closeoutTimeoutMs);
@@ -440,6 +460,8 @@ export function readRuntimeConfig(): RuntimeConfig {
       ? interviewTask.model
       : process.env.STEPFUN_REALTIME_MODEL?.trim() || DEFAULT_STEPFUN_MODEL,
     stepfunApiKey: process.env.STEPFUN_API_KEY?.trim() || undefined,
+    stepaudio2Execution,
+    stepaudio2LocalUrl,
     stepaudio3Model: interviewTask.provider === 'stepaudio3_quality'
       ? interviewTask.model
       : process.env.STEPAUDIO3_REALTIME_MODEL?.trim() || DEFAULT_STEPAUDIO3_MODEL,
@@ -483,6 +505,7 @@ export function readRuntimeConfig(): RuntimeConfig {
     realtimeCoachBaseUrl,
     realtimeCoachModel,
     realtimeCoachApiKey,
+    realtimeCoachRequestDialect,
     realtimeCoachGateTimeoutMs,
     realtimeCoachTotalTimeoutMs,
     realtimeRetrieverEnabled,
@@ -770,6 +793,7 @@ function createStoryWorkflowDependencies(
         baseUrl: config.realtimeCoachBaseUrl ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1',
         model: config.realtimeCoachModel ?? 'qwen3-8b',
         apiKey: config.realtimeCoachApiKey,
+        requestDialect: config.realtimeCoachRequestDialect ?? 'dashscope',
       }) : null
     : dependencies.realtimeCoach;
   const realtimeCoachPipeline = dependencies.realtimeCoachPipeline
@@ -928,6 +952,64 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
       authMode: config.authMode ?? 'sms',
     })) {
       if (logoutRequest && logoutUserId && response.statusCode === 200) closeObservationStreams(logoutUserId);
+      return;
+    }
+
+    if (url.pathname === '/api/observability/platform' && request.method === 'GET') {
+      const authContext = authService.resolveToken(readAuthCookie(request.headers.cookie));
+      if (!authContext) {
+        sendJson(response, 401, { error: '请先登录。', errorCode: 'AUTH_REQUIRED' });
+        return;
+      }
+      const telemetryPath = process.env.SPARK_TELEMETRY_PATH?.trim();
+      if (!telemetryPath) {
+        sendJson(response, 404, { available: false, errorCode: 'PLATFORM_TELEMETRY_UNAVAILABLE' });
+        return;
+      }
+      try {
+        const raw = JSON.parse(readFileSync(path.resolve(telemetryPath), 'utf8')) as unknown;
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('invalid telemetry');
+        const telemetry = raw as Record<string, unknown>;
+        const object = (value: unknown): Record<string, unknown> =>
+          value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+        const finiteOrNull = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isFinite(value) ? value : null;
+        const textOrNull = (value: unknown): string | null =>
+          typeof value === 'string' && value.length <= 120 ? value : null;
+        const gpu = object(telemetry.gpu);
+        const memory = object(telemetry.system_memory);
+        const swap = object(telemetry.swap);
+        const services = object(telemetry.services);
+        const allowedServices = ['Text Model', 'Coach', 'Voice', 'Retriever', 'NemoClaw'] as const;
+        const safeServices = Object.fromEntries(allowedServices.map((name) => {
+          const value = services[name];
+          return [name, value === 'RUNNING' || value === 'DEGRADED' || value === 'STOPPED' || value === 'UNKNOWN'
+            ? value : 'UNKNOWN'];
+        }));
+        response.setHeader('Cache-Control', 'no-store');
+        sendJson(response, 200, {
+          available: true,
+          capturedAt: textOrNull(telemetry.captured_at),
+          platform: textOrNull(telemetry.platform),
+          architecture: textOrNull(telemetry.architecture),
+          gpu: {
+            utilizationPct: finiteOrNull(gpu.utilization_pct),
+            memoryUsedMiB: finiteOrNull(gpu.memory_used_mib),
+            memoryTotalMiB: finiteOrNull(gpu.memory_total_mib),
+          },
+          systemMemory: {
+            totalBytes: finiteOrNull(memory.total_bytes),
+            availableBytes: finiteOrNull(memory.available_bytes),
+          },
+          swap: {
+            totalBytes: finiteOrNull(swap.total_bytes),
+            freeBytes: finiteOrNull(swap.free_bytes),
+          },
+          services: safeServices,
+        });
+      } catch {
+        sendJson(response, 503, { available: false, errorCode: 'PLATFORM_TELEMETRY_UNAVAILABLE' });
+      }
       return;
     }
 

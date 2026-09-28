@@ -146,7 +146,7 @@ test('an unavailable observation stream does not prevent a realtime session with
     realtimeProviderFactory: (id) => ({
       id,
       capabilities: { fullDuplex: true, supportsInterrupt: true, supportsToolCalling: false, supportsContextInjection: false, supportsExplicitTurnRequest: true, supportsPlaybackAck: false, supportsExplicitSessionClose: false, manualTurnControl: false },
-      audio: { input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 }, output: { encoding: 'pcm_s16le', sampleRate: 24_000 } },
+      audio: { input: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 16_000, channels: 1, chunkFormat: 'raw-pcm', frameBytes: 640 }, output: { codec: 'pcm_s16le', encoding: 'pcm_s16le', sampleRate: 24_000, channels: 1, chunkFormat: 'raw-pcm' } },
       connectOptions: () => ({ url: providerUrl, headers: {} }),
       setupSession: () => [{ type: 'mock.setup' }],
       normalizeServerMessage: (raw) => {

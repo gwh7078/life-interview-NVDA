@@ -514,3 +514,24 @@ test('Coach Resolve permits public Era mentions of users but rejects personalize
   await assert.rejects(coach.resolve(input), /Coach Resolve selected unsupported/u);
   await assert.rejects(coach.resolve(input), /Coach Resolve selected unsupported/u);
 });
+
+
+test('Coach uses vLLM chat_template_kwargs without changing the default DashScope dialect', async () => {
+  const normal: CoachGateResult = {
+    action: 'none', retrieve_memory: false, memory_query: null,
+    retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+    reason: 'normal', avoid: null, direction: null,
+  };
+  const requests: Array<Record<string, unknown>> = [];
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible',
+    baseUrl: 'http://127.0.0.1:8001/v1',
+    model: 'Qwen/Qwen3-8B',
+    apiKey: 'local-test',
+    requestDialect: 'vllm',
+  }, fakeFetch([normal], requests));
+
+  assert.deepEqual(await coach.evaluate(gateInput('story_continue')), normal);
+  assert.deepEqual(requests[0]?.chat_template_kwargs, { enable_thinking: false });
+  assert.equal(Object.hasOwn(requests[0] ?? {}, 'enable_thinking'), false);
+});

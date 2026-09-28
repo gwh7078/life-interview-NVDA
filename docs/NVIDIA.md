@@ -54,9 +54,9 @@ NAT 是评测层，不替换 NemoClaw / OpenClaw 产品 Runtime。
 
 这只是当前开发执行后端，不是最终 DGX Spark 模型结论。
 
-## 3. DGX Spark 尚未完成
+## 3. DGX Spark 实机验证状态
 
-目前不能宣称：
+Spark Deployment Profile、Base / Runtime / Product 生命周期和 StepAudio Local Adapter/Bridge 工程路径已实现。**GB10 / ARM64 runtime compatibility 待 DGX Spark 真机验证**；当前不能宣称：
 
 - Step-Audio-2-mini 已在 DGX Spark 本地稳定全双工运行；
 - Agent 文本模型已全部切到 Spark 本地；
@@ -89,7 +89,7 @@ NVIDIA 技术栈应该体现为真实系统能力：
 
 ## 5. 当前最重要的技术缺口
 
-1. DGX Spark 实机接入；
+1. DGX Spark / GB10 真机兼容性验证；
 2. Mini 本地目标后端验证；
 3. 文本 Agent 本地模型 Benchmark；
 4. Spark 上完整 Realtime + Retriever + Agent 并发；

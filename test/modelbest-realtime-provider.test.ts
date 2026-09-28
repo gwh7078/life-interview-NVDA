@@ -39,8 +39,21 @@ test('ModelBest can be selected without changing existing Realtime provider opti
   assert.equal(provider.capabilities.supportsExplicitTurnRequest, false);
   assert.equal(provider.requiresQueueBeforeSessionInit, true);
   assert.deepEqual(provider.audio, {
-    input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 },
-    output: { encoding: 'pcm_s16le', sampleRate: 24_000 },
+    input: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 16_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+      frameBytes: 640,
+    },
+    output: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 24_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+    },
   });
 });
 

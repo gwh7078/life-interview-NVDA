@@ -35,7 +35,7 @@ STEPFUN_REALTIME_MODEL=step-audio-2-mini
 REALTIME_MEMORY_TRIGGER=supervisor_auto  # Profile 默认值
 ```
 
-Step-Audio-2-mini 目前仍通过 StepFun Cloud 执行。未来 DGX Spark 路线只替换执行后端，不应提前写成“已在 Spark 本地运行”。
+Mac 默认的 Step-Audio-2-mini 仍通过 StepFun Cloud 执行。Spark Deployment Profile 已配置同一 Provider ID 经 Local Adapter/Bridge 执行；GB10 / ARM64 runtime compatibility 仍需 DGX Spark 真机验证，不得写成已在 Spark 稳定运行。
 
 ### 其他 Profile
 

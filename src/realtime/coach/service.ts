@@ -17,11 +17,14 @@ import type {
   RealtimeCoachPort,
 } from './types.js';
 
+export type RealtimeCoachRequestDialect = 'dashscope' | 'vllm';
+
 export interface RealtimeCoachConfig {
   provider: 'openai-compatible';
   baseUrl: string;
   model: string;
   apiKey?: string;
+  requestDialect?: RealtimeCoachRequestDialect;
 }
 
 const SCENARIO_POLICIES: Record<CoachScenario, string> = {
@@ -378,7 +381,9 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
           { role: 'user', content: input.user },
         ],
         response_format: { type: 'json_object' },
-        enable_thinking: false,
+        ...(this.config.requestDialect === 'vllm'
+          ? { chat_template_kwargs: { enable_thinking: false } }
+          : { enable_thinking: false }),
         temperature: 0,
         max_tokens: input.maxTokens,
         stream: false,

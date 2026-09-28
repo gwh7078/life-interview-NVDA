@@ -96,8 +96,21 @@ test('PROVIDER-CONTRACT-02 Qwen satisfies the same generic contract with its leg
     manualTurnControl: false,
   });
   assert.deepEqual(adapter.audio, {
-    input: { encoding: 'pcm_s16le', sampleRate: 16_000, frameBytes: 640 },
-    output: { encoding: 'pcm_s16le', sampleRate: 24_000 },
+    input: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 16_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+      frameBytes: 640,
+    },
+    output: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 24_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+    },
   });
   assert.match(adapter.connectOptions().url, /^wss:\/\/workspace-123\.cn-beijing\.maas\.aliyuncs\.com\//);
   assert.equal(adapter.setupSession(storyContext)[0]?.type, 'session.update');
@@ -118,8 +131,21 @@ test('PROVIDER-CONTRACT-04 Step-Audio exposes 24 kHz audio and its context tool'
 
   assert.equal(adapter.id, 'stepaudio2_mini');
   assert.deepEqual(adapter.audio, {
-    input: { encoding: 'pcm_s16le', sampleRate: 24_000, frameBytes: 960 },
-    output: { encoding: 'pcm_s16le', sampleRate: 24_000 },
+    input: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 24_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+      frameBytes: 960,
+    },
+    output: {
+      codec: 'pcm_s16le',
+      encoding: 'pcm_s16le',
+      sampleRate: 24_000,
+      channels: 1,
+      chunkFormat: 'raw-pcm',
+    },
   });
   assert.equal(adapter.connectOptions().url, 'wss://api.stepfun.com/v1/realtime?model=step-audio-2-mini');
   assert.equal(adapter.capabilities.supportsInterrupt, false);

@@ -2,8 +2,8 @@
 
 > 适用：Story Continue，Q01–Q06，A/B/C 三个 Variant，共 18 场。
 >
-> A = Step-Audio-2-mini Only  
-> B = Step-Audio-2-mini + Coach  
+> A = Step-Audio-2-mini Only<br>
+> B = Step-Audio-2-mini + Coach<br>
 > C = Step-Audio-2-mini + Coach + Memory + Era
 
 ## 统一规则
@@ -198,11 +198,11 @@ Memory + Era 是否被自然使用；是否把行业背景转成好问题，而�
 
 ## 18 场测试顺序
 
-Q01-A → Q01-B → Q01-C  
-Q02-A → Q02-B → Q02-C  
-Q03-A → Q03-B → Q03-C  
-Q04-A → Q04-B → Q04-C  
-Q05-A → Q05-B → Q05-C  
+Q01-A → Q01-B → Q01-C<br>
+Q02-A → Q02-B → Q02-C<br>
+Q03-A → Q03-B → Q03-C<br>
+Q04-A → Q04-B → Q04-C<br>
+Q05-A → Q05-B → Q05-C<br>
 Q06-A → Q06-B → Q06-C
 
 ## 一句话纪律
