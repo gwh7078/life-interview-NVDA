@@ -44,18 +44,6 @@ Coach Gate (Qwen3-8B)
 
 Story Create 与 Contributor 可以使用 Gate 纠偏，但不能请求 Personal Memory / Era Retrieval。
 
-### Story Continue Benchmark Profiles（opt-in）
-
-`INTERVIEW_BENCHMARK_VARIANT` 接受 `A`、`B`、`C`；未设置时保持现有 Coach 行为。三组共用 Step-Audio-2-mini、Realtime Prompt 与 audio 配置，Profile 只控制 Coach 和两路检索：
-
-| Variant | Coach Gate | Personal Memory | Era Context |
-|---|---|---|---|
-| A | 不运行 | 关闭 | 关闭 |
-| B | 运行并保留本轮指导 | 强制关闭 | 强制关闭 |
-| C | 运行并由 Gate 决定 | Gate 按需 | Gate 按需 |
-
-B/C 需要 Coach 凭据；C 还要求 `NEMO_RETRIEVER_ENABLED=true`，沿用现有 Transcript 索引和 Era collection。Trace 记录 Variant、有效能力开关及现有 Gate / retrieval / Resolve 结果；凭据是否存在不参与 Variant 选择。
-
 ### Onboarding
 
 Onboarding 优先保证连续对话：

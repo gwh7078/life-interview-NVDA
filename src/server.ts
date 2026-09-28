@@ -27,13 +27,6 @@ import {
   type RealtimeMemoryTriggerMode,
 } from './realtime/runtime-config.js';
 import {
-  assertInterviewBenchmarkCompatible,
-  constrainCoachGate,
-  parseInterviewBenchmarkVariant,
-  resolveInterviewBenchmarkProfile,
-  type InterviewBenchmarkVariant,
-} from './realtime/benchmark-profile.js';
-import {
   BailianRealtimeCoach,
   buildCoachGatePrompt,
   buildCoachResolvePrompt,
@@ -157,7 +150,6 @@ export interface RuntimeConfig {
   region: QwenRealtimeRegion;
   model: string;
   defaultRealtimeProvider?: RealtimeProviderId;
-  interviewBenchmarkVariant?: InterviewBenchmarkVariant;
   realtimeMemoryTriggerMode?: RealtimeMemoryTriggerMode;
   realtimeCoachProvider?: 'openai-compatible';
   realtimeCoachBaseUrl?: string;
@@ -316,7 +308,6 @@ function base64ByteLength(value: string): number {
 
 export function readRuntimeConfig(): RuntimeConfig {
   const taskConfig = resolveAiTaskConfig();
-  const interviewBenchmarkVariant = parseInterviewBenchmarkVariant(process.env.INTERVIEW_BENCHMARK_VARIANT);
   const interviewTask = taskConfig['interview.story'];
   const closeoutTask = taskConfig['closeout.story'];
   const onboardingCloseoutTask = taskConfig['closeout.onboarding'];
@@ -354,14 +345,6 @@ export function readRuntimeConfig(): RuntimeConfig {
     throw new Error('REALTIME_COACH_REQUEST_DIALECT must be dashscope or vllm.');
   }
   const realtimeRetrieverEnabled = process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true';
-  const interviewProvider = isRealtimeProviderId(interviewTask.provider) ? interviewTask.provider : undefined;
-  assertInterviewBenchmarkCompatible(interviewBenchmarkVariant, {
-    provider: interviewTask.provider,
-    model: interviewTask.model,
-    memoryTriggerMode: resolveRealtimeMemoryTriggerMode(interviewProvider, realtimeMemoryTriggerMode),
-    coachConfigured: Boolean(realtimeCoachApiKey),
-    retrieverEnabled: realtimeRetrieverEnabled,
-  });
   const realtimeCoachGateTimeoutMs = Number(process.env.REALTIME_COACH_GATE_TIMEOUT_MS ?? DEFAULT_REALTIME_COACH_GATE_TIMEOUT_MS);
   const realtimeCoachTotalTimeoutMs = Number(process.env.REALTIME_COACH_TOTAL_TIMEOUT_MS ?? DEFAULT_REALTIME_COACH_TOTAL_TIMEOUT_MS);
   const contextAgentEnabled = realtimeContextAgentEnabled();
@@ -452,7 +435,6 @@ export function readRuntimeConfig(): RuntimeConfig {
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
     defaultRealtimeProvider: isRealtimeProviderId(interviewTask.provider) ? interviewTask.provider : 'stepaudio2_mini',
-    interviewBenchmarkVariant,
     qwenModel: interviewTask.provider === 'qwen'
       ? interviewTask.model
       : process.env.DASHSCOPE_MODEL?.trim() || DEFAULT_QWEN_MODEL,
@@ -780,8 +762,7 @@ function createStoryWorkflowDependencies(
     );
   const retriever = dependencies.retriever
     ?? (process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true' ? createRetrieverClientFromEnv(process.env) : undefined);
-  const eraContextEnabled = process.env.NEMO_ERA_CONTEXT_ENABLED?.trim() === 'true'
-    || config.interviewBenchmarkVariant === 'C';
+  const eraContextEnabled = process.env.NEMO_ERA_CONTEXT_ENABLED?.trim() === 'true';
   const eraContextClient = eraContextEnabled
     ? dependencies.eraContextClient ?? createEraContextClientFromEnv(process.env)
     : undefined;
@@ -2530,20 +2511,11 @@ function createRealtimeHandler(
       currentUserAnswer: text,
       recentContext: recentCoachContext,
     });
-    const benchmarkProfile = baseGate.scenario === 'story_continue'
-      ? resolveInterviewBenchmarkProfile(config.interviewBenchmarkVariant)
-      : undefined;
     const traceFields: RealtimeTraceFields = {
       scenario: baseGate.scenario,
       voiceProfile: 'stepaudio2_mini',
       triggerMode: 'supervisor_auto',
       coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
-      benchmarkVariant: benchmarkProfile?.variant ?? null,
-      ...(benchmarkProfile ? {
-        coachEnabled: benchmarkProfile.coachEnabled,
-        memoryRetrievalEnabled: benchmarkProfile.memoryRetrievalEnabled,
-        eraRetrievalEnabled: benchmarkProfile.eraRetrievalEnabled,
-      } : {}),
       turnId,
       contextVersion: version,
     };
@@ -2565,16 +2537,6 @@ function createRealtimeHandler(
         traceFields: fields,
       });
     };
-    if (benchmarkProfile && !benchmarkProfile.coachEnabled) {
-      recordTrace('coach.skipped', { ...traceFields, reason: 'benchmark_coach_disabled' });
-      respondOnce(undefined, traceFields);
-      if (activeCoachController === controller) {
-        activeCoachController = undefined;
-        activeCoachTraceFields = undefined;
-        activeCoachStage = undefined;
-      }
-      return;
-    }
     const failOpen = (reason: string, fields: RealtimeTraceFields = {}): void => {
       if (!isCurrent()) return;
       controller.abort(reason);
@@ -2680,7 +2642,7 @@ function createRealtimeHandler(
         return;
       }
 
-      const gate = constrainCoachGate(gateOutcome.value, benchmarkProfile);
+      const gate = gateOutcome.value;
       traceWriter?.recordContent('coach.gate.output', { turnId, output: gate });
       recordTrace('coach.gate.completed', {
         ...traceFields, turnId, contextVersion: version,
@@ -4718,12 +4680,6 @@ function createRealtimeHandler(
     let context: RealtimeInterviewContext;
     try {
       const preparedContext = interviewCore.prepare(authContext.userId, target);
-      if (config.interviewBenchmarkVariant
-        && preparedContext.interview_type === 'story'
-        && preparedContext.task_context?.mode === 'continue'
-        && providerName !== 'stepaudio2_mini') {
-        throw new Error('Interview Benchmark A/B/C Story Continue requires Step-Audio-2-mini.');
-      }
       context = {
         ...preparedContext,
         memoryTriggerMode: resolveRealtimeMemoryTriggerMode(providerName, config.realtimeMemoryTriggerMode),
@@ -4850,21 +4806,11 @@ function createRealtimeHandler(
         provider: providerName,
       });
       observationProvider = providerName;
-      const sessionScenario = sessionContext?.interview_type === 'onboarding' ? 'onboarding'
-        : sessionContext?.interview_type === 'external_contributor' ? 'contributor'
-          : sessionContext?.task_context?.mode !== 'create' && sessionContext?.story ? 'story_continue' : 'story_create';
-      const benchmarkProfile = sessionScenario === 'story_continue'
-        ? resolveInterviewBenchmarkProfile(config.interviewBenchmarkVariant)
-        : undefined;
       recordTrace('session.started', {
         lifecycle: phase,
-        scenario: sessionScenario,
-        benchmarkVariant: benchmarkProfile?.variant ?? null,
-        ...(benchmarkProfile ? {
-          coachEnabled: benchmarkProfile.coachEnabled,
-          memoryRetrievalEnabled: benchmarkProfile.memoryRetrievalEnabled,
-          eraRetrievalEnabled: benchmarkProfile.eraRetrievalEnabled,
-        } : {}),
+        scenario: sessionContext?.interview_type === 'onboarding' ? 'onboarding'
+          : sessionContext?.interview_type === 'external_contributor' ? 'contributor'
+            : sessionContext?.task_context?.mode !== 'create' && sessionContext?.story ? 'story_continue' : 'story_create',
         voiceProfile: providerName === 'stepaudio3_quality'
           ? 'stepaudio3_quality'
           : providerName === 'stepaudio2_mini' || providerName === 'stepfun'
@@ -4880,7 +4826,7 @@ function createRealtimeHandler(
         ...(providerName === 'stepaudio2_mini' || providerName === 'stepfun'
           ? { coachModel: config.realtimeCoachModel ?? 'qwen3-8b' }
           : {}),
-        retriever: config.realtimeRetrieverEnabled || benchmarkProfile?.memoryRetrievalEnabled ? 'enabled' : 'disabled',
+        retriever: config.realtimeRetrieverEnabled ? 'enabled' : 'disabled',
         contextAgent: config.realtimeContextAgentEnabled ? 'enabled' : 'disabled',
         contextInjection: selectedAdapter?.capabilities.supportsContextInjection ? 'supported' : 'unsupported',
       });
