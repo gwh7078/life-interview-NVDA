@@ -13,6 +13,7 @@ elif [[ ! -f "$DIR/.env" ]]; then
 fi
 
 . "$DIR/lib/common.sh"
+. "$DIR/lib/ports.sh"
 report="$SPARK_DIAGNOSTICS_DIR/install-report.json"
 events="$SPARK_DIAGNOSTICS_DIR/install-events.jsonl"
 install_log="$SPARK_LOG_DIR/install.log"
@@ -132,10 +133,30 @@ prefetch_all() {
 db_migrate() { cd "$REPO_ROOT"; npm run db:migrate; }
 era_index() { cd "$REPO_ROOT"; npm run era:index; }
 
+preflight_install() {
+  local args=()
+  if [[ "$("$DIR/models/post-session.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+    args+=(--allow-busy-port "$SPARK_TEXT_PORT")
+  fi
+  if [[ "$("$DIR/models/coach.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+    args+=(--allow-busy-port "$SPARK_COACH_PORT")
+  fi
+  if [[ "$("$DIR/models/realtime.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+    args+=(--allow-busy-port "$SPARK_STEPAUDIO_BACKEND_PORT" --allow-busy-port "$SPARK_STEPAUDIO_WS_PORT" --allow-busy-port "$SPARK_STEPAUDIO_HEALTH_PORT")
+  fi
+  if [[ "$("$DIR/services/retriever.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+    args+=(--allow-busy-port "$SPARK_RETRIEVER_PORT" --allow-busy-port "$SPARK_VECTORDB_PORT")
+  fi
+  if [[ "$("$DIR/services/backend.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+    args+=(--allow-busy-port "$SPARK_BACKEND_PORT" --allow-busy-port "$SPARK_AGENT_RETRIEVAL_PORT")
+  fi
+  "$DIR/preflight.sh" "${args[@]}"
+}
+
 if (( dry_run )); then
   run_step preflight "$DIR/preflight.sh" --report-only
 else
-  run_step preflight "$DIR/preflight.sh"
+  run_step preflight preflight_install
 fi
 run_step dependencies bootstrap_tools
 if (( ! dry_run )); then
