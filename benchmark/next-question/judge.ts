@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import path from 'node:path';
 
 const MODEL = 'step-5-preview';
-const ENDPOINT = 'https://api.stepfun.com/v1/chat/completions';
+const ENDPOINT = 'https://api.stepfun.com/step_plan/v1/chat/completions';
 const MAX_ATTEMPTS = 3;
 const SCORE_LIMITS = {
   information_gain: 30,
