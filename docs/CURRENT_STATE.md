@@ -46,7 +46,7 @@ Step-Audio-2-mini 目前仍通过 StepFun Cloud 执行。未来 DGX Spark 路线
 
 ## 3. Mini Realtime Coach
 
-Mini 默认 `supervisor_auto`，Coach 模型为 `qwen3-8b`，使用独立 OpenAI-compatible 配置。
+Mini 默认 `supervisor_auto`，Coach 模型为 `qwen3-8b`，使用独立 OpenAI-compatible 配置。该能力现正式定义为 `interview-coach` Skill，由产品自建的低延迟 Realtime Runtime 执行，而不是经过 OpenClaw / NemoClaw。
 
 ### Onboarding
 
@@ -163,6 +163,7 @@ Task Registry 当前包含：
 - onboarding-closeout
 - interview-closeout
 - interview-observer
+- interview-coach
 - story-completion
 - story-generation
 
