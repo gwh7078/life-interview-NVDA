@@ -17,7 +17,7 @@ case "${1:-status}" in
     export HOST="127.0.0.1" PORT="${PORT:-$SPARK_BACKEND_PORT}"
     export AGENT_RETRIEVAL_BASE_URL="http://$host_ip:$SPARK_AGENT_RETRIEVAL_PORT"
 
-    start_one backend backend.log npm start
+    start_one backend backend.log node --env-file-if-exists=.env --import tsx src/server.ts
     "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_BACKEND_PORT/api/health" 120
 
     if ! pid_running agent-retrieval-proxy; then
