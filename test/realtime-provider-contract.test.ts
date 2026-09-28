@@ -320,6 +320,7 @@ test('Step-Audio-2-mini uses four short scenario prompts and a reduced session c
     ...storyContext,
     story: {
       ...storyContext.story,
+      summary: '1983年高考前夜突然发烧，老师连夜送医，第二天仍参加考试。',
       agent_memory: '不得注入的长期历史。'.repeat(300),
     },
     memoryTriggerMode: 'supervisor_auto' as const,
@@ -345,7 +346,20 @@ test('Step-Audio-2-mini uses four short scenario prompts and a reduced session c
   }
 
   const miniStory = buildStepAudio2MiniContextPayload(continuation);
-  assert.doesNotMatch(JSON.stringify(miniStory), /不得注入的长期历史/);
+  const miniStoryJson = JSON.stringify(miniStory);
+  const miniLifeStage = miniStory.life_stage as Record<string, unknown>;
+  assert.doesNotMatch(miniStoryJson, /不得注入的长期历史/);
+  assert.match(miniStoryJson, /1983年高考前夜突然发烧/);
+  assert.equal(Object.hasOwn(miniLifeStage, 'title'), false);
+  const continuationSession = buildStepfunSessionUpdate(
+    continuation,
+    DEFAULT_STEPFUN_VOICE,
+    'stepaudio2_mini',
+  ).session as Record<string, unknown>;
+  const continuationInstructions = String(continuationSession.instructions ?? '');
+  assert.match(continuationInstructions, /不得自行推进人生时间线/);
+  assert.match(continuationInstructions, /1983年高考前夜突然发烧/);
+  assert.doesNotMatch(continuationInstructions, /工作阶段/);
   const miniContributor = buildStepAudio2MiniContextPayload(contributor);
   assert.match(JSON.stringify(miniContributor), /第三者自己的长期摘要/);
   assert.equal(JSON.stringify(miniContributor).includes('agent_memory'), false);
