@@ -3,6 +3,11 @@
 > 更新：2026-09-27  
 > 用途：给开发 Agent 提供可直接查阅的官方来源。只记录与本项目 Spark 完整移植有关的资料。
 
+> 部署职责边界（2026-09-28）：本页是上游资料索引，不是仓库安装规范。
+> 由用户按官方说明准备 DGX OS、Driver、Docker 和 AI Runtime；应用侧流程
+> 以 [当前部署说明](README.md) 为准。仓库不安装或管理 Text、Coach、
+> StepAudio、Retriever Runtime。
+
 ## A. DGX Spark 系统与版本
 
 ### A1. DGX Spark User Guide
@@ -30,8 +35,8 @@ https://docs.nvidia.com/dgx/dgx-spark/system-overview.html
 
 项目含义：
 
-- 所有自建镜像 / 二进制 / native dependency 都必须考虑 `linux/arm64`；
-- 不允许默认把 Mac/x86 镜像直接搬过去。
+- Runtime 操作者负责确认所选模型和镜像支持目标 ARM64 / GB10 环境；
+- 本仓库的 Spark profile 只检查主机架构和外部 endpoint，不搬运系统镜像或二进制。
 
 ### A3. Release Notes
 https://docs.nvidia.com/dgx/dgx-spark/release-notes.html
@@ -49,7 +54,7 @@ Kernel        6.17
 
 - 该版本表只保证 Founders Edition；
 - 租用的 GB10 partner system 可能不同；
-- `preflight.sh` 必须记录实际 OS / driver / CUDA / kernel，而不是硬编码上述版本。
+- `deploy/spark/check-env.sh` 只读检查 ARM64、GPU、Docker 和外部服务；需要完整 OS / driver / CUDA / kernel 清单时由操作者另行保存，不由应用脚本改写系统。
 
 ### A4. Known Issues
 https://docs.nvidia.com/dgx/dgx-spark/known-issues.html
@@ -74,7 +79,7 @@ https://docs.nvidia.com/dgx/dgx-spark/nvidia-container-runtime-for-docker.html
 ```bash
 docker ps
 nvidia-smi
-docker run --rm --gpus all ubuntu nvidia-smi
+docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
 ```
 
 ## B. 本地文本模型：vLLM
@@ -113,7 +118,7 @@ https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B?features=tool_calling%2Creasoning&h
 
 - Post-session Agent / Closeout / Completion / Generation 第一主测；
 - OpenAI-compatible endpoint 直接适配现有 Text Runtime；
-- 开发 Agent 应从 recipe 获取最终启动 flags，不凭记忆手写过期参数。
+- Runtime 操作者应从 recipe 获取最终启动 flags；仓库记录 endpoint 和实际 served model ID，不决定 GPU memory utilization。
 
 ## C. NemoClaw / OpenShell / OpenClaw
 
@@ -133,7 +138,8 @@ https://build.nvidia.com/spark/nemoclaw/instructions
 本项目用途：
 
 - 不再自己发明一套 NemoClaw 安装过程；
-- `deploy/spark/` 应封装/验证官方路径，并安装本项目 Skills / policies；
+- `deploy/spark/setup.sh` 在 Text endpoint 已运行后使用 NVIDIA 官方 installer / onboarding，配置 OpenClaw 复用既有模型，并安装本项目 Skills / policies；
+- 不通过 NemoClaw 下载或启动第二份 Text model；
 - 必须保留现有 scoped Tool / policy 边界。
 
 ### C2. OpenShell DGX Spark Playbook
@@ -183,7 +189,8 @@ https://docs.nvidia.com/nemo/retriever/latest/extraction/support-matrix/
 
 项目意义：
 
-- Retriever 是当前 Spark 移植中相对明确的 ARM64 路径；
+- NeMo Retriever Runtime 由用户按 NVIDIA 当前文档准备；仓库不 pull image 或管理容器生命周期；
+- 应用继续拥有 collection 初始化、Transcript / Era 索引、Retriever Client 和 fail-open contract；
 - 仍要在真机跑现有 ingest/query/scope-isolation Gate；
 - private Transcript 和 public Era Context 继续使用独立 collection；
 - SQLite 继续是 Source of Truth。
@@ -204,8 +211,9 @@ https://github.com/stepfun-ai/Step-Audio2
 高风险提醒：
 
 - 官方 README 没有在该段声明此 StepFun Docker image 的 ARM64 manifest；
-- Spark 是 ARM64，所以部署 Agent 不得假设该镜像能直接运行；
-- 必须在真机先查 `docker manifest inspect`，失败则走 ARM64 可用 runtime / source installation；
+- Spark 是 ARM64，Runtime 操作者应按 StepFun 当前文档确认其选定 Runtime 可用；
+- 仓库不执行 manifest probing、下载、ARM64 fallback 或 Native Runtime 生命周期管理；
+- 应用只检查 WebSocket endpoint 并保留 Local Provider / protocol adapter；
 - 不应在租机当天才设计 Realtime Provider Contract。
 
 ### E2. vLLM-Omni StepAudio2

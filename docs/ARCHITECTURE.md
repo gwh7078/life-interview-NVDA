@@ -1,6 +1,6 @@
 # Architecture
 
-> 当前整体架构，更新于 2026-09-27。  
+> 当前整体架构，更新于 2026-09-28。
 > Realtime 细节见 [REALTIME.md](REALTIME.md)，Agent 细节见 [AGENT_RUNTIME.md](AGENT_RUNTIME.md)。
 
 ## 1. 核心原则
@@ -143,7 +143,23 @@ Observability 是 side channel，不编排业务：
 
 技术观测失败不得影响用户采访。
 
-## 8. 不再采用的架构
+## 8. DGX Spark Runtime Boundary
+
+Spark 的 Text、Coach、StepAudio 与 Retriever Runtime 由操作者准备和运行；应用通过配置的标准 endpoint 接入：
+
+```text
+Text / Agent  : http://127.0.0.1:8000/v1
+Mini Coach    : http://127.0.0.1:8001/v1
+StepAudio     : ws://127.0.0.1:8092/realtime
+Retriever     : REST / MCP 127.0.0.1:7670
+VectorDB      : internal 127.0.0.1:7671
+```
+
+NemoClaw onboarding 复用已有 Text vLLM 的 `/v1/models` 模型清单；OpenClaw 在 NemoClaw sandbox 内执行正式会后 Agent Skills。`interview-coach` Skill 继续由产品低延迟 Realtime Runtime 执行 Qwen3-8B，不经 OpenClaw。Retriever 只通过 Service `:7670` 接入，应用不得直接访问 VectorDB。
+
+macOS 默认 Step-Audio-2-mini / StepFun Cloud 保持不变。Spark 上 Runtime 兼容、完整 E2E、StepAudio WebSocket / 双工和性能目前均 **NOT TESTED ON DGX SPARK**。
+
+## 9. 不再采用的架构
 
 已被取代：
 

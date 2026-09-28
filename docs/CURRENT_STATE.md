@@ -1,6 +1,6 @@
 # Current State
 
-> 更新：2026-09-27  
+> 更新：2026-09-28
 > 作用：回答“当前 main 到底实现了什么”。任何历史设计与本文冲突时，以当前代码、`.env.example` 和本文为准。
 
 ## 1. 产品主链
@@ -179,21 +179,36 @@ NemoClaw / OpenClaw Agent Adapter 已实现并有真实 Smoke/E2E 证据，但�
 
 ## 7. NVIDIA 状态
 
-已完成/已有实现：
+### Spark 部署边界
 
-- NemoClaw / OpenShell / OpenClaw 本机运行链；
-- NeMo Retriever 本机服务与 MCP；
-- NAT Evaluation / Profiler 配置；
-- Agent Adapter / Contract / Skill；
-- Realtime 技术观测；
-- Era Context 数据与 Benchmark 工具。
+DGX Spark 的目标方式是：**用户准备并运行标准 Runtime，本仓库部署应用并接线**。Runtime endpoint 默认值如下；以操作者实际配置和 served model ID 为准：
 
-尚未完成：
+| Runtime | Model / endpoint |
+|---|---|
+| Text / Agent | `nvidia/Qwen3.6-35B-A3B-NVFP4` — `http://127.0.0.1:8000/v1` |
+| Mini Coach | `Qwen3-8B` — `http://127.0.0.1:8001/v1` |
+| StepAudio contract | `ws://127.0.0.1:8092/realtime` |
+| NeMo Retriever Service | `127.0.0.1:7670` |
+| Retriever 内部 VectorDB | `127.0.0.1:7671`；业务应用不得直接写入 |
 
-- DGX Spark 实机最终接入；
-- Step-Audio-2-mini 在 Spark 上的目标本地 Realtime 后端；
-- Spark 上完整资源占用、P50/P95、并发 Benchmark；
-- 最终比赛打包与视频。
+NemoClaw / OpenClaw 位于 `my-assistant` sandbox。官方 `nemoclaw onboard` 可发现并复用已经运行的 `localhost:8000/v1/models`；这是 endpoint 配置能力，不构成 Spark 兼容性或 E2E 证明。正式会后 Agent Skills 在 OpenClaw Runtime 执行。Mini 的 `interview-coach` Skill 仍由产品低延迟 Realtime Runtime 执行，不经过 OpenClaw。
+
+macOS 根 `.env.example` 默认 Step-Audio-2-mini / StepFun Cloud 保持不变；Spark 目标 profile 的 StepAudio contract 不改变 Mac 默认 provider。
+
+### DGX Spark 验证状态
+
+以下项目目前统一为 **NOT TESTED ON DGX SPARK**：
+
+- GB10 / DGX Spark Runtime compatibility；
+- Text / Coach / StepAudio / Retriever / NemoClaw 组合后的完整应用端到端；
+- StepAudio bridge 的流式、全双工、cancel / barge-in 与首音体验；
+- 资源占用、稳定性、并发以及 P50 / P95 性能。
+
+NVIDIA 官方模型 / vLLM recipe 仅供用户准备标准 Runtime；官方文档或已存在的应用配置都不能升格为本项目真机 PASS。
+
+**比赛与应用证据保留：**正式 Skills 描述 Task 能力与边界；NAT 提供 Evaluation / Profiler / Regression；Technical Observer 呈现真实运行状态；Benchmark 记录固定输入下的质量、性能和环境。每项结论须绑定真机实际运行产物。
+
+`deploy/spark/setup.sh` / `deploy/spark/start.sh` 是用户自管 Runtime 下的应用 setup / start 入口；外部 Text、Coach、StepAudio 与 Retriever 需由用户先行准备。
 
 ## 8. 当前不应再使用的说法
 

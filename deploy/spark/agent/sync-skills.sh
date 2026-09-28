@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=deploy/spark/lib/common.sh
+. "$DIR/lib/common.sh"
+
+have nemoclaw || die "NemoClaw CLI is missing; run deploy/spark/setup.sh first."
+status_json="$(nemoclaw "$NEMOCLAW_SANDBOX" status --json)" \
+  || die "Could not read NemoClaw sandbox status."
+STATUS_JSON="$status_json" python3 - <<'PY'
+import json, os
+status = json.loads(os.environ["STATUS_JSON"])
+if status.get("found") is not True or str(status.get("phase", "")).lower() not in {"ready", "running"}:
+    raise SystemExit("NemoClaw sandbox is not RUNNING.")
+PY
+
+skills=(
+  onboarding-closeout
+  interview-closeout
+  interview-observer
+  story-completion
+  story-generation
+)
+for skill in "${skills[@]}"; do
+  path="$REPO_ROOT/agent/skills/$skill"
+  [[ -f "$path/SKILL.md" ]] || die "Missing formal Skill: $path/SKILL.md"
+  nemoclaw "$NEMOCLAW_SANDBOX" skill install "$path"
+done
+
+# The NemoClaw command installs into OpenClaw's main-agent skill root. The
+# observer is also installed in the restricted product agent's own workspace.
+nemoclaw "$NEMOCLAW_SANDBOX" exec -- openclaw skills install \
+  /sandbox/.openclaw/workspace/skills/interview-observer \
+  --agent realtime-context --force >/dev/null
+
+echo "Synced ${#skills[@]} formal Skills; interview-observer is available to realtime-context."

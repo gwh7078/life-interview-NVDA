@@ -48,11 +48,9 @@ jobs:
 
       - name: Validate Spark deployment scripts
         run: |
-          bash -n deploy/spark/*.sh deploy/spark/lib/*.sh deploy/spark/models/*.sh deploy/spark/services/*.sh
-          python3 -m py_compile deploy/spark/services/*.py deploy/spark/fixtures/*.py deploy/spark/lib/*.py
-          python3 -m py_compile deploy/spark/tests/*.py
-          python3 deploy/spark/tests/lifecycle.test.py
-          bash deploy/spark/install.sh --dry-run
+          bash -n deploy/spark/*.sh deploy/spark/agent/*.sh deploy/spark/services/*.sh
+          python3 -m py_compile deploy/spark/services/*.py deploy/spark/fixtures/*.py
+          bash scripts/codex-node.sh npm run test:spark:deployment
 
       - name: Run deterministic verification
         run: bash scripts/codex-verify.sh

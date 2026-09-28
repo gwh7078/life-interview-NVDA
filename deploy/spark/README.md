@@ -1,227 +1,256 @@
-# DGX Spark Deployment Profile
+# DGX Spark application profile
 
-This directory is deployment-only. Product code remains shared with Mac.
+This repository is the Life Interview application for DGX Spark. It does not
+install or manage the machine's NVIDIA stack or the Text, Coach, Voice, or
+Retriever runtimes. Prepare those services with their maintainers' instructions,
+then configure this application to use their HTTP and WebSocket endpoints.
 
-## Three deployment operations
+## Prerequisites
+
+Prepare the Spark host yourself:
+
+- DGX Spark with DGX OS / Linux on ARM64 and an NVIDIA GB10 driver.
+- NVIDIA Container Toolkit and Docker Engine, configured for GPU access.
+- Git and Node.js 24.16+ (24.x), 26.1+, or newer. npm is required by the
+  repository's Node wrapper.
+- Network access and enough disk for the application and your chosen runtimes.
+- The four application endpoints below. Text must be running before NemoClaw
+  onboarding. Python 3.12 and uv are needed for the optional NAT evaluation.
+
+Official references:
+
+- [NVIDIA DGX Spark documentation](https://docs.nvidia.com/dgx/dgx-spark/)
+- [NVIDIA Container Toolkit installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+- [Docker Engine installation](https://docs.docker.com/engine/install/ubuntu/)
+
+Verify host prerequisites and Docker GPU access:
+
+```bash
+uname -m
+nvidia-smi
+docker info
+docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
+```
+
+The final command follows NVIDIA's [Container Toolkit sample workload](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html).
+
+## 1. Clone
 
 ```bash
 git clone https://github.com/gwh7078/life-interview-NVDA.git
 cd life-interview-NVDA
-git checkout main
-./deploy/spark/install.sh
 ```
 
-For a frozen test run, check out the `SPARK_RC_SHA` recorded in the final
-validation handoff instead of following a moving branch.
+## 2. Prepare the AI Runtime endpoints
 
-`install.sh` is the first-machine one-command flow: Runtime artifact prefetch,
-Text/Coach startup, Base bootstrap, Retriever startup, Product update, full
-start and verify. Text is ready before first NemoClaw onboarding so OpenClaw
-uses the existing local vLLM service rather than installing a separate model.
-It already runs `verify.sh`.
+Start each runtime yourself, using its official documentation. The application
+only calls the configured endpoint. It does not pull model images, download
+weights, choose GPU memory limits, or restart these services.
 
-Daily Product development:
+| Runtime | Recommended model | Endpoint contract | Official instructions |
+|---|---|---|---|
+| Text | `nvidia/Qwen3.6-35B-A3B-NVFP4` | OpenAI-compatible `http://127.0.0.1:8000/v1` | [NVIDIA DGX Spark vLLM model recipes](https://build.nvidia.com/spark/vllm/agent-ready-models), [Qwen3.6-35B-A3B recipe](https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B?features=tool_calling%2Creasoning&hardware=dgx_spark_gb10) |
+| Coach | `Qwen/Qwen3-8B` | OpenAI-compatible `http://127.0.0.1:8001/v1` | [vLLM OpenAI-compatible server](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html) |
+| Voice | Step-Audio 2 Mini | Product WebSocket `ws://127.0.0.1:8092/realtime` | [Step-Audio 2 official repository](https://github.com/stepfun-ai/Step-Audio2) |
+| Retrieval | NeMo Retriever | REST `http://127.0.0.1:7670`; VectorDB `http://127.0.0.1:7671` | [NeMo Retriever getting started](https://docs.nvidia.com/nemo/retriever/latest/extraction/getting-started-about/) |
+
+### Text model
+
+Follow NVIDIA's current DGX Spark vLLM recipe. Its model selection starts with:
 
 ```bash
-git pull
-./deploy/spark/update.sh
+export MODEL_HANDLE=nvidia/Qwen3.6-35B-A3B-NVFP4
 ```
 
-`update.sh` applies Product dependencies, migrations, changed Skills and Era
-data, and validates the Product. On success it stops and restarts Backend/Web,
-the scoped retrieval proxy, and Observer; this can start them even if they were
-stopped before the update. `--no-restart` leaves those services stopped after a
-successful update. The update may call Retriever APIs to ensure collections but
-does not start or restart the Retriever service. It never installs or upgrades
-Spark Base or restarts Text, Coach, Voice, Retriever, or NemoClaw Runtime
-services. If Base inputs are incompatible, it fails with the required
-`bootstrap.sh` command.
-
-Model changes stay in the Spark Runtime profile:
+Start the server using the recipe's current command and verify the served model
+ID:
 
 ```bash
-./deploy/spark/models.sh status
-./deploy/spark/models.sh sync text       # or coach / voice; fetch the selected artifacts
-./deploy/spark/restart.sh text           # or coach / voice
+curl http://127.0.0.1:8000/v1/models
 ```
 
-`models.sh prefetch [text|coach|voice]` downloads only the selected Runtime
-artifacts. Container `spec_hash` reconciliation recreates only a service whose
-image, model or runtime arguments changed. `SPARK_TEXT_MODEL` and
-`SPARK_COACH_MODEL` select model artifacts; their `*_SERVED_MODEL` values keep
-the Product-facing API route stable when the underlying model changes. Set
-`TEXT_MODEL` and `AGENT_MODEL_*` to the Text served name, and `REALTIME_COACH_MODEL`
-to the Coach served name; these are API model identifiers, not weight IDs. The
-example aliases are `text-api` and `coach-api`. Changing Text also refreshes the
-NemoClaw route after its selective restart; it does not reinstall the NemoClaw
-Base. `models.sh sync` only prepares the selected model;
-the following restart applies its container spec and does not restart other
-models.
+For NemoClaw's unauthenticated local-vLLM route, bind the existing server to
+loopback as NVIDIA documents. Setup reuses this server; it does not start a
+second Text model.
 
-### Unified Memory budget
+### Coach model
 
-The default vLLM utilization settings are Text `0.40`, Coach `0.18`, and
-StepAudio `0.12`, for a configured total of `0.70`. This leaves headroom for
-Retriever, KV-cache variation, CUDA, Docker, Node, OpenClaw, and the operating
-system on DGX Spark's Unified Memory. These are runtime limits, not measured peak
-usage; only the Spark run can establish actual concurrent memory use. Changing
-`SPARK_STEPAUDIO_GPU_MEMORY_UTILIZATION` changes the Voice backend fingerprint
-and recreates that backend on the next start.
-
-## Spark Base
-
-`install.sh` invokes `bootstrap.sh` during first setup after Text is ready. On a
-configured Spark, run `bootstrap.sh` only for a real Base upgrade:
+For vLLM, start the served model on port 8001:
 
 ```bash
-./deploy/spark/bootstrap.sh
-./deploy/spark/verify-base.sh
+vllm serve Qwen/Qwen3-8B --host 127.0.0.1 --port 8001
 ```
 
-`verify-base.sh` checks ARM64/GPU/Docker GPU, the host toolchain, NemoClaw /
-OpenShell, the Base fingerprint and persistent paths. It has no dependency on
-current model IDs, database contents or Skills. A Spark `PASS` is the Base
-freeze point; `NOT TESTED - REQUIRES DGX SPARK` is not a pass.
+Verify it with `curl http://127.0.0.1:8001/v1/models`, then use the exact
+served model ID in the application configuration. Another OpenAI-compatible
+runtime may use the same endpoint contract.
 
-The Base fingerprint covers the host architecture, GPU/driver, Docker/NVIDIA
-Runtime, Base version inputs, managed tool versions, generic vLLM image and Base
-setup scripts. The Base pins `uv` to 0.12.19, the version used by a successful Spark CI run; changing it changes the fingerprint. It does not include Git HEAD or the full Spark `.env`. Text,
-Coach and Voice use separate container specifications; formal Skills and
-Product dependencies have their own content/lockfile fingerprints.
+### StepAudio
 
-## Before renting Spark
-
-Run locally:
+StepAudio Local Runtime is an external dependency. Follow StepFun's instructions
+to install and start the model runtime. The official vLLM backend command can
+publish its HTTP service on a free host port (8002 below, leaving 8000 for Text):
 
 ```bash
-./deploy/spark/install.sh --dry-run
+docker run --rm -it --gpus all \
+  -v "$STEP_AUDIO_MODEL_DIR:/Step-Audio-2-mini:ro" \
+  -p 8002:8000 \
+  stepfun2025/vllm:step-audio-2-v20250909 \
+  -- vllm serve /Step-Audio-2-mini \
+  --served-model-name step-audio-2-mini --port 8000 \
+  --max-model-len 16384 --max-num-seqs 32 --tensor-parallel-size 1 \
+  --enable-auto-tool-choice --tool-call-parser step_audio_2 \
+  --tokenizer-mode step_audio_2 --chat_template_content_format string \
+  --audio-parser step_audio_2_tts_ta4 --trust-remote-code
 ```
 
-Hardware-dependent verify gates are never reported as PASS off Spark; they remain
-`NOT TESTED - REQUIRES DGX SPARK`.
-
-`verify.md` records the checked-out Git commit, host architecture and device,
-GPU driver, Docker/GPU runtime, memory and free disk, configured model IDs,
-runtime gate results, and the overall result. Its Git commit is captured from
-`git rev-parse HEAD` for reproducible hardware evidence.
-
-Credentials are optional unless the selected upstream artifacts require them. The
-preflight report records only present/missing for `HF_TOKEN`, `NGC_API_KEY`,
-`NVIDIA_API_KEY`, and `NVIDIA_INFERENCE_API_KEY`; it never prints values.
-Put required values in the shell environment or the untracked
-`deploy/spark/.env` (mode 600).
-
-## Architecture
-
-```text
-Shared Product (src/, web/public, agent/, nvidia/)
-        |
-        +-- OpenAI-compatible Text Provider -> local vLLM :8000
-        +-- Coach -> local qwen3-8b vLLM :8001
-        +-- RealtimeVoiceProvider(stepaudio2_mini)
-        |      -> Local Adapter -> WS Bridge :8092
-        |      -> Step-Audio2 vLLM :8010 + Token2Wav
-        +-- Retriever contract -> NeMo Retriever :7670 / VectorDB :7671
-        +-- Agent Task Contract -> NemoClaw/OpenShell/OpenClaw
-        |      -> signed retrieval scripts -> private proxy :4175
-        |      -> Backend /internal/agent-retrieval/* :4174
-        +-- NAT -> eval/profiler/regression only
-```
-
-Mac defaults remain StepFun Cloud because root `.env.example` keeps
-`STEPAUDIO2_EXECUTION=stepfun-cloud`. Spark selects `local` only in this
-deployment profile.
-
-## Voice capability policy
-
-The Local Adapter starts with every capability set to false. The Bridge announces
-the features it actually implements during session setup. Current bridge:
-context injection, explicit turn request, explicit session close, and manual turn
-control are implemented; full duplex, interruption, playback ACK, and tool calling
-are false. This must not be changed to PASS based on model marketing or an
-unverified upstream API.
-
-The Spark deployment path and local Adapter/Bridge integration are implemented.
-GB10 / ARM64 runtime compatibility still requires verification on DGX Spark. The
-StepFun reference image is checked for a verified `linux/arm64` manifest before
-prefetch. If ARM64 is not proven and `SPARK_STEPAUDIO_NATIVE_START_CMD` is empty,
-prefetch fails before downloading artifacts. A configured native command is
-reported as `NATIVE_FALLBACK`; it must bind local services to loopback and honor
-`SPARK_STEPAUDIO_GPU_MEMORY_UTILIZATION`. No unverified native command is
-provided by the deployment.
-
-Text, Coach, and the StepAudio backend publish their API ports only on
-`127.0.0.1`. The StepAudio bridge and Retriever use host networking: the bridge
-binds WebSocket and health endpoints to loopback, while Retriever is started
-with `--host 127.0.0.1`; its supervised VectorDB child also listens on loopback.
-The scoped `agent-retrieval-proxy` remains reachable on the private host address
-for the NemoClaw sandbox and continues to rely on its scoped API and token policy.
-
-## Agent retrieval boundary
-
-The product Backend remains bound to loopback. A tiny Spark-only reverse proxy
-binds the host's private address and exposes only the two signed formal-Agent
-retrieval routes. OpenShell policy permits only those routes and Node binaries;
-it does not mount `memoir.db` or the repository into the sandbox. The persistent
-token-signing secret is generated into untracked `deploy/spark/.env`; each Agent
-run still receives only its normal short-lived scoped retrieval token.
-
-## Selective service operations
+This server exposes StepFun's HTTP inference API. The product requires an
+additional Realtime bridge implementing `ws://127.0.0.1:8092/realtime`; the
+HTTP endpoint alone does not implement that WebSocket contract. The retained
+`stepaudio2_bridge.py` is the product protocol adapter. After preparing the
+StepFun source, model files, and Python dependencies using StepFun's
+instructions, run it yourself against the external backend, for example:
 
 ```bash
-./deploy/spark/preflight.sh
+STEP_AUDIO_SOURCE_DIR=/opt/Step-Audio2 \
+STEP_AUDIO_BACKEND_URL=http://127.0.0.1:8002/v1/chat/completions \
+STEP_AUDIO_TOKEN2WAV_DIR=/opt/Step-Audio-2-mini/token2wav \
+STEP_AUDIO_PROMPT_WAV=/opt/Step-Audio2/assets/default_male.wav \
+python3 deploy/spark/services/stepaudio2_bridge.py
+```
+
+The configured service must expose the Life Interview WebSocket contract at
+`/realtime`. Spark `setup.sh`, `start.sh`, and `stop.sh` do not install, start,
+or manage the model or bridge processes.
+
+### NeMo Retriever
+
+Start NeMo Retriever and its VectorDB with NVIDIA's instructions. This
+application creates its Transcript and Era collections, indexes application
+data, and uses the REST endpoint. It never starts, stops, or updates Retriever
+containers.
+
+Verify the endpoints before continuing:
+
+```bash
+curl http://127.0.0.1:8000/v1/models
+curl http://127.0.0.1:8001/v1/models
+curl http://127.0.0.1:7670/v1/health
+curl http://127.0.0.1:7671/v1/health
+```
+
+The WebSocket handshake and model IDs are checked by `check-env.sh`.
+
+## 3. Configure
+
+```bash
+cp deploy/spark/env.example deploy/spark/.env
+chmod 600 deploy/spark/.env
+```
+
+Edit the served model IDs and endpoint URLs if your runtimes use different
+values. Keep the Text and Agent URLs/models aligned:
+
+```dotenv
+TEXT_MODEL_PROVIDER=openai-compatible
+TEXT_MODEL_BASE_URL=http://127.0.0.1:8000/v1
+TEXT_MODEL=<actual-served-model-id>
+
+REALTIME_COACH_PROVIDER=openai-compatible
+REALTIME_COACH_BASE_URL=http://127.0.0.1:8001/v1
+REALTIME_COACH_MODEL=<actual-served-model-id>
+
+STEPAUDIO2_EXECUTION=local
+STEPAUDIO2_LOCAL_WS_URL=ws://127.0.0.1:8092/realtime
+
+NEMO_RETRIEVER_ENABLED=true
+NEMO_RETRIEVER_BASE_URL=http://127.0.0.1:7670
+NEMO_RETRIEVER_VECTORDB_URL=http://127.0.0.1:7671
+
+AGENT_MODEL_BASE_URL=http://127.0.0.1:8000/v1
+AGENT_MODEL_DEFAULT=<same-actual-served-text-model-id>
+```
+
+Do not put provider secrets in Git or print them in diagnostics. The setup script
+generates application signing secrets into this ignored mode-0600 file.
+
+## 4. Set up the application
+
+With the endpoints running:
+
+```bash
+./deploy/spark/check-env.sh
+./deploy/spark/setup.sh
+```
+
+`check-env.sh` only reports host and endpoint readiness. It does not install,
+repair, restart, or stop anything.
+
+`setup.sh` installs npm dependencies, migrates and seeds the application
+SQLite database, initializes Retriever collections and Era data, then installs
+and configures NemoClaw/OpenClaw and the formal Skills. It uses NVIDIA's hosted
+NemoClaw installer when the CLI is absent and the documented
+`nemoclaw onboard --non-interactive` path for a missing sandbox. It sets the
+existing vLLM provider and served model in NemoClaw, so OpenClaw reuses the
+already-running Text endpoint. It never selects `install-vllm` or starts a
+second model server.
+
+References: [NemoClaw Quickstart with OpenClaw](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart),
+[reuse an existing vLLM server](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/local-inference/set-up-vllm),
+[OpenAI-compatible endpoints](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/custom-endpoints/set-up-openai-compatible-endpoint).
+
+## 5. Start and stop
+
+```bash
 ./deploy/spark/start.sh
 ./deploy/spark/status.sh
-./deploy/spark/restart.sh all
-./deploy/spark/restart.sh product
-./deploy/spark/restart.sh backend
-./deploy/spark/restart.sh text
-./deploy/spark/restart.sh coach
-./deploy/spark/restart.sh voice
-./deploy/spark/restart.sh retriever
-./deploy/spark/restart.sh nemoclaw
-./deploy/spark/benchmark.sh
 ./deploy/spark/stop.sh
 ```
 
-The default `restart.sh` target remains `all`. Use `product` or a named service
-to avoid restarting unrelated models.
+These commands manage only Product-owned Backend/Web, retrieval proxy, and
+Technical Observer processes. They do not stop user-managed Text, Coach,
+StepAudio, or Retriever runtimes, and they do not stop NemoClaw/OpenClaw.
 
-## Persistent paths and data
+## 6. Verify
 
-`SPARK_HOME` defaults to `$HOME/.local/share/life-interview/spark`. It holds
-bootstrapped tools, Base state, PIDs, runtime state, Retriever data and the
-Spark SQLite database (`$SPARK_HOME/data/memoir.db`). HF/NGC model caches keep
-using `HF_HOME`, `MODEL_CACHE` and `NGC_CACHE`. Diagnostics, logs and benchmark
-evidence remain under the Product checkout's `runtime/` for easy archiving.
-If an older checkout has `data/memoir.db`, `update.sh` copies it using SQLite's
-backup API, verifies integrity and retains the original; conflicting old and
-new databases stop the update without overwriting either file. Existing
-Retriever data from the former `runtime/retriever` path is copied into an empty
-`SPARK_HOME` Retriever directory on first start; the source remains in place.
-If both old and persistent SQLite files differ, `update.sh` stops without
-choosing one and leaves Backend/Observer stopped until `DATABASE_PATH` is
-resolved, preventing service startup against the wrong copy.
+```bash
+./deploy/spark/verify.sh
+```
 
-This path policy is Spark-only. Mac setup and its per-Worktree database path
-remain unchanged. Stop/restart never deletes SQLite, Retriever data, model
-caches, NemoClaw sandboxes or user data. Re-running `install.sh` while the
-deployment is live is supported: preflight allows ports owned by services this
-profile can positively identify; unrelated occupied target ports fail closed.
+Verification writes a timestamped report and logs under
+`runtime/diagnostics/spark/verify-runs/`; each run keeps its own evidence. It
+checks the hardware profile, HTTP/WebSocket endpoints, model responses, Backend,
+Web, SQLite, realtime integration, Retriever and Era/Memory, NemoClaw/OpenClaw,
+Skills, deterministic application tests, NAT evaluation, and Technical Observer.
 
-## Spark-day order
+Statuses stay explicit:
 
-1. `preflight.sh`
-2. start/prefetch large images and models immediately
-3. Text 35B
-4. NemoClaw / OpenShell / formal Skills
-5. NeMo Retriever + Era index
-6. Coach
-7. Step-Audio2 Local
-8. backend/full stack
-9. `benchmark.sh` → text / coach / retriever / realtime / concurrency evidence
-10. clean-clone one-command replay
-11. retain `runtime/diagnostics/spark/` and `runtime/benchmarks/spark/` as evidence
+- `PASS`: the named check ran and passed.
+- `FAIL`: a required check ran and failed.
+- `EXTERNAL RUNTIME NOT READY`: an operator-managed endpoint is unavailable.
+- `NOT TESTED ON DGX SPARK`: the host is not a detected ARM64 GB10 system.
+- `NOT TESTED`: an additional verification input, such as a speech fixture, is
+  missing.
 
-Never interpret Cloud fallback, Retriever fail-open, or Coach fail-open as a local
-Spark PASS.
+The full StepAudio audio-to-audio gate uses a speech WAV fixture. Set
+`SPARK_REALTIME_FIXTURE=/path/to/speech.wav` to use a prepared fixture.
+Verification does not claim DGX Spark hardware validation when run on a Mac or
+another machine.
+
+## Benchmark
+
+Competition benchmarks remain separate from deployment. Run them after preparing
+the Spark runtime and product:
+
+```bash
+bash scripts/codex-node.sh npm run spark:benchmark
+```
+
+The benchmark records model, Coach, Retriever, realtime, and end-to-end evidence;
+it does not install or manage the external AI runtimes.
+
+## Mac and other profiles
+
+Spark is a deployment profile. The root `.env.example`, default
+`npm run dev`, StepFun Cloud voice path, and Direct Model Runtime remain the
+normal Mac development defaults.

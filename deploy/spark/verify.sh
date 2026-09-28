@@ -1,134 +1,256 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=deploy/spark/lib/common.sh
 . "$DIR/lib/common.sh"
-. "$DIR/lib/ports.sh"
 
-python3 - "$DIR" "$REPO_ROOT" "$SPARK_DIAGNOSTICS_DIR" <<'PY'
-import json, os, platform, re, subprocess, sys, time
+ensure_product_dirs
+run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+evidence_dir="$SPARK_DIAGNOSTICS_DIR/verify-runs/$run_id"
+mkdir -p "$evidence_dir"
+if "$DIR/check-env.sh" >"$evidence_dir/check-env.log" 2>&1; then
+  check_exit=0
+else
+  check_exit=$?
+fi
+export SPARK_VERIFY_CHECK_LOG="$evidence_dir/check-env.log"
+python3 - "$REPO_ROOT" "$evidence_dir" "$DATABASE_PATH" "$check_exit" <<'PY'
+import datetime, json, os, platform, re, shutil, subprocess, sys, time
 from pathlib import Path
 
-spark_dir, root, diag = map(Path, sys.argv[1:])
-evidence=diag/"evidence"; evidence.mkdir(parents=True,exist_ok=True)
-is_spark=platform.machine().lower() in {"aarch64","arm64"} and subprocess.run(["sh","-lc","command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1"]).returncode==0
-NOT_TESTED="NOT TESTED - REQUIRES DGX SPARK"
+root, evidence, database = map(Path, sys.argv[1:4])
+check_exit = int(sys.argv[4])
+check_text = Path(os.environ["SPARK_VERIFY_CHECK_LOG"]).read_text(encoding="utf-8", errors="replace")
+evidence.mkdir(parents=True, exist_ok=True)
 
-def redact(s):
-    s=re.sub(r'(?i)(authorization:?[ =]+bearer )[A-Za-z0-9._-]+',r'\1[REDACTED]',s)
-    s=re.sub(r'\b(?:nvapi-|sk-)[A-Za-z0-9_-]{8,}\b','[REDACTED]',s)
-    return s
+def command(args, timeout=900):
+    return subprocess.run(args, cwd=root, text=True, capture_output=True,
+                          timeout=timeout, env=os.environ.copy(), check=False)
 
-def gate(gid,name,command,requires_spark=True,timeout=900):
-    path=evidence/f"{gid}.log"; start=time.monotonic()
-    if requires_spark and not is_spark:
-        path.write_text(NOT_TESTED+"\n")
-        return {"id":gid,"name":name,"status":NOT_TESTED,"duration_ms":0,"evidence_file":str(path.relative_to(root)),"safe_error":None}
+def endpoint_pass(label):
+    return any(line.startswith("PASS:") and label.lower() in line.lower()
+               for line in check_text.splitlines())
+
+def physical_spark():
+    if platform.machine().lower() not in {"aarch64", "arm64"} or not shutil.which("nvidia-smi"):
+        return False
+    result = command(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"], timeout=10)
+    return result.returncode == 0 and "GB10" in result.stdout.upper()
+
+is_spark = physical_spark()
+rows = []
+
+def record(gid, name, status, output="", duration_ms=0):
+    safe = re.sub(r"(?i)(authorization:?\s*bearer\s+)[^\s]+", r"\1[REDACTED]", output)
+    safe = re.sub(r"\b(?:nvapi-|sk-)[A-Za-z0-9_-]{8,}\b", "[REDACTED]", safe)
+    path = evidence / f"{gid}.log"
+    path.write_text((safe.strip() or status) + "\n", encoding="utf-8")
+    rows.append({"id": gid, "name": name, "status": status,
+                 "duration_ms": duration_ms, "evidence_file": str(path.relative_to(root))})
+
+def gate(gid, name, args, timeout=900, needs=()):
+    if not is_spark:
+        record(gid, name, "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
+        return
+    missing = [label for label in needs if not endpoint_pass(label)]
+    if missing:
+        record(gid, name, "EXTERNAL RUNTIME NOT READY", "Unavailable endpoint checks: " + ", ".join(missing))
+        return
+    started = time.monotonic()
     try:
-        p=subprocess.run(["bash","-c",command],cwd=root,text=True,capture_output=True,timeout=timeout,env=os.environ.copy())
-        out=redact((p.stdout or "")+(("\n"+p.stderr) if p.stderr else ""))
-        path.write_text(out[-100000:])
-        status="PASS" if p.returncode==0 else "FAIL"
-        err=None if p.returncode==0 else (out.strip().splitlines()[-1][-500:] if out.strip() else f"exit {p.returncode}")
+        result = command(args, timeout=timeout)
+        output = (result.stdout or "") + (("\n" + result.stderr) if result.stderr else "")
+        record(gid, name, "PASS" if result.returncode == 0 else "FAIL",
+               output or f"exit={result.returncode}", round((time.monotonic() - started) * 1000))
     except subprocess.TimeoutExpired:
-        path.write_text("timeout\n"); status="FAIL"; err=f"timeout after {timeout}s"
-    except Exception as e:
-        path.write_text(type(e).__name__+"\n"); status="FAIL"; err=type(e).__name__
-    return {"id":gid,"name":name,"status":status,"duration_ms":round((time.monotonic()-start)*1000),"evidence_file":str(path.relative_to(root)),"safe_error":err}
+        record(gid, name, "FAIL", f"Timed out after {timeout}s", round((time.monotonic() - started) * 1000))
 
-q=lambda s: "'" + str(s).replace("'","'\\''") + "'"
-text_served_model=os.getenv("SPARK_TEXT_SERVED_MODEL","text-api")
-sandbox=os.getenv("NEMOCLAW_SANDBOX","my-assistant")
-db=os.getenv("DATABASE_PATH","data/memoir.db")
-gates=[
- gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')} --allow-owned-ports && {q(spark_dir/'lib/docker-gpu-smoke.sh')}"),
- gate("G1","Dependencies","bash scripts/codex-node.sh node --version && bash scripts/codex-node.sh npm --version && python3 --version && docker --version",False,60),
- gate("G2","Local Text Model",f"python3 {q(spark_dir/'lib/openai-smoke.py')} http://127.0.0.1:{os.getenv('SPARK_TEXT_PORT','8000')}/v1 {q(text_served_model)}",True,180),
- gate("G3","NemoClaw / OpenShell / Skills",f"test \"$({q(spark_dir/'services/nemoclaw.sh')} status)\" = RUNNING && nemoclaw {q(sandbox)} skill list && {q(spark_dir/'services/nemoclaw.sh')} smoke",True,360),
- gate("G4","Private Retriever + Agent retrieval boundary","bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-retriever-smoke.ts && bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-agent-retrieval-smoke.ts",True,420),
- gate("G5","Era Context","bash scripts/codex-node.sh npm run era:index && bash scripts/codex-node.sh npm run era:benchmark",True,600),
- gate("G6","Coach","bash scripts/codex-node.sh npm run test:realtime:coach:live",True,180),
- gate("G7","Step-Audio model load",f"curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_BACKEND_PORT','8010')}/health && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_HEALTH_PORT','8093')}/health",True,60),
- gate("G8","Audio-to-audio / streaming","bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-bridge-smoke.ts",True,300),
- gate("G9","Realtime Provider E2E","bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-provider-e2e.ts",True,600),
- gate("G10","Backend + Web + DB",f"test -f {q(db)} && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_BACKEND_PORT','4174')}/api/health && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_BACKEND_PORT','4174')}/ >/dev/null",True,60),
- gate("G11","Interview + Closeout","bash scripts/codex-node.sh npm run test:closeout:real",True,600),
- gate("G12","Completion / Continue / Contributor / Generation","bash scripts/codex-node.sh npm run test:agent:nat:eval",True,900),
- gate("G13","NAT","bash scripts/codex-node.sh npm run test:agent:nat:smoke",True,600),
- gate("G14","Technical Observer",f"test \"$({q(spark_dir/'services/observer.sh')} status)\" = RUNNING && python3 -c 'import json; d=json.load(open(\"runtime/diagnostics/spark/telemetry.json\")); assert d[\"platform\"]==\"dgx-spark\"; assert d[\"system_memory\"][\"total_bytes\"] is not None; assert d[\"gpu\"][\"utilization_pct\"] is None or d[\"gpu\"][\"utilization_pct\"] >= 0'",True,60),
-]
-gate_status={gate["id"]:gate["status"] for gate in gates}
-try:
-    git_commit=subprocess.run(["git","rev-parse","HEAD"],cwd=root,text=True,capture_output=True,check=True).stdout.strip()
-except Exception:
-    git_commit="UNAVAILABLE"
-
-def read_json(path):
-    try: return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError,json.JSONDecodeError): return {}
-
-preflight=read_json(diag/"preflight.json") if is_spark else {}
-versions=read_json(diag/"versions.json") if is_spark else {}
-checks=preflight.get("checks",{})
-hard_failed=preflight.get("hard_checks",{}).get("failed",[])
 if not is_spark:
-    gpu_runtime_status=NOT_TESTED
-elif hard_failed:
-    gpu_runtime_status="NOT TESTED - PREFLIGHT FAILED"
-elif gate_status.get("G0")=="PASS":
-    gpu_runtime_status="PASS"
-elif gate_status.get("G0")=="FAIL":
-    gpu_runtime_status="FAIL"
+    record("G0", "DGX Spark host prerequisites", "NOT TESTED ON DGX SPARK",
+           "Requires ARM64, a detected NVIDIA GB10 GPU, and Docker.")
 else:
-    gpu_runtime_status="NOT TESTED - PREFLIGHT FAILED"
+    required = ("ARM64", "NVIDIA GPU", "Docker daemon")
+    missing = [label for label in required if not endpoint_pass(label)]
+    record("G0", "DGX Spark host prerequisites", "FAIL" if missing else "PASS",
+           "Missing checks: " + ", ".join(missing) if missing else check_text)
 
-def gate_result(gid):
-    return gate_status.get(gid,NOT_TESTED)
+if not is_spark:
+    record("G0R", "External Runtime endpoint readiness", "NOT TESTED ON DGX SPARK",
+           "The Spark profile is not running on detected DGX Spark GB10 hardware.")
+elif check_exit == 0:
+    record("G0R", "External Runtime endpoint readiness", "PASS", check_text)
+else:
+    failed_lines = [line for line in check_text.splitlines()
+                    if line.startswith(("FAIL:", "EXTERNAL RUNTIME NOT READY:"))]
+    status = "FAIL" if any(line.startswith("FAIL:") for line in failed_lines) \
+        else "EXTERNAL RUNTIME NOT READY"
+    record("G0R", "External Runtime endpoint readiness", status,
+           "Required readiness checks failed:\n" + "\n".join(failed_lines))
 
-def combined_result(*ids):
-    statuses=[gate_result(gid) for gid in ids]
-    if all(status=="PASS" for status in statuses): return "PASS"
-    if any(status=="FAIL" for status in statuses): return "FAIL"
-    return NOT_TESTED
+gate("G1", "Backend + Web + SQLite", [
+    "python3", "-c",
+    "import os,sqlite3,urllib.request; "
+    "p=os.environ['DATABASE_PATH']; "
+    "db=sqlite3.connect('file:'+p+'?mode=ro',uri=True); "
+    "assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; db.close(); "
+    "base='http://127.0.0.1:'+os.environ['SPARK_BACKEND_PORT']; "
+    "urllib.request.urlopen(base+'/api/health',timeout=8).read(); "
+    "urllib.request.urlopen(base+'/',timeout=8).read()"
+], timeout=30)
 
-def observed(key, check=None):
-    if not is_spark: return NOT_TESTED
-    value=versions.get(key)
-    if value is None and check:
-        value=checks.get(check,{}).get("value")
-    return str(value) if value is not None else "UNAVAILABLE"
+gate("G2", "Text model connection", [
+    "python3", "deploy/spark/lib/openai-smoke.py",
+    os.environ.get("TEXT_MODEL_BASE_URL", ""), os.environ.get("TEXT_MODEL", ""),
+], timeout=180, needs=("Text endpoint and served model",))
 
-device_gpu=" / ".join(value for value in (observed("product_identity"),observed("gpu")) if value not in {NOT_TESTED,"UNAVAILABLE"}) if is_spark else NOT_TESTED
-if is_spark and not device_gpu: device_gpu="UNAVAILABLE"
-hardware={
-    "Git Commit":git_commit,
-    "Architecture":observed("architecture","architecture_arm64"),
-    "Device / GPU":device_gpu,
-    "Driver":observed("driver"),
-    "Docker":observed("docker"),
-    "Docker GPU Runtime":gpu_runtime_status,
-    "System Memory":(f"{float(versions['system_memory_gb']):.1f} GB" if is_spark and versions.get("system_memory_gb") is not None else ("UNAVAILABLE" if is_spark else NOT_TESTED)),
-    "Free Disk":(f"{float(versions['free_disk_gb']):.1f} GB" if is_spark and versions.get("free_disk_gb") is not None else ("UNAVAILABLE" if is_spark else NOT_TESTED)),
-    "Text Model":os.getenv("SPARK_TEXT_MODEL") or versions.get("deployment",{}).get("text_model") or "nvidia/Qwen3.6-35B-A3B-NVFP4",
-    "Text Runtime":gate_result("G2"),
-    "Coach Model":os.getenv("SPARK_COACH_MODEL") or versions.get("deployment",{}).get("coach_model") or "Qwen/Qwen3-8B",
-    "Coach Runtime":gate_result("G6"),
-    "Voice Model":os.getenv("SPARK_STEPAUDIO_HF_MODEL") or versions.get("deployment",{}).get("stepaudio_hf_model") or "stepfun-ai/Step-Audio-2-mini",
-    "Voice Runtime":combined_result("G7","G8"),
-    "Retriever":gate_result("G4"),
-    "NemoClaw":gate_result("G3"),
-    "OpenClaw":gate_result("G3"),
-    "Backend":gate_result("G10"),
+gate("G3", "Coach model connection", [
+    "python3", "deploy/spark/lib/openai-smoke.py",
+    os.environ.get("REALTIME_COACH_BASE_URL", ""), os.environ.get("REALTIME_COACH_MODEL", ""),
+], timeout=180, needs=("Coach endpoint and served model",))
+
+fixture = Path(os.environ.get("SPARK_REALTIME_FIXTURE", "runtime/benchmarks/spark/fixtures/speech-short.wav"))
+if not fixture.is_absolute():
+    fixture = root / fixture
+if not is_spark:
+    record("G4", "Realtime Provider + StepAudio integration",
+           "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
+elif not endpoint_pass("StepAudio WebSocket"):
+    record("G4", "Realtime Provider + StepAudio integration", "EXTERNAL RUNTIME NOT READY",
+           "StepAudio WebSocket endpoint did not pass the external readiness check.")
+elif not fixture.is_file():
+    record("G4", "Realtime Provider + StepAudio integration", "NOT TESTED",
+           f"Speech fixture not found: {fixture}; set SPARK_REALTIME_FIXTURE to a speech WAV.")
+else:
+    gate("G4", "Realtime Provider + StepAudio integration", [
+        "bash", "scripts/codex-node.sh", "node", "--env-file-if-exists=deploy/spark/.env",
+        "--import", "tsx", "scripts/spark-realtime-bridge-smoke.ts", "--fixture", str(fixture),
+    ], timeout=600, needs=("StepAudio WebSocket",))
+
+gate("G5", "Retriever + transcript Evidence contract", [
+    "bash", "scripts/codex-node.sh", "npm", "run", "spark:retriever:smoke",
+], timeout=420, needs=("NeMo Retriever REST",))
+
+gate("G6", "Era + Memory + Agent retrieval policy", [
+    "bash", "-lc",
+    "bash scripts/codex-node.sh npm run era:index && "
+    "bash scripts/codex-node.sh npm run spark:agent-retrieval:smoke",
+], timeout=900, needs=("NeMo Retriever REST",))
+
+sandbox = os.environ.get("NEMOCLAW_SANDBOX", "my-assistant")
+model = os.environ.get("AGENT_MODEL_DEFAULT", "")
+def verify_agent_runtime():
+    name = "NemoClaw + OpenClaw + Skills + model route"
+    if not is_spark:
+        record("G7", name, "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
+        return
+    if not shutil.which("nemoclaw"):
+        record("G7", name, "FAIL", "nemoclaw CLI is unavailable.")
+        return
+    started = time.monotonic()
+    try:
+        status = command(["nemoclaw", sandbox, "status", "--json"], timeout=60)
+        data = json.loads(status.stdout)
+        if status.returncode or data.get("found") is not True or str(data.get("phase", "")).lower() not in {"ready", "running"}:
+            raise RuntimeError("NemoClaw sandbox is not RUNNING.")
+        if data.get("provider") != "vllm-local" or data.get("model") != model:
+            raise RuntimeError("OpenClaw inference route does not match the configured Text model.")
+        expected_route = {"provider": "vllm-local", "model": model}
+        for route_name in ("recordedRoute", "liveRoute"):
+            route = data.get(route_name)
+            if not isinstance(route, dict) or any(route.get(key) != value for key, value in expected_route.items()):
+                raise RuntimeError(f"OpenClaw {route_name} does not match the configured Text model.")
+        if data.get("routeDrift"):
+            raise RuntimeError("NemoClaw reports inference route drift.")
+        openclaw = command(["nemoclaw", sandbox, "exec", "--", "openclaw", "--version"], timeout=30)
+        if openclaw.returncode:
+            raise RuntimeError("OpenClaw is not installed or not available in the sandbox.")
+        agents = command(["nemoclaw", sandbox, "config", "get", "--key", "agents.list", "--format", "json"], timeout=60)
+        if agents.returncode or "realtime-context" not in agents.stdout:
+            raise RuntimeError("realtime-context Agent is not configured.")
+        skills = ("onboarding-closeout", "interview-closeout", "interview-observer",
+                  "story-completion", "story-generation")
+        for skill in skills:
+            result = command(["nemoclaw", sandbox, "exec", "--", "test", "-f",
+                              f"/sandbox/.openclaw/workspace/skills/{skill}/SKILL.md"], timeout=30)
+            if result.returncode:
+                raise RuntimeError(f"Formal Skill is missing: {skill}")
+        observer = command(["nemoclaw", sandbox, "exec", "--", "test", "-f",
+                            "/sandbox/.openclaw/workspace-realtime-context/skills/interview-observer/SKILL.md"], timeout=30)
+        if observer.returncode:
+            raise RuntimeError("interview-observer is missing from realtime-context.")
+        record("G7", name, "PASS",
+               f"phase={data.get('phase')} provider=vllm-local model={model}; "
+               "realtime-context and five formal Skills verified.",
+               round((time.monotonic() - started) * 1000))
+    except Exception as error:
+        record("G7", name, "FAIL", str(error), round((time.monotonic() - started) * 1000))
+
+verify_agent_runtime()
+
+gate("G8", "Closeout + Completion + Generation + Contributor + Memory tests",
+     ["bash", "scripts/codex-node.sh", "npm", "test"], timeout=1800)
+
+gate("G9", "NAT evaluation", [
+    "bash", "scripts/codex-node.sh", "npm", "run", "test:agent:nat:smoke",
+], timeout=1200, needs=("Text endpoint and served model",))
+
+if not is_spark:
+    record("G10", "Technical Observer", "NOT TESTED ON DGX SPARK",
+           "Physical DGX Spark GB10 host not detected.")
+else:
+    started = time.monotonic()
+    try:
+        telemetry = json.loads(Path(os.environ["SPARK_TELEMETRY_PATH"]).read_text(encoding="utf-8"))
+        if telemetry.get("platform") != "dgx-spark":
+            raise RuntimeError("Observer telemetry does not identify dgx-spark.")
+        if not telemetry.get("system_memory", {}).get("total_bytes"):
+            raise RuntimeError("Observer telemetry has no system memory reading.")
+        record("G10", "Technical Observer", "PASS", json.dumps(telemetry, ensure_ascii=False),
+               round((time.monotonic() - started) * 1000))
+    except Exception as error:
+        record("G10", "Technical Observer", "FAIL", str(error), round((time.monotonic() - started) * 1000))
+
+try:
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, text=True,
+                            capture_output=True, timeout=10).stdout.strip()
+except Exception:
+    commit = "UNAVAILABLE"
+
+statuses = {row["status"] for row in rows}
+if "FAIL" in statuses:
+    overall = "FAIL"
+elif "NOT TESTED ON DGX SPARK" in statuses:
+    overall = "NOT TESTED ON DGX SPARK"
+elif "EXTERNAL RUNTIME NOT READY" in statuses:
+    overall = "EXTERNAL RUNTIME NOT READY"
+elif "NOT TESTED" in statuses:
+    overall = "NOT TESTED"
+else:
+    overall = "PASS"
+
+summary = {
+    "captured_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "git_commit": commit, "dgx_spark_gb10_detected": is_spark,
+    "external_runtime_check_exit": check_exit, "overall": overall, "gates": rows,
 }
-result_text="FAIL" if any(g["status"]=="FAIL" for g in gates) else (NOT_TESTED if not is_spark else "PASS")
-summary={"captured_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"git_commit":git_commit,"dgx_spark_detected":is_spark,"hardware_validation":hardware,"gates":gates}
-(diag/"verify.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2))
-lines=["# DGX Spark Verify","","## DGX Spark Hardware Validation",""]
-lines.extend(f"{key}: {value}" for key,value in hardware.items())
-lines += ["",f"Result: {result_text}.","","## Verification Gates","","| Gate | Check | Status | Duration | Evidence |","|---|---|---|---:|---|"]
-for g in gates:
-    lines.append(f"| {g['id']} | {g['name']} | {g['status']} | {g['duration_ms']} ms | `{g['evidence_file']}` |")
-fail=[g for g in gates if g["status"]=="FAIL"]
-(diag/"verify.md").write_text("\n".join(lines)+"\n")
+(evidence / "verify.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+lines = [
+    "# Spark application verification", "",
+    f"Result: **{overall}**", "",
+    f"- Git commit: {commit}",
+    f"- DGX Spark GB10 detected: {str(is_spark).lower()}",
+    f"- External endpoint check: {'PASS' if check_exit == 0 else 'NOT READY'}",
+    "- Repeat: bash deploy/spark/verify.sh",
+    f"- Evidence: {evidence.relative_to(root)}", "",
+    "## Gates", "",
+    "| Gate | Check | Status | Duration | Evidence |",
+    "|---|---|---|---:|---|",
+]
+for row in rows:
+    lines.append(f"| {row['id']} | {row['name']} | {row['status']} | {row['duration_ms']} ms | {row['evidence_file']} |")
+report = evidence / "verify.md"
+report.write_text("\n".join(lines) + "\n", encoding="utf-8")
 print("\n".join(lines))
-raise SystemExit(1 if fail else 0)
+print(f"\nDetailed report: {report.relative_to(root)}")
+raise SystemExit(0 if overall == "PASS" else 1)
 PY

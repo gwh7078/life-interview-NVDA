@@ -1,6 +1,6 @@
 # Agent Runtime
 
-> 当前 Agent Task / Skill / Runtime 真相源，更新于 2026-09-27。
+> 当前 Agent Task / Skill / Runtime 真相源，更新于 2026-09-28。
 
 ## 1. Task Registry
 
@@ -23,9 +23,9 @@ story.generation
 
 固定业务入口由 Backend 决定，不增加总控 Agent 重新判断已知路由。
 
-## 2. Skill
+## 2. Skill 与执行 Runtime
 
-当前产品 Skill family：
+当前正式产品 Skill：
 
 - `onboarding-closeout`
 - `interview-closeout`
@@ -33,6 +33,8 @@ story.generation
 - `interview-coach`
 - `story-completion`
 - `story-generation`
+
+NemoClaw setup 将项目正式 Skill 定义同步到 sandbox。Skills 的安装不改变各产品任务的执行 Runtime：会后 Agent Tasks 由 OpenClaw 执行；Mini `interview-coach` 仍由产品低延迟 Realtime Runtime 执行。
 
 `story-context-inspector` 属于早期 Smoke / 诊断，不计入当前产品能力。
 
@@ -46,15 +48,15 @@ NemoClaw / OpenClaw Agent Runtime
 Stub Runtime
 ```
 
-`.env.example` 当前默认：
+Mac `.env.example` 当前默认：
 
 ```text
 AI_TASK_RUNTIME=direct
 ```
 
-所以正确表述是：
+DGX Spark 目标由操作者准备 Text / Agent Model Service，本仓库把 AgentTask Contract 接到 NemoClaw 管理的 OpenClaw sandbox `my-assistant`。OpenClaw 是会后正式 Agent Runtime；不在 Host 上另装一套 OpenClaw。
 
-> Agent Runtime 已实现并经过专项真实验证，但当前 Web 默认环境仍使用 Direct Model；需要时可切换到 NemoClaw / OpenClaw。
+首次 setup 使用 [NVIDIA 官方 NemoClaw installer](https://www.nvidia.com/nemoclaw.sh) 与 [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart)。已有 `http://localhost:8000/v1` vLLM 服务时，onboard 可读取 `/v1/models` 并复用其 served model。Spark 的应用接线配置见 [README](../README.md#dgx-spark-deployment) 与 [Spark deployment brief](04-nvidia/spark/SPARK_DEPLOYMENT_AGENT_BRIEF_v1.0.md)。
 
 ## 4. Contract
 
@@ -83,9 +85,9 @@ Reasoning 可以重试；Apply 必须保持幂等和事务边界。
 
 当前 Story Continue Closeout 可使用受限 `memory-search` script capability。
 
-## 6. interview.context_hint
+## 6. interview.context_hint 与 Mini Coach
 
-这是专用 Realtime Context Agent Task：
+`interview.context_hint` 是专用 Realtime Context Agent Task：
 
 - agent id：`realtime-context`；
 - thinking：off；
@@ -96,11 +98,9 @@ Reasoning 可以重试；Apply 必须保持幂等和事务边界。
 
 它主要服务 StepAudio 3 的 Voice Tool Slow Path。
 
-**Step-Audio-2-mini 的 supervisor_auto Coach 不调用该 Agent。** Mini 使用正式 `interview-coach` Skill，由独立的低延迟 Realtime Runtime 执行 Qwen3-8B Gate / Retrieval / Resolve，避免再叠一层 OpenClaw 调用。
+**Step-Audio-2-mini 的 `supervisor_auto` Coach 不调用该 Agent，也不经过 OpenClaw。** 产品低延迟 Realtime Runtime 使用 Qwen3-8B 执行 `interview-coach` Skill 的 Gate / Retrieval / Resolve，遵守 2s Gate 与 6s 总 Deadline；失败、超时或 stale 结果不得阻塞当前 Voice。
 
-`interview-coach` 与通用 AgentTaskPort Skill 的区别只在 Runtime：它仍是正式 Skill，但默认执行 Runtime 是产品自建的 low-latency realtime runtime，而不是 Direct Model / NemoClaw / OpenClaw。
-
-## 7. Model Profile
+## 7. Model Profile 与 endpoint
 
 Task Definition 当前按职责映射：
 
@@ -109,7 +109,7 @@ Task Definition 当前按职责映射：
 - realtime-context；
 - writing。
 
-Mac 当前 Agent / 文本任务通过 Bailian `qwen3.6-35b-a3b` 配置；未来 Spark 可以替换模型执行后端，不改变 Task Contract。
+Mac Agent / 文本任务通过 Bailian `qwen3.6-35b-a3b` 配置。Spark 部署目标由操作者运行 OpenAI-compatible Text Service：`nvidia/Qwen3.6-35B-A3B-NVFP4`，默认 `http://127.0.0.1:8000/v1`；NemoClaw 复用 `/v1/models` 实际返回的模型 ID。Mini Coach 单独使用 `Qwen3-8B`，默认 `http://127.0.0.1:8001/v1`。两套 endpoint 分开配置，不能将 Coach 路由到 OpenClaw。
 
 ## 8. NAT
 
@@ -121,4 +121,4 @@ NeMo Agent Toolkit 用于：
 - Trace / Trajectory；
 - Benchmark。
 
-NAT 不接管 `AgentTaskPort`，也不编排产品流程。
+NAT 是比赛 / 应用评测证据面，不接管 `AgentTaskPort`，也不编排产品流程。DGX Spark 上的 NAT、Agent、Coach、Realtime、Retriever 与应用全链路均 **NOT TESTED ON DGX SPARK**，直到真机报告保存可复现结果。

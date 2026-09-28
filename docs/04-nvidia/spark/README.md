@@ -1,88 +1,66 @@
-# DGX Spark Deployment Reference Hub
+# DGX Spark Deployment Reference
 
-> 状态：Current preparation reference  
-> 更新：2026-09-27  
-> 目标：为 `life-interview-NVDA` 的 DGX Spark 完整移植、一键部署和一天真机验收提供单一入口。
+> 状态：Current deployment boundary and operator reference
+> 更新：2026-09-28
 
-## 1. 这组资料解决什么问题
+## 1. 部署定位
 
-本目录不是产品架构真相源，也不替代 `docs/CURRENT_STATE.md` / `docs/REALTIME.md` / `docs/NVIDIA.md`。
+DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库部署人生采访局应用，并将应用接到这些服务。部署过程保留现有业务 Contract、SQLite Source of Truth、Agent Skill 边界和 Mini Coach 低延迟 Runtime。
 
-它只负责：
+本页不把“从裸 Spark 一键安装全部 Runtime”作为目标。`deploy/spark/setup.sh` 与 `start.sh` 只部署 / 启动应用并接线；Text、Coach、StepAudio 与 Retriever 服务须由用户先行准备和维护。
 
-- 收集 DGX Spark / NVIDIA / StepFun / vLLM-Omni 的当前官方资料；
-- 把官方资料映射到本项目的实际部署任务；
-- 约束开发 Agent 在租用 Spark 前完成所有可提前完成的工作；
-- 给一天真机租用提供固定 Gate、命令入口和证据清单；
-- 明确哪些能力已经由官方验证，哪些仍必须在我们的租用 Spark 上实测。
+## 2. Runtime 接口
 
-## 2. 阅读顺序
+| Role | Model | Default endpoint | Owner / consumer |
+|---|---|---|---|
+| Text / Agent | `nvidia/Qwen3.6-35B-A3B-NVFP4` | `http://127.0.0.1:8000/v1` | 用户运行 vLLM；OpenClaw 与应用复用 served ID |
+| Mini Coach | `Qwen3-8B` | `http://127.0.0.1:8001/v1` | 用户运行；产品低延迟 Realtime Runtime 调用 |
+| StepAudio | Step-Audio-2-mini | `ws://127.0.0.1:8092/realtime` | 用户提供符合应用契约的 Realtime Runtime / bridge |
+| NeMo Retriever | Transcript / Era collections | Service `:7670`；internal VectorDB `:7671` | 用户运行；应用只访问 `:7670` |
 
-1. [OFFICIAL_REFERENCE_INDEX_v1.0.md](OFFICIAL_REFERENCE_INDEX_v1.0.md)  
-   官方资料索引、当前版本快照、已知兼容性和禁止提前假设的事项。
+`my-assistant` NemoClaw sandbox 内的 OpenClaw 承担正式会后 Agent Tasks。Mini `interview-coach` Skill 继续在产品低延迟 Runtime 中执行，不经过 OpenClaw。
 
-2. [SPARK_DEPLOYMENT_AGENT_BRIEF_v1.0.md](SPARK_DEPLOYMENT_AGENT_BRIEF_v1.0.md)  
-   给开发 Agent 的实现约束。目标是提前完成 `deploy/spark/`、配置、Adapter 边界、Smoke、Benchmark 与证据采集。
+## 3. 前置条件
 
-3. [ONE_DAY_SPARK_RUNBOOK_v1.0.md](ONE_DAY_SPARK_RUNBOOK_v1.0.md)  
-   真机到手后的执行顺序。Spark 当天以部署、兼容性修复、Benchmark 和完整验收为主，不现场重新设计架构。
+- 可登录的 DGX Spark（ARM64 / aarch64），NVIDIA driver 可通过 nvidia-smi 检查，Docker daemon 可用；兼容性仍须在目标设备上实际验证。
+- Git、Python 3、Node.js / npm；通过 `bash scripts/codex-node.sh` 调用 Node / npm。
+- Text、Coach、StepAudio contract、Retriever endpoint 已在 Spark 上启动。
+- Text `:8000/v1/models` 返回真实 served ID；Coach `:8001/v1/models` 与配置一致。
+- NemoClaw / OpenShell onboarding 所需网络访问与凭据由操作者准备，密钥不得提交或写入报告。
 
-## 3. 当前已确认的 DGX Spark 基线
+## 4. 操作步骤
 
-以 NVIDIA 官方文档 2026-09-27 可见信息为准：
+完整的 Clone → Prepare runtimes → Configure → Setup → Start → Verify 命令见根目录 [README 的 DGX Spark deployment](../../../README.md#dgx-spark-deployment)。
 
-- DGX Spark：Grace Blackwell / GB10；
-- CPU：20-core ARM64；
-- 内存：128 GB unified memory；
-- DGX OS：Ubuntu-based Linux；
-- Docker 与 NVIDIA Container Runtime 是官方主路径；
-- Founders Edition 当前 release notes：DGX OS 7.5.0、Driver 580.159.03、CUDA 13.0.2、Kernel 6.17；
-- GB10 partner system 的版本可能不同，真机必须重新记录；
-- NVIDIA 当前 DGX Spark agent-ready vLLM 推荐：`nvidia/Qwen3.6-35B-A3B-NVFP4`；
-- NeMo Retriever service image 当前文档明确包含 `linux/arm64` multi-arch manifest；
-- Step-Audio-2-mini 已有官方 StepFun vLLM 路径与 vLLM-Omni StepAudio2 pipeline，但公开 vLLM-Omni StepAudio2 资料是 offline / S2ST 能力证据，不等于已经证明 DGX Spark full-duplex Realtime WebSocket。
+1. Clone 本仓库。
+2. 在仓库外依官方资料准备 Text / Coach / StepAudio / Retriever Runtime。
+3. 复制 `deploy/spark/env.example` 为忽略文件 `deploy/spark/.env`，按两个 `/v1/models` endpoint 返回的 served ID 配置模型名。
+4. 四个外部 Runtime 就绪后运行 `bash deploy/spark/setup.sh`。它执行服务检查、应用依赖与数据库 setup、NVIDIA 官方 NemoClaw installer / `nemoclaw onboard`、现有 `localhost:8000/v1/models` 模型复用，以及应用 Skills / policy 接线。
+5. 运行 `bash deploy/spark/start.sh`。NemoClaw setup 已保证 sandbox 运行；`start.sh` 只启动 Backend、Agent retrieval proxy 和 Technical Observer。
+6. 所有服务就绪后在真机运行 `bash deploy/spark/verify.sh`，并保留报告与 gate evidence。
 
-## 4. 项目最终目标
+## 5. 比赛 / 应用证据
 
-最终比赛版的 Definition of Done：
+- **Skills**：说明会后 Agent Task 的应用能力、职责和证据边界。
+- **NAT**：记录 Agent Evaluation、Profiler、Regression 和轨迹结果。
+- **Technical Observer**：记录真实服务状态及可读取的 Spark 指标。
+- **Benchmark**：提供固定输入下的质量、时延、资源和并发结果。
 
-```bash
-git clone https://github.com/gwh7078/life-interview-NVDA.git
-cd life-interview-NVDA
-./deploy/spark/install.sh
-```
+这些证据必须来自实际运行，附带环境和 commit。Harness、endpoint 配置或官方模型 recipe 不能代替 Spark 真机结果。
 
-完成后至少能够：
+## 6. 当前验收状态
 
-```text
-Web
-→ Backend
-→ SQLite
-→ Step-Audio-2-mini Local Realtime
-→ Mini Coach
-→ Current Story / Era Retrieval
-→ NemoClaw / OpenShell / OpenClaw
-→ Local Post-session Agent
-→ Closeout / Completion / Generation
-→ NAT Eval / Technical Observer
-```
+- DGX Spark Runtime compatibility：**NOT TESTED ON DGX SPARK**。
+- 完整应用端到端（Text / Coach / StepAudio / Retriever / OpenClaw）：**NOT TESTED ON DGX SPARK**。
+- 性能、资源与并发 Benchmark：**NOT TESTED ON DGX SPARK**。
 
-并通过：
+## 7. 官方参考
 
-```bash
-./deploy/spark/verify.sh
-```
-
-## 5. 资料优先级
-
-发生冲突时按以下优先级处理：
-
-1. 租用 Spark 真机的实际输出；
-2. NVIDIA DGX Spark 官方 User Guide / build.nvidia.com Spark Playbook；
-3. NVIDIA OpenShell / NeMo Retriever 官方文档；
-4. vLLM / vLLM-Omni 官方仓库；
-5. StepFun Step-Audio2 官方仓库；
-6. 本目录中的项目归纳；
-7. 旧历史文档、博客、社区帖子。
-
-任何第三方教程不得覆盖官方约束或真机事实。
+- [DGX Spark User Guide](https://docs.nvidia.com/dgx/dgx-spark/)
+- [NVIDIA vLLM agent-ready models for Spark](https://build.nvidia.com/spark/vllm/agent-ready-models)
+- [Qwen3.6-35B-A3B GB10 recipe](https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B?features=tool_calling%2Creasoning&hardware=dgx_spark_gb10)
+- [NemoClaw installer](https://www.nvidia.com/nemoclaw.sh)
+- [NemoClaw OpenClaw quickstart](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart)
+- [NemoClaw existing vLLM setup](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/local-inference/set-up-vllm)
+- [Step-Audio 2 official repository](https://github.com/stepfun-ai/Step-Audio2)
+- [NeMo Retriever getting started](https://docs.nvidia.com/nemo/retriever/latest/extraction/getting-started-about/)

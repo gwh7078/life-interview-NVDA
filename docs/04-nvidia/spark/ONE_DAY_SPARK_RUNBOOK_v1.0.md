@@ -1,4 +1,9 @@
-# One-Day DGX Spark Runbook v1.0
+# One-Day DGX Spark Runbook v1.0 (historical plan)
+
+> 本文记录比赛日的验证顺序，不再定义安装器或 Runtime 管理方式。当前
+> 部署边界、官方 Runtime 链接和命令以 [当前 Spark 部署说明](README.md)
+> 与 [deploy/spark/README.md](../../../deploy/spark/README.md) 为准。旧版
+> install/bootstrap/models/restart 命令已删除，不要按本文旧版本执行。
 
 > 约束：Spark 只租用一天。  
 > 原则：租机当天只做真机部署、兼容性修复、Benchmark、完整验收和证据留存。
@@ -7,38 +12,25 @@
 
 确认：
 
-- GitHub main 已包含 `deploy/spark/`；
-- `install.sh` / `verify.sh` 已完成非 Spark 环境的静态验证；
-- HF token / NGC / GitHub 凭据准备好；
-- 需要 accept license / model access 的模型已经提前处理；
-- 模型 handle、镜像 tag、端口全部配置化；
-- 固定音频与 benchmark dataset 已在 repo 或可快速获取的位置；
+- 最新 main 包含 `deploy/spark/setup.sh`、`start.sh` 和应用验证脚本；
+- 用户将按 NVIDIA / StepFun 官方说明准备 Text、Coach、StepAudio 和 Retriever；
+- Text 与 Agent 共用的 served model ID、Coach served model ID 和各 endpoint 已确认；
+- 模型许可、官方 Runtime 先决条件和必要凭证由 Runtime 操作者处理；
+- 固定语音 fixture 与 benchmark dataset 已在 repo 或可快速获取的位置；
 - README 不依赖当天临时写；
 - Coding Agent 能在 Linux ARM64 上使用；
 - 不需要现场重新做产品决策。
 
-## 1. T+0：先采集机器事实
+## 1. T+0：只检查机器与 endpoint readiness
 
-第一件事不是安装。
+仓库不安装或修复 DGX OS、Driver、CUDA、Docker 或 NVIDIA Container Runtime。
+先运行只读检查：
 
-执行 `preflight.sh`，保存：
-
-```text
-hostname
-OS / kernel
-architecture
-DGX / partner identity
-driver
-CUDA
-Docker
-Container Runtime
-CPU
-system memory
-swap
-disk
-network
-ports
+```bash
+./deploy/spark/check-env.sh
 ```
+
+如需记录更完整的硬件清单，操作者另行保存下列命令结果。
 
 人工同时确认：
 
@@ -48,32 +40,28 @@ uname -m
 cat /etc/os-release
 nvidia-smi
 docker info
+docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
 free -h
 df -h
 ```
 
-如果 ARM64 / GPU / Docker GPU 不成立，暂停产品部署，先修基础环境。
+如果 ARM64 / GPU / Docker GPU 不成立，按 NVIDIA 官方说明准备主机后再运行应用 setup。
 
-## 2. T+早期：立即启动所有大下载
+## 2. T+早期：按官方说明准备外部 Runtime
 
-最浪费一天的是串行等待模型。
+模型下载、镜像选择和 GPU memory 参数由 Runtime 操作者按当前供应商 recipe 决定。
+本仓库不执行这些下载或启停操作。
 
-尽早并行准备：
+在克隆应用前启动并检查：
 
-- Qwen3.6-35B-A3B-NVFP4；
-- Step-Audio-2-mini；
-- Coach local model；
-- NeMo Retriever image / model assets；
-- vLLM / vLLM-Omni / NemoClaw images；
-- Hugging Face cache。
+```text
+Text       OpenAI-compatible :8000/v1
+Coach      OpenAI-compatible :8001/v1
+StepAudio  Product WebSocket ws://127.0.0.1:8092/realtime
+Retriever  REST :7670, VectorDB :7671
+```
 
-规则：
-
-- 所有下载进入持久 cache；
-- 不允许相同模型被两个脚本重复下载；
-- 记录 download start/end；
-- 下载失败可 resume；
-- 不为了并行把磁盘 / network 打爆。
+参考模型、官方文档、health checks 与完整安装步骤见当前部署说明。
 
 ## 3. Gate A：Post-session Model
 
@@ -99,11 +87,10 @@ Backend Text Runtime
 失败顺序：
 
 1. 对照 NVIDIA 当前 GB10 recipe；
-2. 检查 image / vLLM version；
-3. 检查 UMA pressure；
-4. 降低 context / memory utilization；
-5. 再考虑 SGLang；
-6. 不要直接重写产品 Runtime。
+2. 按模型 Runtime 官方说明检查 served ID、版本和设备资源；
+3. 记录实际 latency、失败和资源观察；
+4. 将 endpoint 配置回产品 profile；
+5. 不通过修改访谈业务逻辑或 Coach deadline 掩盖 Runtime 问题。
 
 ## 4. Gate B：NemoClaw / OpenShell / Skills
 
@@ -176,8 +163,8 @@ Coach total <= 6s
 ### E1 Model / Runtime
 
 ```text
-ARM64 runtime / image
-→ model load
+按 StepFun 官方说明安装并启动外部 Local Runtime
+→ 产品 WebSocket contract 可用
 → fixed audio ASR
 → fixed text/audio generation
 → audio-to-audio
@@ -269,24 +256,30 @@ Voice + background Closeout
 
 UMA 下如果 `nvidia-smi` 不提供 Memory-Usage，不写假数据；记录 `free`、process metrics、DGX Dashboard / 可用 telemetry。
 
-## 10. Gate H：一键重装验证
+## 10. Gate H：应用部署复现
 
-当天后段必须做一次“接近新用户”的复现：
+在 AI Runtime 已准备并运行后，按正常开源软件步骤复现应用部署：
 
 ```bash
-git clone ...
+git clone https://github.com/gwh7078/life-interview-NVDA.git
 cd life-interview-NVDA
-./deploy/spark/install.sh
+cp deploy/spark/env.example deploy/spark/.env
+# 编辑 deploy/spark/.env，填入 served model IDs 和 endpoints
+./deploy/spark/check-env.sh
+./deploy/spark/setup.sh
+./deploy/spark/start.sh
 ./deploy/spark/verify.sh
 ```
 
-不要求浪费时间重新下载已缓存模型，但必须证明：
+必须证明：
 
-- fresh repo；
-- 只依赖 documented env/secrets；
+- 用户预先启动的四类 Runtime 可连接；
+- setup 配置的 OpenClaw 复用已运行的 Text model；
+- 只依赖文档与本机 ignored 配置；
 - 不依赖手工复制未提交文件；
 - 不依赖某个 shell session 的临时变量；
-- start/stop/restart/status 可重复。
+- setup、start、stop 可重复；
+- stop 不影响任何用户管理的 AI Runtime。
 
 ## 11. 最终必须带走的证据
 
@@ -324,14 +317,14 @@ docs/07-reports/spark/
 必须完成优先级：
 
 ```text
-P0  环境事实 + 下载 + Post-session Local
+P0  环境事实 + 用户准备的 Runtime + Post-session Local
 P0  NemoClaw / Skills
 P0  Retriever
 P0  Step-Audio Local
 P0  Full Stack
 P1  Coach latency tuning
 P1  Benchmark
-P1  One-command replay
+P1  应用部署复现
 P2  UI polish
 P3  非必要架构优化
 ```
