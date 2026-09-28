@@ -1,0 +1,103 @@
+{
+  "benchmark": "controlled-next-question",
+  "run_id": "2026-09-28T13-34-48-step-plan-judge-682ebd14",
+  "generated_at": "2026-09-28T11:54:23.406Z",
+  "commit_sha": "38c3802b525ab45bde69e847ad57ec3d417481fe",
+  "cases": [
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "C06",
+    "C07",
+    "C08",
+    "C09",
+    "C10"
+  ],
+  "variants": [
+    "A",
+    "B",
+    "C"
+  ],
+  "runs": 3,
+  "samples_planned": 90,
+  "realtime_model": "step-audio-2-mini",
+  "realtime_provider": "stepfun-cloud",
+  "voice_profile": "stepaudio2_mini",
+  "story_context_sha256": "6f90447a9dd74fc9fe827a8006a27fd81f69968ca7ff49c4b7730e4a548a8a86",
+  "judge_model": "step-5-preview",
+  "judge_endpoint": "https://api.stepfun.com/step_plan/v1/chat/completions",
+  "judge_temperature": 0,
+  "coach": {
+    "coach_model": "qwen3-8b",
+    "request_dialect": "dashscope",
+    "base_url_host": "dashscope.aliyuncs.com",
+    "gate_timeout_ms": 2000,
+    "total_timeout_ms": 6000
+  },
+  "coach_temperature": 0,
+  "coach_gate_timeout_ms": 2000,
+  "coach_total_timeout_ms": 6000,
+  "input": "The fixed previous question is included in response instructions; canonical mono PCM16 16 kHz WAV is resampled to StepFun production PCM16 24 kHz and sent with the existing adapter appendAudioMessages/commitInputTurn path. No user input_text is sent; user.transcript.final must come from StepFun ASR.",
+  "response_rule": "Capture the first completed response transcript and trim surrounding whitespace only.",
+  "repeat_command": "bash scripts/codex-node.sh npm run benchmark:next-question -- --cases C01,C02,C03,C04,C05,C06,C07,C08,C09,C10 --variants A,B,C --runs 3",
+  "verification": [
+    "Each sample starts a fresh StepFun websocket.",
+    "All variants reuse the same in-memory canonical WAV bytes per case.",
+    "User ASR is provider-generated after input_audio_buffer.commit.",
+    "Exactly one response.create is sent after the ASR final and Coach path.",
+    "A has no Coach/Retriever/Era calls.",
+    "B constrains both retrieval paths off.",
+    "C uses the production RealtimeCoachPipeline and current Retriever/Era clients."
+  ],
+  "judge_max_output_tokens_initial": 2048,
+  "judge_adaptive_retry_caps": [
+    4096,
+    8192
+  ],
+  "judge_max_attempts_per_candidate": 3,
+  "judge_retry_policy": "Retry only truncated output, network/request failures, timeouts, or HTTP 5xx; retain every attempt and use the latest complete Step 5 response.",
+  "samples_completed": 90,
+  "audio_fixtures_verified": 10,
+  "judge_candidates": 90,
+  "judge_attempts_total": 192,
+  "primary_score_eligible": 41,
+  "asr_mismatch_excluded": 36,
+  "completion_status": "INCOMPLETE",
+  "ready_for_competition_report": false,
+  "completion_blockers": [
+    "JUDGE_COVERAGE_INCOMPLETE"
+  ],
+  "source_execution_run_id": "2026-09-28T11-54-23-404Z-27c55a4d",
+  "source_execution_commit_sha": "8bd75fe37640a83e536e9f72849605a8916dd933",
+  "source_execution_completed_at_utc": "2026-09-28T13:06:48.142228+00:00",
+  "judge_commit_sha": "71847bbec6847dc730785646fd5aab449ac6f02e",
+  "judge_started_at_utc": "2026-09-28T13:34:48.176491+00:00",
+  "judge_response_format": "json_object",
+  "judge_status": "INCOMPLETE",
+  "judge_concurrency": 2,
+  "judge_completed_at_utc": "2026-09-28T15:42:35+00:00",
+  "judge_interrupted_attempts": 1,
+  "judge_provider_responses_total": 191,
+  "judge_candidates_retried": 60,
+  "judge_scored_candidates": 69,
+  "judge_failed_candidates": 21,
+  "judge_failure_breakdown": {
+    "JUDGE_RESPONSE_SCHEMA_INVALID": 13,
+    "JUDGE_OUTPUT_TOKEN_LIMIT": 8
+  },
+  "judge_explicit_retry_rounds": {
+    "schema_invalid_round_1": {
+      "attempted": 45,
+      "scored": 21,
+      "failed": 24
+    },
+    "remaining_failures_round_2": {
+      "attempted": 24,
+      "scored": 3,
+      "failed": 21
+    }
+  },
+  "judge_retry_policy_note": "Two user-requested one-shot retry rounds; all prior attempts retained and scoring settings unchanged."
+}
