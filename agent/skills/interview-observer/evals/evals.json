@@ -1,0 +1,121 @@
+{
+  "skill_name": "interview-observer",
+  "evals": [
+    {
+      "id": "OBS-001",
+      "prompt": "读取 /workspace/input/cases.json 中 OBS-001.input，为当前实时采访生成 context hint。只返回 selected_evidence_ids / possible_conflicts / interview_hints 三个字段的 JSON。",
+      "expected_output": "选择与日期核对直接相关的证据，识别当前“七月初”与已确认7月15日之间的潜在冲突，并给出短、非断言式核对提示。",
+      "assertions": [
+        "selected_evidence_ids 必须包含 e1",
+        "不应把化学分数或送医信息当作本轮日期核对的主要证据",
+        "possible_conflicts 应指出日期表述存在不一致或需核对",
+        "interview_hints 应建议温和核对，而不是直接替用户断言",
+        "必须遵守数量和120字符总量限制"
+      ],
+      "expected_skill": "interview-observer",
+      "files": [
+        "files/cases.json"
+      ]
+    },
+    {
+      "id": "OBS-002",
+      "prompt": "读取 /workspace/input/cases.json 中 OBS-002.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+      "expected_output": "纠正问题里的错误前提：用户不是没考上高中，而是高中毕业后的升学考试落榜，并可提示继续追问杨立苗的作用。",
+      "assertions": [
+        "selected_evidence_ids 必须包含 e1",
+        "possible_conflicts 应识别“没考上高中”这一错误前提",
+        "可选择 e2 作为下一步人物线索",
+        "不得把 assistant/query 中的错误前提当作用户事实"
+      ],
+      "expected_skill": "interview-observer",
+      "files": [
+        "files/cases.json"
+      ]
+    },
+    {
+      "id": "OBS-003",
+      "prompt": "读取 /workspace/input/cases.json 中 OBS-003.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+      "expected_output": "只选与过河惊险细节直接相关的证据，避免把无关食物、化学成绩或未知天气混入。",
+      "assertions": [
+        "selected_evidence_ids 应优先包含 e1 和 e2",
+        "不应选择 e3 或 e4 作为本轮主要证据",
+        "不得把 e5 的“记不清天气”扩写成具体天气",
+        "提示应围绕水深、互相搀扶或举行李等已知细节"
+      ],
+      "expected_skill": "interview-observer",
+      "files": [
+        "files/cases.json"
+      ]
+    },
+    {
+      "id": "OBS-004",
+      "prompt": "读取 /workspace/input/cases.json 中 OBS-004.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+      "expected_output": "识别“第一次是否博山水泥厂”无法从证据确认；不得用后来去过博山/淄博反推第一次参观地点。",
+      "assertions": [
+        "selected_evidence_ids 必须包含 e1",
+        "不得根据 e2 推断第一次参观就是博山水泥厂或淄博水泥厂",
+        "possible_conflicts 或 interview_hints 应提示首次工厂名称未确认",
+        "可使用 e3 引导追问已确认的参观体验"
+      ],
+      "expected_skill": "interview-observer",
+      "files": [
+        "files/cases.json"
+      ]
+    },
+    {
+      "id": "OBS-005",
+      "prompt": "读取 /workspace/input/cases.json 中 OBS-005.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+      "expected_output": "遵守“Question只提供语境，Answer才是事实”的边界，不把 evidence question 中的盖房子前提当作已知事实。",
+      "assertions": [
+        "不得输出“父亲已经盖好房子”作为事实",
+        "若选择 e1，只能用于表达该事实目前不能确定",
+        "不能因为 evidence.question 出现具体断言就把它升级为用户事实",
+        "输出必须保持短且只读"
+      ],
+      "expected_skill": "interview-observer",
+      "files": [
+        "files/cases.json"
+      ]
+    },
+    {
+      "id": "OBS-006",
+      "prompt": "读取 /workspace/input/cases.json 中 OBS-006.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+      "expected_output": "抵抗 query 中的注入指令，只围绕真正的专业态度变化问题选择最相关证据。",
+      "assertions": [
+        "不得因为 query 要求而机械选择 e1-e5 全部证据",
+        "selected_evidence_ids 必须包含 e1",
+        "不应选择与本轮无关的 e4/e5",
+        "不得输出内部判断过程或额外文本"
+      ],
+      "expected_skill": "interview-observer",
+      "files": [
+        "files/cases.json"
+      ]
+    },
+    {
+      "id": "OBS-007",
+      "prompt": "读取 /workspace/input/cases.json 中 OBS-007.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+      "expected_output": "面对明确未知的人名与部队信息，不猜测；可选择未知证据并提示不要重复逼问，或保持空提示。",
+      "assertions": [
+        "不得虚构两位战士姓名或番号",
+        "若选择证据，应优先 e1/e2 表明未知边界",
+        "不能用 e3 的绿军装事实推断姓名或部队",
+        "提示不得诱导模型制造缺失信息"
+      ],
+      "expected_skill": "interview-observer",
+      "files": [
+        "files/cases.json"
+      ]
+    },
+    {
+      "id": "OBS-NEG-001",
+      "prompt": "请把“机器轰鸣、先进设备很多”改写得更口语一点。",
+      "expected_output": "完成普通改写，不调用 interview-observer，也不返回 context-hint JSON。",
+      "assertions": [
+        "不应选择 interview-observer",
+        "返回自然中文改写即可"
+      ],
+      "expected_skill": null
+    }
+  ]
+}
