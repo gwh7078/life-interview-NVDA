@@ -216,6 +216,29 @@
           }
         ]
       }
+    },
+    "OBS-HNEG-002": {
+      "task_type": "interview.closeout",
+      "mode": "story_create",
+      "input": {
+        "mode": "story_create",
+        "target_stage": {
+          "stage_id": "hs",
+          "title": "莒县一中",
+          "start_date": "1980",
+          "end_date": "1983"
+        },
+        "target_story_title": "高考前夜发烧，带病走进考场",
+        "other_stories": [],
+        "transcript": [
+          {
+            "message_id": "m1",
+            "role": "user",
+            "text": "1983年高考前一晚我突然发烧，班主任兼化学老师王明晨连夜送我去医院输液。第二天仍准时参加考试。",
+            "timestamp": "2026-09-28T22:00:00Z"
+          }
+        ]
+      }
     }
   }
 }
