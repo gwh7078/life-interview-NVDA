@@ -1,0 +1,1216 @@
+{
+  "benchmark": "controlled-next-question",
+  "run_id": "2026-09-28T11-54-23-404Z-27c55a4d",
+  "generated_at": "2026-09-28T11:54:23.405Z",
+  "commit_sha": "8bd75fe37640a83e536e9f72849605a8916dd933",
+  "sample_count_planned": 90,
+  "audio_manifest_sha256": "fa6a67974008b9ca89414c4776c5aee235208cb420c256dced1e1bae38599be1",
+  "fixture_scope": {
+    "owner_id": "397e35ad-39c4-4920-b280-222728788dd4",
+    "story_id": "a8d84059-bfcb-4486-880c-30deb2df7298",
+    "stage_id": "580db080-5573-4833-a4e8-315601191d74",
+    "retriever_collection": "life-interview-transcripts"
+  },
+  "canonical_audio": {
+    "C01": {
+      "path": "benchmark/next-question/audio/C01.wav",
+      "audio_sha256": "edae8506dd0cef38f8f344648121519027964a3e9d3ead621f51d8dc410ba5fc",
+      "adapter_pcm_sha256": "e8d8ec973451eed02514bc6bb2d23f8ed2f0dc159913e53a2c3ca3e96a389923",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C02": {
+      "path": "benchmark/next-question/audio/C02.wav",
+      "audio_sha256": "fc292b18fa2c2f75d74da4f586c0d6d4ec737dad39f70ae7bd73baa3ba5e38a0",
+      "adapter_pcm_sha256": "de1f347f70729f5de79a5c96a1e31ef639fffcd2d8bf8c35b6b260b81bd9a6bb",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C03": {
+      "path": "benchmark/next-question/audio/C03.wav",
+      "audio_sha256": "173521c2745c74429fd42f00bd349180c2af8e66591a65f0e14253d0e8293d6d",
+      "adapter_pcm_sha256": "cadd17d35ec6c783eff37dd0fda47f649add9ca341ab4f3e9c62c94bfd593802",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C04": {
+      "path": "benchmark/next-question/audio/C04.wav",
+      "audio_sha256": "655620eca3489f4f02a92477bde9ec398b124599efae68632b83cba668c5fd13",
+      "adapter_pcm_sha256": "6c321f8b483ffba1c3ea49a5397f2510c146ea1cbc57d8f479368b8d16c4a364",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C05": {
+      "path": "benchmark/next-question/audio/C05.wav",
+      "audio_sha256": "52b1f247f7f24bbb711962fa2fd85d6496317d992139db6e88d8be42aaecbf17",
+      "adapter_pcm_sha256": "083d72f9de56198c9acb64304b3f9d9e84703ade35e54e983d2ddff428422e97",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C06": {
+      "path": "benchmark/next-question/audio/C06.wav",
+      "audio_sha256": "da8efe63d0d92f66e50043bb9d4c6c8516699b72ddb7bb770e8a75b3640f514a",
+      "adapter_pcm_sha256": "a596ff40f4d3630390c76e0fbad7e167b8d91586377d67ad9cd864014c8dc988",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C07": {
+      "path": "benchmark/next-question/audio/C07.wav",
+      "audio_sha256": "5c0faa749094f497f813e81e5af2e8b89e5d49289990addd87598ef170675c84",
+      "adapter_pcm_sha256": "a9d226e6e4e31cf107607d1e4da59cddef068e8dad992b280668b3de7ccb7ae9",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C08": {
+      "path": "benchmark/next-question/audio/C08.wav",
+      "audio_sha256": "140365dddf5f1aed1be6b260751eddf73fa91dc49b8596b2ac7965ce41e855cb",
+      "adapter_pcm_sha256": "fe163dbf14f8e0ef712ad08a8c1fae5b0667ce2c5ced1df021f968b31926040b",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C09": {
+      "path": "benchmark/next-question/audio/C09.wav",
+      "audio_sha256": "20b28277ecfb9b06e1872a31c20b509e76e744632f4d44a3de30e017fb7631d6",
+      "adapter_pcm_sha256": "cf7baefa6be50b9988de02fe0f73237580c1c0fa63e171de89a3c8f4d7a2d343",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    },
+    "C10": {
+      "path": "benchmark/next-question/audio/C10.wav",
+      "audio_sha256": "babca5fce84bbf2b127ed9245ff14a917ccf7ac954f7732c6831ba5a4cccbc14",
+      "adapter_pcm_sha256": "b116d3a766ee2861bca8aa77f62448fab981cfd054d8ae3f0fe6b2d29cf590ad",
+      "adapter_sample_rate_hz": 24000,
+      "frame_bytes": 960
+    }
+  },
+  "samples": [
+    {
+      "candidate_id": "0dfd1682-1e2a-4a67-9a11-a2df3c749620",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 0,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "22d6b2d0-eb35-453d-83da-27444536f450",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 1,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "0297d16d-cb92-4e88-8e7f-2e81d009d3ec",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 2,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "d0573007-59be-4f5d-b503-eed7a544e91f",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 3,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "8413cd45-ea72-4e78-845e-b91f53e69f97",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 4,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "0ad43a47-3b8c-4dd1-96ed-f8034f5bab5a",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 5,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "39a094a5-9d15-4457-9625-8d188aa4b7fc",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 6,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "029ababf-e0a1-4a53-ab86-bd1c1b89cefd",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 7,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "51f005b2-9edd-4e76-a1f3-151bba9d30fc",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 8,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "26f3fc47-708d-4a97-8747-c8dd3e68c1a1",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 9,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "0fbb253e-aa5e-4d90-8192-cd0b55bf7a40",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 10,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "779a1dad-ef1a-4bbb-abc2-039bd3bf6c35",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 11,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "02fa2474-41f1-4cd6-91a4-4999cd348b5f",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 12,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "1a20ebf3-7105-46ff-afe6-09049bf64c4c",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 13,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "04e343c0-728a-4543-bce7-e66055d1bbc4",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 14,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "796c0f55-d4a0-4dec-96b3-2d211fcf34b4",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 15,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "69ac9b36-96c1-4521-9435-9787b0f2985b",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 16,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "634ee423-1345-41d3-9b28-9d9e4c7c924e",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 17,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "2de23ada-028b-47b8-b00c-d5201562b611",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 18,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "c0f4e7c5-1544-44a6-9107-a811cb9e7518",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 19,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "f1ed6174-48c8-4834-918e-f7108085068d",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 20,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "5e91aa6f-c0f4-4366-a569-0856cb6c2d88",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 21,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "0beffbaf-2a79-45e3-a26c-0b65cb70390f",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 22,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "92ff370b-d47b-46e5-8114-ab060ed691c9",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 23,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "0f9234ef-feb4-4597-8938-34a6ee9b10d2",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 24,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "6413fe80-ee34-416e-b2e6-30f2c54e5ccc",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 25,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "5825f903-fa07-4c15-9bc5-9a9c5d820984",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 26,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "52a28a30-00fb-4fb5-867e-b9d14c3d5387",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 27,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "37e6ef25-9889-42e0-9e54-51addb083434",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 28,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "59f99698-fe2f-4795-8cb2-cd63c57a4871",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 29,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "3f7b38e1-b996-42bd-a75e-fe7e54be72e2",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 30,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "5498615d-a8a4-46de-a9f6-c7190bd6306f",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 31,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "5b1f645b-13db-430c-abd0-196088594636",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 32,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "d10da014-4d36-4827-a21b-08e5772be6ce",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 33,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "e3e30098-8b4b-46b0-9294-39a6a8e7f15a",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 34,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "8e8ff3fd-1fca-4338-a28f-62f80e31c80c",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 35,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "96f9e829-f8df-4ecd-b0db-38b7612d0eb9",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 36,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "30bbb991-4029-484b-8306-bc5fe5ad7d06",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 37,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "3b029901-78d3-4dd2-bf96-96f416af870d",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 38,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "acab3eba-6c42-4cfe-9383-7065e99b06e9",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 39,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "81009a2b-2be0-4349-8a95-5ac6090443f5",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 40,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "6c1d0675-0099-40cc-9e00-73f5f16e966c",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 41,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "1aaeac67-2b3d-4345-93d9-0a8494d57132",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 42,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "13a40874-c40b-419d-bdf9-3005968d3f55",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 43,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "e773b67a-f4cf-469e-8d3e-bda5968f412f",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 44,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "f2cab39e-36e2-4196-a5d3-43bb899022e5",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 45,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "920cad65-2109-4c0b-ae2f-0565e34da4a9",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 46,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "243a25a2-7d8f-4eaf-bc27-c45facc4bacf",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 47,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "6676f8ec-fa22-4340-ba6e-b15addec13b3",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 48,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "3aeff776-b87f-4919-acfd-7b159b6526e7",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 49,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "14d41eb9-1ffb-4e7f-b691-737bb604a5bc",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 50,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "c75057ed-7aad-4d28-8fbe-86b43f0277d5",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 51,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "546aa1cd-14dd-4405-8712-39837930cebe",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 52,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "23b967fc-0cdd-4300-9ccb-0d1d9d0cf769",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 53,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "ea519272-20c4-46c4-b599-0cf47b9660dc",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 54,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "c86bff84-c1b8-410e-a154-9b1dc54d85ca",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 55,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "351d6281-8f60-4470-9ac4-1ee8f78bbe90",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 56,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "bf3d6e4b-ddc9-4de1-98c7-382a64a8c0e6",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 57,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "cf62a71d-45ee-4a72-9396-e9791ef7fcb7",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 58,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "54510e80-feca-4ec6-9400-94d3470e38cd",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 59,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "e63b6ab0-a30a-4583-aed5-11f544ca7652",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 60,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "885d637e-f1ec-40bb-844a-524a0b78dd27",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 61,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "989b7c16-d530-4662-bc9f-11ffb96d3cb3",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 62,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "9db4775d-ef67-4b74-b845-5e596067a5d7",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 63,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "a1327e78-5533-423a-a84b-138ff6226b4f",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 64,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "9024c4cf-a85c-4316-b4fa-e298e80ee130",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 65,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "464f5eb9-c123-4ac4-841b-8614f6c1d7f3",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 66,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "2095aa87-679a-4c15-b381-762bba828bfb",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 67,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "568eeb8c-9e8c-4451-9d43-c14c7c886fa6",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 68,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "b4d5e531-7e02-4e2b-9e95-3eb29e2c5f44",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 69,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "2f6004ee-5035-4f95-8ebe-e7465b4e94ac",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 70,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "1461c5eb-f29a-4b22-9a52-103316140a9f",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 71,
+      "input_equivalence": "FAIL",
+      "primary_score_eligible": false
+    },
+    {
+      "candidate_id": "6b320c4a-8cc5-4c61-a17f-362a76946ce6",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 72,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "7e791057-297a-461a-a3c5-9d52ef1ed32c",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 73,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "27ba96c9-9e5c-464a-8c9d-40c5fc66fe1d",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 74,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "96a86a6d-5e77-41b5-9b98-278247a19425",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 75,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "777f692e-1ed2-4c8e-a4b1-d14f402303f0",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 76,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "ca4c0635-3028-436f-befa-fa07ad55dc17",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 77,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "2f044be0-4ec3-4df1-b0d8-6f500cec3bb4",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 78,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "2100496b-b590-49ff-bde3-969960cc3bfe",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 79,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "9e3ddf06-3991-4a37-a268-8ef896347432",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 80,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "fb046b74-45c0-4eb9-ab4f-fd7305d1ced0",
+      "variant": "A",
+      "run": 1,
+      "technical_record_index": 81,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "18e4b5d3-d411-4190-83fe-a50f1c22fd0d",
+      "variant": "A",
+      "run": 2,
+      "technical_record_index": 82,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "4599db8b-d114-47a2-93f2-32fabaf8412b",
+      "variant": "A",
+      "run": 3,
+      "technical_record_index": 83,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "f1492837-bb5f-4bc6-af7c-b3410692a358",
+      "variant": "B",
+      "run": 1,
+      "technical_record_index": 84,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "e502aeae-02a4-44ca-82d9-9f4118f29744",
+      "variant": "B",
+      "run": 2,
+      "technical_record_index": 85,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "44cd8300-df8e-4927-9c0c-ef198118a89b",
+      "variant": "B",
+      "run": 3,
+      "technical_record_index": 86,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "0dd0b3f5-f21a-41c0-9fec-ca04fe459ee1",
+      "variant": "C",
+      "run": 1,
+      "technical_record_index": 87,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "1361bcdf-c74c-4a09-b678-73c78dac7894",
+      "variant": "C",
+      "run": 2,
+      "technical_record_index": 88,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    },
+    {
+      "candidate_id": "59b37688-f8e7-49bf-ab10-cea827125090",
+      "variant": "C",
+      "run": 3,
+      "technical_record_index": 89,
+      "input_equivalence": "PASS",
+      "primary_score_eligible": true
+    }
+  ],
+  "input_equivalence": [
+    {
+      "case_id": "C01",
+      "run": 1,
+      "expected_normalized_asr": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过沭河的时候水都到腰了",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了",
+        "B": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了",
+        "C": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了"
+      }
+    },
+    {
+      "case_id": "C01",
+      "run": 2,
+      "expected_normalized_asr": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过沭河的时候水都到腰了",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了",
+        "B": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了",
+        "C": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了"
+      }
+    },
+    {
+      "case_id": "C01",
+      "run": 3,
+      "expected_normalized_asr": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过沭河的时候水都到腰了",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了",
+        "B": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了",
+        "C": "事情挺多早上会去图书馆廊道背书周末还得走路回家有一次发大水过树河的时候水都倒腰了"
+      }
+    },
+    {
+      "case_id": "C02",
+      "run": 1,
+      "expected_normalized_asr": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+        "B": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+        "C": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的"
+      }
+    },
+    {
+      "case_id": "C02",
+      "run": 2,
+      "expected_normalized_asr": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+        "B": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+        "C": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的"
+      }
+    },
+    {
+      "case_id": "C02",
+      "run": 3,
+      "expected_normalized_asr": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+        "B": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的",
+        "C": "通知书下来我才知道硅酸盐主要和水泥有关当时其实挺失落的"
+      }
+    },
+    {
+      "case_id": "C03",
+      "run": 1,
+      "expected_normalized_asr": "当时也没想那么多杨老师让我再试一次我就去了",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "当时也没想那么多杨老师让我再试一次我就去了",
+        "B": "当时也没想那么多杨老师让我再试一次我就去了",
+        "C": "当时也没想那么多杨老师让我再试一次我就去了"
+      }
+    },
+    {
+      "case_id": "C03",
+      "run": 2,
+      "expected_normalized_asr": "当时也没想那么多杨老师让我再试一次我就去了",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "当时也没想那么多杨老师让我再试一次我就去了",
+        "B": "当时也没想那么多杨老师让我再试一次我就去了",
+        "C": "当时也没想那么多杨老师让我再试一次我就去了"
+      }
+    },
+    {
+      "case_id": "C03",
+      "run": 3,
+      "expected_normalized_asr": "当时也没想那么多杨老师让我再试一次我就去了",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "当时也没想那么多杨老师让我再试一次我就去了",
+        "B": "当时也没想那么多杨老师让我再试一次我就去了",
+        "C": "当时也没想那么多杨老师让我再试一次我就去了"
+      }
+    },
+    {
+      "case_id": "C04",
+      "run": 1,
+      "expected_normalized_asr": "他对学生挺好的我们都是住校生谁生病了或者心里有什么事他一般都会注意到",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到",
+        "B": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到",
+        "C": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到"
+      }
+    },
+    {
+      "case_id": "C04",
+      "run": 2,
+      "expected_normalized_asr": "他对学生挺好的我们都是住校生谁生病了或者心里有什么事他一般都会注意到",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到",
+        "B": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到",
+        "C": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到"
+      }
+    },
+    {
+      "case_id": "C04",
+      "run": 3,
+      "expected_normalized_asr": "他对学生挺好的我们都是住校生谁生病了或者心里有什么事他一般都会注意到",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到",
+        "B": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到",
+        "C": "他对学生挺好的我们都是助校生谁生病了或者心里有什么事他一般都会注意到"
+      }
+    },
+    {
+      "case_id": "C05",
+      "run": 1,
+      "expected_normalized_asr": "那年成绩还可以化学应该算考得最好",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "那年成绩还可以化学应该算考得最好",
+        "B": "那年成绩还可以化学应该算考得最好",
+        "C": "那年成绩还可以化学应该算考得最好"
+      }
+    },
+    {
+      "case_id": "C05",
+      "run": 2,
+      "expected_normalized_asr": "那年成绩还可以化学应该算考得最好",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "那年成绩还可以化学应该算考得最好",
+        "B": "那年成绩还可以化学应该算考得最好",
+        "C": "那年成绩还可以化学应该算考得最好"
+      }
+    },
+    {
+      "case_id": "C05",
+      "run": 3,
+      "expected_normalized_asr": "那年成绩还可以化学应该算考得最好",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "那年成绩还可以化学应该算考得最好",
+        "B": "那年成绩还可以化学应该算考得最好",
+        "C": "那年成绩还可以化学应该算考得最好"
+      }
+    },
+    {
+      "case_id": "C06",
+      "run": 1,
+      "expected_normalized_asr": "好像是7月7号吧时间太久了我也不敢确定",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "好像是7月7号吧时间太久了我也不敢确定",
+        "B": "好像是7月7号吧时间太久了我也不敢确定",
+        "C": "好像是7月7号吧时间太久了我也不敢确定"
+      }
+    },
+    {
+      "case_id": "C06",
+      "run": 2,
+      "expected_normalized_asr": "好像是7月7号吧时间太久了我也不敢确定",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "好像是7月7号吧时间太久了我也不敢确定",
+        "B": "好像是7月7号吧时间太久了我也不敢确定",
+        "C": "好像是7月7号吧时间太久了我也不敢确定"
+      }
+    },
+    {
+      "case_id": "C06",
+      "run": 3,
+      "expected_normalized_asr": "好像是7月7号吧时间太久了我也不敢确定",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "好像是7月7号吧时间太久了我也不敢确定",
+        "B": "好像是7月7号吧时间太久了我也不敢确定",
+        "C": "好像是7月7号吧时间太久了我也不敢确定"
+      }
+    },
+    {
+      "case_id": "C07",
+      "run": 1,
+      "expected_normalized_asr": "有一次过沭河确实挺危险的",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "有一次过树河确实挺危险的",
+        "B": "有一次过树河确实挺危险的",
+        "C": "有一次过树河确实挺危险的"
+      }
+    },
+    {
+      "case_id": "C07",
+      "run": 2,
+      "expected_normalized_asr": "有一次过沭河确实挺危险的",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "有一次过树河确实挺危险的",
+        "B": "有一次过树河确实挺危险的",
+        "C": "有一次过树河确实挺危险的"
+      }
+    },
+    {
+      "case_id": "C07",
+      "run": 3,
+      "expected_normalized_asr": "有一次过沭河确实挺危险的",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "有一次过树河确实挺危险的",
+        "B": "有一次过树河确实挺危险的",
+        "C": "有一次过树河确实挺危险的"
+      }
+    },
+    {
+      "case_id": "C08",
+      "run": 1,
+      "expected_normalized_asr": "后来是杨老师让我再去试一次我才去考了莒县一中",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "后来是杨老师让我再去试一次我才去考了举县一中",
+        "B": "后来是杨老师让我再去试一次我才去考了举县一中",
+        "C": "后来是杨老师让我再去试一次我才去考了举县一中"
+      }
+    },
+    {
+      "case_id": "C08",
+      "run": 2,
+      "expected_normalized_asr": "后来是杨老师让我再去试一次我才去考了莒县一中",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "后来是杨老师让我再去试一次我才去考了举县一中",
+        "B": "后来是杨老师让我再去试一次我才去考了举县一中",
+        "C": "后来是杨老师让我再去试一次我才去考了举县一中"
+      }
+    },
+    {
+      "case_id": "C08",
+      "run": 3,
+      "expected_normalized_asr": "后来是杨老师让我再去试一次我才去考了莒县一中",
+      "status": "FAIL",
+      "normalized_asr_by_variant": {
+        "A": "后来是杨老师让我再去试一次我才去考了举县一中",
+        "B": "后来是杨老师让我再去试一次我才去考了举县一中",
+        "C": "后来是杨老师让我再去试一次我才去考了举县一中"
+      }
+    },
+    {
+      "case_id": "C09",
+      "run": 1,
+      "expected_normalized_asr": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+        "B": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+        "C": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了"
+      }
+    },
+    {
+      "case_id": "C09",
+      "run": 2,
+      "expected_normalized_asr": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+        "B": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+        "C": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了"
+      }
+    },
+    {
+      "case_id": "C09",
+      "run": 3,
+      "expected_normalized_asr": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+        "B": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了",
+        "C": "没有我们农村孩子消息很闭塞很多人觉得高中毕业以后就是回家种地我爸连房子都已经给我盖好了"
+      }
+    },
+    {
+      "case_id": "C10",
+      "run": 1,
+      "expected_normalized_asr": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+        "B": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+        "C": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少"
+      }
+    },
+    {
+      "case_id": "C10",
+      "run": 2,
+      "expected_normalized_asr": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+        "B": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+        "C": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少"
+      }
+    },
+    {
+      "case_id": "C10",
+      "run": 3,
+      "expected_normalized_asr": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+      "status": "PASS",
+      "normalized_asr_by_variant": {
+        "A": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+        "B": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少",
+        "C": "后来学校里慢慢越来越重视高考了但我们农村孩子知道外面的事情还是很少"
+      }
+    }
+  ],
+  "c_memory_evidence_readiness": [
+    {
+      "case_id": "C06",
+      "run": 1,
+      "status": "NO_EVIDENCE",
+      "memory_evidence_count": 0
+    },
+    {
+      "case_id": "C06",
+      "run": 2,
+      "status": "NO_EVIDENCE",
+      "memory_evidence_count": 0
+    },
+    {
+      "case_id": "C06",
+      "run": 3,
+      "status": "NO_EVIDENCE",
+      "memory_evidence_count": 0
+    },
+    {
+      "case_id": "C07",
+      "run": 1,
+      "status": "NO_EVIDENCE",
+      "memory_evidence_count": 0
+    },
+    {
+      "case_id": "C07",
+      "run": 2,
+      "status": "NO_EVIDENCE",
+      "memory_evidence_count": 0
+    },
+    {
+      "case_id": "C07",
+      "run": 3,
+      "status": "NO_EVIDENCE",
+      "memory_evidence_count": 0
+    }
+  ],
+  "primary_score_excluded_candidates": [
+    "0dfd1682-1e2a-4a67-9a11-a2df3c749620",
+    "22d6b2d0-eb35-453d-83da-27444536f450",
+    "0297d16d-cb92-4e88-8e7f-2e81d009d3ec",
+    "d0573007-59be-4f5d-b503-eed7a544e91f",
+    "8413cd45-ea72-4e78-845e-b91f53e69f97",
+    "0ad43a47-3b8c-4dd1-96ed-f8034f5bab5a",
+    "39a094a5-9d15-4457-9625-8d188aa4b7fc",
+    "029ababf-e0a1-4a53-ab86-bd1c1b89cefd",
+    "51f005b2-9edd-4e76-a1f3-151bba9d30fc",
+    "52a28a30-00fb-4fb5-867e-b9d14c3d5387",
+    "37e6ef25-9889-42e0-9e54-51addb083434",
+    "59f99698-fe2f-4795-8cb2-cd63c57a4871",
+    "3f7b38e1-b996-42bd-a75e-fe7e54be72e2",
+    "5498615d-a8a4-46de-a9f6-c7190bd6306f",
+    "5b1f645b-13db-430c-abd0-196088594636",
+    "d10da014-4d36-4827-a21b-08e5772be6ce",
+    "e3e30098-8b4b-46b0-9294-39a6a8e7f15a",
+    "8e8ff3fd-1fca-4338-a28f-62f80e31c80c",
+    "ea519272-20c4-46c4-b599-0cf47b9660dc",
+    "c86bff84-c1b8-410e-a154-9b1dc54d85ca",
+    "351d6281-8f60-4470-9ac4-1ee8f78bbe90",
+    "bf3d6e4b-ddc9-4de1-98c7-382a64a8c0e6",
+    "cf62a71d-45ee-4a72-9396-e9791ef7fcb7",
+    "54510e80-feca-4ec6-9400-94d3470e38cd",
+    "e63b6ab0-a30a-4583-aed5-11f544ca7652",
+    "885d637e-f1ec-40bb-844a-524a0b78dd27",
+    "989b7c16-d530-4662-bc9f-11ffb96d3cb3",
+    "9db4775d-ef67-4b74-b845-5e596067a5d7",
+    "a1327e78-5533-423a-a84b-138ff6226b4f",
+    "9024c4cf-a85c-4316-b4fa-e298e80ee130",
+    "464f5eb9-c123-4ac4-841b-8614f6c1d7f3",
+    "2095aa87-679a-4c15-b381-762bba828bfb",
+    "568eeb8c-9e8c-4451-9d43-c14c7c886fa6",
+    "b4d5e531-7e02-4e2b-9e95-3eb29e2c5f44",
+    "2f6004ee-5035-4f95-8ebe-e7465b4e94ac",
+    "1461c5eb-f29a-4b22-9a52-103316140a9f"
+  ]
+}

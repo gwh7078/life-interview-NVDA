@@ -1,0 +1,1338 @@
+{
+  "benchmark": "controlled-next-question",
+  "run_id": "2026-09-28T11-54-23-404Z-27c55a4d",
+  "commit_sha": "8bd75fe37640a83e536e9f72849605a8916dd933",
+  "generated_at": "2026-09-28T13:05:12.679Z",
+  "judge_model": "step-5-preview",
+  "samples_planned": 90,
+  "samples_attempted": 90,
+  "provider_attempts_total": 90,
+  "samples_completed": 90,
+  "samples_scored": 28,
+  "judge_attempts_total": 112,
+  "judge_candidates_retried": 22,
+  "judge_failures": 62,
+  "judge_failure_breakdown": {
+    "JUDGE_RESPONSE_SCHEMA_INVALID": 27,
+    "JUDGE_HTTP_ERROR_HTTP_402": 35
+  },
+  "judge_missing_candidates": [],
+  "valid_primary_scores": 18,
+  "completion_status": "INCOMPLETE",
+  "ready_for_competition_report": false,
+  "completion_blockers": [
+    "JUDGE_COVERAGE_INCOMPLETE"
+  ],
+  "samples_excluded_for_asr_mismatch": 36,
+  "asr_mismatch_samples": [
+    "C01-A-run1",
+    "C01-A-run2",
+    "C01-A-run3",
+    "C01-B-run1",
+    "C01-B-run2",
+    "C01-B-run3",
+    "C01-C-run1",
+    "C01-C-run2",
+    "C01-C-run3",
+    "C04-A-run1",
+    "C04-A-run2",
+    "C04-A-run3",
+    "C04-B-run1",
+    "C04-B-run2",
+    "C04-B-run3",
+    "C04-C-run1",
+    "C04-C-run2",
+    "C04-C-run3",
+    "C07-A-run1",
+    "C07-A-run2",
+    "C07-A-run3",
+    "C07-B-run1",
+    "C07-B-run2",
+    "C07-B-run3",
+    "C07-C-run1",
+    "C07-C-run2",
+    "C07-C-run3",
+    "C08-A-run1",
+    "C08-A-run2",
+    "C08-A-run3",
+    "C08-B-run1",
+    "C08-B-run2",
+    "C08-B-run3",
+    "C08-C-run1",
+    "C08-C-run2",
+    "C08-C-run3"
+  ],
+  "quality": {
+    "A": {
+      "total_score": {
+        "n": 6,
+        "mean": 40.833333333333336,
+        "median": 46.5,
+        "std_dev": 29.239813040897964
+      },
+      "dimensions": {
+        "information_gain": {
+          "n": 6,
+          "mean": 11.5,
+          "median": 15.5,
+          "std_dev": 9.071934744033381
+        },
+        "context_use": {
+          "n": 6,
+          "mean": 10.166666666666666,
+          "median": 9,
+          "std_dev": 8.035338615557322
+        },
+        "story_value": {
+          "n": 6,
+          "mean": 7.666666666666667,
+          "median": 9.5,
+          "std_dev": 6.282250127674531
+        },
+        "depth": {
+          "n": 6,
+          "mean": 5.166666666666667,
+          "median": 6.5,
+          "std_dev": 4.215052391924288
+        },
+        "non_leading": {
+          "n": 6,
+          "mean": 6.333333333333333,
+          "median": 8.5,
+          "std_dev": 3.8815804341359033
+        }
+      },
+      "eligible_sample_count": 18
+    },
+    "B": {
+      "total_score": {
+        "n": 4,
+        "mean": 42.25,
+        "median": 35,
+        "std_dev": 34.30621906690778
+      },
+      "dimensions": {
+        "information_gain": {
+          "n": 4,
+          "mean": 12.25,
+          "median": 10.5,
+          "std_dev": 12.446552400832395
+        },
+        "context_use": {
+          "n": 4,
+          "mean": 11.25,
+          "median": 11,
+          "std_dev": 9.429563439877091
+        },
+        "story_value": {
+          "n": 4,
+          "mean": 7,
+          "median": 5.5,
+          "std_dev": 7.438637868140466
+        },
+        "depth": {
+          "n": 4,
+          "mean": 5,
+          "median": 4,
+          "std_dev": 5.291502622129181
+        },
+        "non_leading": {
+          "n": 4,
+          "mean": 6.75,
+          "median": 7,
+          "std_dev": 3.304037933599835
+        }
+      },
+      "eligible_sample_count": 18
+    },
+    "C": {
+      "total_score": {
+        "n": 8,
+        "mean": 40.625,
+        "median": 39,
+        "std_dev": 14.262212811682284
+      },
+      "dimensions": {
+        "information_gain": {
+          "n": 8,
+          "mean": 11.875,
+          "median": 12,
+          "std_dev": 5.356904756613521
+        },
+        "context_use": {
+          "n": 8,
+          "mean": 10.375,
+          "median": 10,
+          "std_dev": 5.040904113917888
+        },
+        "story_value": {
+          "n": 8,
+          "mean": 7.375,
+          "median": 7,
+          "std_dev": 3.113908889391045
+        },
+        "depth": {
+          "n": 8,
+          "mean": 4.5,
+          "median": 4.5,
+          "std_dev": 1.6903085094570331
+        },
+        "non_leading": {
+          "n": 8,
+          "mean": 6.5,
+          "median": 6.5,
+          "std_dev": 1.927248223318863
+        }
+      },
+      "eligible_sample_count": 18
+    }
+  },
+  "paired_deltas": {
+    "A_vs_B": {
+      "total_score": {
+        "paired_n": 2,
+        "mean_delta": 30.5,
+        "median_delta": 30.5
+      },
+      "information_gain": {
+        "paired_n": 2,
+        "mean_delta": 8.5,
+        "median_delta": 8.5
+      },
+      "context_use": {
+        "paired_n": 2,
+        "mean_delta": 10,
+        "median_delta": 10
+      },
+      "story_value": {
+        "paired_n": 2,
+        "mean_delta": 5.5,
+        "median_delta": 5.5
+      },
+      "depth": {
+        "paired_n": 2,
+        "mean_delta": 4,
+        "median_delta": 4
+      },
+      "non_leading": {
+        "paired_n": 2,
+        "mean_delta": 2.5,
+        "median_delta": 2.5
+      }
+    },
+    "B_vs_C": {
+      "total_score": {
+        "paired_n": 0,
+        "mean_delta": null,
+        "median_delta": null
+      },
+      "information_gain": {
+        "paired_n": 0,
+        "mean_delta": null,
+        "median_delta": null
+      },
+      "context_use": {
+        "paired_n": 0,
+        "mean_delta": null,
+        "median_delta": null
+      },
+      "story_value": {
+        "paired_n": 0,
+        "mean_delta": null,
+        "median_delta": null
+      },
+      "depth": {
+        "paired_n": 0,
+        "mean_delta": null,
+        "median_delta": null
+      },
+      "non_leading": {
+        "paired_n": 0,
+        "mean_delta": null,
+        "median_delta": null
+      }
+    },
+    "A_vs_C": {
+      "total_score": {
+        "paired_n": 1,
+        "mean_delta": -9,
+        "median_delta": -9
+      },
+      "information_gain": {
+        "paired_n": 1,
+        "mean_delta": -5,
+        "median_delta": -5
+      },
+      "context_use": {
+        "paired_n": 1,
+        "mean_delta": 0,
+        "median_delta": 0
+      },
+      "story_value": {
+        "paired_n": 1,
+        "mean_delta": -5,
+        "median_delta": -5
+      },
+      "depth": {
+        "paired_n": 1,
+        "mean_delta": -4,
+        "median_delta": -4
+      },
+      "non_leading": {
+        "paired_n": 1,
+        "mean_delta": 5,
+        "median_delta": 5
+      }
+    }
+  },
+  "case_groups": {
+    "coach": {
+      "title": "Coach Cases C01–C04",
+      "case_ids": [
+        "C01",
+        "C02",
+        "C03",
+        "C04"
+      ],
+      "contrast": "A → B",
+      "variants": {
+        "A": {
+          "total_score": {
+            "n": 2,
+            "mean": 6.5,
+            "median": 6.5,
+            "std_dev": 9.192388155425117
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 2,
+              "mean": 0,
+              "median": 0,
+              "std_dev": 0
+            },
+            "context_use": {
+              "n": 2,
+              "mean": 2.5,
+              "median": 2.5,
+              "std_dev": 3.5355339059327378
+            },
+            "story_value": {
+              "n": 2,
+              "mean": 0,
+              "median": 0,
+              "std_dev": 0
+            },
+            "depth": {
+              "n": 2,
+              "mean": 0,
+              "median": 0,
+              "std_dev": 0
+            },
+            "non_leading": {
+              "n": 2,
+              "mean": 4,
+              "median": 4,
+              "std_dev": 5.656854249492381
+            }
+          },
+          "eligible_sample_count": 6
+        },
+        "B": {
+          "total_score": {
+            "n": 2,
+            "mean": 67,
+            "median": 67,
+            "std_dev": 31.11269837220809
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 2,
+              "mean": 22,
+              "median": 22,
+              "std_dev": 8.48528137423857
+            },
+            "context_use": {
+              "n": 2,
+              "mean": 17.5,
+              "median": 17.5,
+              "std_dev": 7.7781745930520225
+            },
+            "story_value": {
+              "n": 2,
+              "mean": 12.5,
+              "median": 12.5,
+              "std_dev": 6.363961030678928
+            },
+            "depth": {
+              "n": 2,
+              "mean": 9,
+              "median": 9,
+              "std_dev": 4.242640687119285
+            },
+            "non_leading": {
+              "n": 2,
+              "mean": 6,
+              "median": 6,
+              "std_dev": 4.242640687119285
+            }
+          },
+          "eligible_sample_count": 6
+        },
+        "C": {
+          "total_score": {
+            "n": 3,
+            "mean": 44,
+            "median": 42,
+            "std_dev": 5.291502622129181
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 3,
+              "mean": 13,
+              "median": 12,
+              "std_dev": 1.7320508075688772
+            },
+            "context_use": {
+              "n": 3,
+              "mean": 11.666666666666666,
+              "median": 10,
+              "std_dev": 2.8867513459481287
+            },
+            "story_value": {
+              "n": 3,
+              "mean": 8,
+              "median": 8,
+              "std_dev": 2
+            },
+            "depth": {
+              "n": 3,
+              "mean": 4.666666666666667,
+              "median": 5,
+              "std_dev": 0.5773502691896258
+            },
+            "non_leading": {
+              "n": 3,
+              "mean": 6.666666666666667,
+              "median": 7,
+              "std_dev": 1.5275252316519465
+            }
+          },
+          "eligible_sample_count": 6
+        }
+      },
+      "A_vs_B": {
+        "total_score": {
+          "paired_n": 1,
+          "mean_delta": 89,
+          "median_delta": 89
+        },
+        "information_gain": {
+          "paired_n": 1,
+          "mean_delta": 28,
+          "median_delta": 28
+        },
+        "context_use": {
+          "paired_n": 1,
+          "mean_delta": 23,
+          "median_delta": 23
+        },
+        "story_value": {
+          "paired_n": 1,
+          "mean_delta": 17,
+          "median_delta": 17
+        },
+        "depth": {
+          "paired_n": 1,
+          "mean_delta": 12,
+          "median_delta": 12
+        },
+        "non_leading": {
+          "paired_n": 1,
+          "mean_delta": 9,
+          "median_delta": 9
+        }
+      },
+      "B_vs_C": {
+        "total_score": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "information_gain": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "context_use": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "story_value": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "depth": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "non_leading": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        }
+      },
+      "A_vs_C": {
+        "total_score": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "information_gain": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "context_use": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "story_value": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "depth": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "non_leading": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        }
+      }
+    },
+    "retrieval": {
+      "title": "Retrieval Cases C05–C08",
+      "case_ids": [
+        "C05",
+        "C06",
+        "C07",
+        "C08"
+      ],
+      "contrast": "B → C",
+      "variants": {
+        "A": {
+          "total_score": {
+            "n": 2,
+            "mean": 46.5,
+            "median": 46.5,
+            "std_dev": 9.192388155425117
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 2,
+              "mean": 15.5,
+              "median": 15.5,
+              "std_dev": 0.7071067811865476
+            },
+            "context_use": {
+              "n": 2,
+              "mean": 9,
+              "median": 9,
+              "std_dev": 5.656854249492381
+            },
+            "story_value": {
+              "n": 2,
+              "mean": 9.5,
+              "median": 9.5,
+              "std_dev": 0.7071067811865476
+            },
+            "depth": {
+              "n": 2,
+              "mean": 6.5,
+              "median": 6.5,
+              "std_dev": 0.7071067811865476
+            },
+            "non_leading": {
+              "n": 2,
+              "mean": 6,
+              "median": 6,
+              "std_dev": 4.242640687119285
+            }
+          },
+          "eligible_sample_count": 6
+        },
+        "B": {
+          "total_score": {
+            "n": 2,
+            "mean": 17.5,
+            "median": 17.5,
+            "std_dev": 10.606601717798213
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 2,
+              "mean": 2.5,
+              "median": 2.5,
+              "std_dev": 3.5355339059327378
+            },
+            "context_use": {
+              "n": 2,
+              "mean": 5,
+              "median": 5,
+              "std_dev": 7.0710678118654755
+            },
+            "story_value": {
+              "n": 2,
+              "mean": 1.5,
+              "median": 1.5,
+              "std_dev": 2.1213203435596424
+            },
+            "depth": {
+              "n": 2,
+              "mean": 1,
+              "median": 1,
+              "std_dev": 1.4142135623730951
+            },
+            "non_leading": {
+              "n": 2,
+              "mean": 7.5,
+              "median": 7.5,
+              "std_dev": 3.5355339059327378
+            }
+          },
+          "eligible_sample_count": 6
+        },
+        "C": {
+          "total_score": {
+            "n": 3,
+            "mean": 32,
+            "median": 31,
+            "std_dev": 5.5677643628300215
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 3,
+              "mean": 10,
+              "median": 10,
+              "std_dev": 5
+            },
+            "context_use": {
+              "n": 3,
+              "mean": 6,
+              "median": 5,
+              "std_dev": 1.7320508075688772
+            },
+            "story_value": {
+              "n": 3,
+              "mean": 6.666666666666667,
+              "median": 5,
+              "std_dev": 2.8867513459481287
+            },
+            "depth": {
+              "n": 3,
+              "mean": 3.6666666666666665,
+              "median": 3,
+              "std_dev": 1.1547005383792515
+            },
+            "non_leading": {
+              "n": 3,
+              "mean": 5.666666666666667,
+              "median": 6,
+              "std_dev": 2.516611478423583
+            }
+          },
+          "eligible_sample_count": 6
+        }
+      },
+      "A_vs_B": {
+        "total_score": {
+          "paired_n": 1,
+          "mean_delta": -28,
+          "median_delta": -28
+        },
+        "information_gain": {
+          "paired_n": 1,
+          "mean_delta": -11,
+          "median_delta": -11
+        },
+        "context_use": {
+          "paired_n": 1,
+          "mean_delta": -3,
+          "median_delta": -3
+        },
+        "story_value": {
+          "paired_n": 1,
+          "mean_delta": -6,
+          "median_delta": -6
+        },
+        "depth": {
+          "paired_n": 1,
+          "mean_delta": -4,
+          "median_delta": -4
+        },
+        "non_leading": {
+          "paired_n": 1,
+          "mean_delta": -4,
+          "median_delta": -4
+        }
+      },
+      "B_vs_C": {
+        "total_score": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "information_gain": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "context_use": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "story_value": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "depth": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "non_leading": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        }
+      },
+      "A_vs_C": {
+        "total_score": {
+          "paired_n": 1,
+          "mean_delta": -9,
+          "median_delta": -9
+        },
+        "information_gain": {
+          "paired_n": 1,
+          "mean_delta": -5,
+          "median_delta": -5
+        },
+        "context_use": {
+          "paired_n": 1,
+          "mean_delta": 0,
+          "median_delta": 0
+        },
+        "story_value": {
+          "paired_n": 1,
+          "mean_delta": -5,
+          "median_delta": -5
+        },
+        "depth": {
+          "paired_n": 1,
+          "mean_delta": -4,
+          "median_delta": -4
+        },
+        "non_leading": {
+          "paired_n": 1,
+          "mean_delta": 5,
+          "median_delta": 5
+        }
+      }
+    },
+    "era": {
+      "title": "Era Cases C09–C10",
+      "case_ids": [
+        "C09",
+        "C10"
+      ],
+      "contrast": "B → C",
+      "variants": {
+        "A": {
+          "total_score": {
+            "n": 2,
+            "mean": 69.5,
+            "median": 69.5,
+            "std_dev": 6.363961030678928
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 2,
+              "mean": 19,
+              "median": 19,
+              "std_dev": 1.4142135623730951
+            },
+            "context_use": {
+              "n": 2,
+              "mean": 19,
+              "median": 19,
+              "std_dev": 1.4142135623730951
+            },
+            "story_value": {
+              "n": 2,
+              "mean": 13.5,
+              "median": 13.5,
+              "std_dev": 2.1213203435596424
+            },
+            "depth": {
+              "n": 2,
+              "mean": 9,
+              "median": 9,
+              "std_dev": 1.4142135623730951
+            },
+            "non_leading": {
+              "n": 2,
+              "mean": 9,
+              "median": 9,
+              "std_dev": 0
+            }
+          },
+          "eligible_sample_count": 6
+        },
+        "B": {
+          "total_score": {
+            "n": 0,
+            "mean": null,
+            "median": null,
+            "std_dev": null
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "std_dev": null
+            },
+            "context_use": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "std_dev": null
+            },
+            "story_value": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "std_dev": null
+            },
+            "depth": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "std_dev": null
+            },
+            "non_leading": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "std_dev": null
+            }
+          },
+          "eligible_sample_count": 6
+        },
+        "C": {
+          "total_score": {
+            "n": 2,
+            "mean": 48.5,
+            "median": 48.5,
+            "std_dev": 30.405591591021544
+          },
+          "dimensions": {
+            "information_gain": {
+              "n": 2,
+              "mean": 13,
+              "median": 13,
+              "std_dev": 11.313708498984761
+            },
+            "context_use": {
+              "n": 2,
+              "mean": 15,
+              "median": 15,
+              "std_dev": 7.0710678118654755
+            },
+            "story_value": {
+              "n": 2,
+              "mean": 7.5,
+              "median": 7.5,
+              "std_dev": 6.363961030678928
+            },
+            "depth": {
+              "n": 2,
+              "mean": 5.5,
+              "median": 5.5,
+              "std_dev": 3.5355339059327378
+            },
+            "non_leading": {
+              "n": 2,
+              "mean": 7.5,
+              "median": 7.5,
+              "std_dev": 2.1213203435596424
+            }
+          },
+          "eligible_sample_count": 6
+        }
+      },
+      "A_vs_B": {
+        "total_score": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "information_gain": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "context_use": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "story_value": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "depth": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "non_leading": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        }
+      },
+      "B_vs_C": {
+        "total_score": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "information_gain": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "context_use": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "story_value": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "depth": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "non_leading": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        }
+      },
+      "A_vs_C": {
+        "total_score": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "information_gain": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "context_use": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "story_value": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "depth": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        },
+        "non_leading": {
+          "paired_n": 0,
+          "mean_delta": null,
+          "median_delta": null
+        }
+      }
+    }
+  },
+  "case_by_case": [
+    {
+      "case_id": "C01",
+      "main_capability": "Coach",
+      "variants": {
+        "A": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "B": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "C": {
+          "valid_n": 0,
+          "mean": null
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C02",
+      "main_capability": "Coach",
+      "variants": {
+        "A": {
+          "valid_n": 2,
+          "mean": 6.5
+        },
+        "B": {
+          "valid_n": 2,
+          "mean": 67
+        },
+        "C": {
+          "valid_n": 0,
+          "mean": null
+        }
+      },
+      "A_vs_B_delta": 89,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C03",
+      "main_capability": "Coach",
+      "variants": {
+        "A": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "B": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "C": {
+          "valid_n": 3,
+          "mean": 44
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C04",
+      "main_capability": "Coach",
+      "variants": {
+        "A": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "B": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "C": {
+          "valid_n": 0,
+          "mean": null
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C05",
+      "main_capability": "Memory Retrieval",
+      "variants": {
+        "A": {
+          "valid_n": 1,
+          "mean": 53
+        },
+        "B": {
+          "valid_n": 1,
+          "mean": 25
+        },
+        "C": {
+          "valid_n": 1,
+          "mean": 27
+        }
+      },
+      "A_vs_B_delta": -28,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C06",
+      "main_capability": "Memory Retrieval",
+      "variants": {
+        "A": {
+          "valid_n": 1,
+          "mean": 40
+        },
+        "B": {
+          "valid_n": 1,
+          "mean": 10
+        },
+        "C": {
+          "valid_n": 2,
+          "mean": 34.5
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C07",
+      "main_capability": "Memory Retrieval",
+      "variants": {
+        "A": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "B": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "C": {
+          "valid_n": 0,
+          "mean": null
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C08",
+      "main_capability": "Memory Retrieval",
+      "variants": {
+        "A": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "B": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "C": {
+          "valid_n": 0,
+          "mean": null
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C09",
+      "main_capability": "Era",
+      "variants": {
+        "A": {
+          "valid_n": 2,
+          "mean": 69.5
+        },
+        "B": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "C": {
+          "valid_n": 0,
+          "mean": null
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    },
+    {
+      "case_id": "C10",
+      "main_capability": "Era",
+      "variants": {
+        "A": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "B": {
+          "valid_n": 0,
+          "mean": null
+        },
+        "C": {
+          "valid_n": 2,
+          "mean": 48.5
+        }
+      },
+      "A_vs_B_delta": null,
+      "B_vs_C_delta": null
+    }
+  ],
+  "technical": {
+    "gate": {
+      "B_intervention_rate": {
+        "numerator": 0,
+        "denominator": 29,
+        "rate": 0
+      },
+      "C_intervention_rate": {
+        "numerator": 0,
+        "denominator": 28,
+        "rate": 0
+      }
+    },
+    "memory": {
+      "C_request_rate": {
+        "numerator": 0,
+        "denominator": 30,
+        "rate": 0
+      },
+      "C_retrieval_success_rate_among_requests": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      },
+      "C_mean_evidence_count": 0,
+      "C_requested_samples": 0
+    },
+    "era": {
+      "C_request_rate": {
+        "numerator": 0,
+        "denominator": 30,
+        "rate": 0
+      },
+      "C_retrieval_success_rate_among_requests": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      },
+      "C_requested_samples": 0
+    },
+    "coach": {
+      "success_rate": {
+        "numerator": 57,
+        "denominator": 60,
+        "rate": 0.95
+      },
+      "fail_open_rate": {
+        "numerator": 3,
+        "denominator": 60,
+        "rate": 0.05
+      },
+      "timeout_rate": {
+        "numerator": 0,
+        "denominator": 60,
+        "rate": 0
+      },
+      "gate_evaluation_count": 57
+    },
+    "asr": {
+      "input_equivalence_pass_rate": {
+        "numerator": 54,
+        "denominator": 90,
+        "rate": 0.6
+      },
+      "samples_excluded_for_mismatch": 36,
+      "samples_not_tested": 0
+    },
+    "latency_ms": {
+      "A": {
+        "total_latency_ms": {
+          "n": 30,
+          "p50": 10393.5,
+          "p95": 14759.08
+        }
+      },
+      "B": {
+        "gate_latency_ms": {
+          "n": 30,
+          "p50": 1290.975,
+          "p95": 1782.86
+        },
+        "coach_latency_ms": {
+          "n": 30,
+          "p50": 1290.975,
+          "p95": 1782.86
+        },
+        "total_latency_ms": {
+          "n": 30,
+          "p50": 12478.865,
+          "p95": 18544.55
+        }
+      },
+      "C": {
+        "gate_latency_ms": {
+          "n": 30,
+          "p50": 1326.845,
+          "p95": 2008.53
+        },
+        "memory_latency_ms": {
+          "n": 0,
+          "p50": null,
+          "p95": null
+        },
+        "era_latency_ms": {
+          "n": 0,
+          "p50": null,
+          "p95": null
+        },
+        "resolve_latency_ms": {
+          "n": 0,
+          "p50": null,
+          "p95": null
+        },
+        "coach_latency_ms": {
+          "n": 30,
+          "p50": 1326.845,
+          "p95": 2008.53
+        },
+        "total_latency_ms": {
+          "n": 30,
+          "p50": 11886.125,
+          "p95": 16285.74
+        }
+      }
+    },
+    "sample_attempts_total": 90
+  },
+  "runtime_parity": {
+    "completed_case_run_groups": 30,
+    "passed": 30,
+    "failed": 0,
+    "failures": []
+  },
+  "unexpected_regressions": [
+    {
+      "case_id": "C05",
+      "main_capability": "Memory Retrieval",
+      "variants": {
+        "A": {
+          "valid_n": 1,
+          "mean": 53
+        },
+        "B": {
+          "valid_n": 1,
+          "mean": 25
+        },
+        "C": {
+          "valid_n": 1,
+          "mean": 27
+        }
+      },
+      "A_vs_B_delta": -28,
+      "B_vs_C_delta": null
+    }
+  ]
+}

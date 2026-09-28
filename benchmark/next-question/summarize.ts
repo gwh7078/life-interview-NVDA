@@ -135,7 +135,7 @@ function technicalSummary(samples: Row[]): Row {
     return [variant, Object.fromEntries(latencyFields.map((field) => [field, latencyStats(variantSamples, field)]))];
   }));
   const timeouts = coachSamples.filter((sample) => (Array.isArray(sample.errors) ? sample.errors as Row[] : [])
-    .some((error) => /TIMEOUT/u.test(String(error.code))).length;
+    .some((error) => /TIMEOUT/u.test(String(error.code)))).length;
   const memorySuccesses = memoryRequests.filter((sample) => Number(sample.memory_evidence_count ?? 0) > 0).length;
   const eraSuccesses = eraRequests.filter((sample) => Number(sample.era_evidence_count ?? 0) > 0).length;
   return {
@@ -242,10 +242,20 @@ async function main(): Promise<void> {
   const judges = jsonl(path.join(directory, 'judge-results.jsonl'));
   const mapping = new Map<string, Row>((manifest.samples as Row[]).map((entry) => [entry.candidate_id, entry]));
   const technicalByIndex = new Map(samples.map((sample, index) => [index, sample]));
-  const judgedById = new Map(judges.map((row) => [row.candidate_id, row]));
-  const judgeFailures = judges.filter((row) => row.status !== 'scored');
+  const judgedById = new Map<string, Row>();
+  for (const row of judges) judgedById.set(String(row.candidate_id), row);
+  const latestJudges = [...judgedById.values()];
+  const judgeFailures = latestJudges.filter((row) => row.status !== 'scored');
   const missingJudgeIds = [...mapping.keys()].filter((candidateId) => !judgedById.has(candidateId));
   const judgeFailureCount = judgeFailures.length + missingJudgeIds.length;
+  const judgeFailureBreakdown: Row = {};
+  for (const row of judgeFailures) {
+    const label = row.http_status
+      ? `${String(row.error_code ?? 'unknown')}_HTTP_${String(row.http_status)}`
+      : String(row.error_code ?? 'unknown');
+    judgeFailureBreakdown[label] = Number(judgeFailureBreakdown[label] ?? 0) + 1;
+  }
+  if (missingJudgeIds.length) judgeFailureBreakdown.MISSING_RESULT = missingJudgeIds.length;
   const records: Array<{ case_id: string; run: number; variant: string; candidate_id: string; score: Row }> = [];
   for (const [candidateId, map] of mapping) {
     const sample = technicalByIndex.get(Number(map.technical_record_index));
@@ -293,6 +303,11 @@ async function main(): Promise<void> {
   });
   const technical = technicalSummary(samples);
   const runtimeParity = verifyRuntimeParity(samples);
+  const completionBlockers = [
+    ...(samples.filter((sample) => sample.status === 'completed').length !== Number(run.samples_planned) ? ['SAMPLES_INCOMPLETE'] : []),
+    ...(judgeFailureCount > 0 ? ['JUDGE_COVERAGE_INCOMPLETE'] : []),
+    ...(runtimeParity.failed > 0 ? ['RUNTIME_PARITY_FAILED'] : []),
+  ];
   const asrMismatch = samples.filter((sample) => sample.input_equivalence === 'FAIL').map((sample) => `${sample.case_id}-${sample.variant}-run${sample.run}`);
   const summary = {
     benchmark: 'controlled-next-question',
@@ -304,10 +319,16 @@ async function main(): Promise<void> {
     samples_attempted: samples.length,
     provider_attempts_total: technical.sample_attempts_total,
     samples_completed: samples.filter((sample) => sample.status === 'completed').length,
-    samples_scored: judges.filter((row) => row.status === 'scored').length,
+    samples_scored: latestJudges.filter((row) => row.status === 'scored').length,
+    judge_attempts_total: judges.length,
+    judge_candidates_retried: new Set(judges.filter((row) => Number(row.judge_attempt ?? 1) > 1).map((row) => row.candidate_id)).size,
     judge_failures: judgeFailureCount,
+    judge_failure_breakdown: judgeFailureBreakdown,
     judge_missing_candidates: missingJudgeIds,
     valid_primary_scores: records.length,
+    completion_status: completionBlockers.length ? 'INCOMPLETE' : 'COMPLETE',
+    ready_for_competition_report: completionBlockers.length === 0,
+    completion_blockers: completionBlockers,
     samples_excluded_for_asr_mismatch: asrMismatch.length,
     asr_mismatch_samples: asrMismatch,
     quality,
@@ -337,12 +358,14 @@ async function main(): Promise<void> {
     '',
     `- Run ID: \`${run.run_id}\``,
     `- Commit: \`${run.commit_sha}\``,
+    `- Benchmark status: **${completionBlockers.length ? 'INCOMPLETE' : 'COMPLETE'}**; READY_FOR_COMPETITION_REPORT = ${completionBlockers.length ? 'NO' : 'YES'}`,
     `- Judge: \`${summary.judge_model}\`, temperature 0, one independent absolute score per candidate`,
     `- Audio: 10 frozen canonical WAV files; see [audio manifest](../../audio/manifest.json)`,
     `- Samples: ${summary.samples_completed}/${summary.samples_planned} completed; ${summary.provider_attempts_total} provider attempts; ${summary.samples_scored} judged; ${summary.valid_primary_scores} primary-score eligible`,
-    `- ASR excluded: ${asrMismatch.length}; Judge failures or missing results: ${judgeFailureCount}`,
+    `- ASR excluded: ${asrMismatch.length}; Judge failures or missing results: ${judgeFailureCount} (${Object.entries(judgeFailureBreakdown).map(([code, count]) => `${code}=${count}`).join(', ') || 'none'})`,
     `- Runtime parity: ${runtimeParity.passed}/${runtimeParity.completed_case_run_groups} complete Case × run groups passed shared-input and profile checks; failures: ${runtimeParity.failed}`,
     '- Standard deviation uses sample standard deviation (n−1). Score and latency are reported separately.',
+    '- The scores below are a partial, non-representative subset because some Judge outputs failed; do not treat these contrasts as a completed benchmark result.',
     '',
     '## Overall scores',
     '',
@@ -360,9 +383,9 @@ async function main(): Promise<void> {
     lineForPair('B → C (Memory + Era)', paired.B_vs_C),
     lineForPair('A → C', paired.A_vs_C),
     '',
-    `**Q1 — Coach:** C01–C04 A→B paired mean total-score delta ${deltaText(coachGroup.A_vs_B.total_score)}.`,
-    `**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta ${deltaText(paired.B_vs_C.total_score)}; Retrieval C05–C08 ${deltaText(retrievalGroup.B_vs_C.total_score)}, Era C09–C10 ${deltaText(eraGroup.B_vs_C.total_score)}.`,
-    `**Q3 — Source of change:** see the five dimension deltas above; positive values are improvements and negative values are regressions.`,
+    `**Q1 — Coach (partial only):** C01–C04 A→B paired mean total-score delta ${deltaText(coachGroup.A_vs_B.total_score)}; the available subset is too small for a benchmark conclusion.`,
+    `**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta ${deltaText(paired.B_vs_C.total_score)}; Retrieval C05–C08 ${deltaText(retrievalGroup.B_vs_C.total_score)}, Era C09–C10 ${deltaText(eraGroup.B_vs_C.total_score)}. The current Judge results provide no paired B→C evidence.`,
+    '**Q3 — Source of change:** no complete conclusion is available; dimension contrasts below are from the partial judged subset only.',
     '',
     '## Case groups',
     '',
@@ -398,9 +421,10 @@ async function main(): Promise<void> {
     '## Exclusions and regressions',
     '',
     `- ASR mismatch sample IDs: ${asrMismatch.length ? asrMismatch.join(', ') : 'none'}`,
-    `- Judge errors or missing results: ${judgeFailureCount ? [...judgeFailures.map((row) => `${row.case_id}:${row.error_code ?? 'unknown'}`), ...missingJudgeIds.map((id) => `${id}:missing`)].join(', ') : 'none'}`,
+    `- Judge errors or missing results: ${judgeFailureCount ? Object.entries(judgeFailureBreakdown).map(([code, count]) => `${code}=${count}`).join(', ') : 'none'}`,
     `- Negative case-level paired deltas: ${summary.unexpected_regressions.length ? (summary.unexpected_regressions as Row[]).map((row) => `${row.case_id} (A→B ${row.A_vs_B_delta ?? 'n/a'}, B→C ${row.B_vs_C_delta ?? 'n/a'})`).join('; ') : 'none'}`,
     '- All completed candidates and technical traces remain in the result directory; the primary score excludes only ASR-mismatch samples and failed Judge records.',
+    `- Completion blockers: ${completionBlockers.join(', ') || 'none'}`,
     '',
   ].join('\n');
   writeFileSync(path.join(directory, 'summary.md'), markdown, { mode: 0o600 });
