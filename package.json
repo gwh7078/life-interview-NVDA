@@ -39,7 +39,8 @@
     "spark:retriever:smoke": "node --env-file-if-exists=.env --import tsx scripts/spark-retriever-smoke.ts",
     "spark:realtime:smoke": "node --env-file-if-exists=.env --import tsx scripts/spark-realtime-bridge-smoke.ts",
     "test:spark:realtime:e2e": "node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-provider-e2e.ts",
-    "spark:benchmark": "bash deploy/spark/benchmark.sh"
+    "spark:benchmark": "bash deploy/spark/benchmark.sh",
+    "spark:agent-retrieval:smoke": "node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-agent-retrieval-smoke.ts"
   },
   "dependencies": {
     "@ricky0123/vad-web": "^0.0.31",

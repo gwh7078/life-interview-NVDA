@@ -463,6 +463,16 @@ try {
           ? finite(eventMetrics.responseBFirstAudioMs ?? eventMetrics.firstAudioLatencyMs ?? event.durationMs)
           : finite(eventMetrics.responseFirstAudioMs ?? eventMetrics.firstAudioLatencyMs ?? event.durationMs);
         if (latency !== null) turn.firstAudioMs = latency;
+        if (!turn.slowTriggered) {
+          turn.retriever = 'skipped'; turn.retrieverLabel = 'N/A'; turn.retrieverDetail = '';
+          turn.memoryRetriever = 'skipped'; turn.memoryRetrieverLabel = 'N/A'; turn.memoryRetrieverRequested = false;
+          turn.eraRetriever = 'skipped'; turn.eraRetrieverLabel = 'N/A'; turn.eraRetrieverRequested = false;
+          turn.coach = 'skipped'; turn.coachLabel = 'N/A'; turn.coachDetail = '';
+          turn.context = 'skipped'; turn.contextLabel = 'N/A'; turn.contextDetail = '';
+          turn.triggerRetrieverEdge = 'skipped'; turn.retrieverCoachEdge = 'skipped';
+          turn.coachContextEdge = 'skipped'; turn.contextVoiceEdge = 'skipped';
+          turn.slowStatus = '本轮无需检索';
+        }
         turn.assistant = 'active'; turn.assistantLabel = '首段语音已到'; turn.assistantActive = true;
         turn.voiceAssistantEdge = 'active';
         if (event.component === 'realtime-tool-cycle' && turn.context === 'complete') turn.contextVoiceEdge = 'complete';

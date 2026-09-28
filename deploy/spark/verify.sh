@@ -44,7 +44,7 @@ gates=[
  gate("G1","Dependencies","node --version && npm --version && python3 --version && docker --version",False,60),
  gate("G2","Local Text Model",f"python3 {q(spark_dir/'lib/openai-smoke.py')} http://127.0.0.1:{os.getenv('SPARK_TEXT_PORT','8000')}/v1 {q(text_model)}",True,180),
  gate("G3","NemoClaw / OpenShell / Skills",f"test \"$({q(spark_dir/'services/nemoclaw.sh')} status)\" = RUNNING && nemoclaw {q(sandbox)} skill list && {q(spark_dir/'services/nemoclaw.sh')} smoke",True,360),
- gate("G4","Private Retriever","node --import tsx scripts/spark-retriever-smoke.ts",True,300),
+ gate("G4","Private Retriever + Agent retrieval boundary","node --import tsx scripts/spark-retriever-smoke.ts && node --import tsx scripts/spark-agent-retrieval-smoke.ts",True,420),
  gate("G5","Era Context","npm run era:index && npm run era:benchmark",True,600),
  gate("G6","Coach","npm run test:realtime:coach:live",True,180),
  gate("G7","Step-Audio model load",f"curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_BACKEND_PORT','8010')}/health && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_HEALTH_PORT','8093')}/health",True,60),
