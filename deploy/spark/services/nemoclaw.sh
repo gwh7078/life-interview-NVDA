@@ -116,7 +116,10 @@ case "${1:-status}" in
   start)
     install_cli
     ensure_sandbox
-    NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" nemoclaw inference get >/dev/null
+    NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
+      nemoclaw inference set --provider vllm --model "$model" --sandbox "$sandbox" >/dev/null
+    NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
+      nemoclaw "$sandbox" inference get >/dev/null
     install_skills
     configure_realtime_context_agent
     apply_policy
