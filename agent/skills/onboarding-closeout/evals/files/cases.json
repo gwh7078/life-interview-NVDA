@@ -285,6 +285,42 @@
         ]
       },
       "boundary_test": "Sparse evidence; missing profile fields must remain null and no precise chronology should be invented."
+    },
+    "ONB-HNEG-002": {
+      "task_type": "interview.closeout",
+      "mode": "story_continue",
+      "input": {
+        "mode": "story_continue",
+        "current_story": {
+          "title": "高考前夜发烧，带病走进考场",
+          "summary": "1983年高考前夜发烧，仍坚持参加考试。",
+          "agent_memory": "1983年7月15日参加高考。高考前一晚突然发烧。",
+          "status": "interviewing"
+        },
+        "current_stage": {
+          "stage_id": "hs",
+          "title": "莒县一中",
+          "start_date": "1980",
+          "end_date": "1983"
+        },
+        "life_stages": [
+          {
+            "stage_id": "hs",
+            "title": "莒县一中",
+            "start_date": "1980",
+            "end_date": "1983"
+          }
+        ],
+        "other_stories": [],
+        "transcript": [
+          {
+            "message_id": "m1",
+            "role": "user",
+            "text": "我又想起来了，是班主任兼化学老师王明晨连夜送我去医院输液。",
+            "timestamp": "2026-09-28T20:00:00Z"
+          }
+        ]
+      }
     }
   }
 }
