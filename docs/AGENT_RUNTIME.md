@@ -30,6 +30,7 @@ story.generation
 - `onboarding-closeout`
 - `interview-closeout`
 - `interview-observer`
+- `interview-coach`
 - `story-completion`
 - `story-generation`
 
@@ -95,7 +96,9 @@ Reasoning 可以重试；Apply 必须保持幂等和事务边界。
 
 它主要服务 StepAudio 3 的 Voice Tool Slow Path。
 
-**Step-Audio-2-mini 的 supervisor_auto Coach 不调用该 Agent。** Mini 使用独立 Qwen3-8B Gate / Resolve Service，避免再叠一层 OpenClaw 调用。
+**Step-Audio-2-mini 的 supervisor_auto Coach 不调用该 Agent。** Mini 使用正式 `interview-coach` Skill，由独立的低延迟 Realtime Runtime 执行 Qwen3-8B Gate / Retrieval / Resolve，避免再叠一层 OpenClaw 调用。
+
+`interview-coach` 与通用 AgentTaskPort Skill 的区别只在 Runtime：它仍是正式 Skill，但默认执行 Runtime 是产品自建的 low-latency realtime runtime，而不是 Direct Model / NemoClaw / OpenClaw。
 
 ## 7. Model Profile
 
