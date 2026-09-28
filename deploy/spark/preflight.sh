@@ -7,15 +7,27 @@ SPARK_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SPARK_DIR/lib/ports.sh"
 
 report_only=0
-[[ "${1:-}" == "--report-only" ]] && report_only=1
+allow_busy_ports=()
+while (( $# )); do
+  case "$1" in
+    --report-only) report_only=1; shift ;;
+    --allow-busy-port)
+      [[ "${2:-}" =~ ^[0-9]+$ ]] || { echo "--allow-busy-port requires a numeric port" >&2; exit 2; }
+      allow_busy_ports+=("$2"); shift 2 ;;
+    *) echo "usage: $0 [--report-only] [--allow-busy-port PORT ...]" >&2; exit 2 ;;
+  esac
+done
+allowed_busy_csv="$(IFS=,; printf '%s' "${allow_busy_ports[*]-}")"
 
-python3 - "$SPARK_DIAGNOSTICS_DIR" "$report_only" \
+python3 - "$SPARK_DIAGNOSTICS_DIR" "$report_only" "$allowed_busy_csv" \
   "$SPARK_TEXT_PORT" "$SPARK_COACH_PORT" "$SPARK_STEPAUDIO_BACKEND_PORT" "$SPARK_STEPAUDIO_WS_PORT" \
   "$SPARK_STEPAUDIO_HEALTH_PORT" "$SPARK_RETRIEVER_PORT" "$SPARK_VECTORDB_PORT" "$SPARK_BACKEND_PORT" "$SPARK_AGENT_RETRIEVAL_PORT" <<'PY'
 import json, os, platform, shutil, socket, subprocess, sys, time, urllib.error, urllib.request
 from pathlib import Path
 
-out = Path(sys.argv[1]); report_only = sys.argv[2] == "1"; ports = [int(x) for x in sys.argv[3:]]
+out = Path(sys.argv[1]); report_only = sys.argv[2] == "1"
+allowed_busy = {int(x) for x in sys.argv[3].split(",") if x}
+ports = [int(x) for x in sys.argv[4:]]
 out.mkdir(parents=True, exist_ok=True)
 
 def cmd(argv, timeout=15):
@@ -83,7 +95,12 @@ checks = {
     "node": {"status":"PASS" if node_ver else "FAIL","value":node_ver},
     "memory": {"status":"PASS" if mem_gb is not None and mem_gb >= float(os.getenv("SPARK_MIN_MEMORY_GB","100")) else "FAIL","gb":mem_gb},
     "disk": {"status":"PASS" if disk_gb >= float(os.getenv("SPARK_MIN_DISK_GB","180")) else "FAIL","free_gb":disk_gb},
-    "ports": {"status":"PASS" if all(port_free(p) for p in ports) else "FAIL","busy":[p for p in ports if not port_free(p)]},
+    "ports": {
+        "status":"PASS" if all(port_free(p) or p in allowed_busy for p in ports) else "FAIL",
+        "busy":[p for p in ports if not port_free(p)],
+        "allowed_busy":[p for p in ports if not port_free(p) and p in allowed_busy],
+        "unexpected_busy":[p for p in ports if not port_free(p) and p not in allowed_busy],
+    },
 }
 checks["network"] = {name: network(url) for name,url in {
     "github":"https://github.com",
