@@ -459,10 +459,10 @@ try {
         turn.assistant = 'active'; turn.assistantLabel = '首段文字已到'; turn.assistantActive = true;
         turn.voiceAssistantEdge = 'active';
       } else if (eventType === 'realtime.first_audio') {
-        if (event.component === 'realtime-provider') {
-          const latency = finite(eventMetrics.responseFirstAudioMs ?? event.durationMs);
-          if (latency !== null) turn.firstAudioMs = latency;
-        }
+        const latency = event.component === 'realtime-tool-cycle'
+          ? finite(eventMetrics.responseBFirstAudioMs ?? eventMetrics.firstAudioLatencyMs ?? event.durationMs)
+          : finite(eventMetrics.responseFirstAudioMs ?? eventMetrics.firstAudioLatencyMs ?? event.durationMs);
+        if (latency !== null) turn.firstAudioMs = latency;
         turn.assistant = 'active'; turn.assistantLabel = '首段语音已到'; turn.assistantActive = true;
         turn.voiceAssistantEdge = 'active';
         if (event.component === 'realtime-tool-cycle' && turn.context === 'complete') turn.contextVoiceEdge = 'complete';
