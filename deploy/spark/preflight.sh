@@ -69,6 +69,10 @@ docker_version = version(["docker","--version"]) if shutil.which("docker") else 
 docker_info = cmd(["docker","info"]) if shutil.which("docker") else {"ok":False,"stdout":"","stderr":"missing"}
 python_ver = version(["python3","--version"]) if shutil.which("python3") else None
 node_ver = version(["node","--version"]) if shutil.which("node") else None
+required_tools = ["curl","git","tar","xz","sha256sum","awk"]
+missing_tools = [name for name in required_tools if not shutil.which(name)]
+python_venv = cmd(["python3","-c","import venv, ensurepip"]) if shutil.which("python3") else {"ok":False}
+native_build_tools = [name for name in ["make","g++"] if shutil.which(name)]
 free = cmd(["free","-h"]) if shutil.which("free") else {"ok":False,"stdout":"","stderr":"missing"}
 df = cmd(["df","-h"])
 lsblk = cmd(["lsblk"]) if shutil.which("lsblk") else {"ok":False,"stdout":"","stderr":"missing"}
@@ -92,7 +96,14 @@ checks = {
     "docker": {"status":"PASS" if docker_info["ok"] else "FAIL"},
     "docker_gpu_runtime": {"status":"PASS" if docker_info["ok"] and ("nvidia" in docker_info["stdout"].lower() or "nvidia" in docker_info["stderr"].lower()) else "NOT_TESTED", "note":"Read-only preflight never pulls a test image."},
     "python": {"status":"PASS" if python_ver else "FAIL","value":python_ver},
-    "node": {"status":"PASS" if node_ver else "FAIL","value":node_ver},
+    "node": {"status":"PASS" if node_ver else "FAIL","value":node_ver,"note":"Node may be bootstrapped locally by install.sh."},
+    "system_tools": {"status":"PASS" if not missing_tools else "FAIL","missing":missing_tools},
+    "python_venv": {"status":"PASS" if python_venv.get("ok") else "FAIL"},
+    "native_build_tools": {
+        "status":"PASS" if len(native_build_tools)==2 else "NOT_TESTED",
+        "present":native_build_tools,
+        "note":"Only required if an npm native dependency has no matching prebuilt binary.",
+    },
     "memory": {"status":"PASS" if mem_gb is not None and mem_gb >= float(os.getenv("SPARK_MIN_MEMORY_GB","100")) else "FAIL","gb":mem_gb},
     "disk": {"status":"PASS" if disk_gb >= float(os.getenv("SPARK_MIN_DISK_GB","180")) else "FAIL","free_gb":disk_gb},
     "ports": {
@@ -146,10 +157,19 @@ report = {
 }
 (out/"preflight.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 (out/"versions.json").write_text(json.dumps(versions,ensure_ascii=False,indent=2),encoding="utf-8")
-print(json.dumps({"architecture":checks["architecture_arm64"],"gpu":checks["nvidia_gpu"],"docker":checks["docker"],"docker_gpu_runtime":checks["docker_gpu_runtime"],"ports":checks["ports"],"credentials":checks["credentials"]},ensure_ascii=False,indent=2))
+print(json.dumps({
+    "architecture":checks["architecture_arm64"],
+    "gpu":checks["nvidia_gpu"],
+    "docker":checks["docker"],
+    "docker_gpu_runtime":checks["docker_gpu_runtime"],
+    "system_tools":checks["system_tools"],
+    "python_venv":checks["python_venv"],
+    "ports":checks["ports"],
+    "credentials":checks["credentials"],
+},ensure_ascii=False,indent=2))
 # Node is deliberately not a hard preflight gate: install.sh can bootstrap a
 # pinned Node 22 runtime after hardware validation.
-hard = ["architecture_arm64","nvidia_gpu","docker","python","memory","disk","ports"]
+hard = ["architecture_arm64","nvidia_gpu","docker","python","python_venv","system_tools","memory","disk","ports"]
 failed = [k for k in hard if checks[k]["status"] == "FAIL"]
 if failed and not report_only:
     print("preflight failed: "+",".join(failed), file=sys.stderr)
