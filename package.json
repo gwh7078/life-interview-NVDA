@@ -15,6 +15,7 @@
     "trace:tool-cycles": "tsx scripts/summarize-realtime-tool-cycles.ts",
     "test:integration": "tsx --test test/db.test.ts test/interview-closeout-workflow.test.ts test/onboarding-closeout.test.ts test/onboarding-runtime.test.ts test/realtime-end.test.ts test/realtime-retriever-wiring.test.ts test/server.test.ts test/observability-server.test.ts test/retriever-server.test.ts test/story-e2e.test.ts test/story-share-api.test.ts test/book-api.test.ts test/book-pdf.test.ts test/book-acceptance.test.ts",
     "benchmark:next-question": "node --env-file-if-exists=.env --import tsx benchmark/next-question/runner.ts",
+    "benchmark:next-question:canary": "node --env-file-if-exists=.env --import tsx benchmark/next-question/text-transport-canary.ts",
     "test": "npm run test:fast && npm run test:integration && npm run test:agent && npm run test:agent:nat:unit",
     "test:voice:e2e": "node --env-file-if-exists=.env --import tsx scripts/real-provider-e2e.ts",
     "test:realtime:agent:smoke": "node --env-file-if-exists=.env --import tsx scripts/realtime-context-agent-smoke.ts",

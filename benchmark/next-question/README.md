@@ -13,6 +13,16 @@ The harness reuses the current Gate input builder, Gate/Resolve Coach, `Realtime
 - C runs require `NEMO_RETRIEVER_ENABLED=true` and the prepared historical Story indexed under the owner/story IDs passed to the runner.
 - Set `NEXT_QUESTION_BENCHMARK_OWNER_ID` and `NEXT_QUESTION_BENCHMARK_STORY_ID`, or pass `--owner-id` and `--story-id`. These IDs must scope the actual historical Story; the Runner does not seed or fabricate retrieval evidence.
 
+## Text transport canary
+
+Before smoke runs, verify that Step-Audio-2-mini consumes a real text user item:
+
+```bash
+bash scripts/codex-node.sh npm run benchmark:next-question:canary
+```
+
+The canary generates a random marker only in the user `input_text` item and asks the model to repeat it without putting the marker in the response instruction. It is a transport check, not a benchmark sample.
+
 ## Smoke
 
 ```bash
