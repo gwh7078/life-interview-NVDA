@@ -15,17 +15,23 @@ gpu_util="${SPARK_TEXT_GPU_MEMORY_UTILIZATION:-0.40}"
 max_seqs="${SPARK_TEXT_MAX_NUM_SEQS:-2}"
 max_batched_tokens="${SPARK_TEXT_MAX_NUM_BATCHED_TOKENS:-4096}"
 
+spec="$(spec_hash "$image" "$model" "$max_len" "$gpu_util" "$max_seqs" "$max_batched_tokens" "$SPARK_TEXT_PORT")"
+
 case "${1:-status}" in
   prefetch)
     docker_pull_cached "$image"
     hf_prefetch_cache "$model"
     ;;
   start)
-    if docker ps --format '{{.Names}}' | grep -qx "$name"; then exit 0; fi
+    reconcile_container_spec "$name" "$spec"
+    if docker ps --format '{{.Names}}' | grep -qx "$name"; then
+      "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_TEXT_PORT/health" "${SPARK_TEXT_START_TIMEOUT_S:-1800}"
+      exit 0
+    fi
     if docker ps -a --format '{{.Names}}' | grep -qx "$name"; then
       docker start "$name" >/dev/null
     else
-      args=(run -d --name "$name" --gpus all --ipc host
+      args=(run -d --name "$name" --label "life-interview.spark.spec=$spec" --gpus all --ipc host
         --ulimit memlock=-1 --ulimit stack=67108864
         -p "$SPARK_TEXT_PORT:8000"
         -v "$HF_HOME:/root/.cache/huggingface"
