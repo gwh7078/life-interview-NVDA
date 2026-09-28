@@ -21,7 +21,7 @@ case "${1:-status}" in
       exit 0
     fi
     docker rm "$name" >/dev/null 2>&1 || true
-    args=(run -d --name "$name" --label "life-interview.spark.spec=$spec" --gpus all --network host -v "$data_dir:/data" -w /data)
+    args=(run -d --name "$name" --label "life-interview.spark.spec=$spec" --gpus all --network host -v "$data_dir:/data" -w /data -e INGEST_LOG_LEVEL=WARNING)
     [[ -n "${NVIDIA_API_KEY:-}" ]] && args+=(-e NVIDIA_API_KEY)
     [[ -n "${NGC_API_KEY:-}" ]] && args+=(-e NGC_API_KEY)
     [[ -n "${NEMO_RETRIEVER_API_TOKEN:-}" ]] && args+=(-e NRL_API_TOKEN="$NEMO_RETRIEVER_API_TOKEN")
