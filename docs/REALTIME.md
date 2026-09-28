@@ -14,9 +14,9 @@
 
 DGX Spark 的目标是未来替换 Mini 的执行后端，而不是改变产品层 Provider Contract。
 
-## 2. Mini：Fast Voice + Realtime Coach
+## 2. Mini：Fast Voice + interview-coach Skill
 
-Mini 默认不再依赖旧 Independent Memory 路线。
+Mini 默认不再依赖旧 Independent Memory 路线。实时慢系统现正式定义为 `interview-coach` Skill；为了满足语音低延迟预算，它由产品自建的 Realtime Runtime 执行，不经过通用 OpenClaw / NemoClaw Runtime。
 
 ### Story Create / Story Continue / Contributor
 
