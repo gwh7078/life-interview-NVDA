@@ -113,6 +113,13 @@ def run_asr(audio_path):
     )
     return (text or "").strip()
 
+def run_asr_serialized(audio_path):
+    # Acquire the model lock inside the worker thread, never on the asyncio
+    # event-loop thread. Otherwise a concurrent speech worker can hold the
+    # lock while waiting for the event loop to drain audio, creating a deadlock.
+    with inference_lock:
+        return run_asr(audio_path)
+
 def run_speech(history, system, instructions, audio_path, queue, loop, response_id):
     def emit(item):
         asyncio.run_coroutine_threadsafe(queue.put(item), loop).result()
@@ -191,8 +198,7 @@ async def handler(ws):
                     path = Path(tempdir.name) / f"turn-{uuid.uuid4().hex}.wav"
                     write_pcm_wav(path, bytes(input_audio))
                     input_audio.clear(); speech_started = False
-                    with inference_lock:
-                        pending_user_text = await asyncio.to_thread(run_asr, path)
+                    pending_user_text = await asyncio.to_thread(run_asr_serialized, path)
                     pending_audio_path = path
                     await ws.send(json.dumps({
                         "type":"conversation.item.input_audio_transcription.completed",
