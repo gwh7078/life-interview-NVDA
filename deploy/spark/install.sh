@@ -84,6 +84,9 @@ bootstrap_tools() {
     "$uvroot/bin/python" -m pip install --quiet --upgrade pip uv
   fi
   export PATH="$SPARK_RUNTIME_DIR/tools/node/bin:$uvroot/bin:$PATH"
+  # Build the shared Hugging Face helper venv once before parallel model prefetch
+  # jobs begin; concurrent first-time venv creation is not reliable.
+  ensure_tool_venv >/dev/null
   cd "$REPO_ROOT"
   npm ci
   uv sync --project nvidia/nat
