@@ -28,6 +28,9 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   docker_runtimes="$(docker info --format '{{json .Runtimes}}' 2>/dev/null || true)"
   if [[ "$docker_runtimes" == *'"nvidia"'* ]]; then
     pass "NVIDIA Container Runtime"
+  elif have nvidia-ctk \
+    && nvidia-ctk cdi list 2>/dev/null | grep -Eq '^nvidia\.com/gpu=(all|[0-9]+)$'; then
+    pass "NVIDIA Container Runtime (CDI)"
   else
     fail "NVIDIA Container Runtime unavailable in Docker"
   fi
