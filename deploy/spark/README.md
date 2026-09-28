@@ -88,7 +88,10 @@ run still receives only its normal short-lived scoped retrieval token.
 
 Runtime state, logs, diagnostics, caches and benchmarks live under `runtime/` or
 user cache directories and are not committed. Stop/restart never deletes SQLite,
-Retriever data, model caches, NemoClaw sandboxes or user data.
+Retriever data, model caches, NemoClaw sandboxes or user data. Re-running
+`install.sh` while this deployment is already live is supported: preflight
+allows only ports belonging to services this profile can positively observe as
+RUNNING; any other occupied target port still fails closed.
 
 ## Spark-day order
 
