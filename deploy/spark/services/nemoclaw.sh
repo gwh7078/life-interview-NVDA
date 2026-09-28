@@ -117,7 +117,7 @@ case "${1:-status}" in
     install_cli
     ensure_sandbox
     NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
-      nemoclaw inference set --provider vllm --model "$model" --sandbox "$sandbox" >/dev/null
+      nemoclaw inference set --provider vllm-local --model "$model" --sandbox "$sandbox" >/dev/null
     NEMOCLAW_VLLM_PORT="$SPARK_TEXT_PORT" \
       nemoclaw "$sandbox" inference get >/dev/null
     install_skills
