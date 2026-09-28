@@ -4,6 +4,7 @@ import path from 'node:path';
 const MODEL = 'step-5-preview';
 const ENDPOINT = 'https://api.stepfun.com/step_plan/v1/chat/completions';
 const MAX_ATTEMPTS = 3;
+const CONCURRENCY = 2;
 const SCORE_LIMITS = {
   information_gain: 30,
   context_use: 25,
@@ -26,6 +27,14 @@ function requiredArgument(name: string): string {
   const index = process.argv.indexOf(name);
   const value = index >= 0 ? process.argv[index + 1] : undefined;
   if (!value || value.startsWith('--')) throw new Error(`Missing ${name}.`);
+  return value;
+}
+
+function optionalPositiveIntegerArgument(name: string): number | undefined {
+  const index = process.argv.indexOf(name);
+  if (index < 0) return undefined;
+  const value = Number(process.argv[index + 1]);
+  if (!Number.isInteger(value) || value < 1) throw new Error(`Invalid ${name}.`);
   return value;
 }
 
@@ -165,24 +174,84 @@ async function main(): Promise<void> {
   if (!apiKey) throw new Error('STEPFUN_API_KEY is not configured for the Step 5 Preview Judge.');
   const candidates = parseJsonl<JudgeInput>(inputPath);
   if (candidates.length === 0) throw new Error('judge.jsonl has no candidates.');
-  const existingRows = parseJsonl<{ candidate_id?: string; status?: string; error_code?: string; http_status?: number }>(outputPath);
-  const attemptHistory = new Map<string, Array<{ status?: string; error_code?: string; http_status?: number }>>();
+  const existingRows = parseJsonl<{
+    candidate_id?: string;
+    status?: string;
+    error_code?: string;
+    http_status?: number;
+    max_output_tokens?: number;
+    retry_reason?: string;
+  }>(outputPath);
+  const attemptHistory = new Map<string, Array<{
+    status?: string;
+    error_code?: string;
+    http_status?: number;
+    max_output_tokens?: number;
+    retry_reason?: string;
+  }>>();
   for (const row of existingRows) {
     if (!row.candidate_id) continue;
     attemptHistory.set(row.candidate_id, [...(attemptHistory.get(row.candidate_id) ?? []), row]);
   }
   const retryable = (row: { error_code?: string; http_status?: number }) =>
-    ['JUDGE_OUTPUT_TOKEN_LIMIT', 'JUDGE_RESPONSE_INCOMPLETE', 'JUDGE_TIMEOUT', 'JUDGE_REQUEST_FAILED'].includes(String(row.error_code))
+    ['JUDGE_OUTPUT_TOKEN_LIMIT', 'JUDGE_RESPONSE_INCOMPLETE', 'JUDGE_TIMEOUT', 'JUDGE_REQUEST_FAILED', 'JUDGE_RUN_INTERRUPTED'].includes(String(row.error_code))
     || (row.error_code === 'JUDGE_HTTP_ERROR' && Number(row.http_status) >= 500);
   const scored = new Set([...attemptHistory].filter(([, rows]) => rows.at(-1)?.status === 'scored').map(([id]) => id));
   if (!existsSync(outputPath)) writeFileSync(outputPath, '', { mode: 0o600 });
   let newCalls = 0;
-  for (let index = 0; index < candidates.length; index += 1) {
-    const candidate = candidates[index]!;
-    if (scored.has(candidate.candidate_id)) continue;
+  let nextIndex = 0;
+  const retrySchemaInvalidOnce = process.argv.includes('--retry-schema-invalid-once');
+  const retryLatestFailuresOnce = process.argv.includes('--retry-latest-failures-once');
+  if (retrySchemaInvalidOnce && retryLatestFailuresOnce) throw new Error('Choose only one explicit retry mode.');
+  const oneShotRetryReason = retrySchemaInvalidOnce
+    ? 'USER_REQUESTED_SCHEMA_RETRY'
+    : retryLatestFailuresOnce ? 'USER_REQUESTED_FAILURE_RETRY_ROUND_2' : undefined;
+  const explicitRetryTargets = oneShotRetryReason ? candidates.filter((candidate) => {
     const history = attemptHistory.get(candidate.candidate_id) ?? [];
     const previous = history.at(-1);
-    if (previous && (previous.status === 'scored' || !retryable(previous))) continue;
+    return previous?.status === 'failed'
+      && (!retrySchemaInvalidOnce || previous.error_code === 'JUDGE_RESPONSE_SCHEMA_INVALID')
+      && !history.some((row) => row.retry_reason === oneShotRetryReason);
+  }) : [];
+  const expectedRetryCount = optionalPositiveIntegerArgument('--expect-retry-count');
+  if (expectedRetryCount !== undefined && explicitRetryTargets.length !== expectedRetryCount) {
+    throw new Error(`Expected ${expectedRetryCount} explicit retry targets, found ${explicitRetryTargets.length}.`);
+  }
+  const explicitRetryIds = new Set(explicitRetryTargets.map((candidate) => candidate.candidate_id));
+  const processCandidate = async (index: number): Promise<void> => {
+    const candidate = candidates[index]!;
+    const history = attemptHistory.get(candidate.candidate_id) ?? [];
+    const previous = history.at(-1);
+    if (oneShotRetryReason) {
+      if (!explicitRetryIds.has(candidate.candidate_id) || !previous) return;
+      const maxTokens = previous.max_output_tokens ?? 2_048;
+      let result: Record<string, unknown>;
+      try {
+        result = await score(candidate, apiKey, maxTokens);
+      } catch (error) {
+        result = {
+          status: 'failed', candidate_id: candidate.candidate_id, case_id: candidate.case_id,
+          judge_model: MODEL, max_output_tokens: maxTokens,
+          error_code: error instanceof Error && error.name === 'TimeoutError' ? 'JUDGE_TIMEOUT' : 'JUDGE_REQUEST_FAILED',
+        };
+      }
+      result.judge_attempt = history.length + 1;
+      result.retry_reason = oneShotRetryReason;
+      appendFileSync(outputPath, `${JSON.stringify(result)}\n`, { encoding: 'utf8', mode: 0o600 });
+      history.push({
+        status: String(result.status),
+        error_code: typeof result.error_code === 'string' ? result.error_code : undefined,
+        http_status: typeof result.http_status === 'number' ? result.http_status : undefined,
+        max_output_tokens: maxTokens,
+        retry_reason: oneShotRetryReason,
+      });
+      attemptHistory.set(candidate.candidate_id, history);
+      newCalls += 1;
+      process.stdout.write(`${result.status === 'scored' ? 'SCORED' : 'JUDGE_FAILED'} ${index + 1}/${candidates.length} retry=${oneShotRetryReason} attempt=${history.length} ${candidate.case_id}\n`);
+      return;
+    }
+    if (scored.has(candidate.candidate_id)) return;
+    if (previous && (previous.status === 'scored' || !retryable(previous))) return;
     for (let attempt = history.length + 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
       const maxTokens = 2_048 * (2 ** (attempt - 1));
       let result: Record<string, unknown>;
@@ -212,7 +281,16 @@ async function main(): Promise<void> {
       if (!retryable(result) || attempt === MAX_ATTEMPTS) break;
       process.stdout.write(`JUDGE_RETRY ${candidate.case_id} after ${String(result.error_code)}\n`);
     }
-  }
+  };
+  process.stdout.write(`Judge concurrency=${CONCURRENCY}${oneShotRetryReason ? `; explicit retry=${oneShotRetryReason}; targets=${explicitRetryTargets.length}` : ''}.\n`);
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, candidates.length) }, async () => {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= candidates.length) return;
+      await processCandidate(index);
+    }
+  }));
   const latest = new Map<string, { status?: string }>();
   for (const row of parseJsonl<{ candidate_id?: string; status?: string }>(outputPath)) {
     if (row.candidate_id) latest.set(row.candidate_id, row);

@@ -256,6 +256,18 @@ async function main(): Promise<void> {
     judgeFailureBreakdown[label] = Number(judgeFailureBreakdown[label] ?? 0) + 1;
   }
   if (missingJudgeIds.length) judgeFailureBreakdown.MISSING_RESULT = missingJudgeIds.length;
+  const explicitRetryRound = (reason: string) => {
+    const attempts = judges.filter((row) => row.retry_reason === reason);
+    return {
+      attempted: attempts.length,
+      scored: attempts.filter((row) => row.status === 'scored').length,
+      failed: attempts.filter((row) => row.status !== 'scored').length,
+    };
+  };
+  const explicitRetryRounds = {
+    schema_invalid_round_1: explicitRetryRound('USER_REQUESTED_SCHEMA_RETRY'),
+    remaining_failures_round_2: explicitRetryRound('USER_REQUESTED_FAILURE_RETRY_ROUND_2'),
+  };
   const records: Array<{ case_id: string; run: number; variant: string; candidate_id: string; score: Row }> = [];
   for (const [candidateId, map] of mapping) {
     const sample = technicalByIndex.get(Number(map.technical_record_index));
@@ -315,6 +327,9 @@ async function main(): Promise<void> {
     commit_sha: run.commit_sha,
     generated_at: new Date().toISOString(),
     judge_model: 'step-5-preview',
+    judge_endpoint: run.judge_endpoint ?? null,
+    judge_commit_sha: run.judge_commit_sha ?? null,
+    judge_concurrency: Number(run.judge_concurrency ?? 1),
     samples_planned: Number(run.samples_planned),
     samples_attempted: samples.length,
     provider_attempts_total: technical.sample_attempts_total,
@@ -322,6 +337,7 @@ async function main(): Promise<void> {
     samples_scored: latestJudges.filter((row) => row.status === 'scored').length,
     judge_attempts_total: judges.length,
     judge_candidates_retried: new Set(judges.filter((row) => Number(row.judge_attempt ?? 1) > 1).map((row) => row.candidate_id)).size,
+    judge_explicit_retry_rounds: explicitRetryRounds,
     judge_failures: judgeFailureCount,
     judge_failure_breakdown: judgeFailureBreakdown,
     judge_missing_candidates: missingJudgeIds,
@@ -344,6 +360,7 @@ async function main(): Promise<void> {
   const coachGroup = caseGroups.coach as Row;
   const retrievalGroup = caseGroups.retrieval as Row;
   const eraGroup = caseGroups.era as Row;
+  const retryRoundText = Object.entries(explicitRetryRounds).map(([name, result]) => `${name}: ${result.attempted} attempted, ${result.scored} scored, ${result.failed} failed`);
   const lineForPair = (label: string, values: Row) => `| ${label} | ${deltaText(values.total_score)} | ${DIMENSIONS.map((dimension) => deltaText(values[dimension])).join(' | ')} |`;
   const caseRows = caseByCase.map((row) => `| ${row.case_id} | ${row.variants.A.mean ?? 'n/a'} | ${row.variants.B.mean ?? 'n/a'} | ${row.variants.C.mean ?? 'n/a'} | ${row.main_capability} |`);
   const latencyRows: string[] = [];
@@ -360,6 +377,9 @@ async function main(): Promise<void> {
     `- Commit: \`${run.commit_sha}\``,
     `- Benchmark status: **${completionBlockers.length ? 'INCOMPLETE' : 'COMPLETE'}**; READY_FOR_COMPETITION_REPORT = ${completionBlockers.length ? 'NO' : 'YES'}`,
     `- Judge: \`${summary.judge_model}\`, temperature 0, one independent absolute score per candidate`,
+    `- Judge endpoint: \`${summary.judge_endpoint ?? 'not recorded'}\`; concurrency: ${summary.judge_concurrency}`,
+    `- Judge code commit: \`${summary.judge_commit_sha ?? 'not recorded'}\``,
+    `- Explicit Judge retry rounds: ${retryRoundText.join('; ')}`,
     `- Audio: 10 frozen canonical WAV files; see [audio manifest](../../audio/manifest.json)`,
     `- Samples: ${summary.samples_completed}/${summary.samples_planned} completed; ${summary.provider_attempts_total} provider attempts; ${summary.samples_scored} judged; ${summary.valid_primary_scores} primary-score eligible`,
     `- ASR excluded: ${asrMismatch.length}; Judge failures or missing results: ${judgeFailureCount} (${Object.entries(judgeFailureBreakdown).map(([code, count]) => `${code}=${count}`).join(', ') || 'none'})`,
@@ -384,7 +404,7 @@ async function main(): Promise<void> {
     lineForPair('A → C', paired.A_vs_C),
     '',
     `**Q1 — Coach (partial only):** C01–C04 A→B paired mean total-score delta ${deltaText(coachGroup.A_vs_B.total_score)}; the available subset is too small for a benchmark conclusion.`,
-    `**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta ${deltaText(paired.B_vs_C.total_score)}; Retrieval C05–C08 ${deltaText(retrievalGroup.B_vs_C.total_score)}, Era C09–C10 ${deltaText(eraGroup.B_vs_C.total_score)}. The current Judge results provide no paired B→C evidence.`,
+    `**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta ${deltaText(paired.B_vs_C.total_score)}; Retrieval C05–C08 ${deltaText(retrievalGroup.B_vs_C.total_score)}, Era C09–C10 ${deltaText(eraGroup.B_vs_C.total_score)}. These sparse pairs are non-representative and do not support a completed conclusion.`,
     '**Q3 — Source of change:** no complete conclusion is available; dimension contrasts below are from the partial judged subset only.',
     '',
     '## Case groups',
