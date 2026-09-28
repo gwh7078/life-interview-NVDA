@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 STATUS = ROOT / "deploy/spark/lib/nemoclaw_status.py"
 STATUS_SCRIPT = ROOT / "deploy/spark/status.sh"
+AGENT_CHECK_SCRIPT = ROOT / "deploy/spark/agent/check-agent-runtime.sh"
 SANITIZER_PATH = ROOT / "scripts/spark/evidence.py"
 spec = importlib.util.spec_from_file_location("spark_evidence", SANITIZER_PATH)
 evidence = importlib.util.module_from_spec(spec)
@@ -110,6 +112,109 @@ class NemoClawStatusTest(unittest.TestCase):
         command_error, error_row = self.run_status("{}", fail_command=True)
         self.assertEqual(command_error.returncode, 0, command_error.stderr)
         self.assertTrue(error_row.endswith("NOT READY"), error_row)
+
+
+class AgentRuntimeReadinessTest(unittest.TestCase):
+    def run_check(self, *, status=None, sandbox="my-assistant", cli=True, openclaw=True):
+        with tempfile.TemporaryDirectory(prefix="spark-agent-ready-") as temp:
+            root = Path(temp)
+            bindir = root / "bin"
+            bindir.mkdir()
+            calls = root / "calls.log"
+            for name in ("dirname",):
+                target = shutil.which(name)
+                if target:
+                    (bindir / name).symlink_to(target)
+            (bindir / "python3").symlink_to(sys.executable)
+            if cli:
+                fake_cli = bindir / "nemoclaw"
+                fake_cli.write_text(
+                    "#!/bin/sh\n"
+                    "printf '%s\\n' \"$*\" >> \"$FAKE_CALLS\"\n"
+                    "if [ \"$*\" = \"$FAKE_SANDBOX status --json\" ]; then "
+                    "printf '%s\\n' \"$FAKE_STATUS\"; exit 0; fi\n"
+                    "if [ \"$*\" = \"$FAKE_SANDBOX exec -- openclaw --version\" ]; then "
+                    "[ \"$FAKE_OPENCLAW_OK\" = true ] || exit 7; "
+                    "printf 'OpenClaw test-version\\n'; exit 0; fi\n"
+                    "exit 97\n",
+                    encoding="utf-8",
+                )
+                fake_cli.chmod(0o755)
+            env_file = root / "spark.env"
+            env_file.write_text(
+                "DEPLOYMENT_PROFILE=spark\n"
+                + (f"NEMOCLAW_SANDBOX={sandbox}\n" if sandbox is not None else ""),
+                encoding="utf-8",
+            )
+            env = {
+                **os.environ,
+                "PATH": str(bindir),
+                "HOME": str(root / "home"),
+                "SPARK_ENV_FILE": str(env_file),
+                "SPARK_HOME": str(root / "home"),
+                "FAKE_CALLS": str(calls),
+                "FAKE_SANDBOX": sandbox or "",
+                "FAKE_STATUS": status if status is not None else json.dumps({"found": True, "phase": "running"}),
+                "FAKE_OPENCLAW_OK": "true" if openclaw else "false",
+            }
+            result = subprocess.run(
+                ["/bin/bash", str(AGENT_CHECK_SCRIPT)], cwd=ROOT, env=env,
+                capture_output=True, text=True, timeout=15, check=False,
+            )
+            log = calls.read_text(encoding="utf-8").splitlines() if calls.exists() else []
+            return result, log
+
+    def assert_not_ready(self, result):
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("AGENT RUNTIME NOT READY", result.stderr)
+        self.assertIn("operator-managed prerequisite", result.stderr)
+        self.assertIn("Install and onboard NemoClaw with OpenClaw", result.stderr)
+
+    def test_ready_and_running_sandboxes_require_openclaw_inside_sandbox(self):
+        for phase in ("ready", "running"):
+            with self.subTest(phase=phase):
+                result, calls = self.run_check(status=json.dumps({"found": True, "phase": phase}))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("NemoClaw/OpenClaw Agent Runtime", result.stdout)
+                self.assertEqual(calls, [
+                    "my-assistant status --json",
+                    "my-assistant exec -- openclaw --version",
+                ])
+
+    def test_missing_cli_or_sandbox_is_not_ready_and_does_not_run_mutations(self):
+        missing_cli, cli_calls = self.run_check(cli=False)
+        self.assert_not_ready(missing_cli)
+        self.assertEqual(cli_calls, [])
+
+        missing_sandbox, sandbox_calls = self.run_check(sandbox=None)
+        self.assert_not_ready(missing_sandbox)
+        self.assertEqual(sandbox_calls, [])
+
+    def test_missing_stopped_invalid_sandbox_and_missing_openclaw_fail_closed(self):
+        for payload in (
+            json.dumps({"found": False, "phase": "running"}),
+            json.dumps({"found": True, "phase": "stopped"}),
+            "not-json",
+        ):
+            with self.subTest(payload=payload):
+                result, calls = self.run_check(status=payload)
+                self.assert_not_ready(result)
+                self.assertEqual(calls, ["my-assistant status --json"])
+
+        openclaw_missing, calls = self.run_check(openclaw=False)
+        self.assert_not_ready(openclaw_missing)
+        self.assertEqual(calls, [
+            "my-assistant status --json",
+            "my-assistant exec -- openclaw --version",
+        ])
+
+    def test_check_never_installs_onboards_starts_or_stops_agent_runtime(self):
+        result, calls = self.run_check()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(any(
+            any(word in call.split() for word in ("onboard", "start", "stop", "install"))
+            for call in calls
+        ))
 
 
 class EvidenceSanitizerTest(unittest.TestCase):

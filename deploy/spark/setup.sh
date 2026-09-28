@@ -16,13 +16,22 @@ validate_product_config() {
   [[ "$DEPLOYMENT_PROFILE" == spark ]] || die "DEPLOYMENT_PROFILE must be spark."
   [[ "${TEXT_MODEL_PROVIDER:-}" == openai-compatible ]] || die "TEXT_MODEL_PROVIDER must be openai-compatible."
   [[ -n "${TEXT_MODEL_BASE_URL:-}" && -n "${TEXT_MODEL:-}" ]] || die "TEXT_MODEL_BASE_URL and TEXT_MODEL are required."
+  [[ "$TEXT_MODEL_BASE_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+/v1/?$ ]] \
+    || die "Spark Text Runtime must use an unauthenticated loopback OpenAI-compatible /v1 endpoint."
+  if [[ -n "${TEXT_MODEL_API_KEY:-}" ]]; then
+    printf '%s\n' \
+      'Spark profile requires an unauthenticated loopback Text vLLM endpoint because NemoClaw/OpenClaw uses the local vllm-local route.' \
+      'TEXT_MODEL_API_KEY must be empty.' >&2
+    exit 1
+  fi
   [[ "${AGENT_MODEL_BASE_URL:-}" == "$TEXT_MODEL_BASE_URL" ]] || die "AGENT_MODEL_BASE_URL must match TEXT_MODEL_BASE_URL."
   [[ "${AGENT_MODEL_DEFAULT:-}" == "$TEXT_MODEL" ]] || die "AGENT_MODEL_DEFAULT must match the served TEXT_MODEL."
   [[ "${REALTIME_COACH_PROVIDER:-}" == openai-compatible ]] || die "REALTIME_COACH_PROVIDER must be openai-compatible."
   [[ -n "${REALTIME_COACH_BASE_URL:-}" && -n "${REALTIME_COACH_MODEL:-}" ]] || die "Coach endpoint and served model are required."
   [[ "${STEPAUDIO2_EXECUTION:-}" == local && -n "${STEPAUDIO2_LOCAL_WS_URL:-}" ]] || die "Configure the operator-managed local StepAudio WebSocket endpoint."
   [[ "${NEMO_RETRIEVER_ENABLED:-}" == true && -n "${NEMO_RETRIEVER_BASE_URL:-}" ]] || die "Configure the operator-managed NeMo Retriever endpoint."
-  [[ "${AI_TASK_RUNTIME:-}" == agent && -n "${NEMOCLAW_SANDBOX:-}" ]] || die "Spark requires AI_TASK_RUNTIME=agent and NEMOCLAW_SANDBOX."
+  [[ "${AI_TASK_RUNTIME:-}" == agent && -n "${SPARK_NEMOCLAW_SANDBOX_CONFIGURED:-}" ]] \
+    || die "Spark requires AI_TASK_RUNTIME=agent and a configured NEMOCLAW_SANDBOX."
   [[ "${SPARK_SEED_DEMO_DATA:-false}" == true || "${SPARK_SEED_DEMO_DATA:-false}" == false ]] \
     || die "SPARK_SEED_DEMO_DATA must be true or false."
 }
@@ -105,7 +114,7 @@ if [[ "${NEMO_ERA_CONTEXT_ENABLED:-false}" == true ]]; then
   bash scripts/codex-node.sh npm run era:index
 fi
 
-"$DIR/agent/install-nemoclaw.sh"
+"$DIR/agent/check-agent-runtime.sh"
 "$DIR/agent/configure-runtime.sh"
 "$DIR/agent/sync-skills.sh"
 "$DIR/agent/configure-policy.sh"

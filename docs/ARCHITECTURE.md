@@ -155,7 +155,7 @@ Retriever     : REST / MCP 127.0.0.1:7670
 VectorDB      : internal to Retriever Runtime; not an application endpoint
 ```
 
-NemoClaw onboarding 复用已有 Text vLLM 的 `/v1/models` 模型清单；OpenClaw 在 NemoClaw sandbox 内执行正式会后 Agent Skills。`interview-coach` Skill 继续由产品低延迟 Realtime Runtime 执行 Qwen3-8B，不经 OpenClaw。Retriever 只通过 Service `:7670` 接入，应用不得直接访问 VectorDB。
+操作者在仓库外安装并 onboard NemoClaw，准备好可用的 OpenClaw Agent 和指定 sandbox；这整体作为一个 operator-managed NemoClaw/OpenClaw Agent Runtime。Life Interview setup 检查该 Runtime ready/running 后，复用已有 Text vLLM 的 `/v1/models` 模型清单配置 inference route，并配置正式会后 Agent Skills。`interview-coach` Skill 继续由产品低延迟 Realtime Runtime 执行 Qwen3-8B，不经 OpenClaw。Retriever 只通过 Service `:7670` 接入，应用不得直接访问 VectorDB。
 
 macOS 默认 Step-Audio-2-mini / StepFun Cloud 保持不变。Spark 上 Runtime 兼容、完整 E2E、StepAudio WebSocket / 双工和性能目前均 **NOT TESTED ON DGX SPARK**。
 

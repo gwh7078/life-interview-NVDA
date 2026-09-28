@@ -36,7 +36,9 @@ row "Text" "$(http_state "${TEXT_MODEL_BASE_URL%/}/models" TEXT_MODEL_API_KEY)"
 row "Coach" "$(http_state "${REALTIME_COACH_BASE_URL%/}/models" REALTIME_COACH_API_KEY)"
 row "Retriever REST" "$(http_state "${NEMO_RETRIEVER_BASE_URL%/}/v1/health" NEMO_RETRIEVER_API_TOKEN)"
 row "StepAudio WebSocket" "CHECK WITH ./deploy/spark/check-env.sh"
-if nemoclaw_status_ready "$NEMOCLAW_SANDBOX" >/dev/null 2>&1; then
+if [[ -n "${NEMOCLAW_SANDBOX:-}" ]] \
+  && nemoclaw_status_ready "$NEMOCLAW_SANDBOX" >/dev/null 2>&1 \
+  && nemoclaw "$NEMOCLAW_SANDBOX" exec -- openclaw --version >/dev/null 2>&1; then
   row "NemoClaw / OpenClaw" "RUNNING"
 else
   row "NemoClaw / OpenClaw" "NOT READY"

@@ -4,7 +4,8 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=deploy/spark/lib/common.sh
 . "$DIR/lib/common.sh"
 
-have nemoclaw || die "NemoClaw CLI is missing; run deploy/spark/setup.sh first."
+have nemoclaw || die "NemoClaw/OpenClaw Agent Runtime is not ready; prepare it before application setup."
+[[ -n "${NEMOCLAW_SANDBOX:-}" ]] || die "NEMOCLAW_SANDBOX is not configured."
 nemoclaw_status_ready "$NEMOCLAW_SANDBOX" \
   || die "NemoClaw sandbox is not RUNNING."
 

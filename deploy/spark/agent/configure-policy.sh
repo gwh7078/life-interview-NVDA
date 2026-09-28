@@ -4,7 +4,8 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=deploy/spark/lib/common.sh
 . "$DIR/lib/common.sh"
 
-have nemoclaw || die "NemoClaw CLI is missing; run deploy/spark/setup.sh first."
+have nemoclaw || die "NemoClaw/OpenClaw Agent Runtime is not ready; prepare it before application setup."
+[[ -n "${NEMOCLAW_SANDBOX:-}" ]] || die "NEMOCLAW_SANDBOX is not configured."
 sandbox="$NEMOCLAW_SANDBOX"
 host_ip="$(safe_host_ip)"
 [[ "$host_ip" != 127.0.0.1 ]] || die "Could not determine a private host address for retrieval policy access."

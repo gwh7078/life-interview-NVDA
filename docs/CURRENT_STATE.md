@@ -191,7 +191,7 @@ DGX Spark 的目标方式是：**用户准备并运行标准 Runtime，本仓库
 | NeMo Retriever Service | `127.0.0.1:7670` |
 | Retriever 内部存储 | 由 NeMo Retriever Runtime 管理；不是应用 Endpoint |
 
-NemoClaw / OpenClaw 位于 `my-assistant` sandbox。官方 `nemoclaw onboard` 可发现并复用已经运行的 `localhost:8000/v1/models`；这是 endpoint 配置能力，不构成 Spark 兼容性或 E2E 证明。正式会后 Agent Skills 在 OpenClaw Runtime 执行。Mini 的 `interview-coach` Skill 仍由产品低延迟 Realtime Runtime 执行，不经过 OpenClaw。
+NemoClaw/OpenClaw 是一项 operator-managed Agent Runtime，默认 `my-assistant` sandbox 内提供 OpenClaw Agent。操作者负责官方安装、onboarding 与 readiness；仓库只检查 readiness 并配置应用 route、Agent、Skills 和 policy。官方 onboard 可发现并复用已经运行的 `localhost:8000/v1/models`；这是 endpoint 配置能力，不构成 Spark 兼容性或 E2E 证明。正式会后 Agent Skills 在 OpenClaw Runtime 执行。Mini 的 `interview-coach` Skill 仍由产品低延迟 Realtime Runtime 执行，不经过 OpenClaw。
 
 macOS 根 `.env.example` 默认 Step-Audio-2-mini / StepFun Cloud 保持不变；Spark 目标 profile 的 StepAudio contract 不改变 Mac 默认 provider。
 

@@ -57,10 +57,10 @@ Spark 的 Runtime 由操作者准备和维护；本仓库负责应用配置、�
 
 ### Prerequisites
 
-- 可登录的 DGX Spark（ARM64 / aarch64），NVIDIA driver 可通过 nvidia-smi 检查，Docker daemon 可用；Runtime 由操作者按官方说明准备。
-- Git、Python 3，以及 Node.js / npm。Node 命令统一经 `bash scripts/codex-node.sh` 执行。
+- 可登录的 DGX Spark（ARM64 / aarch64），NVIDIA driver 可通过 nvidia-smi 检查，Docker daemon 与 NVIDIA Container Runtime 可用；Runtime 由操作者按官方说明准备。
+- Git、Python 3.9+、Node.js 24.16+（24.x）或 26.1+、npm。Node/npm 命令统一经 `bash scripts/codex-node.sh` 执行。
 - 下表所列服务已在 Spark 上启动，并可从应用进程访问。
-- NemoClaw / OpenShell 可完成 NVIDIA 官方 onboarding；模型与服务凭据由操作者安全管理。
+- NemoClaw/OpenClaw Agent Runtime 已由操作者按 NVIDIA 官方方式安装、onboard，且指定 sandbox 为 ready/running；模型与服务凭据由操作者安全管理。
 
 | Runtime | 默认 endpoint | 模型 / 边界 |
 |---|---|---|
@@ -105,7 +105,9 @@ chmod 600 deploy/spark/.env
 bash deploy/spark/setup.sh
 ```
 
-setup 会检查 Spark 与外部 Runtime endpoint、安装应用依赖、迁移独立 Spark SQLite、确保 Retriever collections，并安装应用 Agent 配置、Skills 与 policy。示例数据只在 `SPARK_SEED_DEMO_DATA=true` 时写入。缺少 NemoClaw 时，它通过 NVIDIA 官方 [`nemoclaw.sh` installer](https://www.nvidia.com/nemoclaw.sh) 安装 NemoClaw，并运行 `nemoclaw onboard`。当 Text vLLM 已在 `localhost:8000` 运行，onboard 使用 `/v1/models` 发现并复用当前模型，不另起一个 Text 服务。Setup 显式关闭 NemoClaw 的可选 Web Search，避免主机上其他凭证静默启用外部搜索。OpenClaw 运行在 `my-assistant` NemoClaw sandbox 内。
+NemoClaw/OpenClaw Agent Runtime 是一项整体的 operator-managed prerequisite：操作者在仓库外使用 [NVIDIA 官方 installer](https://www.nvidia.com/nemoclaw.sh) 与 [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart)，准备好含 OpenClaw 的指定 sandbox 并确保其 ready/running。仓库只检查 `nemoclaw` CLI、`nemoclaw <sandbox> status --json` 和 sandbox 内 `openclaw --version`；不安装、onboard、启动或停止该 Runtime。缺失时输出 `AGENT RUNTIME NOT READY`。
+
+`setup.sh` 检查主机与外部 Runtime、安装应用依赖、迁移独立 Spark SQLite、初始化 Retriever collections / Era index，再检查 Agent Runtime 并配置既有 Text route、realtime-context Agent、Formal Skills 与 retrieval policy。它复用已经运行的 Text vLLM，不启动第二份模型。Spark 的 `TEXT_MODEL_API_KEY` 必须留空；非空时 setup 失败。Coach API key 仍可选。示例数据只在 `SPARK_SEED_DEMO_DATA=true` 时写入。
 
 `interview-coach` 是正式产品 Skill。其定义可随正式 Skills 同步，但 Mini Coach 的实际 Gate / Retrieval / Resolve 仍由产品低延迟 Realtime Runtime 调用 Qwen3-8B；不经过 OpenClaw。
 
@@ -115,8 +117,9 @@ setup 会检查 Spark 与外部 Runtime endpoint、安装应用依赖、迁移�
 bash deploy/spark/start.sh
 ```
 
-`setup.sh` ensures that the NemoClaw/OpenClaw sandbox is running and configured.
-`start.sh` starts only the Product Backend and Technical Observer. Text, Coach,
+`setup.sh` requires the operator-prepared NemoClaw/OpenClaw Agent Runtime to be
+ready before it applies application configuration. `start.sh` starts only the
+Product Backend, Agent retrieval proxy, and Technical Observer. Text, Coach,
 StepAudio, and Retriever continue to be provided by user-managed runtimes.
 
 ### 6. Verify
@@ -138,7 +141,7 @@ set +a
 bash deploy/spark/verify.sh
 ```
 
-报告写入 `runtime/diagnostics/spark/`。基础 verify 包含 Backend / Web / SQLite、真实 Text / Coach / StepAudio / Retriever smoke、Era / Agent retrieval、NemoClaw / OpenClaw / Skills / model route、产品 acceptance 和 Technical Observer。只有真机命令实际运行并保存证据后，才可把相应 gate 更新为 PASS。当前 DGX Spark compatibility（包括 StepAudio ARM64）、完整 E2E 与性能均为 **NOT TESTED ON DGX SPARK**。
+报告写入 `runtime/diagnostics/spark/`。verify 分开记录 G0 host prerequisite、G0R external endpoints、G0A Agent Runtime readiness、G4a bridge smoke、G4b Product Realtime E2E、G7a OpenClaw configuration 与 G7b 实际 Agent Task。缺少语音 fixture 时 G4a/G4b 为 `NOT TESTED`，不会记为 PASS。G8 是产品确定性 acceptance；NAT / Profiler / Benchmark 独立运行。只有真机命令实际运行并保存证据后，才可把相应 gate 更新为 PASS。当前 DGX Spark compatibility（包括 StepAudio ARM64）、完整 E2E 与性能均为 **NOT TESTED ON DGX SPARK**。
 
 > `deploy/spark/setup.sh` / `start.sh` 是外部 Runtime 已准备后的应用 setup / start 入口；它们不会代替操作者部署或启动 Text、Coach、StepAudio 与 Retriever 服务。
 

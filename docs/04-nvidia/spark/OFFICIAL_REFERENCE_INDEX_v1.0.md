@@ -137,9 +137,9 @@ https://build.nvidia.com/spark/nemoclaw/instructions
 
 本项目用途：
 
-- 不再自己发明一套 NemoClaw 安装过程；
-- `deploy/spark/setup.sh` 在 Text endpoint 已运行后使用 NVIDIA 官方 installer / onboarding，配置 OpenClaw 复用既有模型，并安装本项目 Skills / policies；
-- 不通过 NemoClaw 下载或启动第二份 Text model；
+- NemoClaw/OpenClaw Agent Runtime 由操作者在仓库外按上述官方路径安装、onboard，并准备好 sandbox；
+- `deploy/spark/setup.sh` 只检查既有 Agent Runtime，再配置 OpenClaw 复用已运行的 Text endpoint，并安装本项目 Skills / policies；
+- 不通过 NemoClaw 下载或启动第二份 Text model，也不自动安装、onboard、启动或停止 Agent Runtime；
 - 必须保留现有 scoped Tool / policy 边界。
 
 ### C2. OpenShell DGX Spark Playbook

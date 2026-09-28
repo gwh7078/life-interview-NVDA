@@ -15,7 +15,7 @@ SERVICES={
  "Retriever":("http://127.0.0.1:"+os.environ.get("SPARK_RETRIEVER_PORT","7670")+"/v1/health"),
  "Backend":("http://127.0.0.1:"+os.environ.get("SPARK_BACKEND_PORT","4174")+"/api/health"),
 }
-NEMOCLAW_SANDBOX=os.environ.get("NEMOCLAW_SANDBOX","my-assistant")
+NEMOCLAW_SANDBOX=os.environ.get("NEMOCLAW_SANDBOX","")
 _nemo_cache={"at":0.0,"state":"UNKNOWN"}
 
 def meminfo():
@@ -77,13 +77,19 @@ def nemoclaw_state():
     now=time.monotonic()
     if now-_nemo_cache["at"] < 30:
         return _nemo_cache["state"]
-    try:
-        p=subprocess.run(["nemoclaw",NEMOCLAW_SANDBOX,"status","--json"],text=True,capture_output=True,timeout=5)
-        state="RUNNING" if p.returncode==0 and validate_status_json(p.stdout) is None else "DEGRADED"
-    except FileNotFoundError:
-        state="STOPPED"
-    except Exception:
-        state="UNKNOWN"
+    if not NEMOCLAW_SANDBOX:
+        state="NOT READY"
+    else:
+        try:
+            p=subprocess.run(["nemoclaw",NEMOCLAW_SANDBOX,"status","--json"],text=True,capture_output=True,timeout=5)
+            status_ready=p.returncode==0 and validate_status_json(p.stdout) is None
+            openclaw=subprocess.run(["nemoclaw",NEMOCLAW_SANDBOX,"exec","--","openclaw","--version"],
+                                    text=True,capture_output=True,timeout=5) if status_ready else None
+            state="RUNNING" if openclaw is not None and openclaw.returncode==0 else "DEGRADED"
+        except FileNotFoundError:
+            state="STOPPED"
+        except Exception:
+            state="UNKNOWN"
     _nemo_cache.update(at=now,state=state)
     return state
 

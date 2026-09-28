@@ -62,27 +62,38 @@ test('setup is repeatable, initializes the app, and seeds demo data only by expl
   assert.match(source, /if\s+\[\[.*SPARK_SEED_DEMO_DATA.*==.*true/s);
   assert.match(source, /npm\s+run\s+db:seed/);
   assert.doesNotMatch(source, /NEMO_RETRIEVER_VECTORDB_URL/);
-  assert.match(source, /install-nemoclaw\.sh/);
+  assert.match(source, /check-agent-runtime\.sh/);
+  assert.doesNotMatch(source, /install-nemoclaw|nemoclaw\s+(?:onboard|start|stop)/i);
   assert.match(source, /sync-skills\.sh/);
   assert.match(source, /configure-policy\.sh/);
+  assert.match(source, /TEXT_MODEL_API_KEY must be empty/);
   assertNoRuntimeLifecycle(source, 'setup.sh');
   assert.doesNotMatch(source, /(?:services\/retriever\.sh|services\/backend\.sh|services\/observer\.sh)\s+start/);
 });
 
-test('NemoClaw install uses NVIDIA onboarding and selects the already-running vLLM server', () => {
-  const source = read('agent/install-nemoclaw.sh');
+test('NemoClaw/OpenClaw readiness is operator-managed and check-only', () => {
+  const source = read('agent/check-agent-runtime.sh');
   for (const expected of [
-    'https://www.nvidia.com/nemoclaw.sh',
-    'NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1',
-    'NEMOCLAW_AGENT=openclaw',
-    'NEMOCLAW_WEB_SEARCH_PROVIDER=none',
-    'NEMOCLAW_PROVIDER=vllm',
-    'NEMOCLAW_SANDBOX_NAME',
-    'NEMOCLAW_NO_EXPRESS=1',
-  ]) assert.ok(source.includes(expected), `installer should configure ${expected}`);
-  assert.doesNotMatch(source, /nemoclaw\s+setup-spark/i);
-  assert.doesNotMatch(source, /NEMOCLAW_PROVIDER=install-vllm/);
-  assert.doesNotMatch(source, /docker\s+(?:pull|run|start)/i);
+    'AGENT RUNTIME NOT READY',
+    'operator-managed prerequisite',
+    'status --json',
+    'found',
+    'ready',
+    'running',
+    'openclaw',
+    '--version',
+  ]) assert.ok(source.includes(expected), `Agent Runtime check should enforce ${expected}`);
+  assert.doesNotMatch(source, /curl|nemoclaw\s+(?:onboard|start|stop)|openclaw\s+(?:install|onboard)/i);
+  assert.equal(existsSync(resolve(sparkRoot, 'agent/install-nemoclaw.sh')), false);
+});
+
+test('Spark Text contract rejects authentication while Coach credentials remain optional', () => {
+  const env = read('env.example');
+  const setup = read('setup.sh');
+  assert.match(env, /^TEXT_MODEL_API_KEY=$/m);
+  assert.match(env, /^REALTIME_COACH_API_KEY=$/m);
+  assert.match(setup, /TEXT_MODEL_API_KEY must be empty/);
+  assert.doesNotMatch(setup, /REALTIME_COACH_API_KEY must be empty/);
 });
 
 test('OpenClaw route uses the configured served model and agent Skills can be synced repeatedly', () => {
@@ -122,6 +133,12 @@ test('verify is an application acceptance profile, not CI or competition evaluat
     'NemoClaw', 'OpenClaw', 'Skills', 'Closeout', 'Completion',
     'Generation', 'Contributor', 'spark:product:acceptance', 'Technical Observer',
   ]) assert.ok(source.includes(expected), `verify.sh should report ${expected}`);
+  for (const gate of ['G0A', 'G4a', 'G4b', 'G7a', 'G7b']) {
+    assert.ok(source.includes(gate), `verify.sh should report ${gate}`);
+  }
+  assert.match(source, /test:spark:realtime:e2e/);
+  assert.match(source, /test:realtime:agent:smoke/);
+  assert.match(source, /fixture\.is_file\(\)[\s\S]*?NOT TESTED/);
   assert.doesNotMatch(source, /npm\s+test|test:agent:nat|\bNAT\b/i);
   assert.doesNotMatch(source, /NEMO_RETRIEVER_VECTORDB_URL|vectordb/i);
   assert.match(source, /G9.*Technical Observer/s);
@@ -169,17 +186,17 @@ test('old whole-machine installer and model lifecycle managers are removed; benc
 });
 
 test('NemoClaw management uses current sandbox command syntax and reconciles the configured endpoint', () => {
-  const install = read('agent/install-nemoclaw.sh');
+  const readiness = read('agent/check-agent-runtime.sh');
   const runtime = read('agent/configure-runtime.sh');
   const skills = read('agent/sync-skills.sh');
   const policy = read('agent/configure-policy.sh');
   const verify = read('verify.sh');
   const benchmark = readFileSync(resolve(repoRoot, 'scripts/benchmark/spark.sh'), 'utf8');
 
-  for (const source of [install, runtime, skills, policy, verify, benchmark]) {
+  for (const source of [readiness, runtime, skills, policy, verify, benchmark]) {
     assert.doesNotMatch(source, /nemoclaw\s+sandbox\s+status/);
   }
-  assert.match(install, /nemoclaw_status_(?:phase|ready)/);
+  assert.match(readiness, /nemoclaw_status_ready/);
   assert.match(runtime, /NEMOCLAW_VLLM_PORT="\$port"\s+nemoclaw\s+inference\s+set/);
   assert.match(runtime, /--sandbox\s+"\$sandbox"/);
   assert.match(verify, /\["nemoclaw",\s*sandbox,\s*"exec",\s*"--",\s*"openclaw",\s*"--version"\]/);
@@ -192,13 +209,24 @@ test('NemoClaw management uses current sandbox command syntax and reconciles the
   assert.match(benchmark, /validate_status_json/);
   assert.match(verify, /\["nemoclaw",\s*sandbox,\s*"status",\s*"--json"\]/);
   assert.match(benchmark, /\[cli,sandbox,"status","--json"\]/);
-  for (const source of [install, runtime, skills]) {
+  for (const source of [readiness, runtime, skills]) {
     assert.match(source, /nemoclaw_status(?:_ready|\.py)|nemoclaw_status/,
-      'NemoClaw lifecycle scripts should share the status contract');
+      'NemoClaw readiness/configuration scripts should share the status contract');
   }
   assert.match(verify, /validate_status_json/);
   assert.match(read('status.sh'), /nemoclaw_status_ready/);
   assert.match(read('services/telemetry.py'), /validate_status_json/);
+});
+
+test('check-env checks versioned host prerequisites and reports them as FAIL', () => {
+  const source = read('check-env.sh');
+  for (const expected of [
+    'python3 --version', 'node --version', 'npm --version', 'git --version',
+    'docker info', 'nvidia-smi', 'NVIDIA Container Runtime',
+  ]) assert.ok(source.includes(expected), `check-env.sh should check ${expected}`);
+  assert.match(source, /fail\s+.*Python|fail\s+.*Node|fail\s+.*npm|fail\s+.*Git/i);
+  assert.match(source, /EXTERNAL RUNTIME NOT READY/);
+  assertNoRuntimeLifecycle(source, 'check-env.sh');
 });
 
 test('application and competition evidence share the same sanitizer', () => {

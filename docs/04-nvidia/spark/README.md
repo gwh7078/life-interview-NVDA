@@ -18,15 +18,15 @@ DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库�
 | StepAudio | Step-Audio-2-mini | `ws://127.0.0.1:8092/realtime` | 用户提供符合应用契约的 Realtime Runtime / bridge |
 | NeMo Retriever | Transcript / Era collections | REST Service `:7670` | 用户运行；应用只访问 Retriever Service |
 
-`my-assistant` NemoClaw sandbox 内的 OpenClaw 承担正式会后 Agent Tasks。Mini `interview-coach` Skill 继续在产品低延迟 Runtime 中执行，不经过 OpenClaw。
+操作者预先准备的 NemoClaw/OpenClaw Agent Runtime（默认指定 sandbox 名为 `my-assistant`）承担正式会后 Agent Tasks。Mini `interview-coach` Skill 继续在产品低延迟 Runtime 中执行，不经过 OpenClaw。
 
 ## 3. 前置条件
 
 - 可登录的 DGX Spark（ARM64 / aarch64），NVIDIA driver 可通过 nvidia-smi 检查，Docker daemon 可用；兼容性仍须在目标设备上实际验证。
-- Git、Python 3、Node.js / npm；通过 `bash scripts/codex-node.sh` 调用 Node / npm。
+- Git、Python 3.9+、Node.js 24.16+（24.x）或 26.1+、npm；通过 `bash scripts/codex-node.sh` 调用 Node / npm。Python 3 用于应用 setup 与检查，Python 3.12 / uv 是可选 NAT tooling 的额外依赖。
 - Text、Coach、StepAudio contract、Retriever endpoint 已在 Spark 上启动。
 - Text `:8000/v1/models` 返回真实 served ID；Coach `:8001/v1/models` 与配置一致。
-- NemoClaw / OpenShell onboarding 所需网络访问与凭据由操作者准备，密钥不得提交或写入报告。
+- NemoClaw/OpenClaw Agent Runtime 已由操作者在仓库外完成官方安装与 onboarding；指定 sandbox 已 ready/running 且 OpenClaw 可用。网络访问与凭据由操作者准备，密钥不得提交或写入报告。
 
 ## 4. 操作步骤
 
@@ -35,9 +35,10 @@ DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库�
 1. Clone 本仓库。
 2. 在仓库外依官方资料准备 Text / Coach / StepAudio / Retriever Runtime。
 3. 复制 `deploy/spark/env.example` 为忽略文件 `deploy/spark/.env`，按两个 `/v1/models` endpoint 返回的 served ID 配置模型名；Retriever 只需 `NEMO_RETRIEVER_BASE_URL`，不配置其内部存储地址。
-4. 四个外部 Runtime 就绪后运行 `bash deploy/spark/setup.sh`。它执行服务检查、应用依赖与 SQLite migration、NVIDIA 官方 NemoClaw installer / `nemoclaw onboard`、现有 `localhost:8000/v1/models` 模型复用，以及应用 Skills / policy 接线。示例数据默认关闭，只在 `SPARK_SEED_DEMO_DATA=true` 时写入。
-5. 运行 `bash deploy/spark/start.sh`。NemoClaw setup 已保证 sandbox 运行；`start.sh` 只启动 Backend、Agent retrieval proxy 和 Technical Observer。
-6. 所有服务就绪后在真机运行 `bash deploy/spark/verify.sh`，并保留报告与 gate evidence。
+4. 在运行仓库 setup 之前，操作者按 NVIDIA 官方方式准备 NemoClaw/OpenClaw Agent Runtime：安装、`nemoclaw onboard`、准备指定 sandbox 并确认 ready/running。
+5. 运行 `bash deploy/spark/setup.sh`。它只检查该 Runtime，再配置已有 Text route、realtime-context Agent、Skills 与 policy；不会安装、onboard、启动或停止 NemoClaw/OpenClaw。示例数据默认关闭，只在 `SPARK_SEED_DEMO_DATA=true` 时写入。
+6. 运行 `bash deploy/spark/start.sh`。它只启动 Backend、Agent retrieval proxy 和 Technical Observer。
+7. 所有服务就绪后在真机运行 `bash deploy/spark/verify.sh`，并保留报告与 gate evidence。
 
 ## 5. 比赛 / 应用证据
 

@@ -34,7 +34,7 @@ story.generation
 - `story-completion`
 - `story-generation`
 
-NemoClaw setup 将项目正式 Skill 定义同步到 sandbox。Skills 的安装不改变各产品任务的执行 Runtime：会后 Agent Tasks 由 OpenClaw 执行；Mini `interview-coach` 仍由产品低延迟 Realtime Runtime 执行。
+Life Interview setup 将项目正式 Skill 定义同步到 operator-managed NemoClaw/OpenClaw Agent Runtime。Skills 的安装不改变各产品任务的执行 Runtime：会后 Agent Tasks 由 OpenClaw 执行；Mini `interview-coach` 仍由产品低延迟 Realtime Runtime 执行。
 
 `story-context-inspector` 属于早期 Smoke / 诊断，不计入当前产品能力。
 
@@ -54,9 +54,9 @@ Mac `.env.example` 当前默认：
 AI_TASK_RUNTIME=direct
 ```
 
-DGX Spark 目标由操作者准备 Text / Agent Model Service，本仓库把 AgentTask Contract 接到 NemoClaw 管理的 OpenClaw sandbox `my-assistant`。OpenClaw 是会后正式 Agent Runtime；不在 Host 上另装一套 OpenClaw。
+DGX Spark 目标由操作者准备 Text / Agent Model Service，并在仓库外安装、onboard NemoClaw，准备 OpenClaw Agent 与 sandbox。NemoClaw/OpenClaw Agent Runtime 是一项 operator-managed prerequisite；本仓库将 AgentTask Contract 接到已就绪的指定 sandbox（默认名称 `my-assistant`），不在 Host 上另装 OpenClaw。
 
-首次 setup 使用 [NVIDIA 官方 NemoClaw installer](https://www.nvidia.com/nemoclaw.sh) 与 [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart)。已有 `http://localhost:8000/v1` vLLM 服务时，onboard 可读取 `/v1/models` 并复用其 served model。Spark 的应用接线配置见 [README](../README.md#dgx-spark-deployment) 与 [Spark deployment brief](04-nvidia/spark/SPARK_DEPLOYMENT_AGENT_BRIEF_v1.0.md)。
+NemoClaw/OpenClaw Agent Runtime 由操作者在仓库外按 [NVIDIA 官方 installer](https://www.nvidia.com/nemoclaw.sh) 与 [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart) 准备，并确保指定 sandbox ready/running、OpenClaw 可用。Life Interview setup 只检查 readiness，再把现有 `http://localhost:8000/v1` Text endpoint 和 served model 配置给 OpenClaw，并安装应用 Agent/Skills/policy；不安装、onboard 或启停 Agent Runtime。已有 vLLM 的官方说明见[此处](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/local-inference/set-up-vllm)。
 
 ## 4. Contract
 

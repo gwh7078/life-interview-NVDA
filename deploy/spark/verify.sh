@@ -83,9 +83,10 @@ def gate(gid, name, args, timeout=900, needs=(), extra_env=None):
 
 if not is_spark:
     record("G0", "DGX Spark host prerequisites", "NOT TESTED ON DGX SPARK",
-           "Requires ARM64, a detected NVIDIA GB10 GPU, and Docker.")
+           "Requires ARM64, NVIDIA GB10, Docker/NVIDIA Runtime, Python, Node.js/npm, and Git.")
 else:
-    required = ("ARM64", "NVIDIA GPU", "Docker daemon")
+    required = ("ARM64", "NVIDIA GPU", "Docker daemon", "NVIDIA Container Runtime",
+                "Python 3.9+", "Node.js", "npm", "Git")
     missing = [label for label in required if not endpoint_pass(label)]
     record("G0", "DGX Spark host prerequisites", "FAIL" if missing else "PASS",
            "Missing checks: " + ", ".join(missing) if missing else check_text)
@@ -93,15 +94,60 @@ else:
 if not is_spark:
     record("G0R", "External Runtime endpoint readiness", "NOT TESTED ON DGX SPARK",
            "The Spark profile is not running on detected DGX Spark GB10 hardware.")
-elif check_exit == 0:
-    record("G0R", "External Runtime endpoint readiness", "PASS", check_text)
 else:
-    failed_lines = [line for line in check_text.splitlines()
-                    if line.startswith(("FAIL:", "EXTERNAL RUNTIME NOT READY:"))]
-    status = "FAIL" if any(line.startswith("FAIL:") for line in failed_lines) \
-        else "EXTERNAL RUNTIME NOT READY"
-    record("G0R", "External Runtime endpoint readiness", status,
-           "Required readiness checks failed:\n" + "\n".join(failed_lines))
+    host_labels = ("ARM64", "NVIDIA GPU", "Docker daemon", "NVIDIA Container Runtime",
+                   "Python 3.9+", "Node.js", "npm", "Git")
+    host_failed = any(line.startswith("FAIL:") and any(label in line for label in host_labels)
+                      for line in check_text.splitlines())
+    external_failures = [line for line in check_text.splitlines()
+                         if line.startswith("EXTERNAL RUNTIME NOT READY:")]
+    profile_failures = [line for line in check_text.splitlines() if line.startswith("FAIL:")]
+    if host_failed:
+        record("G0R", "External Runtime endpoint readiness", "NOT TESTED",
+               "Host prerequisites failed; external Runtime readiness cannot be accepted.")
+    elif external_failures:
+        record("G0R", "External Runtime endpoint readiness", "EXTERNAL RUNTIME NOT READY",
+               "Required endpoint checks failed:\n" + "\n".join(external_failures))
+    elif profile_failures or check_exit != 0:
+        record("G0R", "External Runtime endpoint readiness", "FAIL",
+               "Spark profile checks failed:\n" + "\n".join(profile_failures))
+    else:
+        record("G0R", "External Runtime endpoint readiness", "PASS", check_text)
+
+sandbox = os.environ.get("SPARK_NEMOCLAW_SANDBOX_CONFIGURED", "").strip()
+model = os.environ.get("AGENT_MODEL_DEFAULT", "")
+agent_readiness_passed = False
+
+def verify_agent_readiness():
+    global agent_readiness_passed
+    name = "NemoClaw/OpenClaw Agent Runtime readiness"
+    if not is_spark:
+        record("G0A", name, "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
+        return
+    started = time.monotonic()
+    try:
+        if not sandbox:
+            raise RuntimeError("NEMOCLAW_SANDBOX is not configured.")
+        if not shutil.which("nemoclaw"):
+            raise RuntimeError("nemoclaw CLI is unavailable.")
+        status = command(["nemoclaw", sandbox, "status", "--json"], timeout=60)
+        if status.returncode:
+            raise RuntimeError("Could not read NemoClaw sandbox status JSON.")
+        status_error = validate_status_json(status.stdout)
+        if status_error:
+            raise RuntimeError(status_error)
+        openclaw = command(["nemoclaw", sandbox, "exec", "--", "openclaw", "--version"], timeout=30)
+        if openclaw.returncode:
+            raise RuntimeError("OpenClaw is unavailable inside the configured sandbox.")
+        phase = json.loads(status.stdout).get("phase")
+        agent_readiness_passed = True
+        record("G0A", name, "PASS", f"sandbox={sandbox} phase={phase}; OpenClaw is available.",
+               round((time.monotonic() - started) * 1000))
+    except Exception as error:
+        record("G0A", name, "EXTERNAL RUNTIME NOT READY", str(error),
+               round((time.monotonic() - started) * 1000))
+
+verify_agent_readiness()
 
 gate("G1", "Backend + Web + SQLite", [
     "python3", "-c",
@@ -132,19 +178,30 @@ fixture = Path(os.environ.get("SPARK_REALTIME_FIXTURE", "runtime/benchmarks/spar
 if not fixture.is_absolute():
     fixture = root / fixture
 if not is_spark:
-    record("G4", "Realtime Provider + StepAudio integration",
-           "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
+    record("G4a", "StepAudio bridge smoke", "NOT TESTED ON DGX SPARK",
+           "Physical DGX Spark GB10 host not detected.")
+    record("G4b", "Product Realtime Provider E2E", "NOT TESTED ON DGX SPARK",
+           "Physical DGX Spark GB10 host not detected.")
 elif not endpoint_pass("StepAudio WebSocket"):
-    record("G4", "Realtime Provider + StepAudio integration", "EXTERNAL RUNTIME NOT READY",
+    record("G4a", "StepAudio bridge smoke", "EXTERNAL RUNTIME NOT READY",
+           "StepAudio WebSocket endpoint did not pass the external readiness check.")
+    record("G4b", "Product Realtime Provider E2E", "EXTERNAL RUNTIME NOT READY",
            "StepAudio WebSocket endpoint did not pass the external readiness check.")
 elif not fixture.is_file():
-    record("G4", "Realtime Provider + StepAudio integration", "NOT TESTED",
+    record("G4a", "StepAudio bridge smoke", "NOT TESTED",
+           f"Speech fixture not found: {fixture}; set SPARK_REALTIME_FIXTURE to a speech WAV.")
+    record("G4b", "Product Realtime Provider E2E", "NOT TESTED",
            f"Speech fixture not found: {fixture}; set SPARK_REALTIME_FIXTURE to a speech WAV.")
 else:
-    gate("G4", "Realtime Provider + StepAudio integration", [
+    gate("G4a", "StepAudio bridge smoke", [
         "bash", "scripts/codex-node.sh", "node", "--env-file-if-exists=deploy/spark/.env",
         "--import", "tsx", "scripts/spark-realtime-bridge-smoke.ts", "--fixture", str(fixture),
     ], timeout=600, needs=("StepAudio WebSocket",))
+    gate("G4b", "Product Realtime Provider E2E", [
+        "bash", "scripts/codex-node.sh", "npm", "run", "test:spark:realtime:e2e",
+    ], timeout=900, needs=("StepAudio WebSocket",), extra_env={
+        "SPARK_REALTIME_FIXTURE": str(fixture),
+    })
 
 gate("G5", "Retriever + transcript Evidence contract", [
     "bash", "scripts/codex-node.sh", "npm", "run", "spark:retriever:smoke",
@@ -156,15 +213,16 @@ gate("G6", "Era + Memory + Agent retrieval policy", [
     "bash scripts/codex-node.sh npm run spark:agent-retrieval:smoke",
 ], timeout=900, needs=("NeMo Retriever REST",))
 
-sandbox = os.environ.get("NEMOCLAW_SANDBOX", "my-assistant")
-model = os.environ.get("AGENT_MODEL_DEFAULT", "")
-def verify_agent_runtime():
-    name = "NemoClaw + OpenClaw + Skills + model route"
+agent_configuration_passed = False
+
+def verify_agent_configuration():
+    global agent_configuration_passed
+    name = "NemoClaw/OpenClaw configuration + route + Skills"
     if not is_spark:
-        record("G7", name, "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
+        record("G7a", name, "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
         return
-    if not shutil.which("nemoclaw"):
-        record("G7", name, "FAIL", "nemoclaw CLI is unavailable.")
+    if not agent_readiness_passed:
+        record("G7a", name, "NOT TESTED", "G0A Agent Runtime readiness did not pass.")
         return
     started = time.monotonic()
     try:
@@ -181,8 +239,19 @@ def verify_agent_runtime():
         if openclaw.returncode:
             raise RuntimeError("OpenClaw is not installed or not available in the sandbox.")
         agents = command(["nemoclaw", sandbox, "config", "get", "--key", "agents.list", "--format", "json"], timeout=60)
-        if agents.returncode or "realtime-context" not in agents.stdout:
+        if agents.returncode:
             raise RuntimeError("realtime-context Agent is not configured.")
+        try:
+            configured_agents = json.loads(agents.stdout)
+            realtime_context = next(agent for agent in configured_agents
+                                    if agent.get("id") == "realtime-context")
+        except (json.JSONDecodeError, StopIteration, TypeError, AttributeError):
+            raise RuntimeError("realtime-context Agent is not configured.")
+        configured_model = realtime_context.get("model", "")
+        if isinstance(configured_model, dict):
+            configured_model = configured_model.get("primary", "")
+        if configured_model != f"vllm-local/{model}":
+            raise RuntimeError("realtime-context Agent does not use the configured Text model.")
         skills = ("onboarding-closeout", "interview-closeout", "interview-observer",
                   "story-completion", "story-generation")
         for skill in skills:
@@ -194,14 +263,26 @@ def verify_agent_runtime():
                             "/sandbox/.openclaw/workspace-realtime-context/skills/interview-observer/SKILL.md"], timeout=30)
         if observer.returncode:
             raise RuntimeError("interview-observer is missing from realtime-context.")
-        record("G7", name, "PASS",
+        agent_configuration_passed = True
+        record("G7a", name, "PASS",
                f"phase={data.get('phase')} provider=vllm-local model={model}; "
                "realtime-context and five formal Skills verified.",
                round((time.monotonic() - started) * 1000))
     except Exception as error:
-        record("G7", name, "FAIL", str(error), round((time.monotonic() - started) * 1000))
+        record("G7a", name, "FAIL", str(error), round((time.monotonic() - started) * 1000))
 
-verify_agent_runtime()
+verify_agent_configuration()
+
+if not is_spark:
+    record("G7b", "Actual OpenClaw Agent Task execution", "NOT TESTED ON DGX SPARK",
+           "Physical DGX Spark GB10 host not detected.")
+elif not agent_configuration_passed:
+    record("G7b", "Actual OpenClaw Agent Task execution", "NOT TESTED",
+           "G7a Agent Runtime configuration did not pass.")
+else:
+    gate("G7b", "Actual OpenClaw Agent Task execution", [
+        "bash", "scripts/codex-node.sh", "npm", "run", "test:realtime:agent:smoke",
+    ], timeout=600, needs=("Text endpoint and served model",))
 
 gate("G8", "Closeout + Completion + Generation + Contributor + Memory acceptance",
      ["bash", "scripts/codex-node.sh", "npm", "run", "spark:product:acceptance"], timeout=900)

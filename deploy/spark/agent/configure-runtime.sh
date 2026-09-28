@@ -4,7 +4,8 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=deploy/spark/lib/common.sh
 . "$DIR/lib/common.sh"
 
-have nemoclaw || die "NemoClaw CLI is missing; run deploy/spark/setup.sh first."
+have nemoclaw || die "NemoClaw/OpenClaw Agent Runtime is not ready; prepare it before application setup."
+[[ -n "${NEMOCLAW_SANDBOX:-}" ]] || die "NEMOCLAW_SANDBOX is not configured."
 [[ "$AGENT_MODEL_BASE_URL" == "$TEXT_MODEL_BASE_URL" ]] \
   || die "AGENT_MODEL_BASE_URL must reuse TEXT_MODEL_BASE_URL."
 [[ "$AGENT_MODEL_DEFAULT" == "$TEXT_MODEL" && -n "$AGENT_MODEL_DEFAULT" ]] \

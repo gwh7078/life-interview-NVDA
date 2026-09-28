@@ -8,6 +8,7 @@ failed=0
 pass() { printf 'PASS: %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$1"; failed=1; }
 external_not_ready() { printf 'EXTERNAL RUNTIME NOT READY: %s\n' "$1"; failed=1; }
+python_ready=0
 
 architecture="$(uname -m 2>/dev/null || true)"
 if [[ "$architecture" == aarch64 || "$architecture" == arm64 ]]; then
@@ -24,14 +25,69 @@ fi
 
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   pass "Docker daemon"
+  docker_runtimes="$(docker info --format '{{json .Runtimes}}' 2>/dev/null || true)"
+  if [[ "$docker_runtimes" == *'"nvidia"'* ]]; then
+    pass "NVIDIA Container Runtime"
+  else
+    fail "NVIDIA Container Runtime unavailable in Docker"
+  fi
 else
   fail "Docker daemon unavailable"
+  fail "NVIDIA Container Runtime cannot be checked without Docker"
+fi
+
+if command -v python3 >/dev/null 2>&1 \
+  && python_version="$(python3 --version 2>&1)" \
+  && [[ "$python_version" =~ ^Python[[:space:]]3\.([0-9]+) ]]; then
+  if (( BASH_REMATCH[1] >= 9 )); then
+    pass "Python 3.9+ ($python_version)"
+    python_ready=1
+  else
+    fail "Python 3.9+ required ($python_version)"
+  fi
+else
+  fail "Python 3.9+ unavailable (python3 --version)"
+fi
+
+if command -v node >/dev/null 2>&1 && node_version="$(node --version 2>/dev/null)" \
+  && [[ "$node_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+  node_major="${BASH_REMATCH[1]}"
+  node_minor="${BASH_REMATCH[2]}"
+  if (( (node_major == 24 && node_minor >= 16) || (node_major == 26 && node_minor >= 1) || node_major > 26 )); then
+    pass "Node.js ($node_version)"
+  else
+    fail "Node.js 24.16+ (24.x), 26.1+, or newer required ($node_version)"
+  fi
+else
+  fail "Node.js unavailable (node --version)"
+fi
+
+if command -v npm >/dev/null 2>&1 && npm_version="$(npm --version 2>/dev/null)" \
+  && [[ "$npm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+  pass "npm ($npm_version)"
+else
+  fail "npm unavailable (npm --version)"
+fi
+
+if command -v git >/dev/null 2>&1 && git_version="$(git --version 2>/dev/null)"; then
+  pass "Git ($git_version)"
+else
+  fail "Git unavailable (git --version)"
+fi
+
+if [[ -n "${TEXT_MODEL_API_KEY:-}" ]]; then
+  fail "Spark Text Runtime requires TEXT_MODEL_API_KEY to be empty"
 fi
 
 check_model_endpoint() {
   local name="$1" base="$2" model="$3" api_key_env="$4" url
+  if (( ! python_ready )); then return; fi
   if [[ -z "$base" || -z "$model" ]]; then
     fail "$name endpoint/model configuration"
+    return
+  fi
+  if [[ "$name" == Text && ! "$base" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+/v1/?$ ]]; then
+    fail "Text endpoint must be a loopback OpenAI-compatible /v1 URL"
     return
   fi
   url="${base%/}/models"
@@ -66,20 +122,37 @@ else
 fi
 
 check_websocket() {
-  local endpoint="$1" url response
+  local endpoint="$1" host port path
   if [[ ! "$endpoint" =~ ^ws://([^/:]+):([0-9]+)(/[^[:space:]]*)?$ ]]; then
     fail "STEPAUDIO2_LOCAL_WS_URL must be a ws://host:port/path URL"
     return
   fi
-  url="http://${BASH_REMATCH[1]}:${BASH_REMATCH[2]}${BASH_REMATCH[3]:-/}"
-  response="$(curl --noproxy '*' --http1.1 --connect-timeout 2 --max-time 2 \
-    -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
-    -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
-    -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || true)"
-  if [[ "$response" == 101 ]]; then
+  host="${BASH_REMATCH[1]}"
+  port="${BASH_REMATCH[2]}"
+  path="${BASH_REMATCH[3]:-/}"
+  if (( ! python_ready )); then return; fi
+  if python3 - "$host" "$port" "$path" <<'PY'
+import socket, sys
+host, port, path = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+key = "dGhlIHNhbXBsZSBub25jZQ=="
+request = (
+    f"GET {path} HTTP/1.1\r\nHost: {host}:{port}\r\n"
+    "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+    f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n"
+).encode("ascii")
+try:
+    with socket.create_connection((host, port), timeout=2) as connection:
+        connection.settimeout(2)
+        connection.sendall(request)
+        status = connection.recv(1024).split(b"\r\n", 1)[0]
+    raise SystemExit(0 if b" 101 " in status else 1)
+except (OSError, TimeoutError):
+    raise SystemExit(1)
+PY
+  then
     pass "StepAudio WebSocket ($endpoint)"
   else
-    external_not_ready "StepAudio WebSocket ($endpoint; expected HTTP 101, received ${response:-no response})"
+    external_not_ready "StepAudio WebSocket ($endpoint; expected HTTP 101 upgrade)"
   fi
 }
 
@@ -91,6 +164,7 @@ fi
 
 check_http() {
   local name="$1" url="$2" api_token_env="${3:-}"
+  if (( ! python_ready )); then return; fi
   if [[ -n "$url" ]] && python3 - "$url" "$api_token_env" >/dev/null 2>&1 <<'PY'
 import os, sys, urllib.error, urllib.request
 url, token_env = sys.argv[1:]

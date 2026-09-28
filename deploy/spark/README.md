@@ -11,12 +11,13 @@ Prepare the Spark host yourself:
 
 - DGX Spark with DGX OS / Linux on ARM64 and an NVIDIA GB10 driver.
 - NVIDIA Container Toolkit and Docker Engine, configured for GPU access.
-- Git and Node.js 24.16+ (24.x), 26.1+, or newer. npm is required by the
-  repository's Node wrapper.
+- Git, Python 3.9+, and Node.js 24.16+ (24.x), 26.1+, or newer. npm is
+  required by the repository's Node wrapper.
 - Network access and enough disk for the application and your chosen runtimes.
-- The four application endpoints below. Text must be running before NemoClaw
-  onboarding. Python 3.12 and uv are only needed for optional NAT evaluation;
-  they are not prerequisites for application setup or verification.
+- The four application endpoints below and an operator-prepared
+  NemoClaw/OpenClaw Agent Runtime with its configured sandbox ready/running.
+  Python is needed by application setup and checks; Python 3.12 and uv are
+  additional requirements only for optional NAT evaluation.
 
 Official references:
 
@@ -176,16 +177,21 @@ With the endpoints running:
 `check-env.sh` only reports host and endpoint readiness. It does not install,
 repair, restart, or stop anything.
 
+Before setup, the operator must prepare the combined NemoClaw/OpenClaw Agent
+Runtime outside this repository: use the [NVIDIA installer](https://www.nvidia.com/nemoclaw.sh),
+run [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart),
+and ensure the configured sandbox exists, is ready/running, and has OpenClaw
+available. Setup checks these conditions and fails with `AGENT RUNTIME NOT
+READY` when they are not met. It never installs NemoClaw, runs onboarding, or
+starts/stops the sandbox.
+
 `setup.sh` installs npm dependencies, migrates the application SQLite database,
-initializes Retriever collections and Era data, then installs
-and configures NemoClaw/OpenClaw and the formal Skills. It uses NVIDIA's hosted
-NemoClaw installer when the CLI is absent and the documented
-`nemoclaw onboard --non-interactive` path for a missing sandbox. It sets the
-existing vLLM provider and served model in NemoClaw, so OpenClaw reuses the
-already-running Text endpoint. It never selects `install-vllm` or starts a
-second model server. Non-interactive onboarding explicitly sets
-`NEMOCLAW_WEB_SEARCH_PROVIDER=none`, so unrelated host credentials do not
-silently enable optional external web search.
+optionally seeds demo data, initializes Retriever collections and Era data,
+checks the existing Agent Runtime, then configures the existing Text model
+route, realtime-context Agent, formal Skills, and retrieval policy. OpenClaw
+reuses the Text model already served at `TEXT_MODEL_BASE_URL`; setup does not
+start another model server. `TEXT_MODEL_API_KEY` must be empty for Spark; a
+non-empty value fails setup. `REALTIME_COACH_API_KEY` remains optional.
 
 Demo data is optional. The default `SPARK_SEED_DEMO_DATA=false` leaves a new
 database without sample people or stories. Set it to `true` in `.env` only when
@@ -215,10 +221,13 @@ StepAudio, or Retriever runtimes, and they do not stop NemoClaw/OpenClaw.
 
 Verification writes a timestamped report and logs under
 `runtime/diagnostics/spark/verify-runs/`; each run keeps its own evidence. It
-checks the hardware profile, HTTP/WebSocket endpoints, model responses, Backend,
-Web, SQLite, realtime integration, Retriever and Era/Memory, NemoClaw/OpenClaw,
-Skills, selected deterministic product acceptance tests, and Technical
-Observer. NAT, profiler, and benchmark evaluation are separate optional
+checks G0 host prerequisites, G0R external endpoint readiness, G0A
+NemoClaw/OpenClaw readiness, Backend/Web/SQLite, real Text and Coach responses,
+G4a StepAudio bridge smoke, G4b Product Realtime Provider E2E, Retriever and
+Era/Memory, G7a Agent route/Skills configuration, G7b actual OpenClaw Agent
+Task execution, selected deterministic product acceptance, and Technical
+Observer. A missing speech fixture is `NOT TESTED`, never PASS. NAT, profiler,
+and benchmark evaluation are separate optional
 competition evidence and do not gate application verification.
 
 Statuses stay explicit:

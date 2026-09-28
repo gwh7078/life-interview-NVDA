@@ -25,14 +25,13 @@ Text / Coach model IDs must match each endpoint's `/v1/models`. When `localhost:
 
 Follow the executable sequence in the root [README](../../../README.md#dgx-spark-deployment):
 
-1. Clone the repository on the Spark host.
-2. Prepare and start the four operator-managed Runtime endpoints outside the app deployment.
-3. Configure ignored `deploy/spark/.env` with addresses, served model IDs, and the isolated SQLite path.
-4. Run `bash deploy/spark/setup.sh`. It checks Spark and external endpoints, installs app dependencies, migrates SQLite, prepares Retriever collections, and wires NemoClaw / OpenClaw. Demo data remains off unless `SPARK_SEED_DEMO_DATA=true` is explicitly set.
-5. If NemoClaw is missing, setup invokes NVIDIA's official `https://www.nvidia.com/nemoclaw.sh` installer and `nemoclaw onboard`. With vLLM already serving on `localhost:8000`, onboarding reuses its `/v1/models` model. OpenClaw remains inside the NemoClaw sandbox.
-6. Setup syncs the project Agent Skills and product policy. Mini Coach still executes through the product low-latency Realtime Runtime.
-7. `setup.sh` verifies that the Agent sandbox is running and configured; start the application with `bash deploy/spark/start.sh`. The app start script starts Backend and Technical Observer; external model and Retriever services stay operator-managed.
-8. Run `bash deploy/spark/verify.sh` on DGX Spark after all services are running; retain the generated report and evidence.
+1. Prepare the DGX Spark host and start Text, Coach, StepAudio, and Retriever endpoints outside the repository.
+2. In the same operator-managed layer, install NemoClaw with NVIDIA's official installer, run `nemoclaw onboard`, prepare the OpenClaw sandbox, and confirm it is ready/running.
+3. Clone the repository on the Spark host and configure ignored `deploy/spark/.env` with endpoint addresses, served model IDs, the Agent sandbox name, and isolated SQLite path. Keep `TEXT_MODEL_API_KEY` empty.
+4. Run `bash deploy/spark/check-env.sh` to check host and external endpoint prerequisites.
+5. Run `bash deploy/spark/setup.sh`. It installs app dependencies, migrates SQLite, prepares Retriever collections / Era data, checks the existing Agent Runtime, and configures the existing vLLM route, realtime-context Agent, Formal Skills, and retrieval policy. Demo data remains off unless `SPARK_SEED_DEMO_DATA=true` is explicitly set.
+6. Start the application with `bash deploy/spark/start.sh`; it starts Backend, Agent retrieval proxy, and Technical Observer only. Mini Coach remains in the product low-latency Realtime Runtime.
+7. Run `bash deploy/spark/verify.sh` on DGX Spark after all services are running; retain the generated report and evidence. Voice G4a/G4b and Agent G7a/G7b are separate gates.
 
 `interview-coach` is a formal product Skill and may be present in the Agent Skill set. The live Mini Coach path uses Qwen3-8B in the product low-latency Realtime Runtime; it is not routed through NemoClaw / OpenClaw.
 

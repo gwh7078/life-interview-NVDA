@@ -17,9 +17,9 @@ SQLite 始终是业务 Source of Truth；Retriever 是可重建索引。Retrieve
 
 ## 2. NemoClaw / OpenClaw
 
-项目 AgentTask Runtime 使用 NemoClaw 管理的 OpenClaw sandbox `my-assistant`。正式会后 Agent Skills 安装在该 sandbox 中；不安装第二个 Host OpenClaw。
+项目把 NemoClaw/OpenClaw 视为一个 operator-managed Agent Runtime；其 sandbox 包含 OpenClaw Agent（默认名 `my-assistant`）。操作者负责官方安装、onboarding 与 sandbox readiness。仓库 setup 只检查 CLI、sandbox status 与 OpenClaw availability，再安装应用 Skills、路由和 policy；不负责 Agent Runtime 安装或生命周期。
 
-首次建立 OpenClaw sandbox 时使用 [NVIDIA 官方 NemoClaw installer](https://www.nvidia.com/nemoclaw.sh) 和 [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart)。在 Text Runtime 已运行的前提下，选择现有 Local vLLM：NemoClaw 可查询 `http://localhost:8000/v1/models` 并复用已加载模型。模型名称须与服务返回的 served ID 对齐。官方关于已有 vLLM 的说明见 [Set Up vLLM / Use an Existing Server](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/local-inference/set-up-vllm)。
+首次建立该 Agent Runtime 时，操作者在仓库外使用 [NVIDIA 官方 NemoClaw installer](https://www.nvidia.com/nemoclaw.sh) 和 [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart)。在 Text Runtime 已运行的前提下，选择现有 Local vLLM：NemoClaw 可查询 `http://localhost:8000/v1/models` 并复用已加载模型。模型名称须与服务返回的 served ID 对齐。官方关于已有 vLLM 的说明见 [Set Up vLLM / Use an Existing Server](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/local-inference/set-up-vllm)。
 
 OpenClaw 承担 `AgentTaskPort` 的正式会后 Task Runtime。Mini `supervisor_auto` 使用 `interview-coach` Skill，由产品低延迟 Realtime Runtime 调用 Qwen3-8B Gate / Retrieval / Resolve；它不经过 OpenClaw，也不因部署到 Spark 而改成会后 Agent 路径。
 

@@ -79,6 +79,8 @@ DGX Spark 目标 Runtime 接口：
 - StepAudio contract：`ws://127.0.0.1:8092/realtime`；
 - Retriever Service：`127.0.0.1:7670`；内部存储由 Retriever Runtime 管理，应用只访问 Service endpoint。
 
+上述服务及 NemoClaw/OpenClaw Agent Runtime 均由操作者按 NVIDIA / StepFun 官方说明准备和维护。仓库负责端点 readiness、应用接线、OpenClaw route / Skills / policy 配置，以及真实产品与比赛验收；不以自研 installer 工程作为比赛能力。
+
 DGX Spark Runtime compatibility、完整应用 E2E、StepAudio WebSocket / 双工体验和性能 **均 NOT TESTED ON DGX SPARK**。具体 StepAudio Runtime 镜像 / backend 在目标设备上的兼容性 **NOT VERIFIED ON DGX SPARK / ARM64**。官方部署 recipe 只证明存在外部操作参考，不证明本项目真机成功。
 
 ## 5. 模型优化与 Benchmark — 25% 中的关键证据
