@@ -148,20 +148,36 @@ era_index() { cd "$REPO_ROOT"; npm run era:index; }
 
 preflight_install() {
   local args=()
-  if [[ "$("$DIR/models/post-session.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+  local text_name="${SPARK_TEXT_CONTAINER:-life-interview-spark-text}"
+  local coach_name="${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
+  local voice_backend="${SPARK_STEPAUDIO_CONTAINER:-life-interview-spark-stepaudio}"
+  local voice_bridge="${SPARK_STEPAUDIO_BRIDGE_CONTAINER:-life-interview-spark-stepaudio-bridge}"
+  local retriever_name="${SPARK_RETRIEVER_CONTAINER:-life-interview-spark-retriever}"
+
+  if docker ps --format '{{.Names}}' | grep -qx "$text_name"; then
     args+=(--allow-busy-port "$SPARK_TEXT_PORT")
   fi
-  if [[ "$("$DIR/models/coach.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+  if docker ps --format '{{.Names}}' | grep -qx "$coach_name"; then
     args+=(--allow-busy-port "$SPARK_COACH_PORT")
   fi
-  if [[ "$("$DIR/models/realtime.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
-    args+=(--allow-busy-port "$SPARK_STEPAUDIO_BACKEND_PORT" --allow-busy-port "$SPARK_STEPAUDIO_WS_PORT" --allow-busy-port "$SPARK_STEPAUDIO_HEALTH_PORT")
+  if docker ps --format '{{.Names}}' | grep -qx "$voice_backend"; then
+    args+=(--allow-busy-port "$SPARK_STEPAUDIO_BACKEND_PORT")
+  elif pid_running stepaudio-backend; then
+    args+=(--allow-busy-port "$SPARK_STEPAUDIO_BACKEND_PORT")
   fi
-  if [[ "$("$DIR/services/retriever.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
+  if docker ps --format '{{.Names}}' | grep -qx "$voice_bridge"; then
+    args+=(--allow-busy-port "$SPARK_STEPAUDIO_WS_PORT" --allow-busy-port "$SPARK_STEPAUDIO_HEALTH_PORT")
+  elif pid_running stepaudio-bridge; then
+    args+=(--allow-busy-port "$SPARK_STEPAUDIO_WS_PORT" --allow-busy-port "$SPARK_STEPAUDIO_HEALTH_PORT")
+  fi
+  if docker ps --format '{{.Names}}' | grep -qx "$retriever_name"; then
     args+=(--allow-busy-port "$SPARK_RETRIEVER_PORT" --allow-busy-port "$SPARK_VECTORDB_PORT")
   fi
-  if [[ "$("$DIR/services/backend.sh" status 2>/dev/null || true)" == "RUNNING" ]]; then
-    args+=(--allow-busy-port "$SPARK_BACKEND_PORT" --allow-busy-port "$SPARK_AGENT_RETRIEVAL_PORT")
+  if pid_running backend; then
+    args+=(--allow-busy-port "$SPARK_BACKEND_PORT")
+  fi
+  if pid_running agent-retrieval-proxy; then
+    args+=(--allow-busy-port "$SPARK_AGENT_RETRIEVAL_PORT")
   fi
   "$DIR/preflight.sh" "${args[@]}"
 }
