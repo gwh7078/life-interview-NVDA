@@ -47,16 +47,13 @@ ensure_sandbox() {
 
 install_skills() {
   local skills=(onboarding-closeout interview-closeout story-completion story-generation interview-observer)
-  local installed
-  installed="$(nemoclaw "$sandbox" skill list 2>/dev/null || true)"
   for skill in "${skills[@]}"; do
     local path="$REPO_ROOT/agent/skills/$skill"
     [[ -d "$path" ]] || die "Missing formal Skill: $path"
-    if printf '%s\n' "$installed" | grep -Fq "$skill"; then
-      log "Skill already installed: $skill"
-    else
-      nemoclaw "$sandbox" skill install "$path"
-    fi
+    # NemoClaw's OpenClaw integration installs with --force, so repeating this
+    # safely refreshes changed Skill content instead of leaving a stale
+    # same-name copy in the sandbox.
+    nemoclaw "$sandbox" skill install "$path"
   done
 }
 
