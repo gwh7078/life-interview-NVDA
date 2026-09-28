@@ -1,5 +1,11 @@
 # Canonical audio fixtures
 
-The initial supported cases are `C06.wav` and `C07.wav`. Create each from its frozen `userAnswer` in `../cases.ts` exactly once. Use one canonical PCM16 mono 16 kHz WAV for all A/B/C variants and every repetition of that Case.
+The ten frozen Case answers are synthesized directly from `../cases.ts` once with Apple macOS Speech Synthesis (`say` / `NSSpeechSynthesizer`), voice Tingting (`zh_CN`), 180 words per minute, and the default synthesis volume (1.0, no post-scaling). `afconvert` produces PCM signed 16-bit little-endian, mono, 16 kHz WAV files.
 
-The Runner reads the WAV header and audio data, records the whole-file SHA-256, then converts the PCM to the current StepFun adapter's 24 kHz input format. It does not record, synthesize, or rewrite fixtures. Once a Case has been used, keep that WAV unchanged; replacing it creates a different benchmark input and hash.
+Generate or verify the fixtures with:
+
+```bash
+bash scripts/codex-node.sh npm run benchmark:next-question:audio
+```
+
+The script never overwrites a canonical WAV. `manifest.json` records the exact source text, TTS settings, duration, format, and whole-file SHA-256. Every A/B/C Sample and retry for a Case reuses its same WAV. The Runner verifies the manifest hash before starting and converts the loaded PCM to the current production adapter input rate without changing production audio parameters.

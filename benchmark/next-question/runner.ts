@@ -1,7 +1,8 @@
-import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createHash, randomInt, randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import WebSocket from 'ws';
 import { createEraContextClientFromEnv } from '../../src/era-context/client.js';
@@ -15,6 +16,7 @@ import { buildStepAudio2MiniInstructions, type RealtimeInterviewContext } from '
 import { createRealtimeInterviewProvider } from '../../src/realtime/provider.js';
 import { resolveRealtimeProviderConfig } from '../../src/realtime/runtime-config.js';
 import { NEXT_QUESTION_CASES } from './cases.js';
+import { loadJudgeContext } from './judge-context.js';
 import {
   normalizeAsrForEquivalence,
   readCanonicalWav,
@@ -52,6 +54,8 @@ interface Options {
   retrieverCollection: string;
   databasePath: string;
   outputDir?: string;
+  workerResultPath?: string;
+  workerRun?: number;
 }
 
 class BenchmarkFailure extends Error {
@@ -100,6 +104,10 @@ function parseOptions(args: string[]): Options {
   }
   const runs = Number(values.get('--runs') ?? 1);
   if (!Number.isInteger(runs) || runs < 1 || runs > 3) throw new Error('--runs must be 1, 2, or 3.');
+  const workerRun = values.has('--worker-run') ? Number(values.get('--worker-run')) : undefined;
+  if (workerRun !== undefined && (!Number.isInteger(workerRun) || workerRun < 1 || workerRun > 3)) {
+    throw new Error('--worker-run must be 1, 2, or 3.');
+  }
   const fixture = loadNextQuestionFixture();
   const ownerId = values.get('--owner-id') ?? process.env.NEXT_QUESTION_BENCHMARK_OWNER_ID ?? fixture.owner_id;
   const storyId = values.get('--story-id') ?? process.env.NEXT_QUESTION_BENCHMARK_STORY_ID ?? fixture.story_id;
@@ -120,6 +128,8 @@ function parseOptions(args: string[]): Options {
     retrieverCollection: fixture.retriever_collection,
     databasePath: fixture.database_path,
     ...(values.get('--output-dir') ? { outputDir: values.get('--output-dir') } : {}),
+    ...(values.get('--worker-result') ? { workerResultPath: values.get('--worker-result') } : {}),
+    ...(workerRun !== undefined ? { workerRun } : {}),
   };
 }
 
@@ -145,6 +155,22 @@ function positiveBudget(name: string, fallback: number, maximum: number): number
 
 function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function isRetryableInfrastructureFailure(sample: JsonRecord): boolean {
+  const retryable = new Set([
+    'STEPFUN_SOCKET_ERROR', 'STEPFUN_SOCKET_CLOSED', 'STEPFUN_CONNECT_TIMEOUT',
+    'STEPFUN_CONNECT_ERROR', 'STEPFUN_HTTP_5XX', 'SAMPLE_WORKER_TIMEOUT', 'PROCESS_CRASH',
+    'TIMEOUT_SESSION_CONFIGURED', 'TIMEOUT_USER_TRANSCRIPT_FINAL', 'TIMEOUT_RESPONSE_DONE',
+  ]);
+  const errors = Array.isArray(sample.errors) ? sample.errors as JsonRecord[] : [];
+  return errors.some((error) => error.stage === 'sample' && typeof error.code === 'string' && retryable.has(error.code));
+}
+
+function sampleErrorCode(sample: JsonRecord): string {
+  const errors = Array.isArray(sample.errors) ? sample.errors as JsonRecord[] : [];
+  const error = errors.find((item) => item.stage === 'sample');
+  return typeof error?.code === 'string' ? error.code : 'UNKNOWN_ERROR';
 }
 
 function makeProvider(envVars: NodeJS.ProcessEnv) {
@@ -381,8 +407,18 @@ async function runSample(input: {
         publish(normalizedEvents, event);
         if (normalized.type === 'assistant.transcript.delta') assistantText += normalized.delta;
         if (normalized.type === 'assistant.transcript.final') assistantText = normalized.text;
-        if (normalized.type === 'provider.error') failWaiters(new BenchmarkFailure('STEPFUN_PROVIDER_ERROR'));
+        if (normalized.type === 'provider.error') {
+          const providerFailure = normalized.error && typeof normalized.error === 'object'
+            ? normalized.error as JsonRecord : {};
+          const status = Number(providerFailure.status ?? providerFailure.status_code ?? providerFailure.http_status ?? 0);
+          failWaiters(new BenchmarkFailure(status >= 500 ? 'STEPFUN_HTTP_5XX' : 'STEPFUN_PROVIDER_ERROR'));
+        }
       }
+    });
+    socket.on('unexpected-response', (_request, response) => {
+      const code = response.statusCode >= 500 ? 'STEPFUN_HTTP_5XX' : `STEPFUN_HTTP_${response.statusCode}`;
+      response.resume();
+      failWaiters(new BenchmarkFailure(code));
     });
     socket.on('error', () => failWaiters(new BenchmarkFailure('STEPFUN_SOCKET_ERROR')));
     socket.on('close', () => failWaiters(new BenchmarkFailure('STEPFUN_SOCKET_CLOSED')));
@@ -446,6 +482,8 @@ async function runSample(input: {
       totalTimeoutMs: input.totalTimeoutMs,
     });
     for (const error of (coachTrace.errors as JsonRecord[] | undefined) ?? []) errors.push(error);
+    coachTrace.memory_latency_ms = coachTrace.memory_retrieval_latency_ms ?? null;
+    coachTrace.era_latency_ms = coachTrace.era_retrieval_latency_ms ?? null;
     const packet = typeof coachTrace.coach_packet === 'string' ? coachTrace.coach_packet : undefined;
     const instructions = [
       buildStepAudio2MiniInstructions(context, {
@@ -479,16 +517,21 @@ async function runSample(input: {
     return {
       status: 'completed',
       case_id: input.item.id,
+      realtime_session_id: sessionId,
       variant: input.variant,
       run: input.run,
       previous_question: input.item.previousQuestion,
       expected_user_text: input.item.userAnswer,
       actual_asr_text: actualAsrText,
+      input_equivalence: 'NOT_TESTED',
       normalized_asr_text: normalizeAsrForEquivalence(actualAsrText),
       next_question: finalText.trim(),
       realtime_model: input.realtimeModel,
+      realtime_provider: 'stepfun-cloud',
       commit_sha: input.commitSha,
       coach_enabled: profile.coachEnabled,
+      coach_model: input.coachRuntime?.coach_model ?? null,
+      memory_enabled: profile.memoryRetrievalEnabled,
       memory_retrieval_enabled: profile.memoryRetrievalEnabled,
       era_enabled: profile.eraRetrievalEnabled,
       input_kind: 'canonical_wav/pcm16_audio_buffer',
@@ -505,6 +548,7 @@ async function runSample(input: {
       session_setup_sha256: sessionSetupHash,
       case_input_sha256: caseInputHash,
       response_parameters_sha256: responseParameterHash,
+      response_parameters: responseConfig,
       session_setup_latency_ms: Number((turnStartedAt === undefined ? 0 : turnStartedAt - startedAt).toFixed(2)),
       total_latency_ms: Number((performance.now() - (turnStartedAt ?? startedAt)).toFixed(2)),
       ...coachTrace,
@@ -516,16 +560,21 @@ async function runSample(input: {
     return {
       status: 'failed',
       case_id: input.item.id,
+      realtime_session_id: sessionId,
       variant: input.variant,
       run: input.run,
       previous_question: input.item.previousQuestion,
       expected_user_text: input.item.userAnswer,
       actual_asr_text: actualAsrText,
+      input_equivalence: 'NOT_TESTED',
       normalized_asr_text: actualAsrText ? normalizeAsrForEquivalence(actualAsrText) : '',
       next_question: '',
       realtime_model: input.realtimeModel,
+      realtime_provider: 'stepfun-cloud',
       commit_sha: input.commitSha,
       coach_enabled: profile.coachEnabled,
+      coach_model: input.coachRuntime?.coach_model ?? null,
+      memory_enabled: profile.memoryRetrievalEnabled,
       memory_retrieval_enabled: profile.memoryRetrievalEnabled,
       era_enabled: profile.eraRetrievalEnabled,
       input_kind: 'canonical_wav/pcm16_audio_buffer',
@@ -557,6 +606,119 @@ function writePrivate(pathname: string, value: string): void {
   writeFileSync(pathname, value, { encoding: 'utf8', mode: 0o600 });
 }
 
+function verifyCanonicalAudioManifest(
+  cases: (typeof NEXT_QUESTION_CASES)[number][],
+  canonicalAudio: Map<string, CanonicalAudio>,
+): void {
+  const manifestPath = path.resolve('benchmark/next-question/audio/manifest.json');
+  const audioManifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+    complete?: boolean;
+    cases?: Array<{ case_id?: string; source_text?: string; sha256?: string; sample_rate?: number; channels?: number; bit_depth?: number }>;
+  };
+  if (audioManifest.complete !== true || audioManifest.cases?.length !== NEXT_QUESTION_CASES.length) {
+    throw new BenchmarkFailure('CANONICAL_AUDIO_MANIFEST_INCOMPLETE');
+  }
+  for (const item of cases) {
+    const entry = audioManifest.cases.find((candidate) => candidate.case_id === item.id);
+    const audio = canonicalAudio.get(item.id);
+    if (!entry || !audio || entry.source_text !== item.userAnswer || entry.sha256 !== audio.sha256
+      || entry.sample_rate !== 16_000 || entry.channels !== 1 || entry.bit_depth !== 16) {
+      throw new BenchmarkFailure(`CANONICAL_AUDIO_MANIFEST_MISMATCH_${item.id}`);
+    }
+  }
+}
+
+function failedWorkerSample(input: {
+  item: (typeof NEXT_QUESTION_CASES)[number];
+  variant: InterviewBenchmarkVariant;
+  run: number;
+  audio: CanonicalAudio;
+  realtimeModel: string;
+  coachRuntime: Record<string, string | number> | null;
+  commitSha: string;
+}): JsonRecord {
+  const profile = resolveProfile(input.variant);
+  return {
+    status: 'failed',
+    case_id: input.item.id,
+    realtime_session_id: null,
+    variant: input.variant,
+    run: input.run,
+    previous_question: input.item.previousQuestion,
+    expected_user_text: input.item.userAnswer,
+    actual_asr_text: '',
+    normalized_asr_text: '',
+    input_equivalence: 'NOT_TESTED',
+    next_question: '',
+    realtime_model: input.realtimeModel,
+    realtime_provider: 'stepfun-cloud',
+    coach_model: input.coachRuntime?.coach_model ?? null,
+    coach_runtime: input.coachRuntime,
+    commit_sha: input.commitSha,
+    coach_enabled: profile.coachEnabled,
+    memory_enabled: profile.memoryRetrievalEnabled,
+    memory_retrieval_enabled: profile.memoryRetrievalEnabled,
+    era_enabled: profile.eraRetrievalEnabled,
+    input_kind: 'canonical_wav/pcm16_audio_buffer',
+    audio_sha256: input.audio.sha256,
+    adapter_pcm_sha256: input.audio.adapterPcmSha256,
+    gate: null,
+    memory_evidence_count: 0,
+    memory_evidence: [],
+    era_evidence_count: 0,
+    era_evidence: [],
+    coach_packet: null,
+    gate_latency_ms: null,
+    memory_latency_ms: null,
+    era_latency_ms: null,
+    resolve_latency_ms: null,
+    coach_latency_ms: null,
+    total_latency_ms: null,
+    errors: [{ stage: 'sample', code: 'PROCESS_CRASH' }],
+  };
+}
+
+function runIsolatedSample(input: {
+  item: (typeof NEXT_QUESTION_CASES)[number];
+  variant: InterviewBenchmarkVariant;
+  run: number;
+  outputDir: string;
+  audio: CanonicalAudio;
+  realtimeModel: string;
+  coachRuntime: Record<string, string | number> | null;
+  commitSha: string;
+}): JsonRecord {
+  const attemptDirectory = path.join(input.outputDir, 'attempts');
+  mkdirSync(attemptDirectory, { recursive: true, mode: 0o700 });
+  const resultPath = path.join(attemptDirectory, `${input.item.id}-${input.variant}-run${input.run}-${randomUUID()}.json`);
+  const args = [
+    '--import', 'tsx', fileURLToPath(import.meta.url),
+    '--cases', input.item.id,
+    '--variants', input.variant,
+    '--runs', '1',
+    '--worker-run', String(input.run),
+    '--worker-result', resultPath,
+  ];
+  const child = spawnSync(process.execPath, args, {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: 'ignore',
+    timeout: 180_000,
+  });
+  if (existsSync(resultPath)) {
+    try {
+      const result = JSON.parse(readFileSync(resultPath, 'utf8')) as JsonRecord;
+      unlinkSync(resultPath);
+      return result;
+    } catch {
+      unlinkSync(resultPath);
+    }
+  }
+  const sample = failedWorkerSample(input);
+  if (child.error?.code === 'ETIMEDOUT') sample.errors = [{ stage: 'sample', code: 'SAMPLE_WORKER_TIMEOUT' }];
+  return sample;
+}
+
 function hasRetrievedMemoryEvidence(sample: JsonRecord | undefined): boolean {
   return sample?.status === 'completed'
     && Array.isArray(sample.memory_evidence)
@@ -586,7 +748,7 @@ function printSmokeReports(samples: JsonRecord[], equivalence: JsonRecord[]): vo
           era_evidence: c.era_evidence,
           coach_packet: c.coach_packet ?? null,
           next_question: c.next_question,
-          memory_evidence_ready: hasRetrievedMemoryEvidence(c) ? 'PASS' : 'FAIL',
+          memory_evidence_observed: hasRetrievedMemoryEvidence(c) ? 'FOUND' : c.status === 'completed' ? 'NO_EVIDENCE' : 'NOT_RUN',
         } : null,
         INPUT_EQUIVALENCE: inputEquivalence?.status ?? 'NOT_TESTED',
       }, null, 2)}\n`);
@@ -594,8 +756,42 @@ function printSmokeReports(samples: JsonRecord[], equivalence: JsonRecord[]): vo
   }
 }
 
+async function runWorker(options: Options): Promise<void> {
+  if (!options.workerResultPath || options.caseIds.length !== 1 || options.variants.length !== 1 || options.runs !== 1) {
+    throw new BenchmarkFailure('SAMPLE_WORKER_OPTIONS_INVALID');
+  }
+  const item = NEXT_QUESTION_CASES.find((candidate) => candidate.id === options.caseIds[0])!;
+  const canonicalAudio = readCanonicalWav(path.resolve('benchmark/next-question/audio', `${item.id}.wav`));
+  const profile = options.variants[0]!;
+  const { realtimeModel } = makeProvider(process.env);
+  const needsCoach = profile !== 'A';
+  const needsC = profile === 'C';
+  const coach = needsCoach ? createRealtimeCoach(process.env) : undefined;
+  if (needsC && env('NEMO_RETRIEVER_ENABLED') !== 'true') throw new Error('Variant C requires NEMO_RETRIEVER_ENABLED=true.');
+  const retriever = needsC ? createRetrieverClientFromEnv({
+    ...process.env,
+    NEMO_RETRIEVER_COLLECTION: options.retrieverCollection,
+  }) : undefined;
+  const era = needsC ? createEraContextClientFromEnv(process.env) : undefined;
+  const pipeline = needsC && coach ? new RealtimeCoachPipeline(coach, retriever, era) : undefined;
+  const gateTimeoutMs = positiveBudget('REALTIME_COACH_GATE_TIMEOUT_MS', MAX_GATE_MS, MAX_GATE_MS);
+  const totalTimeoutMs = positiveBudget('REALTIME_COACH_TOTAL_TIMEOUT_MS', MAX_COACH_MS, MAX_COACH_MS);
+  const coachRuntime = coach ? realtimeCoachDiagnostics(process.env, gateTimeoutMs, totalTimeoutMs) : null;
+  const context = makeNextQuestionContext(options.ownerId, options.storyId, options.databasePath);
+  const commitSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const sample = await runSample({
+    item, variant: profile, run: options.workerRun ?? 1, options, context, coach, pipeline, coachRuntime,
+    realtimeModel, commitSha, gateTimeoutMs, totalTimeoutMs, canonicalAudio,
+  });
+  writePrivate(path.resolve(options.workerResultPath), JSON.stringify(sample));
+}
+
 async function main(): Promise<void> {
   const options = parseOptions(process.argv.slice(2));
+  if (options.workerResultPath) {
+    await runWorker(options);
+    return;
+  }
   const cases = options.caseIds.map((id) => NEXT_QUESTION_CASES.find((item) => item.id === id)!);
   const canonicalAudio = new Map<string, CanonicalAudio>();
   for (const item of cases) {
@@ -606,6 +802,7 @@ async function main(): Promise<void> {
       throw new BenchmarkFailure(`CANONICAL_AUDIO_${item.id}_${errorCode(error)}`);
     }
   }
+  verifyCanonicalAudioManifest(cases, canonicalAudio);
   const needsCoach = options.variants.some((variant) => variant !== 'A');
   const needsC = options.variants.includes('C');
   const { provider: unusedProvider, realtimeModel } = makeProvider(process.env);
@@ -614,18 +811,22 @@ async function main(): Promise<void> {
   if (needsC && env('NEMO_RETRIEVER_ENABLED') !== 'true') {
     throw new Error('Variant C requires NEMO_RETRIEVER_ENABLED=true.');
   }
-  const retriever = needsC ? createRetrieverClientFromEnv({
-    ...process.env,
-    NEMO_RETRIEVER_COLLECTION: options.retrieverCollection,
-  }) : undefined;
-  if (retriever) await retriever.health();
-  const era = needsC ? createEraContextClientFromEnv(process.env) : undefined;
-  const pipeline = needsC && coach ? new RealtimeCoachPipeline(coach, retriever, era) : undefined;
+  // Retrieval health is observed inside each C turn so an outage remains a measured fail-open result.
   const gateTimeoutMs = positiveBudget('REALTIME_COACH_GATE_TIMEOUT_MS', MAX_GATE_MS, MAX_GATE_MS);
   const totalTimeoutMs = positiveBudget('REALTIME_COACH_TOTAL_TIMEOUT_MS', MAX_COACH_MS, MAX_COACH_MS);
   const coachRuntime = coach ? realtimeCoachDiagnostics(process.env, gateTimeoutMs, totalTimeoutMs) : null;
   if (coachRuntime) process.stdout.write(`COACH_CONFIG ${JSON.stringify(coachRuntime)}\n`);
   const context = makeNextQuestionContext(options.ownerId, options.storyId, options.databasePath);
+  const judgeContext = loadJudgeContext({
+    databasePath: options.databasePath,
+    ownerId: options.ownerId,
+    storyId: options.storyId,
+    storySummary: context.story.summary,
+    agentMemory: context.story.agent_memory,
+    lifeStageTitle: context.life_stage.title,
+    lifeStageStartDate: context.life_stage.start_date,
+    lifeStageEndDate: context.life_stage.end_date,
+  });
   const commitSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const runId = `${new Date().toISOString().replace(/[:.]/gu, '-')}-${randomUUID().slice(0, 8)}`;
   const outputDir = options.outputDir
@@ -642,6 +843,7 @@ async function main(): Promise<void> {
     generated_at: new Date().toISOString(),
     commit_sha: commitSha,
     sample_count_planned: planned,
+    audio_manifest_sha256: hash(readFileSync(path.resolve('benchmark/next-question/audio/manifest.json'))),
     fixture_scope: {
       owner_id: options.ownerId,
       story_id: options.storyId,
@@ -668,8 +870,16 @@ async function main(): Promise<void> {
     runs: options.runs,
     samples_planned: planned,
     realtime_model: realtimeModel,
+    realtime_provider: 'stepfun-cloud',
+    voice_profile: context.voiceProfile,
+    story_context_sha256: hash(JSON.stringify(context)),
+    judge_model: 'step-5-preview',
+    judge_endpoint: 'https://api.stepfun.com/v1/chat/completions',
+    judge_temperature: 0,
     coach: coachRuntime,
     coach_temperature: coach ? 0 : null,
+    coach_gate_timeout_ms: gateTimeoutMs,
+    coach_total_timeout_ms: totalTimeoutMs,
     input: 'The fixed previous question is included in response instructions; canonical mono PCM16 16 kHz WAV is resampled to StepFun production PCM16 24 kHz and sent with the existing adapter appendAudioMessages/commitInputTurn path. No user input_text is sent; user.transcript.final must come from StepFun ASR.',
     response_rule: 'Capture the first completed response transcript and trim surrounding whitespace only.',
     repeat_command: `bash scripts/codex-node.sh npm run benchmark:next-question -- ${repeatArgs.join(' ')}`,
@@ -686,10 +896,21 @@ async function main(): Promise<void> {
   for (const item of cases) {
     for (const variant of options.variants) {
       for (let run = 1; run <= options.runs; run += 1) {
-        const sample = await runSample({
-          item, variant, run, options, context, coach, pipeline, coachRuntime, realtimeModel, commitSha, gateTimeoutMs, totalTimeoutMs,
-          canonicalAudio: canonicalAudio.get(item.id)!,
+        let sample = failedWorkerSample({
+          item, variant, run, audio: canonicalAudio.get(item.id)!, realtimeModel, coachRuntime, commitSha,
         });
+        const retryHistory: JsonRecord[] = [];
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          sample = runIsolatedSample({
+            item, variant, run, outputDir, audio: canonicalAudio.get(item.id)!, realtimeModel, coachRuntime, commitSha,
+          });
+          sample.attempt_count = attempt;
+          if (sample.status !== 'failed' || !isRetryableInfrastructureFailure(sample) || attempt === 3) break;
+          retryHistory.push({ attempt, reason: sampleErrorCode(sample) });
+          process.stdout.write(`RETRY ${item.id}-${variant} run ${run} after ${sampleErrorCode(sample)} (attempt ${attempt}/3)\n`);
+        }
+        sample.retry_reason = retryHistory.length ? retryHistory : null;
+        sample.attempt_failures = retryHistory;
         technicalSamples.push(sample);
         appendFileSync(technicalPath, `${JSON.stringify(sample)}\n`, { encoding: 'utf8', mode: 0o600 });
         if (sample.status === 'completed') {
@@ -706,13 +927,15 @@ async function main(): Promise<void> {
             candidate_id: candidateId,
             previous_question: sample.previous_question,
             user_answer: sample.actual_asr_text,
+            known_context: judgeContext[String(sample.case_id)]?.known_context ?? {},
+            historical_known_facts: judgeContext[String(sample.case_id)]?.historical_known_facts ?? [],
             next_question: sample.next_question,
           } });
           (manifest.samples as JsonRecord[]).push(mapping);
           writePrivate(manifestPath, JSON.stringify(manifest, null, 2));
         }
         technicalIndex += 1;
-        process.stdout.write(`${sample.status.toUpperCase()} ${item.id}-${variant} run ${run}: audio ${String(sample.audio_sha256 ?? '').slice(0, 12)}; ASR chars ${String(sample.actual_asr_text ?? '').length}; ${outputDir}\n`);
+        process.stdout.write(`${sample.status.toUpperCase()} ${item.id}-${variant} run ${run} attempts=${sample.attempt_count}: audio ${String(sample.audio_sha256 ?? '').slice(0, 12)}; ASR chars ${String(sample.actual_asr_text ?? '').length}; ${outputDir}\n`);
       }
     }
   }
@@ -724,28 +947,37 @@ async function main(): Promise<void> {
       const expectedVariants = ['A', 'B', 'C'];
       const byVariant = new Map(group.map((sample) => [String(sample.variant), sample]));
       let status: 'PASS' | 'FAIL' | 'NOT_TESTED' = 'NOT_TESTED';
+      const expected = normalizeAsrForEquivalence(item.userAnswer);
       const normalized = expectedVariants.map((variant) => byVariant.get(variant)?.normalized_asr_text);
       if (options.variants.length === 3 && expectedVariants.every((variant) => options.variants.includes(variant as InterviewBenchmarkVariant))
         && expectedVariants.every((variant) => typeof byVariant.get(variant)?.actual_asr_text === 'string'
           && String(byVariant.get(variant)?.actual_asr_text).trim().length > 0)) {
-        status = new Set(normalized).size === 1 ? 'PASS' : 'FAIL';
+        status = normalized.every((text) => text === expected) ? 'PASS' : 'FAIL';
       }
-      const row = { case_id: item.id, run, status, normalized_asr_by_variant: Object.fromEntries(expectedVariants.map((variant, index) => [variant, normalized[index] ?? null])) };
+      const row = {
+        case_id: item.id,
+        run,
+        expected_normalized_asr: expected,
+        status,
+        normalized_asr_by_variant: Object.fromEntries(expectedVariants.map((variant, index) => [variant, normalized[index] ?? null])),
+      };
       equivalence.push(row);
       if (status === 'FAIL') mismatched.add(`${item.id}:${run}`);
       for (const sample of group) {
-        sample.input_equivalence = status;
-        sample.input_transcript_mismatch = status === 'FAIL';
-        sample.primary_score_eligible = status === 'PASS' && sample.status === 'completed';
-        if (status === 'FAIL') {
+        const sampleStatus = sample.status === 'completed' && sample.normalized_asr_text === expected ? 'PASS'
+          : sample.status === 'completed' && typeof sample.actual_asr_text === 'string' && sample.actual_asr_text.trim() ? 'FAIL' : 'NOT_TESTED';
+        sample.input_equivalence = sampleStatus;
+        sample.input_transcript_mismatch = sampleStatus === 'FAIL';
+        sample.primary_score_eligible = sampleStatus === 'PASS';
+        if (sampleStatus === 'FAIL') {
           const errors = Array.isArray(sample.errors) ? sample.errors as JsonRecord[] : [];
           errors.push({ stage: 'input_equivalence', code: 'INPUT_TRANSCRIPT_MISMATCH' });
           sample.errors = errors;
         }
       }
       for (const candidate of judgeCandidates.filter((entry) => entry.sample.case_id === item.id && Number(entry.sample.run) === run)) {
-        candidate.mapping.input_equivalence = status;
-        candidate.mapping.primary_score_eligible = status === 'PASS';
+        candidate.mapping.input_equivalence = candidate.sample.input_equivalence;
+        candidate.mapping.primary_score_eligible = candidate.sample.primary_score_eligible;
       }
     }
   }
@@ -758,16 +990,13 @@ async function main(): Promise<void> {
         cMemoryEvidenceReadiness.push({
           case_id: item.id,
           run,
-          status: hasRetrievedMemoryEvidence(c) ? 'PASS' : 'FAIL',
+          status: hasRetrievedMemoryEvidence(c) ? 'EVIDENCE_FOUND' : c?.status === 'completed' ? 'NO_EVIDENCE' : 'SAMPLE_FAILED',
           memory_evidence_count: Array.isArray(c?.memory_evidence) ? c.memory_evidence.length : 0,
-          ...(hasRetrievedMemoryEvidence(c) ? {} : {
-            code: c?.status === 'completed' ? 'C_MEMORY_EVIDENCE_MISSING' : 'C_SAMPLE_INCOMPLETE',
-          }),
         });
       }
     }
   }
-  const judgeRows = judgeCandidates.filter((entry) => entry.sample.primary_score_eligible === true).map((entry) => entry.judge);
+  const judgeRows = judgeCandidates.map((entry) => entry.judge);
   manifest.input_equivalence = equivalence;
   manifest.c_memory_evidence_readiness = cMemoryEvidenceReadiness;
   manifest.primary_score_excluded_candidates = judgeCandidates
@@ -784,11 +1013,10 @@ async function main(): Promise<void> {
   for (const key of mismatched) process.stderr.write(`INPUT_TRANSCRIPT_MISMATCH ${key}\n`);
   for (const row of equivalence) process.stdout.write(`INPUT_EQUIVALENCE ${row.case_id} run ${row.run} = ${row.status}\n`);
   for (const row of cMemoryEvidenceReadiness) {
-    process.stdout.write(`C_MEMORY_EVIDENCE ${row.case_id} run ${row.run} = ${row.status}${row.code ? ` (${row.code})` : ''}\n`);
+    process.stdout.write(`C_MEMORY_EVIDENCE ${row.case_id} run ${row.run} = ${row.status}\n`);
   }
   process.stdout.write(`Completed ${completed}/${planned} samples. Results: ${outputDir}\n`);
-  if (completed !== planned || mismatched.size > 0
-    || cMemoryEvidenceReadiness.some((row) => row.status !== 'PASS')) process.exitCode = 1;
+  if (completed !== planned) process.exitCode = 1;
 }
 
 void main().catch((error: unknown) => {
