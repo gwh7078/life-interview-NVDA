@@ -1,47 +1,87 @@
-# Controlled Next-Question Benchmark
+# Controlled Fixed-Audio Next-Question Benchmark
 
-This is an independent quality benchmark with its own local A/B/C capability matrix, fixed cases, and result artifacts. It is separate from the removed slow-system/runtime benchmark and does not add benchmark switches to normal interview behavior.
+This is a standalone quality benchmark. It is unrelated to the existing fast/slow-system benchmarks and does not add benchmark switches to normal interview behavior. Cases in `cases.ts` are frozen.
 
-Each sample creates a fresh Step-Audio-2-mini Realtime connection, seeds the case's previous question as an assistant conversation item, and sends the fixed answer as a real `conversation.item.create` user message with `input_text`. It waits for StepFun to acknowledge that item before running the current Mini Coach path and requesting one response. The live StepFun acknowledgement observed here identifies the created item as a user message but reports its content type as `audio` without echoing text; the runner records that acknowledgement and sends no audio-buffer or ASR events.
+Each A/B/C sample uses a fresh Step-Audio-2-mini Realtime session, the same previous question, and the exact same canonical WAV bytes for that case. The Runner waits for StepFun's real `user.transcript.final` ASR event before running the Coach path and requesting one Mini response. It never fabricates a transcript event or sends the case answer as a user `input_text` item.
 
-The harness reuses the current Gate input builder, Gate/Resolve Coach, `RealtimeCoachPipeline`, Retriever/Era clients, Mini Coach packet renderer, prompt builder, and StepFun provider adapter. The current Mini `supervisor_auto` production path uses `RealtimeCoachPipeline`; the separate `RealtimeSlowCoordinator`/Context Hint path is not Mini's Story Continue route. Variant flags are local to this runner; no production benchmark profile or environment switch is used.
+The text transport result is retained as failure evidence:
 
-## Requirements
+> Step-Audio-2-mini text user-turn transport was tested and rejected because the provider acknowledged the message item but the model did not demonstrably consume the input text.
 
-- `.env` contains the normal StepFun and Coach credentials; values are never written to results.
-- `STEPFUN_REALTIME_MODEL=step-audio-2-mini` and `STEPAUDIO2_EXECUTION=stepfun-cloud`.
-- C runs require `NEMO_RETRIEVER_ENABLED=true` and the prepared historical Story indexed under the owner/story IDs passed to the runner.
-- Set `NEXT_QUESTION_BENCHMARK_OWNER_ID` and `NEXT_QUESTION_BENCHMARK_STORY_ID`, or pass `--owner-id` and `--story-id`. These IDs must scope the actual historical Story; the Runner does not seed or fabricate retrieval evidence.
+`text-transport-canary.ts` remains available to reproduce that transport check; it is not an input path for this benchmark.
 
-## Text transport canary
+## Story fixture and Retriever probe
 
-Before smoke runs, verify that Step-Audio-2-mini consumes a real text user item:
+Create a private copy of the existing interview-quality benchmark database. This does not replace the app's Worktree database or the checked-in compressed source. The fixture combines its six completed source sessions under one new UUID owner, Life Stage, and Story. The Story context is shared with the Runner and its historical user answers remain source-derived.
 
 ```bash
-bash scripts/codex-node.sh npm run benchmark:next-question:canary
+python3 benchmark/next-question/prepare-fixture.py
+bash scripts/codex-node.sh npm run benchmark:next-question:retriever-probe
 ```
 
-The canary generates a random marker only in the user `input_text` item and asks the model to repeat it without putting the marker in the response instruction. It is a transport check, not a benchmark sample.
+The probe uses the production `RetrieverIndexService` and `RetrieverClient` through the configured `NEMO_RETRIEVER_BASE_URL`. It indexes every completed session and checks both required recalls:
 
-## Smoke
+- `1983年正式高考日期` returns evidence containing `7月15日`.
+- `过沭河时发生了什么` returns evidence containing `水深得没过腰`, `相互搀扶`, and `行李举过头顶`.
+
+Fixture IDs and the isolated SQLite copy live under ignored `data/next-question-benchmark/`. C runs use that manifest scope and the configured production Transcript collection; unique owner/story IDs keep the benchmark records scoped. The probe writes private repeat instructions and evidence to `benchmark/next-question/results/`.
+
+## Coach Gate probe
+
+Before any Realtime audio smoke, run the real production `BailianRealtimeCoach.evaluate()` three times for C06 and C07:
+
+```bash
+bash scripts/codex-node.sh npm run benchmark:next-question:gate-probe
+```
+
+The probe uses the fixture-backed `StoryInterviewContextBuilder`, the shared Gate input builder, and sanitized effective Coach settings. It records each parsed Gate result or the exact sanitized error code/message. The target is 6/6 schema-valid results; a valid `action: none` remains a real Gate decision and is not changed to force retrieval.
+
+## Canonical audio
+
+Put one canonical file per case at `benchmark/next-question/audio/Cxx.wav`. The first supported smoke inputs are `C06.wav` and `C07.wav`; no audio is generated by the Runner. Record or synthesize each file once, then reuse that file for every variant and repetition. The Runner loads each case file once before starting sessions and records its SHA-256 in every sample and the run manifest.
+
+Canonical WAV format:
+
+- PCM signed 16-bit little-endian
+- mono
+- 16 kHz
+
+The current StepFun production adapter consumes 24 kHz PCM16 mono frames (`960` bytes / 20 ms). The Runner extracts the WAV data, deterministically resamples 16 kHz to the adapter's existing 24 kHz input, then sends frames using the production `appendAudioMessages()` and `commitInputTurn()` adapter methods. Production audio parameters are unchanged. The Runner stops treating input as valid only after the adapter emits a non-empty `user.transcript.final` from StepFun ASR.
+
+The WAV bytes themselves remain the canonical identity (`audio_sha256`); the converted adapter PCM hash is recorded separately as `adapter_pcm_sha256`.
+
+## ASR input equivalence
+
+For each Case and run, A/B/C ASR transcripts are normalized by ignoring Unicode punctuation except separators between adjacent digits, whitespace, and standalone `嗯`/`呃`/`额` fillers. Numeric separators such as the decimal point in `99.5` and slash in `7/15` remain, so punctuation removal cannot merge distinct values. Dates, digits, people, negation, and event words remain intact. If normalized transcripts differ, the group is marked `INPUT_TRANSCRIPT_MISMATCH` and none of its candidates enter `judge.jsonl`. The technical artifact retains all transcripts and mismatch records.
+
+## C06/C07 smoke
+
+Only run this after Gate Probe 6/6, Retriever Probe 2/2, and both canonical WAVs are present and hashed:
 
 ```bash
 bash scripts/codex-node.sh npm run benchmark:next-question -- \
-  --cases C06,C07 --variants A,B,C --runs 1 \
-  --owner-id "$NEXT_QUESTION_BENCHMARK_OWNER_ID" \
-  --story-id "$NEXT_QUESTION_BENCHMARK_STORY_ID"
+  --cases C06,C07 --variants A,B,C --runs 1
 ```
 
-## Formal run
+Each sample starts its own StepFun session, includes the fixed previous question in the response instructions, sends the canonical audio through the adapter's input-audio append and commit path, waits for ASR final, runs the shared Coach/Retriever pipeline when selected by the real Gate, requests one response, then stops. No `input_text` item is sent. The stdout report includes each case's audio hash, expected answer, A/B/C ASR, Gate, evidence, packet, next question, and `INPUT_EQUIVALENCE`.
 
-Only start the 90 samples after the C06/C07 smoke confirms the expected scoped historical evidence and one-question behavior.
+`C06` and `C07` are not modified to make the Gate retrieve. If C does not request Memory or returns no evidence, that is a measured outcome; the Runner records `C_MEMORY_EVIDENCE_MISSING`, exits nonzero, and the 90-sample benchmark remains not ready. The run manifest records the evidence-readiness result per C06/C07 run.
 
-```bash
-bash scripts/codex-node.sh npm run benchmark:next-question -- \
-  --cases C01,C02,C03,C04,C05,C06,C07,C08,C09,C10 \
-  --variants A,B,C --runs 3 \
-  --owner-id "$NEXT_QUESTION_BENCHMARK_OWNER_ID" \
-  --story-id "$NEXT_QUESTION_BENCHMARK_STORY_ID"
-```
+## Production parity
 
-Each run gets a new private directory under `results/` containing `technical.jsonl`, blind `judge.jsonl`, the candidate-to-trace `manifest.json`, and `run.json` with the repeat command and verification rules. Candidate IDs are random and Judge rows are shuffled after collection. The response rule is the first completed assistant transcript, with surrounding whitespace trimmed only. The result files are mode `0600` and ignored by Git because they can contain retrieved personal evidence.
+| Production path | Runner path | Check |
+|---|---|---|
+| `StoryInterviewContextBuilder` in `server.ts` | Same builder against the isolated fixture DB | Shared |
+| `buildRealtimeCoachGateInput()` | Same builder with the fixed prior question and real ASR transcript | Shared |
+| `BailianRealtimeCoach.evaluate()` | Same Coach, same effective settings, 2 s Gate deadline | Shared |
+| `RealtimeCoachPipeline.retrieveAndResolve()` | Same pipeline and Story scope, within the 6 s total deadline | Shared |
+| `renderMiniCoachPacket()` and `buildStepAudio2MiniInstructions()` | Same renderer and prompt builder | Shared |
+| StepFun input/response adapter | Same `appendAudioMessages()`, `commitInputTurn()`, and `requestAssistantTurnMessages()` | Shared |
+| Context Hint injection | Not used by Mini `supervisor_auto` Story Continue | Not part of this path |
+| `respondOnce`, stale-turn cancellation, superseded-turn guards | One serialized turn on a fresh session | Concurrency guards are not exercised |
+
+The fixed previous question is included in response instructions because the rejected text-item transport cannot seed it as a conversation item. This keeps it identical across A/B/C; production normally has the previous assistant transcript in the Realtime conversation. Audio does arrive through the provider and Coach receives its real ASR final. Gate and pipeline failures fail open to one Mini response.
+
+## Formal benchmark
+
+Do not run 90 samples until all required gates pass: Gate Probe 6/6, Retriever Probe 2/2, C06/C07 canonical audio hashes fixed, C06/C07 A/B/C smoke complete, ASR input equivalence passes, and C evidence is present. This README does not authorize or start the formal run.

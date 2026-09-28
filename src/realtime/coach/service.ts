@@ -243,9 +243,19 @@ function parseGate(value: unknown, input: CoachGateInput): CoachGateResult {
     throw Object.assign(new Error('Coach Gate exposed its own model identity.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
   }
   if (action === 'none') {
-    if (object.retrieve_memory || memoryQuery !== null || object.retrieve_era || eraQuery !== null
-      || eraStartYear !== null || eraEndYear !== null || avoid !== null || direction !== null || reason !== 'normal') {
-      throw Object.assign(new Error('A non-intervening Coach Gate must return the normal empty result.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
+    const violations = [
+      ...(object.retrieve_memory ? ['retrieve_memory'] : []),
+      ...(memoryQuery !== null ? ['memory_query'] : []),
+      ...(object.retrieve_era ? ['retrieve_era'] : []),
+      ...(eraQuery !== null ? ['era_query'] : []),
+      ...(eraStartYear !== null ? ['era_start_year'] : []),
+      ...(eraEndYear !== null ? ['era_end_year'] : []),
+      ...(reason !== 'normal' ? ['reason'] : []),
+      ...(avoid !== null ? ['avoid'] : []),
+      ...(direction !== null ? ['direction'] : []),
+    ];
+    if (violations.length) {
+      throw Object.assign(new Error(`A non-intervening Coach Gate must return the normal empty result (violations: ${violations.join(',')}).`), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
     }
   } else {
     const violations = [
