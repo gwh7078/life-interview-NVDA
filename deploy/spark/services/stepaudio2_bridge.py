@@ -222,14 +222,36 @@ async def handler(ws):
                     worker = asyncio.create_task(asyncio.to_thread(
                         run_speech, list(history), system, instructions, pending_audio_path, q, loop, response_id
                     ))
+                    async def watch_worker():
+                        try:
+                            await worker
+                        except Exception as exc:
+                            await q.put({
+                                "_bridge_error": True,
+                                "code": type(exc).__name__,
+                            })
+                    watcher = asyncio.create_task(watch_worker())
                     assistant_text = ""
+                    worker_failed = False
                     while True:
                         item = await q.get()
+                        if item.get("_bridge_error"):
+                            worker_failed = True
+                            await ws.send(json.dumps({
+                                "type": "error",
+                                "error": {
+                                    "code": "LOCAL_INFERENCE_FAILED",
+                                    "message": str(item.get("code") or "InferenceError"),
+                                },
+                            }))
+                            break
                         if item.get("_bridge_done"):
                             assistant_text = str(item.get("text") or "")
                             break
                         await ws.send(json.dumps(item, ensure_ascii=False))
-                    await worker
+                    await watcher
+                    if worker_failed:
+                        continue
                     if pending_user_text:
                         history.append({"role":"human","content":pending_user_text})
                     if assistant_text:
