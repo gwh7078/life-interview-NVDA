@@ -18,6 +18,12 @@ report="$SPARK_DIAGNOSTICS_DIR/install-report.json"
 events="$SPARK_DIAGNOSTICS_DIR/install-events.jsonl"
 install_log="$SPARK_LOG_DIR/install.log"
 started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+install_fingerprint="$(
+  {
+    git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || printf 'no-git\n'
+    if [[ -f "$SPARK_ENV_FILE" ]]; then sha256sum "$SPARK_ENV_FILE"; else printf 'no-env\n'; fi
+  } | sha256sum | awk '{print $1}'
+)"
 : > "$events"
 
 record() {
@@ -52,9 +58,13 @@ run_step() {
   local name="$1"; shift
   local marker="$SPARK_STATE_DIR/install-$name.ok"
   if [[ -f "$marker" && "$name" != "preflight" && "$name" != "start-services" && "$name" != "verify" ]]; then
-    log "SKIP $name (already complete)"
-    record "$name" SKIPPED 0 "marker exists"
-    return 0
+    local recorded
+    recorded="$(cat "$marker" 2>/dev/null || true)"
+    if [[ "$recorded" == "$install_fingerprint" ]]; then
+      log "SKIP $name (already complete for current code/config)"
+      record "$name" SKIPPED 0 "fingerprint match"
+      return 0
+    fi
   fi
   if (( dry_run )); then
     log "DRY-RUN $name: $*"
@@ -66,7 +76,7 @@ run_step() {
   log "RUN $name"
   if "$@" >>"$install_log" 2>&1; then
     t1="$(python3 -c 'import time; print(int(time.time()*1000))')"
-    [[ "$name" == "preflight" || "$name" == "start-services" || "$name" == "verify" ]] || date -u +%Y-%m-%dT%H:%M:%SZ > "$marker"
+    [[ "$name" == "preflight" || "$name" == "start-services" || "$name" == "verify" ]] || printf '%s\n' "$install_fingerprint" > "$marker"
     record "$name" PASS "$((t1-t0))" ""
   else
     local rc=$?
