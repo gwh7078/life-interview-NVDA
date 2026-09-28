@@ -108,6 +108,27 @@ docker_pull_cached() {
   ) 9>"$lock_file"
 }
 
+spec_hash() {
+  printf '%s\0' "$@" | sha256sum | awk '{print $1}'
+}
+
+container_spec() {
+  local name="$1"
+  docker inspect -f '{{ index .Config.Labels "life-interview.spark.spec" }}' "$name" 2>/dev/null || true
+}
+
+reconcile_container_spec() {
+  local name="$1" desired="$2" current
+  if ! docker ps -a --format '{{.Names}}' | grep -qx "$name"; then
+    return 0
+  fi
+  current="$(container_spec "$name")"
+  if [[ "$current" != "$desired" ]]; then
+    log "Recreating $name because runtime configuration changed."
+    docker rm -f "$name" >/dev/null 2>&1 || true
+  fi
+}
+
 json_escape() {
   python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'
 }
