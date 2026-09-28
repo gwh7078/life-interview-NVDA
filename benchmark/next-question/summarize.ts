@@ -318,6 +318,7 @@ async function main(): Promise<void> {
   const completionBlockers = [
     ...(samples.filter((sample) => sample.status === 'completed').length !== Number(run.samples_planned) ? ['SAMPLES_INCOMPLETE'] : []),
     ...(judgeFailureCount > 0 ? ['JUDGE_COVERAGE_INCOMPLETE'] : []),
+    ...(Number(technical.memory.C_mean_evidence_count) > 0 ? [] : ['C_MEMORY_EVIDENCE_MISSING']),
     ...(runtimeParity.failed > 0 ? ['RUNTIME_PARITY_FAILED'] : []),
   ];
   const asrMismatch = samples.filter((sample) => sample.input_equivalence === 'FAIL').map((sample) => `${sample.case_id}-${sample.variant}-run${sample.run}`);
@@ -361,6 +362,9 @@ async function main(): Promise<void> {
   const retrievalGroup = caseGroups.retrieval as Row;
   const eraGroup = caseGroups.era as Row;
   const retryRoundText = Object.entries(explicitRetryRounds).map(([name, result]) => `${name}: ${result.attempted} attempted, ${result.scored} scored, ${result.failed} failed`);
+  const q2ExecutionNote = technical.memory.C_requested_samples === 0 && technical.era.C_requested_samples === 0
+    ? ' C made no Memory or Era requests, so this contrast does not measure either capability.'
+    : '';
   const lineForPair = (label: string, values: Row) => `| ${label} | ${deltaText(values.total_score)} | ${DIMENSIONS.map((dimension) => deltaText(values[dimension])).join(' | ')} |`;
   const caseRows = caseByCase.map((row) => `| ${row.case_id} | ${row.variants.A.mean ?? 'n/a'} | ${row.variants.B.mean ?? 'n/a'} | ${row.variants.C.mean ?? 'n/a'} | ${row.main_capability} |`);
   const latencyRows: string[] = [];
@@ -404,7 +408,7 @@ async function main(): Promise<void> {
     lineForPair('A → C', paired.A_vs_C),
     '',
     `**Q1 — Coach (partial only):** C01–C04 A→B paired mean total-score delta ${deltaText(coachGroup.A_vs_B.total_score)}; the available subset is too small for a benchmark conclusion.`,
-    `**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta ${deltaText(paired.B_vs_C.total_score)}; Retrieval C05–C08 ${deltaText(retrievalGroup.B_vs_C.total_score)}, Era C09–C10 ${deltaText(eraGroup.B_vs_C.total_score)}. These sparse pairs are non-representative and do not support a completed conclusion.`,
+    `**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta ${deltaText(paired.B_vs_C.total_score)}; Retrieval C05–C08 ${deltaText(retrievalGroup.B_vs_C.total_score)}, Era C09–C10 ${deltaText(eraGroup.B_vs_C.total_score)}. These sparse pairs are non-representative and do not support a completed conclusion.${q2ExecutionNote}`,
     '**Q3 — Source of change:** no complete conclusion is available; dimension contrasts below are from the partial judged subset only.',
     '',
     '## Case groups',

@@ -2,7 +2,7 @@
   "benchmark": "controlled-next-question",
   "run_id": "2026-09-28T13-34-48-step-plan-judge-682ebd14",
   "commit_sha": "38c3802b525ab45bde69e847ad57ec3d417481fe",
-  "generated_at": "2026-09-28T15:42:59.273Z",
+  "generated_at": "2026-09-28T15:54:59.336Z",
   "judge_model": "step-5-preview",
   "judge_endpoint": "https://api.stepfun.com/step_plan/v1/chat/completions",
   "judge_commit_sha": "71847bbec6847dc730785646fd5aab449ac6f02e",
@@ -36,7 +36,8 @@
   "completion_status": "INCOMPLETE",
   "ready_for_competition_report": false,
   "completion_blockers": [
-    "JUDGE_COVERAGE_INCOMPLETE"
+    "JUDGE_COVERAGE_INCOMPLETE",
+    "C_MEMORY_EVIDENCE_MISSING"
   ],
   "samples_excluded_for_asr_mismatch": 36,
   "asr_mismatch_samples": [

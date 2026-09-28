@@ -1239,5 +1239,9 @@
     }
   },
   "completion_status": "INCOMPLETE",
-  "ready_for_competition_report": false
+  "ready_for_competition_report": false,
+  "completion_blockers": [
+    "JUDGE_COVERAGE_INCOMPLETE",
+    "C_MEMORY_EVIDENCE_MISSING"
+  ]
 }

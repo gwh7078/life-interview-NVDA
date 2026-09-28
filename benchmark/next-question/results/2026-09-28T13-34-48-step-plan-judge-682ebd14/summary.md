@@ -41,7 +41,7 @@
 | A → C | -5.75 (n=12) | -1 (n=12) | -2.17 (n=12) | -1.75 (n=12) | -1.08 (n=12) | +0.25 (n=12) |
 
 **Q1 — Coach (partial only):** C01–C04 A→B paired mean total-score delta +50.67 (n=3); the available subset is too small for a benchmark conclusion.
-**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta -12.27 (n=11); Retrieval C05–C08 -9.75 (n=4), Era C09–C10 -20.75 (n=4). These sparse pairs are non-representative and do not support a completed conclusion.
+**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta -12.27 (n=11); Retrieval C05–C08 -9.75 (n=4), Era C09–C10 -20.75 (n=4). These sparse pairs are non-representative and do not support a completed conclusion. C made no Memory or Era requests, so this contrast does not measure either capability.
 **Q3 — Source of change:** no complete conclusion is available; dimension contrasts below are from the partial judged subset only.
 
 ## Case groups
@@ -104,4 +104,4 @@
 - Judge errors or missing results: JUDGE_RESPONSE_SCHEMA_INVALID=13, JUDGE_OUTPUT_TOKEN_LIMIT=8
 - Negative case-level paired deltas: C02 (A→B 66, B→C -1.5); C03 (A→B 20, B→C -10); C05 (A→B -27, B→C 6); C06 (A→B 17.5, B→C -25.5); C09 (A→B -36.5, B→C -11); C10 (A→B 20.5, B→C -50)
 - All completed candidates and technical traces remain in the result directory; the primary score excludes only ASR-mismatch samples and failed Judge records.
-- Completion blockers: JUDGE_COVERAGE_INCOMPLETE
+- Completion blockers: JUDGE_COVERAGE_INCOMPLETE, C_MEMORY_EVIDENCE_MISSING

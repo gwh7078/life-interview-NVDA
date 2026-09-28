@@ -67,7 +67,8 @@
   "completion_status": "INCOMPLETE",
   "ready_for_competition_report": false,
   "completion_blockers": [
-    "JUDGE_COVERAGE_INCOMPLETE"
+    "JUDGE_COVERAGE_INCOMPLETE",
+    "C_MEMORY_EVIDENCE_MISSING"
   ],
   "source_execution_run_id": "2026-09-28T11-54-23-404Z-27c55a4d",
   "source_execution_commit_sha": "8bd75fe37640a83e536e9f72849605a8916dd933",
