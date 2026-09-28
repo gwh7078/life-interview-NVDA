@@ -40,7 +40,7 @@ case "${1:-status}" in
       [[ -n "${HF_TOKEN:-}" ]] && args+=(-e HF_TOKEN)
       scheduling_flag=--no-async-scheduling
       [[ "$async_scheduling" == "true" ]] && scheduling_flag=--async-scheduling
-      docker "${args[@]}" "$image" vllm serve "$model"         --served-model-name "$model"         --max-model-len "$max_len"         --gpu-memory-utilization "$gpu_util"         --dtype auto         --quantization modelopt         --kv-cache-dtype fp8         --attention-backend flashinfer         --moe-backend marlin         --max-num-seqs "$max_seqs"         --max-num-batched-tokens "$max_batched_tokens"         --enable-chunked-prefill         "$scheduling_flag"         --enable-prefix-caching         --enable-auto-tool-choice         --tool-call-parser qwen3_coder         --reasoning-parser qwen3         --load-format fastsafetensors
+      docker "${args[@]}" "$image" vllm serve "$model"         --served-model-name "$model"         --max-model-len "$max_len"         --gpu-memory-utilization "$gpu_util"         --dtype auto         --quantization modelopt         --kv-cache-dtype fp8         --attention-backend flashinfer         --moe-backend marlin         --max-num-seqs "$max_seqs"         --max-num-batched-tokens "$max_batched_tokens"         --enable-chunked-prefill         "$scheduling_flag"         --enable-prefix-caching         --enable-auto-tool-choice         --tool-call-parser qwen3_coder         --reasoning-parser qwen3         --load-format fastsafetensors         --disable-log-requests
     fi
     "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_TEXT_PORT/health" "${SPARK_TEXT_START_TIMEOUT_S:-1800}"
     ;;
