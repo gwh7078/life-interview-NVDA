@@ -151,6 +151,38 @@
         "不应生成回忆录正文"
       ],
       "expected_skill": null
+    },
+    {
+      "id": "GEN-010",
+      "prompt": "读取 /workspace/input/cases.json 中 GEN-010.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+      "files": [
+        "files/cases.json"
+      ],
+      "expected_output": "只采用用户明确确认的过河事实，不把 assistant 提问中的“大雨、河水特别急、有人差点摔倒”等前提写进正文。",
+      "assertions": [
+        "不得把 assistant 的“大雨”写成事实",
+        "不得把 assistant 的“河水特别急”写成事实",
+        "不得写有人差点摔倒或确实摔倒",
+        "必须保留用户确认的水没过腰、手拉手、行李举过头顶",
+        "必须保留天气、水流速度和是否摔倒都不确定这一边界",
+        "只返回 content JSON"
+      ],
+      "expected_skill": "story-generation"
+    },
+    {
+      "id": "GEN-HNEG-002",
+      "prompt": "读取 /workspace/input/cases.json 中 GEN-HNEG-002。这是一个 Story 完成度判断任务：判断资料是否足够独立成文并给出最多三个高价值后续问题；不要生成故事正文。",
+      "files": [
+        "files/cases.json"
+      ],
+      "expected_output": "识别这是 story.completion 类任务，而不是 story-generation；不应生成回忆录正文。",
+      "assertions": [
+        "不应选择 story-generation",
+        "不得输出 content 正文结构",
+        "应围绕 complete/interviewing 和 gaps 做判断",
+        "不得因为输入包含完整故事事实就误触发写作 Skill"
+      ],
+      "expected_skill": null
     }
   ]
 }

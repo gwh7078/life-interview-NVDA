@@ -109,6 +109,42 @@
         "blocked_directions": [],
         "session_count": 1
       }
+    },
+    "COMP-HNEG-002": {
+      "task_type": "interview.closeout",
+      "mode": "story_continue",
+      "input": {
+        "mode": "story_continue",
+        "current_story": {
+          "title": "从嫌弃水泥专业到真正认同",
+          "summary": "入学后从失落逐渐转为理解并认同硅酸盐专业。",
+          "agent_memory": "刚入学时对专业失落。新生参观后开始理解专业价值。",
+          "status": "interviewing"
+        },
+        "current_stage": {
+          "stage_id": "uni",
+          "title": "大学时期",
+          "start_date": "1983",
+          "end_date": "1987"
+        },
+        "life_stages": [
+          {
+            "stage_id": "uni",
+            "title": "大学时期",
+            "start_date": "1983",
+            "end_date": "1987"
+          }
+        ],
+        "other_stories": [],
+        "transcript": [
+          {
+            "message_id": "m1",
+            "role": "user",
+            "text": "后来通过老师报告、课堂、同学讨论和专业展览，我才慢慢真正认同这个专业。",
+            "timestamp": "2026-09-28T23:00:00Z"
+          }
+        ]
+      }
     }
   }
 }

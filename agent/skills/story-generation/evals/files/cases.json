@@ -323,6 +323,60 @@
           }
         ]
       }
+    },
+    "GEN-010": {
+      "input": {
+        "mode": "initial",
+        "style": "documentary",
+        "user_instruction": "保持第一人称，按采访事实写，不补细节。",
+        "profile": {},
+        "life_stage": {
+          "title": "莒县一中",
+          "start_date": "1980",
+          "end_date": "1983"
+        },
+        "story": {
+          "title": "周末趟过齐腰深的沭河回家",
+          "summary": "住校期间一次汛期周末回家，和同学趟过齐腰深的沭河。"
+        },
+        "selected_document": null,
+        "transcript": [
+          {
+            "role": "assistant",
+            "text": "那天是不是下着大雨，河水特别急？"
+          },
+          {
+            "role": "user",
+            "text": "这个具体天气我记不清了，水流速度也说不准。能确定的是水已经没过腰，大家手拉手，把行李举过头顶。"
+          },
+          {
+            "role": "assistant",
+            "text": "那应该有人差点摔倒吧？"
+          },
+          {
+            "role": "user",
+            "text": "有没有人摔倒我也记不清，别写成确定事实。"
+          }
+        ]
+      }
+    },
+    "GEN-HNEG-002": {
+      "task_type": "story.completion",
+      "input": {
+        "title": "大二住院与两位解放军战士的绿军装",
+        "agent_memory": "大二因十二指肠球部溃疡住院不到两周，认识两位年轻解放军战士，临走获赠一套绿军装。战士姓名、番号和后续联系都记不清。",
+        "stage_title": "大学时期",
+        "current_status": "interviewing",
+        "previous_gaps": [
+          "同学探望时最让你印象深的是什么？"
+        ],
+        "blocked_directions": [
+          "战士姓名：记不清",
+          "部队番号：不知道",
+          "后来是否联系：记不清"
+        ],
+        "session_count": 3
+      }
     }
   }
 }
