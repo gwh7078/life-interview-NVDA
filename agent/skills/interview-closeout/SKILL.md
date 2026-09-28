@@ -1,11 +1,16 @@
 ---
 name: interview-closeout
-description: Organize an ended Story or external-contributor interview. Supports story_create, story_continue, and contributor modes with strict evidence boundaries.
+version: 1.0.0
+description: 一场 Story 或外部贡献者采访结束后，把明确证据整理为供后端验证的 Proposal。仅用于 interview.closeout 的 story_create、story_continue、contributor 模式；不用于首次建档、实时指导、完成度规划或故事写作。
+metadata:
+  tags: [life-interview, story, contributor, evidence, closeout]
 ---
 
 # Interview Closeout
 
-Use only for `interview.closeout`.
+## Purpose
+
+整理已结束的 Story 或外部贡献者采访，并只提交当前模式对应的 Proposal。Use only for interview.closeout.
 
 The Task Context contains one mode:
 

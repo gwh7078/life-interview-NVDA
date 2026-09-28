@@ -1,0 +1,141 @@
+[1/10] schema ...
+[1/10] schema done in 0.0s (1 error(s), 2 warning(s))
+[2/10] version ...
+[2/10] version done in 0.0s (ok)
+[3/10] security ...
+INFO     Running skillspector on                                                
+         /Users/gwh/.codex/worktrees/f3d6/英伟达DGX黑客松/agent/skills/interview
+         -coach                                                                 
+INFO     Running skillspector: /Users/gwh/.local/bin/skillspector scan          
+         /Users/gwh/.codex/worktrees/f3d6/英伟达DGX黑客松/agent/skills/interview
+         -coach --format json...                                                
+[3/10] security done in 1.7s (ok)
+[4/10] pii ...
+[4/10] pii done in 0.0s (ok)
+[5/10] license ...
+[5/10] license done in 0.0s (ok, 1 warning(s))
+[6/10] code-integrity ...
+INFO     Running Gitleaks: /opt/homebrew/bin/gitleaks detect --source .         
+         --report-format...                                                     
+[6/10] code-integrity done in 0.0s (ok, 1 warning(s))
+[7/10] dependency ...
+[7/10] dependency done in 0.0s (ok)
+[8/10] unicode ...
+[8/10] unicode done in 0.0s (ok)
+[9/10] quality ...
+[9/10] quality done in 0.0s (ok, 5 warning(s))
+[10/10] lint ...
+[10/10] lint done in 0.0s (ok)
+llm skipped: LLM checks disabled by --no-llm.
+                       SkillEvaluator Validation Results                        
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Validator                      ┃ Status ┃ Details                            ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Schema & Repository Governance │  FAIL  │ 1 errors, 3 warnings               │
+│ Semantic Version Validation    │  PASS  │ 1 checks passed                    │
+│ Security Scan                  │  PASS  │ 1 checks passed                    │
+│ PII Scan                       │  PASS  │ 2 checks passed                    │
+│ License Compliance             │  PASS  │ OK                                 │
+│ Code Risk Analysis             │  PASS  │ OK                                 │
+│ Secrets Detection              │  PASS  │ OK                                 │
+│ Code Integrity & Hygiene       │  PASS  │ No standard Python test-file       │
+│                                │        │ candidates found; target tests     │
+│                                │        │ were not executed and coverage was │
+│                                │        │ not measured. Consider adding      │
+│                                │        │ tests.                             │
+│ Dependency Vulnerability Audit │  PASS  │ OK                                 │
+│ Unicode Smuggling Detection    │  PASS  │ 1 checks passed                    │
+│ QUALITY                        │  PASS  │ 1 checks passed                    │
+│ SCRIPT_LINT                    │  PASS  │ 1 checks passed                    │
+└────────────────────────────────┴────────┴────────────────────────────────────┘
+
+╭─────────────────╮
+│ Failure Details │
+╰─────────────────╯
+
+[Schema & Repository Governance]
+Validate SKILL.md frontmatter and repository structure
+[FAIL] Validation failed
+
+Summary:
+  • Checks performed: 8
+  • Errors: 1 (1 high)
+  • Warnings: 3
+
+Issues:
+  1. [SCHEMA-MEDIUM] Missing recommended section: '## Instructions'
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   body_recommended_section
+     Fix:     Consider adding a '## Instructions' or '## Usage' section. Per 
+agentskills.io the body format is unrestricted, so this is a convention nudge — 
+it also gives the quality scorer a stable anchor for instruction-quality 
+heuristics.
+
+  2. [SCHEMA-MEDIUM] Missing recommended section: '## Examples'
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   body_recommended_section
+     Fix:     Consider adding a '## Examples' section. If examples are already 
+inline under instructions, this can be skipped.
+
+  3. [SCHEMA-HIGH] Author not specified in metadata
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   author_missing
+     Fix:     Add 'metadata.author' field with format 'Name <email@example.com>'
+
+╭───────────────────────╮
+│ Non-blocking Findings │
+╰───────────────────────╯
+
+[QUALITY]
+Skill quality scoring across Correctness (35%), Discoverability (25%), 
+Reliability (25%), and Efficiency (15%)
+
+  Overall: 92.8/100 (Grade: A)
+  Skill Type: guide-only
+
+                            Quality Scores by Skill                             
+┏━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Skill      ┃ Grade ┃ Score ┃ Correctne… ┃ Discover… ┃ Reliabili… ┃ Efficien… ┃
+┡━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ interview… │   A   │  92.8 │         90 │       100 │         85 │       100 │
+└────────────┴───────┴───────┴────────────┴───────────┴────────────┴───────────┘
+
+[PASS] Validation passed
+
+Summary:
+  • Checks performed: 1
+
+Details:
+  [OK] quality_score: Score: 92.8/100 (Grade: A) (overall_score=92.8, grade=A, 
+skill_type=guide-only)
+Issues:
+  1. [QUALITY-LOW] No examples provided
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   quality_correctness
+     Fix:     Add example usage with code blocks
+
+  2. [QUALITY-MEDIUM] SKILL_SPEC recommended field missing: 'metadata.author'
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   quality_correctness
+     Fix:     Add 'author' under metadata: — Author name or team (under 
+metadata:)
+
+  3. [QUALITY-LOW] No prerequisites/requirements documented
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   quality_reliability
+     Fix:     Document dependencies, API keys, or setup needed
+
+  4. [QUALITY-LOW] No limitations documented
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   quality_reliability
+     Fix:     Add '## Limitations' section with known issues/constraints
+
+  5. [QUALITY-LOW] No troubleshooting section documented
+     File:    agent/skills/interview-coach/SKILL.md
+     Check:   quality_reliability
+     Fix:     Add '## Troubleshooting' with Error/Cause/Solution patterns
+
+
+[FAIL] Validation failed
+
+Error: Tier 1 checks failed or were incomplete

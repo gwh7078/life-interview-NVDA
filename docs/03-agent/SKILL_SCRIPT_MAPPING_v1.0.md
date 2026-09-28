@@ -1,14 +1,14 @@
 # Skill / Script Mapping v1.0
 
-> Status: **Current Design Baseline; Realtime Context Hint implemented**
+> Status: **Updated 2026-09-28; reflects current Agent and Realtime Coach paths**
 >
-> Scope: OpenClaw Agent Skills, Retriever integration, Realtime Context Hint Agent
+> Scope: OpenClaw Agent Skills, Retriever integration, Realtime Context Hint Agent, and custom Realtime Coach
 >
 > Date: 2026-09-21
 
 ## 1. 冻结结论
 
-本项目后续的动态只读检索能力，优先采用：
+以下脚本设计只适用于通过 OpenClaw 执行的 Agent Tasks。此类动态只读检索能力采用：
 
 ```text
 Agent
@@ -35,6 +35,8 @@ Backend / Retriever API
 - 模型只需要判断“是否需要检索”和“查询什么”；
 - run_id / owner_id / story_id / token / Top-K / retrieval mode / rerank / endpoint 等确定性参数由脚本封装。
 
+自定义低延迟 Realtime Coach 是独立路径：它由应用服务直接调用 Coach、Retriever 与 EraContextClient，不经过 OpenClaw Skill script。不要把 Coach 检索描述成 Observer 或脚本调用。
+
 目的：
 
 1. 减少模型每轮读取 Tool Schema 的上下文开销；
@@ -53,8 +55,9 @@ Backend / Retriever API
 | `interview-closeout / contributor` | 无 | 当前 | 第三者证据与主人公历史隔离；禁止搜索主人公 Memory / Transcript |
 | `story-completion` | 无 | 当前 | Completion 只读 Agent Memory，不回查 Transcript |
 | `story-generation` | 无 | 当前 | 当前 Contract 已提供完整主人公 Transcript；不动态搜索 |
-| `interview.context_hint` / `interview-observer` | 无 | 已接入；真实 Agent smoke 未通过 | Backend 先做 Current Story Classic Retrieval；Agent 只选择证据 ID 和生成短提示；OpenClaw tools 与 scripts 均关闭 |
-| Future Era Context | `scripts/era-context-search.mjs` | Future | 当前 Slow Context 范围不含年代背景检索 |
+| `interview.context_hint` / `interview-observer` | 无 | 当前 | Backend 提供固定 Context 与 Personal Memory evidence；Observer 只选证据并生成短提示；该 Task 的 tools 与 scripts 均关闭 |
+| `interview-coach` / custom Realtime Coach | 无；服务直接调用 `RealtimeCoachPipeline` 与可选 `EraContextClient` | 当前 | 支持 onboarding、story_create、story_continue、contributor；Personal Memory 和 Era Context 检索仅限 story_continue，Era 还受运行时配置控制 |
+| Standalone Era search helper | `scripts/era-context-search.mjs` | 不属于 Skill 执行路径 | 通过有授权的 Backend endpoint 请求 Era Context；不由 Observer 或 Realtime Coach 调用 |
 | Realtime Context Hint | `memory-deep-search.mjs` | **禁止** | Realtime 不允许 Agentic Retrieval 阻塞实时链路 |
 
 ## 3. Interview Closeout 推荐目录
@@ -121,14 +124,18 @@ memory-deep-search.mjs
 
 它可以在脚本内部封装多查询、检索、融合、裁剪等确定性/半确定性步骤，但最终只返回 Evidence，不写业务数据库。
 
-## 4. Current Realtime Context Hint Skill
+## 4. Realtime Context Hint Skill
 
 ```text
 agent/skills/interview-observer/
 └── SKILL.md
 ```
 
-检索由 Backend 在同一 Tool Cycle 内完成，不由 Agent 再检索。`interview-observer` 只看固定注入的 Query、Current Story 摘要、最近最终消息和最多五条 Evidence。它不能读写数据库、调用工具或执行脚本；Evidence Answer 是事实来源，Question 只提供语境。Era Context 可在后续独立评估，当前不接入。
+检索由 Backend 在同一 Tool Cycle 内完成，不由 Agent 再检索。`interview-observer` 只看固定注入的 Query、Current Story 摘要、最近最终消息和最多五条 Evidence。它不能读写数据库、调用工具或执行脚本；Evidence Answer 是事实来源，Question 只提供语境。Observer Skill 目录不包含可执行脚本。
+
+### 4.1 Custom Realtime Coach
+
+Coach 在独立的低延迟应用运行时执行。Onboarding 以异步 sidecar 运行；Story Create 只做指导，不检索；Story Continue 可按 Gate 决策请求当前 Story Personal Memory 和 Era Context；Contributor 模式当前不允许这两类检索。Era Context 客户端只有在 `NEMO_ERA_CONTEXT_ENABLED=true` 时才创建。`scripts/era-context-search.mjs` 是独立 helper，不在此调用链中。
 
 ## 5. 哪些能力不要做成脚本
 
@@ -277,16 +284,4 @@ Final Proposal
 
 ## 10. 与当前代码的关系
 
-当前 `TaskDefinition.executionPolicy.dynamicTools` 和 runtime `toolCallCount` 是 Phase 2B 已有抽象。
-
-在真正实现 Retrieval Script 时，应再版本化调整为更准确的能力声明，例如：
-
-```text
-scriptCapabilities
-allowedExecScripts
-scriptCallCount
-```
-
-不要为了兼容旧字段而重新暴露 `memory_search` 专用 Tool Schema。
-
-当前仅冻结设计，不要求在本次文档更新中修改运行时代码。
+当前 `TaskDefinition.executionPolicy.scriptCapabilities` 已声明 Skill Script 权限；只有 `interview.closeout/story_continue` 获得 `memory-search`。Backend 为当前 owner 与 Story 注入短期 token，Gateway 再校验 owner、Story、source type、query 长度和 Top-K。Observer 没有 script capability。本文记录现状，不要求改变运行时代码。

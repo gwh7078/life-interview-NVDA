@@ -1,11 +1,16 @@
 ---
 name: onboarding-closeout
-description: Organize ended onboarding interviews into evidence-backed profile candidates, life stages, and Story seeds. Use only for the onboarding.closeout task.
+version: 1.0.0
+description: 在首次建档采访结束后，把用户明确陈述整理为候选档案、人生阶段和待整理 Story。仅用于 onboarding.closeout；不用于 Story 采访收尾、实时提示、完成度判断或文章写作。
+metadata:
+  tags: [life-interview, onboarding, profile, life-stages, closeout]
 ---
 
 # Onboarding Closeout
 
-Use only for `onboarding.closeout`.
+## Purpose
+
+首次建档采访结束后，从结构化输入中提取有来源的候选档案、人生阶段和待整理 Story。Use only for onboarding.closeout.
 
 ## Input
 

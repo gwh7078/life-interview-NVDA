@@ -92,6 +92,17 @@ import json,sys
 open(sys.argv[1],"w").write(json.dumps({"status":"FAIL","safe_error":"invalid benchmark JSON"},indent=2)+"\n")
 PY
     fi
+    if [[ -s "$target" ]] && ! python3 - "$target" <<'PY'
+import json,sys
+try:
+    report=json.load(open(sys.argv[1],encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0 if report.get("status")=="PASS" else 1)
+PY
+    then
+      overall_fail=1
+    fi
   else
     overall_fail=1
     python3 - "$stderr" "$target" <<'PY'

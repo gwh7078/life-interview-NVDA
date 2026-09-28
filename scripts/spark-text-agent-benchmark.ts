@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { isNatPathPassing } from './spark-benchmark-validation.js';
 
 const baseUrl = (process.env.TEXT_MODEL_BASE_URL || 'http://127.0.0.1:8000/v1').replace(/\/+$/u, '');
 const model = process.env.TEXT_MODEL || process.env.SPARK_TEXT_SERVED_MODEL || 'nvidia/Qwen3.6-35B-A3B-NVFP4';
@@ -146,19 +147,23 @@ const structured = await structuredOutput();
 const agentPaths: Record<string, unknown>[] = [];
 for (const caseId of cases) {
   const result = await runNat(caseId);
+  const validation = result.validation ?? {};
   agentPaths.push({
     case_id: caseId,
     status: result.status,
     latency_ms: result?.metrics?.latency_ms ?? result?.runtime?.latencyMs ?? null,
     attempt_count: result?.metrics?.attempt_count ?? null,
     repair_count: result?.metrics?.repair_count ?? null,
-    contract_valid: result?.validation?.contract_valid ?? null,
-    semantic_valid: result?.validation?.semantic_valid ?? null,
+    contract_valid: validation.contract_valid ?? null,
+    backend_validation: validation.backend_validation ?? null,
+    semantic_valid: validation.semantic_valid ?? null,
+    semantic_checks: validation.semantic_checks ?? null,
+    validation_passed: isNatPathPassing(result),
   });
 }
 
 const report = {
-  status: agentPaths.every((row: any) => row.status === 'succeeded') ? 'PASS' : 'FAIL',
+  status: agentPaths.every((row: any) => row.validation_passed === true) ? 'PASS' : 'FAIL',
   model,
   iterations,
   streaming: {
@@ -173,3 +178,4 @@ const report = {
   task_latency_ms: Object.fromEntries(agentPaths.map((row: any) => [row.case_id, row.latency_ms])),
 };
 process.stdout.write(`${JSON.stringify(report)}\n`);
+if (report.status !== 'PASS') process.exitCode = 1;

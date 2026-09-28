@@ -4,6 +4,7 @@ import type {
   CoachGateResult,
   CoachResolveInput,
 } from '../src/realtime/coach/types.js';
+import { isCoachGatePassing } from './spark-benchmark-validation.js';
 
 const iterations = process.argv.includes('--once')
   ? 1
@@ -86,6 +87,7 @@ for (const entry of gateCases) {
     expected_route: entry.expected,
     samples,
     observed_routes: [...new Set(samples.map((sample) => sample.route))],
+    status: isCoachGatePassing(entry.expected, samples, 2_000) ? 'PASS' : 'FAIL',
   });
 }
 
@@ -135,8 +137,9 @@ for (const kind of ['memory', 'era', 'dual'] as const) {
   resolves.push({ route: kind, samples });
 }
 
-process.stdout.write(`${JSON.stringify({
-  status: 'PASS',
+const gateStatus = gates.every((gate: any) => gate.status === 'PASS') ? 'PASS' : 'FAIL';
+const report = {
+  status: gateStatus,
   model: process.env.REALTIME_COACH_MODEL || process.env.SPARK_COACH_SERVED_MODEL || 'Qwen/Qwen3-8B',
   iterations,
   gate: {
@@ -151,4 +154,6 @@ process.stdout.write(`${JSON.stringify({
     routes: resolves,
   },
   total_deadline_ms: 6_000,
-})}\n`);
+};
+process.stdout.write(`${JSON.stringify(report)}\n`);
+if (report.status !== 'PASS') process.exitCode = 1;

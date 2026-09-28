@@ -1,0 +1,36 @@
+                       SkillEvaluator Validation Results                        
+┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Validator        ┃   Status   ┃ Details                                      ┃
+┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Similarity Check │ INCOMPLETE │ embedding-provider did not complete (1       │
+│                  │            │ errors)                                      │
+└──────────────────┴────────────┴──────────────────────────────────────────────┘
+
+╭─────────────────╮
+│ Failure Details │
+╰─────────────────╯
+
+[Similarity Check]
+Detect duplicate content via embedding similarity
+[INCOMPLETE] embedding-provider did not complete
+
+Summary:
+  • Errors: 1
+
+Execution errors:
+  • Embedding provider error: No provider is configured.
+
+For NVIDIA Build, set:
+  export SKILL_EVAL_EMBEDDING_PROVIDER=nv_build
+  export NVIDIA_API_KEY='your-api-key'
+  Get a key: https://build.nvidia.com
+
+Other SKILL_EVAL_EMBEDDING_PROVIDER values and their keys:
+  openai     -> OPENAI_API_KEY
+
+More providers and setup options:
+  https://docs.nvidia.com/skills/skillevaluator/configuration
+
+[INCOMPLETE] Validation evidence is incomplete
+
+Error: similarity check failed

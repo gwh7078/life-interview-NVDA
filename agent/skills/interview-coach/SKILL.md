@@ -1,6 +1,9 @@
 ---
 name: interview-coach
-description: Guide realtime memoir interviews with a low-latency Gate → optional Retrieval → Resolve loop. Use after each final user turn in supported realtime interview modes; do not use for post-session closeout or story writing.
+version: 1.0.0
+description: Guide the next turn of a live memoir interview. Use after final user turns in onboarding, Story, or contributor modes; not for closeout or story writing.
+metadata:
+  tags: [life-interview, realtime, coaching, retrieval, follow-up]
 ---
 
 # Interview Coach
@@ -66,7 +69,7 @@ Coach Gate
 
 - May guide or correct the interviewer.
 - Must not retrieve the protagonist's private Personal Memory.
-- Must not retrieve Era Context unless the product policy explicitly enables it for this mode.
+- The current runtime does not enable Personal Memory or Era Context retrieval in this mode.
 - Never expose private protagonist information to the contributor.
 
 ## Gate
@@ -186,7 +189,7 @@ The Skill/runtime separation is therefore:
 ~~~text
 Skill:   interview-coach
 Runtime: custom low-latency realtime runtime
-Model:   Qwen3-8B Coach
+Model:   `REALTIME_COACH_MODEL` (default: `qwen3-8b`)
 Tools:   conditional Personal Memory / Era Retrieval
 Client:  realtime voice model
 ~~~
