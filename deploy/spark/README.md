@@ -2,17 +2,72 @@
 
 This directory is deployment-only. Product code remains shared with Mac.
 
-## One-command path
+## Three deployment operations
 
 ```bash
 git clone https://github.com/gwh7078/life-interview-NVDA.git
 cd life-interview-NVDA
 git checkout spark
 ./deploy/spark/install.sh
-./deploy/spark/verify.sh
 ```
 
-After this branch is merged to the final competition branch, the explicit checkout is no longer needed.
+`install.sh` is the first-machine one-command flow: Runtime artifact prefetch,
+Text/Coach startup, Base bootstrap, Retriever startup, Product update, full
+start and verify. Text is ready before first NemoClaw onboarding so OpenClaw
+uses the existing local vLLM service rather than installing a separate model.
+It already runs `verify.sh`.
+
+Daily Product development:
+
+```bash
+git pull
+./deploy/spark/update.sh
+```
+
+`update.sh` applies Product dependencies, migrations, changed Skills and Era
+data, validates the Product, and restarts Backend/Web plus Observer. It never
+installs or upgrades Spark Base and never starts or restarts Text, Coach, Voice,
+Retriever or NemoClaw Runtime services. If Base inputs are incompatible, it
+fails with the required `bootstrap.sh` command.
+
+Model changes stay in the Spark Runtime profile:
+
+```bash
+./deploy/spark/models.sh status
+./deploy/spark/models.sh sync text       # or coach / voice; fetch the selected artifacts
+./deploy/spark/restart.sh text           # or coach / voice
+```
+
+`models.sh prefetch [text|coach|voice]` downloads only the selected Runtime
+artifacts. Container `spec_hash` reconciliation recreates only a service whose
+image, model or runtime arguments changed. `SPARK_TEXT_MODEL` and
+`SPARK_COACH_MODEL` select model artifacts; their `*_SERVED_MODEL` values keep
+the Product-facing API route stable when the underlying model changes. Changing
+Text also refreshes the NemoClaw route after its selective restart; it does not
+reinstall the NemoClaw Base. `models.sh sync` only prepares the selected model;
+the following restart applies its container spec and does not restart other
+models.
+
+## Spark Base
+
+`install.sh` invokes `bootstrap.sh` during first setup after Text is ready. On a
+configured Spark, run `bootstrap.sh` only for a real Base upgrade:
+
+```bash
+./deploy/spark/bootstrap.sh
+./deploy/spark/verify-base.sh
+```
+
+`verify-base.sh` checks ARM64/GPU/Docker GPU, the host toolchain, NemoClaw /
+OpenShell, the Base fingerprint and persistent paths. It has no dependency on
+current model IDs, database contents or Skills. A Spark `PASS` is the Base
+freeze point; `NOT TESTED - REQUIRES DGX SPARK` is not a pass.
+
+The Base fingerprint covers the host architecture, GPU/driver, Docker/NVIDIA
+Runtime, Base version inputs, managed tool versions, generic vLLM image and Base
+setup scripts. It does not include Git HEAD or the full Spark `.env`. Text,
+Coach and Voice use separate container specifications; formal Skills and
+Product dependencies have their own content/lockfile fingerprints.
 
 ## Before renting Spark
 
@@ -75,23 +130,48 @@ it does not mount `memoir.db` or the repository into the sandbox. The persistent
 token-signing secret is generated into untracked `deploy/spark/.env`; each Agent
 run still receives only its normal short-lived scoped retrieval token.
 
-## Lifecycle
+## Selective service operations
 
 ```bash
 ./deploy/spark/preflight.sh
 ./deploy/spark/start.sh
 ./deploy/spark/status.sh
-./deploy/spark/restart.sh
+./deploy/spark/restart.sh all
+./deploy/spark/restart.sh product
+./deploy/spark/restart.sh backend
+./deploy/spark/restart.sh text
+./deploy/spark/restart.sh coach
+./deploy/spark/restart.sh voice
+./deploy/spark/restart.sh retriever
+./deploy/spark/restart.sh nemoclaw
 ./deploy/spark/benchmark.sh
 ./deploy/spark/stop.sh
 ```
 
-Runtime state, logs, diagnostics, caches and benchmarks live under `runtime/` or
-user cache directories and are not committed. Stop/restart never deletes SQLite,
-Retriever data, model caches, NemoClaw sandboxes or user data. Re-running
-`install.sh` while this deployment is already live is supported: preflight
-allows only ports belonging to services this profile can positively observe as
-RUNNING; any other occupied target port still fails closed.
+The default `restart.sh` target remains `all`. Use `product` or a named service
+to avoid restarting unrelated models.
+
+## Persistent paths and data
+
+`SPARK_HOME` defaults to `$HOME/.local/share/life-interview/spark`. It holds
+bootstrapped tools, Base state, PIDs, runtime state, Retriever data and the
+Spark SQLite database (`$SPARK_HOME/data/memoir.db`). HF/NGC model caches keep
+using `HF_HOME`, `MODEL_CACHE` and `NGC_CACHE`. Diagnostics, logs and benchmark
+evidence remain under the Product checkout's `runtime/` for easy archiving.
+If an older checkout has `data/memoir.db`, `update.sh` copies it using SQLite's
+backup API, verifies integrity and retains the original; conflicting old and
+new databases stop the update without overwriting either file. Existing
+Retriever data from the former `runtime/retriever` path is copied into an empty
+`SPARK_HOME` Retriever directory on first start; the source remains in place.
+If both old and persistent SQLite files differ, `update.sh` stops without
+choosing one and leaves Backend/Observer stopped until `DATABASE_PATH` is
+resolved, preventing service startup against the wrong copy.
+
+This path policy is Spark-only. Mac setup and its per-Worktree database path
+remain unchanged. Stop/restart never deletes SQLite, Retriever data, model
+caches, NemoClaw sandboxes or user data. Re-running `install.sh` while the
+deployment is live is supported: preflight allows ports owned by services this
+profile can positively identify; unrelated occupied target ports fail closed.
 
 ## Spark-day order
 

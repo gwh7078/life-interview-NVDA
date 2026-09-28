@@ -107,11 +107,11 @@ PY
   rm -f "$stdout" "$stderr"
 }
 
-run_json text node --import tsx scripts/spark-text-agent-benchmark.ts
-run_json coach node --import tsx scripts/spark-coach-benchmark.ts
-run_json retriever node --import tsx scripts/spark-retriever-benchmark.ts
-run_json realtime node --import tsx scripts/spark-realtime-benchmark.ts
-run_json concurrency node --import tsx scripts/spark-concurrency-benchmark.ts
+run_json text bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-text-agent-benchmark.ts
+run_json coach bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-coach-benchmark.ts
+run_json retriever bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-retriever-benchmark.ts
+run_json realtime bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-benchmark.ts
+run_json concurrency bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-concurrency-benchmark.ts
 
 if (( voice_load_status )); then
   overall_fail=1

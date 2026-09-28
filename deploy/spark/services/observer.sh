@@ -12,7 +12,7 @@ case "${1:-status}" in
     nohup python3 "$DIR/services/telemetry.py" >>"$SPARK_LOG_DIR/observer.log" 2>&1 &
     write_pid "$name" "$!"
     ;;
-  stop) p="$(read_pid "$name")"; [[ "$p" =~ ^[0-9]+$ ]] && kill "$p" 2>/dev/null || true; clear_pid "$name" ;;
+  stop) stop_owned_process "$name" ;;
   status) pid_running "$name" && echo RUNNING || echo STOPPED ;;
   *) echo "usage: $0 {start|stop|status}" >&2; exit 2 ;;
 esac

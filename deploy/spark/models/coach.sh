@@ -4,12 +4,15 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "$DIR/lib/common.sh"
 . "$DIR/lib/ports.sh"
 
-image="${SPARK_VLLM_IMAGE:-nvcr.io/nvidia/vllm@sha256:9204569b17ee4c0eff75194b8e6e458479c8aee18953b5ab9cf359fcdac659e2}"
+image="${SPARK_VLLM_IMAGE:-${SPARK_BASE_VLLM_IMAGE:-nvcr.io/nvidia/vllm@sha256:9204569b17ee4c0eff75194b8e6e458479c8aee18953b5ab9cf359fcdac659e2}}"
 model="${SPARK_COACH_MODEL:-Qwen/Qwen3-8B}"
+served_model="$SPARK_COACH_SERVED_MODEL"
 name="${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
 max_len="${SPARK_COACH_MAX_MODEL_LEN:-8192}"
 gpu_util="${SPARK_COACH_GPU_MEMORY_UTILIZATION:-0.18}"
-spec="$(spec_hash "$image" "$model" "$max_len" "$gpu_util" "$SPARK_COACH_PORT")"
+runtime_args=(vllm serve "$model" --served-model-name "$served_model" --max-model-len "$max_len"
+  --gpu-memory-utilization "$gpu_util" --reasoning-parser qwen3 --disable-log-requests)
+spec="$(spec_hash "$image" "$SPARK_COACH_PORT" "${runtime_args[@]}")"
 
 case "${1:-status}" in
   prefetch)
@@ -26,7 +29,7 @@ case "${1:-status}" in
       args=(run -d --name "$name" --label "life-interview.spark.spec=$spec" --gpus all --ipc host --ulimit memlock=-1 --ulimit stack=67108864
         -p "$SPARK_COACH_PORT:8000" -v "$HF_HOME:/root/.cache/huggingface" --entrypoint "")
       [[ -n "${HF_TOKEN:-}" ]] && args+=(-e HF_TOKEN)
-      docker "${args[@]}" "$image" vllm serve "$model" --served-model-name "$model"         --max-model-len "$max_len"         --gpu-memory-utilization "$gpu_util"         --reasoning-parser qwen3         --disable-log-requests
+      docker "${args[@]}" "$image" "${runtime_args[@]}"
     fi
     "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_COACH_PORT/health" "${SPARK_COACH_START_TIMEOUT_S:-900}"
     ;;

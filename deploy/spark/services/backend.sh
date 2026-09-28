@@ -17,7 +17,7 @@ case "${1:-status}" in
     export HOST="127.0.0.1" PORT="${PORT:-$SPARK_BACKEND_PORT}"
     export AGENT_RETRIEVAL_BASE_URL="http://$host_ip:$SPARK_AGENT_RETRIEVAL_PORT"
 
-    start_one backend backend.log node --env-file-if-exists=.env --import tsx src/server.ts
+    start_one backend backend.log bash scripts/codex-node.sh node --env-file-if-exists=.env --import tsx src/server.ts
     "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_BACKEND_PORT/api/health" 120
 
     if ! pid_running agent-retrieval-proxy; then
@@ -30,11 +30,11 @@ case "${1:-status}" in
     "$DIR/lib/wait-for.sh" "http://$host_ip:$SPARK_AGENT_RETRIEVAL_PORT/health" 30
     ;;
   stop)
+    failed=0
     for n in backend agent-retrieval-proxy; do
-      p="$(read_pid "$n")"
-      [[ "$p" =~ ^[0-9]+$ ]] && kill "$p" 2>/dev/null || true
-      clear_pid "$n"
+      if ! stop_owned_process "$n"; then failed=1; fi
     done
+    (( failed == 0 ))
     ;;
   status)
     curl -fsS --noproxy '*' "http://127.0.0.1:$SPARK_BACKEND_PORT/api/health" >/dev/null 2>&1 && echo RUNNING || echo STOPPED

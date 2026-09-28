@@ -24,7 +24,7 @@ def gate(gid,name,command,requires_spark=True,timeout=900):
         path.write_text(NOT_TESTED+"\n")
         return {"id":gid,"name":name,"status":NOT_TESTED,"duration_ms":0,"evidence_file":str(path.relative_to(root)),"safe_error":None}
     try:
-        p=subprocess.run(["bash","-lc",command],cwd=root,text=True,capture_output=True,timeout=timeout,env=os.environ.copy())
+        p=subprocess.run(["bash","-c",command],cwd=root,text=True,capture_output=True,timeout=timeout,env=os.environ.copy())
         out=redact((p.stdout or "")+(("\n"+p.stderr) if p.stderr else ""))
         path.write_text(out[-100000:])
         status="PASS" if p.returncode==0 else "FAIL"
@@ -40,20 +40,20 @@ text_model=os.getenv("SPARK_TEXT_MODEL","nvidia/Qwen3.6-35B-A3B-NVFP4")
 sandbox=os.getenv("NEMOCLAW_SANDBOX","my-assistant")
 db=os.getenv("DATABASE_PATH","data/memoir.db")
 gates=[
- gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')} && {q(spark_dir/'lib/docker-gpu-smoke.sh')}"),
- gate("G1","Dependencies","node --version && npm --version && python3 --version && docker --version",False,60),
+ gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')} --report-only && {q(spark_dir/'lib/docker-gpu-smoke.sh')}"),
+ gate("G1","Dependencies","bash scripts/codex-node.sh node --version && bash scripts/codex-node.sh npm --version && python3 --version && docker --version",False,60),
  gate("G2","Local Text Model",f"python3 {q(spark_dir/'lib/openai-smoke.py')} http://127.0.0.1:{os.getenv('SPARK_TEXT_PORT','8000')}/v1 {q(text_model)}",True,180),
  gate("G3","NemoClaw / OpenShell / Skills",f"test \"$({q(spark_dir/'services/nemoclaw.sh')} status)\" = RUNNING && nemoclaw {q(sandbox)} skill list && {q(spark_dir/'services/nemoclaw.sh')} smoke",True,360),
- gate("G4","Private Retriever + Agent retrieval boundary","node --import tsx scripts/spark-retriever-smoke.ts && node --import tsx scripts/spark-agent-retrieval-smoke.ts",True,420),
- gate("G5","Era Context","npm run era:index && npm run era:benchmark",True,600),
- gate("G6","Coach","npm run test:realtime:coach:live",True,180),
+ gate("G4","Private Retriever + Agent retrieval boundary","bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-retriever-smoke.ts && bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-agent-retrieval-smoke.ts",True,420),
+ gate("G5","Era Context","bash scripts/codex-node.sh npm run era:index && bash scripts/codex-node.sh npm run era:benchmark",True,600),
+ gate("G6","Coach","bash scripts/codex-node.sh npm run test:realtime:coach:live",True,180),
  gate("G7","Step-Audio model load",f"curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_BACKEND_PORT','8010')}/health && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_STEPAUDIO_HEALTH_PORT','8093')}/health",True,60),
- gate("G8","Audio-to-audio / streaming","node --import tsx scripts/spark-realtime-bridge-smoke.ts",True,300),
- gate("G9","Realtime Provider E2E","node --import tsx scripts/spark-realtime-provider-e2e.ts",True,600),
+ gate("G8","Audio-to-audio / streaming","bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-bridge-smoke.ts",True,300),
+ gate("G9","Realtime Provider E2E","bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-realtime-provider-e2e.ts",True,600),
  gate("G10","Backend + Web + DB",f"test -f {q(db)} && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_BACKEND_PORT','4174')}/api/health && curl -fsS --noproxy '*' http://127.0.0.1:{os.getenv('SPARK_BACKEND_PORT','4174')}/ >/dev/null",True,60),
- gate("G11","Interview + Closeout","npm run test:closeout:real",True,600),
- gate("G12","Completion / Continue / Contributor / Generation","npm run test:agent:nat:eval",True,900),
- gate("G13","NAT","npm run test:agent:nat:smoke",True,600),
+ gate("G11","Interview + Closeout","bash scripts/codex-node.sh npm run test:closeout:real",True,600),
+ gate("G12","Completion / Continue / Contributor / Generation","bash scripts/codex-node.sh npm run test:agent:nat:eval",True,900),
+ gate("G13","NAT","bash scripts/codex-node.sh npm run test:agent:nat:smoke",True,600),
  gate("G14","Technical Observer",f"test \"$({q(spark_dir/'services/observer.sh')} status)\" = RUNNING && python3 -c 'import json; d=json.load(open(\"runtime/diagnostics/spark/telemetry.json\")); assert d[\"platform\"]==\"dgx-spark\"; assert d[\"system_memory\"][\"total_bytes\"] is not None; assert d[\"gpu\"][\"utilization_pct\"] is None or d[\"gpu\"][\"utilization_pct\"] >= 0'",True,60),
 ]
 summary={"captured_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"dgx_spark_detected":is_spark,"gates":gates}
