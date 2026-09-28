@@ -7,16 +7,39 @@ SPARK_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SPARK_DIR/lib/ports.sh"
 
 report_only=0
+allow_owned_ports=0
 allow_busy_ports=()
 while (( $# )); do
   case "$1" in
     --report-only) report_only=1; shift ;;
+    --allow-owned-ports) allow_owned_ports=1; shift ;;
     --allow-busy-port)
       [[ "${2:-}" =~ ^[0-9]+$ ]] || { echo "--allow-busy-port requires a numeric port" >&2; exit 2; }
       allow_busy_ports+=("$2"); shift 2 ;;
-    *) echo "usage: $0 [--report-only] [--allow-busy-port PORT ...]" >&2; exit 2 ;;
+    *) echo "usage: $0 [--report-only] [--allow-owned-ports] [--allow-busy-port PORT ...]" >&2; exit 2 ;;
   esac
 done
+
+if (( allow_owned_ports )); then
+  running_containers="$(docker ps --format '{{.Names}}' 2>/dev/null || true)"
+  container_running() { grep -Fqx "$1" <<<"$running_containers"; }
+  allow_if_owned() {
+    local port="$1" container="${2:-}" process="${3:-}"
+    if { [[ -n "$container" ]] && container_running "$container"; } \
+      || { [[ -n "$process" ]] && pid_running "$process"; }; then
+      allow_busy_ports+=("$port")
+    fi
+  }
+  allow_if_owned "$SPARK_TEXT_PORT" "${SPARK_TEXT_CONTAINER:-life-interview-spark-text}"
+  allow_if_owned "$SPARK_COACH_PORT" "${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
+  allow_if_owned "$SPARK_STEPAUDIO_BACKEND_PORT" "${SPARK_STEPAUDIO_CONTAINER:-life-interview-spark-stepaudio}" stepaudio-backend
+  allow_if_owned "$SPARK_STEPAUDIO_WS_PORT" "${SPARK_STEPAUDIO_BRIDGE_CONTAINER:-life-interview-spark-stepaudio-bridge}" stepaudio-bridge
+  allow_if_owned "$SPARK_STEPAUDIO_HEALTH_PORT" "${SPARK_STEPAUDIO_BRIDGE_CONTAINER:-life-interview-spark-stepaudio-bridge}" stepaudio-bridge
+  allow_if_owned "$SPARK_RETRIEVER_PORT" "${SPARK_RETRIEVER_CONTAINER:-life-interview-spark-retriever}"
+  allow_if_owned "$SPARK_VECTORDB_PORT" "${SPARK_RETRIEVER_CONTAINER:-life-interview-spark-retriever}"
+  allow_if_owned "$SPARK_BACKEND_PORT" "" backend
+  allow_if_owned "$SPARK_AGENT_RETRIEVAL_PORT" "" agent-retrieval-proxy
+fi
 allowed_busy_csv="$(IFS=,; printf '%s' "${allow_busy_ports[*]-}")"
 
 python3 - "$SPARK_DIAGNOSTICS_DIR" "$report_only" "$allowed_busy_csv" \
@@ -67,6 +90,9 @@ os_release = Path("/etc/os-release").read_text(errors="replace") if Path("/etc/o
 smi = cmd(["nvidia-smi"]) if shutil.which("nvidia-smi") else {"ok":False,"stdout":"","stderr":"missing"}
 docker_version = version(["docker","--version"]) if shutil.which("docker") else None
 docker_info = cmd(["docker","info"]) if shutil.which("docker") else {"ok":False,"stdout":"","stderr":"missing"}
+docker_runtime = cmd(["docker","info","--format","{{.DefaultRuntime}}|{{json .Runtimes}}"])
+gpu_info = cmd(["nvidia-smi","--query-gpu=name,driver_version","--format=csv,noheader"]) if smi["ok"] else {"ok":False,"stdout":""}
+gpu_fields = [part.strip() for part in gpu_info["stdout"].splitlines()[0].split(",",1)] if gpu_info.get("stdout","").strip() else []
 python_ver = version(["python3","--version"]) if shutil.which("python3") else None
 node_ver = version(["node","--version"]) if shutil.which("node") else None
 required_tools = ["curl","git","tar","xz","sha256sum","awk"]
@@ -124,12 +150,20 @@ checks["credentials"] = {name:("present" if os.getenv(name) else "missing") for 
     "HF_TOKEN","NGC_API_KEY","NVIDIA_API_KEY","NVIDIA_INFERENCE_API_KEY"
 ]}
 
+hard = ["architecture_arm64","nvidia_gpu","docker","python","python_venv","system_tools","memory","disk","ports"]
+failed = [name for name in hard if checks[name]["status"] == "FAIL"]
+
 versions = {
     "captured_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "architecture": arch,
     "product_identity": product.strip() or None,
     "kernel": platform.release(),
     "docker": docker_version,
+    "docker_gpu_runtime": docker_runtime["stdout"].strip() or None,
+    "gpu": gpu_fields[0] if gpu_fields else None,
+    "driver": gpu_fields[1] if len(gpu_fields) > 1 else None,
+    "system_memory_gb": mem_gb,
+    "free_disk_gb": disk_gb,
     "python": python_ver,
     "node": node_ver,
     "deployment": {
@@ -154,6 +188,7 @@ report = {
         "lsblk": lsblk["stdout"].strip() or lsblk["stderr"].strip(),
     },
     "checks": checks,
+    "hard_checks": {"required":hard,"failed":failed},
 }
 (out/"preflight.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 (out/"versions.json").write_text(json.dumps(versions,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -168,9 +203,7 @@ print(json.dumps({
     "credentials":checks["credentials"],
 },ensure_ascii=False,indent=2))
 # Node is deliberately not a hard preflight gate: install.sh can bootstrap a
-# pinned Node 22 runtime after hardware validation.
-hard = ["architecture_arm64","nvidia_gpu","docker","python","python_venv","system_tools","memory","disk","ports"]
-failed = [k for k in hard if checks[k]["status"] == "FAIL"]
+# pinned Node runtime after hardware validation.
 if failed and not report_only:
     print("preflight failed: "+",".join(failed), file=sys.stderr)
     raise SystemExit(1)

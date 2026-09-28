@@ -11,15 +11,19 @@ source_dir="${SPARK_STEPAUDIO_SOURCE_DIR:-$MODEL_CACHE/sources/Step-Audio2}"
 source_ref="${SPARK_STEPAUDIO_SOURCE_REF:-76e272b56c3917a8d7188f18bbb5a65dfc8a0845}"
 model_dir="${SPARK_STEPAUDIO_MODEL_DIR:-$MODEL_CACHE/stepfun-ai/Step-Audio-2-mini}"
 model_identity="${SPARK_STEPAUDIO_MODEL_NAME:-step-audio-2-mini}"
+gpu_util="${SPARK_STEPAUDIO_GPU_MEMORY_UTILIZATION:-0.12}"
+export SPARK_STEPAUDIO_GPU_MEMORY_UTILIZATION="$gpu_util"
+backend_publish="127.0.0.1:$SPARK_STEPAUDIO_BACKEND_PORT:8000"
 bridge_file="$SPARK_RUNTIME_DIR/bridge/stepaudio2_bridge.py"
 manifest_file="$SPARK_DIAGNOSTICS_DIR/stepaudio-image-manifest.json"
 backend_args=(vllm serve /Step-Audio-2-mini --served-model-name "$model_identity" --port 8000
+  --gpu-memory-utilization "$gpu_util"
   --max-model-len "${SPARK_STEPAUDIO_MAX_MODEL_LEN:-16384}"
   --max-num-seqs "${SPARK_STEPAUDIO_MAX_NUM_SEQS:-4}"
   --tensor-parallel-size 1 --enable-auto-tool-choice --tool-call-parser step_audio_2
   --tokenizer-mode step_audio_2 --chat_template_content_format string
   --audio-parser step_audio_2_tts_ta4 --trust-remote-code --disable-log-requests)
-backend_spec="$(spec_hash "$image" "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_dir" "$SPARK_STEPAUDIO_BACKEND_PORT" "${backend_args[@]}")"
+backend_spec="$(spec_hash linux/arm64 "$image" "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_dir" "$backend_publish" "${backend_args[@]}")"
 bridge_impl_hash="$(spark_path_fingerprint "$DIR/services/stepaudio2_bridge.py")"
 bridge_spec="$(spec_hash bridge-v1 "$image" "$source_ref" "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_identity" "$source_dir" "$model_dir" "$SPARK_STEPAUDIO_BACKEND_PORT" "$SPARK_STEPAUDIO_WS_PORT" "$SPARK_STEPAUDIO_HEALTH_PORT" "${SPARK_STEPAUDIO_BRIDGE_HOST:-127.0.0.1}" "${SPARK_STEPAUDIO_MAX_TURN_BYTES:-8640000}" "${SPARK_STEPAUDIO_TOKEN_CHUNK:-25}" "$bridge_impl_hash")"
 
@@ -31,16 +35,62 @@ sync_bridge_source() {
 }
 
 arm64_image() {
-  local local_arch
-  local_arch="$(docker image inspect -f '{{.Architecture}}' "$image" 2>/dev/null || true)"
-  if [[ "$local_arch" == "arm64" || "$local_arch" == "aarch64" ]]; then
+  local local_platform
+  local_platform="$(docker image inspect -f '{{.Os}}/{{.Architecture}}' "$image" 2>/dev/null || true)"
+  if [[ "$local_platform" == "linux/arm64" || "$local_platform" == "linux/aarch64" ]]; then
     return 0
   fi
-  docker manifest inspect "$image" >"$manifest_file" 2>/dev/null || return 1
-  grep -Eq '"architecture"[[:space:]]*:[[:space:]]*"arm64"|"architecture"[[:space:]]*:[[:space:]]*"aarch64"' "$manifest_file"
+  docker manifest inspect --verbose "$image" >"$manifest_file" 2>/dev/null || return 1
+  python3 - "$manifest_file" <<'PY'
+import json,sys
+from pathlib import Path
+try:
+    manifest=json.loads(Path(sys.argv[1]).read_text())
+except (OSError,json.JSONDecodeError):
+    raise SystemExit(1)
+def has_linux_arm64(value):
+    if isinstance(value,dict):
+        platform=value.get("Platform",value.get("platform"))
+        if isinstance(platform,dict) and platform.get("os")=="linux" and platform.get("architecture") in {"arm64","aarch64"}:
+            return True
+        return any(has_linux_arm64(child) for child in value.values())
+    if isinstance(value,list):
+        return any(has_linux_arm64(child) for child in value)
+    return False
+raise SystemExit(0 if has_linux_arm64(manifest) else 1)
+PY
+}
+
+runtime_mode() {
+  if arm64_image; then
+    printf '%s\n' DOCKER_ARM64
+  elif [[ -n "${SPARK_STEPAUDIO_NATIVE_START_CMD:-}" ]]; then
+    printf '%s\n' NATIVE_FALLBACK
+  else
+    printf '%s\n' \
+      "StepAudio runtime is not ready for DGX Spark:" \
+      "Docker image does not provide a verified linux/arm64 runtime and" \
+      "SPARK_STEPAUDIO_NATIVE_START_CMD is not configured." >&2
+    return 1
+  fi
+}
+
+pull_arm64_image() {
+  local local_platform
+  local_platform="$(docker image inspect -f '{{.Os}}/{{.Architecture}}' "$image" 2>/dev/null || true)"
+  if [[ "$local_platform" != "linux/arm64" && "$local_platform" != "linux/aarch64" ]]; then
+    docker pull --platform linux/arm64 "$image"
+  fi
+  local_platform="$(docker image inspect -f '{{.Os}}/{{.Architecture}}' "$image" 2>/dev/null || true)"
+  [[ "$local_platform" == "linux/arm64" || "$local_platform" == "linux/aarch64" ]] \
+    || die "StepAudio image pull did not produce a local linux/arm64 image."
 }
 
 prefetch() {
+  local mode
+  mode="$(runtime_mode)"
+  log "StepAudio runtime readiness: $mode"
+  if [[ "$mode" == "DOCKER_ARM64" ]]; then pull_arm64_image; fi
   mkdir -p "$(dirname "$source_dir")" "$model_dir"
   if [[ ! -d "$source_dir/.git" ]]; then
     git clone https://github.com/stepfun-ai/Step-Audio2.git "$source_dir"
@@ -51,10 +101,6 @@ prefetch() {
     hf_download "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_dir"
   fi
   python3 "$DIR/fixtures/generate.py" "$source_dir" "$SPARK_BENCH_DIR/fixtures"
-  docker manifest inspect "$image" >"$manifest_file" 2>/dev/null || true
-  if arm64_image; then docker_pull_cached "$image"; else
-    warn "StepFun image does not currently prove linux/arm64 support. Native runtime path remains available via SPARK_STEPAUDIO_NATIVE_START_CMD."
-  fi
 }
 
 start_docker() {
@@ -62,7 +108,7 @@ start_docker() {
   reconcile_container_spec "$bridge_name" "$bridge_spec"
   if ! docker ps --format '{{.Names}}' | grep -qx "$backend_name"; then
     if docker ps -a --format '{{.Names}}' | grep -qx "$backend_name"; then docker start "$backend_name" >/dev/null; else
-      docker run -d --name "$backend_name" --label "life-interview.spark.spec=$backend_spec" --gpus all -v "$model_dir:/Step-Audio-2-mini:ro"         -p "$SPARK_STEPAUDIO_BACKEND_PORT:8000" "$image" -- "${backend_args[@]}"
+      docker run -d --platform linux/arm64 --name "$backend_name" --label "life-interview.spark.spec=$backend_spec" --gpus all -v "$model_dir:/Step-Audio-2-mini:ro"         -p "$backend_publish" "$image" -- "${backend_args[@]}"
     fi
   fi
   "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_STEPAUDIO_BACKEND_PORT/health" "${SPARK_STEPAUDIO_START_TIMEOUT_S:-1200}"
@@ -82,7 +128,7 @@ start_native() {
   local backend_native_spec bridge_native_spec backend_spec_file bridge_spec_file current_spec bridge_cmd p
   sync_bridge_source
   bridge_cmd="${SPARK_STEPAUDIO_NATIVE_BRIDGE_CMD:-python3 '$bridge_file'}"
-  backend_native_spec="$(spec_hash "$SPARK_STEPAUDIO_NATIVE_START_CMD" "$source_ref" "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_dir" "$SPARK_STEPAUDIO_BACKEND_PORT" "${SPARK_STEPAUDIO_MAX_MODEL_LEN:-16384}" "${SPARK_STEPAUDIO_MAX_NUM_SEQS:-4}")"
+  backend_native_spec="$(spec_hash "$SPARK_STEPAUDIO_NATIVE_START_CMD" "$source_ref" "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_dir" "$backend_publish" "$gpu_util" "${SPARK_STEPAUDIO_MAX_MODEL_LEN:-16384}" "${SPARK_STEPAUDIO_MAX_NUM_SEQS:-4}")"
   bridge_native_spec="$(spec_hash "$bridge_cmd" "$source_ref" "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-Audio-2-mini}" "$model_identity" "$source_dir" "$model_dir" "$SPARK_STEPAUDIO_BACKEND_PORT" "$SPARK_STEPAUDIO_WS_PORT" "$SPARK_STEPAUDIO_HEALTH_PORT" "${SPARK_STEPAUDIO_BRIDGE_HOST:-127.0.0.1}" "${SPARK_STEPAUDIO_MAX_TURN_BYTES:-8640000}" "${SPARK_STEPAUDIO_TOKEN_CHUNK:-25}" "$bridge_impl_hash")"
   backend_spec_file="$SPARK_STATE_DIR/stepaudio-backend-native.spec"
   bridge_spec_file="$SPARK_STATE_DIR/stepaudio-bridge-native.spec"
@@ -108,11 +154,39 @@ start_native() {
   printf '%s\n' "$bridge_native_spec" > "$bridge_spec_file"
 }
 
+stop_native() {
+  local name p
+  for name in stepaudio-bridge stepaudio-backend; do
+    p="$(read_pid "$name")"
+    if [[ "$p" =~ ^[0-9]+$ ]] && kill -0 "$p" 2>/dev/null; then kill "$p"; fi
+    clear_pid "$name"
+  done
+}
+
+stop_docker() {
+  local name
+  have docker || return 0
+  for name in "$bridge_name" "$backend_name"; do
+    if docker ps --format '{{.Names}}' | grep -qx "$name"; then docker stop "$name" >/dev/null; fi
+  done
+}
+
 case "${1:-status}" in
+  readiness)
+    mode="$(runtime_mode)"
+    log "StepAudio runtime readiness: $mode"
+    ;;
   prefetch) prefetch ;;
   bridge-fingerprint) printf '%s\n' "$bridge_spec" ;;
   start)
-    if arm64_image; then start_docker; else start_native; fi
+    mode="$(runtime_mode)"
+    if [[ "$mode" == "DOCKER_ARM64" ]]; then
+      stop_native
+      start_docker
+    else
+      stop_docker
+      start_native
+    fi
     ;;
   stop)
     docker stop "$bridge_name" "$backend_name" >/dev/null 2>&1 || true
@@ -120,5 +194,5 @@ case "${1:-status}" in
     ;;
   status) curl -fsS --noproxy '*' "http://127.0.0.1:$SPARK_STEPAUDIO_HEALTH_PORT/health" >/dev/null 2>&1 && echo RUNNING || echo STOPPED ;;
   manifest) arm64_image && echo ARM64_SUPPORTED || echo ARM64_NOT_PROVEN ;;
-  *) echo "usage: $0 {prefetch|start|stop|status|manifest}" >&2; exit 2 ;;
+  *) echo "usage: $0 {readiness|prefetch|start|stop|status|manifest}" >&2; exit 2 ;;
 esac

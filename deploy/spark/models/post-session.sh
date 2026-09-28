@@ -15,6 +15,7 @@ max_len="${SPARK_TEXT_MAX_MODEL_LEN:-32768}"
 gpu_util="${SPARK_TEXT_GPU_MEMORY_UTILIZATION:-0.40}"
 max_seqs="${SPARK_TEXT_MAX_NUM_SEQS:-2}"
 max_batched_tokens="${SPARK_TEXT_MAX_NUM_BATCHED_TOKENS:-4096}"
+publish="127.0.0.1:$SPARK_TEXT_PORT:8000"
 async_scheduling="${SPARK_TEXT_ASYNC_SCHEDULING:-false}"
 scheduling_flag=--no-async-scheduling
 [[ "$async_scheduling" == "true" ]] && scheduling_flag=--async-scheduling
@@ -25,7 +26,7 @@ runtime_args=(vllm serve "$model" --served-model-name "$served_model" --max-mode
   --enable-chunked-prefill "$scheduling_flag" --enable-prefix-caching
   --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser qwen3
   --load-format fastsafetensors --disable-log-requests)
-spec="$(spec_hash "$image" "$SPARK_TEXT_PORT" "${runtime_args[@]}")"
+spec="$(spec_hash "$image" "$publish" "${runtime_args[@]}")"
 
 case "${1:-status}" in
   prefetch)
@@ -43,7 +44,7 @@ case "${1:-status}" in
     else
       args=(run -d --name "$name" --label "life-interview.spark.spec=$spec" --gpus all --ipc host
         --ulimit memlock=-1 --ulimit stack=67108864
-        -p "$SPARK_TEXT_PORT:8000"
+        -p "$publish"
         -v "$HF_HOME:/root/.cache/huggingface"
         --entrypoint "")
       [[ -n "${HF_TOKEN:-}" ]] && args+=(-e HF_TOKEN)

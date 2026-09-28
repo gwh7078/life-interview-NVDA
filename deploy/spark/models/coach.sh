@@ -10,9 +10,10 @@ served_model="$SPARK_COACH_SERVED_MODEL"
 name="${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
 max_len="${SPARK_COACH_MAX_MODEL_LEN:-8192}"
 gpu_util="${SPARK_COACH_GPU_MEMORY_UTILIZATION:-0.18}"
+publish="127.0.0.1:$SPARK_COACH_PORT:8000"
 runtime_args=(vllm serve "$model" --served-model-name "$served_model" --max-model-len "$max_len"
   --gpu-memory-utilization "$gpu_util" --reasoning-parser qwen3 --disable-log-requests)
-spec="$(spec_hash "$image" "$SPARK_COACH_PORT" "${runtime_args[@]}")"
+spec="$(spec_hash "$image" "$publish" "${runtime_args[@]}")"
 
 case "${1:-status}" in
   prefetch)
@@ -27,7 +28,7 @@ case "${1:-status}" in
     fi
     if docker ps -a --format '{{.Names}}' | grep -qx "$name"; then docker start "$name" >/dev/null; else
       args=(run -d --name "$name" --label "life-interview.spark.spec=$spec" --gpus all --ipc host --ulimit memlock=-1 --ulimit stack=67108864
-        -p "$SPARK_COACH_PORT:8000" -v "$HF_HOME:/root/.cache/huggingface" --entrypoint "")
+        -p "$publish" -v "$HF_HOME:/root/.cache/huggingface" --entrypoint "")
       [[ -n "${HF_TOKEN:-}" ]] && args+=(-e HF_TOKEN)
       docker "${args[@]}" "$image" "${runtime_args[@]}"
     fi

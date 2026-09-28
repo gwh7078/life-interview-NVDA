@@ -5,13 +5,14 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 if [[ "${1:-}" == "--dry-run" ]]; then
   printf '%s\n' \
     "Spark first-install plan:" \
-    "  1. prefetch Text, Coach, Voice and Retriever Runtime artifacts" \
-    "  2. start Text and Coach so first OpenClaw onboarding can reuse local vLLM" \
-    "  3. bootstrap Spark Base and verify host/NemoClaw prerequisites" \
-    "  4. start Retriever Runtime" \
-    "  5. install/update Product dependencies, database, Skills and Era index" \
-    "  6. start the full Runtime and Product profile" \
-    "  7. run the complete Spark verify gates"
+    "  1. validate host resources and StepAudio linux/arm64 or explicit native readiness" \
+    "  2. prefetch Text, Coach, Voice and Retriever Runtime artifacts" \
+    "  3. start Text and Coach so first OpenClaw onboarding can reuse local vLLM" \
+    "  4. bootstrap Spark Base and verify host/NemoClaw prerequisites" \
+    "  5. start Retriever Runtime" \
+    "  6. install/update Product dependencies, database, Skills and Era index" \
+    "  7. start the full Runtime and Product profile" \
+    "  8. run the complete Spark verify gates"
   exit 0
 fi
 [[ $# -eq 0 ]] || { echo "usage: $0 [--dry-run]" >&2; exit 2; }
@@ -69,26 +70,8 @@ PY
 }
 
 preflight_install() {
-  local args=()
-  local text_name="${SPARK_TEXT_CONTAINER:-life-interview-spark-text}"
-  local coach_name="${SPARK_COACH_CONTAINER:-life-interview-spark-coach}"
-  local voice_backend="${SPARK_STEPAUDIO_CONTAINER:-life-interview-spark-stepaudio}"
-  local voice_bridge="${SPARK_STEPAUDIO_BRIDGE_CONTAINER:-life-interview-spark-stepaudio-bridge}"
-  local retriever_name="${SPARK_RETRIEVER_CONTAINER:-life-interview-spark-retriever}"
-  if docker ps --format '{{.Names}}' | grep -qx "$text_name"; then args+=(--allow-busy-port "$SPARK_TEXT_PORT"); fi
-  if docker ps --format '{{.Names}}' | grep -qx "$coach_name"; then args+=(--allow-busy-port "$SPARK_COACH_PORT"); fi
-  if docker ps --format '{{.Names}}' | grep -qx "$voice_backend" || pid_running stepaudio-backend; then
-    args+=(--allow-busy-port "$SPARK_STEPAUDIO_BACKEND_PORT")
-  fi
-  if docker ps --format '{{.Names}}' | grep -qx "$voice_bridge" || pid_running stepaudio-bridge; then
-    args+=(--allow-busy-port "$SPARK_STEPAUDIO_WS_PORT" --allow-busy-port "$SPARK_STEPAUDIO_HEALTH_PORT")
-  fi
-  if docker ps --format '{{.Names}}' | grep -qx "$retriever_name"; then
-    args+=(--allow-busy-port "$SPARK_RETRIEVER_PORT" --allow-busy-port "$SPARK_VECTORDB_PORT")
-  fi
-  if pid_running backend; then args+=(--allow-busy-port "$SPARK_BACKEND_PORT"); fi
-  if pid_running agent-retrieval-proxy; then args+=(--allow-busy-port "$SPARK_AGENT_RETRIEVAL_PORT"); fi
-  "$DIR/preflight.sh" "${args[@]}"
+  "$DIR/preflight.sh" --allow-owned-ports
+  "$DIR/models/realtime.sh" readiness
 }
 
 run_step preflight preflight_install

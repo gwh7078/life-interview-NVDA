@@ -127,14 +127,16 @@ class SparkLifecycleTests(unittest.TestCase):
             "def save(): json.dump(state,open(state_path,'w'))\n"
             "def log(event): open(os.environ['MOCK_DOCKER_LOG'],'a').write(json.dumps(event)+'\\n')\n"
             "if args[:2]==['image','inspect']:\n"
-            " print('arm64') if '-f' in args else None; sys.exit(0)\n"
+            " print(os.environ.get('MOCK_DOCKER_PLATFORM','linux/'+os.environ.get('MOCK_DOCKER_ARCH','arm64'))) if '-f' in args else None; sys.exit(0)\n"
+            "if args[:2]==['manifest','inspect']:\n"
+            " print(os.environ.get('MOCK_DOCKER_MANIFEST','')); sys.exit(int(os.environ.get('MOCK_DOCKER_MANIFEST_CODE','0')))\n"
             "if args and args[0]=='ps':\n"
-            " running='-a' not in args; print('\\n'.join(n for n,v in state.items() if not running or v['running'])); sys.exit(0)\n"
+            " running='-a' not in args; names=[n for n,v in state.items() if not running or v['running']]; names+=os.environ.get('MOCK_OWNED_CONTAINERS','').split(',') if os.environ.get('MOCK_OWNED_CONTAINERS') else []; print('\\n'.join(names)); sys.exit(0)\n"
             "if args and args[0]=='inspect':\n"
             " print(state.get(args[-1],{}).get('spec','')); sys.exit(0)\n"
             "if args and args[0]=='run':\n"
             " name=args[args.index('--name')+1]; label=args[args.index('--label')+1]; spec=label.split('=',1)[1]\n"
-            " state[name]={'spec':spec,'running':True}; save(); log({'op':'run','name':name,'spec':spec}); print('container-id'); sys.exit(0)\n"
+            " state[name]={'spec':spec,'running':True}; save(); log({'op':'run','name':name,'spec':spec,'args':args}); print('container-id'); sys.exit(0)\n"
             "if args and args[0]=='rm':\n"
             " name=args[-1]; state.pop(name,None); save(); log({'op':'rm','name':name}); sys.exit(0)\n"
             "if args and args[0] in ('start','stop'):\n"
@@ -157,14 +159,14 @@ class SparkLifecycleTests(unittest.TestCase):
         if log is not None:
             self.env["MOCK_NEMO_LOG"] = str(log)
 
-    def run_script(self, relative, *args, env=None, check=True):
+    def run_script(self, relative, *args, env=None, check=True, timeout=20):
         result = subprocess.run(
             ["bash", str(self.repo / relative), *args],
             cwd=self.repo,
             env=env or self.env,
             text=True,
             capture_output=True,
-            timeout=20,
+            timeout=timeout,
         )
         if check and result.returncode:
             self.fail(f"{relative} failed ({result.returncode}):\n{result.stdout}\n{result.stderr}")
@@ -333,6 +335,73 @@ class SparkLifecycleTests(unittest.TestCase):
         self.assertNotEqual(second, third)
         self.assertEqual(self.git_log.read_text(), "")
 
+    def test_stepaudio_memory_budget_is_passed_and_reconciles_its_container(self):
+        self.write_fake_docker()
+        values = self.values()
+        self.env_file.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+        ports = [int(values[key]) for key in ("SPARK_STEPAUDIO_BACKEND_PORT", "SPARK_STEPAUDIO_HEALTH_PORT")]
+        self.serve(ports)
+
+        script = "deploy/spark/models/realtime.sh"
+        self.run_script(script, "start")
+        first = [json.loads(line) for line in self.docker_log.read_text().splitlines() if line]
+        backend = next(event for event in first if event.get("op") == "run" and event["name"] == "life-interview-spark-stepaudio")
+        args = backend["args"]
+        self.assertEqual(args[args.index("--gpu-memory-utilization") + 1], "0.12")
+        self.assertIn(f"127.0.0.1:{values['SPARK_STEPAUDIO_BACKEND_PORT']}:8000", args)
+
+        first_spec = backend["spec"]
+        self.docker_log.write_text("")
+        values["SPARK_STEPAUDIO_GPU_MEMORY_UTILIZATION"] = "0.14"
+        self.env_file.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+        self.run_script(script, "start")
+        second = [json.loads(line) for line in self.docker_log.read_text().splitlines() if line]
+        recreated = {event["name"] for event in second if event["op"] == "rm"}
+        second_backend = next(event for event in second if event.get("op") == "run" and event["name"] == "life-interview-spark-stepaudio")
+        self.assertEqual(recreated, {"life-interview-spark-stepaudio"})
+        self.assertNotEqual(first_spec, second_backend["spec"])
+
+    def test_stepaudio_prefetch_requires_a_verified_runtime_before_downloads(self):
+        self.write_fake_docker()
+        values = self.values()
+        source = self.tmp / "stepaudio-source"
+        model = self.tmp / "stepaudio-model"
+        (source / ".git").mkdir(parents=True)
+        model.mkdir()
+        (model / "config.json").write_text("{}", encoding="utf-8")
+        values["SPARK_STEPAUDIO_SOURCE_DIR"] = str(source)
+        values["SPARK_STEPAUDIO_MODEL_DIR"] = str(model)
+        self.env_file.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+        script = "deploy/spark/models/realtime.sh"
+
+        # A locally verified ARM64 image is ready without a native command.
+        self.env["MOCK_DOCKER_ARCH"] = "arm64"
+        passed = self.run_script(script, "readiness")
+        self.assertIn("DOCKER_ARM64", passed.stdout)
+        self.assertNotIn("NATIVE_FALLBACK", passed.stdout + passed.stderr)
+
+        # An unverified image is ready only when the user supplied a native path.
+        self.env["MOCK_DOCKER_ARCH"] = "amd64"
+        self.env["MOCK_DOCKER_MANIFEST"] = json.dumps({"manifests": [{"platform": {"os": "linux", "architecture": "arm64"}}]})
+        manifest_arm = self.run_script(script, "readiness")
+        self.assertIn("DOCKER_ARM64", manifest_arm.stdout)
+
+        self.env["MOCK_DOCKER_MANIFEST"] = json.dumps({"manifests": [{"platform": {"os": "windows", "architecture": "arm64"}}]})
+        values["SPARK_STEPAUDIO_NATIVE_START_CMD"] = "configured-by-user"
+        self.env_file.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+        fallback = self.run_script(script, "readiness")
+        self.assertIn("NATIVE_FALLBACK", fallback.stdout + fallback.stderr)
+
+        # Without either runtime, fail before touching the checked-out source.
+        values.pop("SPARK_STEPAUDIO_NATIVE_START_CMD")
+        self.env_file.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+        self.git_log.write_text("")
+        failed = self.run_script(script, "prefetch", check=False)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertIn("StepAudio runtime is not ready for DGX Spark:", failed.stderr)
+        self.assertIn("SPARK_STEPAUDIO_NATIVE_START_CMD is not configured.", failed.stderr)
+        self.assertEqual(self.git_log.read_text(), "")
+
     def test_retriever_start_does_not_initialize_collections(self):
         self.write_fake_docker()
         retriever_port, vectordb_port = [int(self.values()[k]) for k in ("SPARK_RETRIEVER_PORT", "SPARK_VECTORDB_PORT")]
@@ -340,6 +409,65 @@ class SparkLifecycleTests(unittest.TestCase):
         HealthHandler.requests = []
         self.run_script("deploy/spark/services/retriever.sh", "start")
         self.assertFalse(any(path == "/v1/collections" for _, path in HealthHandler.requests))
+        events = [json.loads(line) for line in self.docker_log.read_text().splitlines() if line]
+        run = next(event for event in events if event.get("op") == "run")
+        args = run["args"]
+        self.assertEqual(args[args.index("--network") + 1], "host")
+        self.assertIn("--host 127.0.0.1", args[-1])
+        self.assertIn("--launch-vectordb", args[-1])
+        self.assertNotIn("-p", args)
+
+    def test_text_and_coach_apis_bind_published_ports_to_loopback(self):
+        self.write_fake_docker()
+        values = self.values()
+        ports = [int(values[key]) for key in ("SPARK_TEXT_PORT", "SPARK_COACH_PORT")]
+        self.serve(ports)
+        self.run_script("deploy/spark/models/post-session.sh", "start")
+        self.run_script("deploy/spark/models/coach.sh", "start")
+        events = [json.loads(line) for line in self.docker_log.read_text().splitlines() if line]
+        mappings = {
+            event["name"]: event["args"][event["args"].index("-p") + 1]
+            for event in events if event.get("op") == "run"
+        }
+        self.assertEqual(mappings["life-interview-spark-text"], f"127.0.0.1:{values['SPARK_TEXT_PORT']}:8000")
+        self.assertEqual(mappings["life-interview-spark-coach"], f"127.0.0.1:{values['SPARK_COACH_PORT']}:8000")
+
+    def test_preflight_allows_owned_ports_and_rejects_unknown_busy_ports(self):
+        self.write_fake_docker()
+        values = self.values()
+        port = free_port()
+        values["SPARK_TEXT_PORT"] = str(port)
+        self.env_file.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+        self.serve([port])
+
+        self.env["MOCK_OWNED_CONTAINERS"] = "life-interview-spark-text"
+        self.run_script("deploy/spark/preflight.sh", "--report-only", "--allow-owned-ports", timeout=60)
+        report_path = self.repo / "runtime/diagnostics/spark/preflight.json"
+        owned = json.loads(report_path.read_text(encoding="utf-8"))["checks"]["ports"]
+        self.assertEqual(owned["status"], "PASS")
+        self.assertEqual(owned["allowed_busy"], [port])
+        self.assertEqual(owned["unexpected_busy"], [])
+
+        self.env["MOCK_OWNED_CONTAINERS"] = ""
+        self.run_script("deploy/spark/preflight.sh", "--report-only", "--allow-owned-ports", timeout=60)
+        unexpected = json.loads(report_path.read_text(encoding="utf-8"))["checks"]["ports"]
+        self.assertEqual(unexpected["status"], "FAIL")
+        self.assertEqual(unexpected["unexpected_busy"], [port])
+
+    def test_preflight_gate_exit_matches_its_hard_check_report(self):
+        result = self.run_script("deploy/spark/preflight.sh", check=False, timeout=60)
+        report = json.loads((self.repo / "runtime/diagnostics/spark/preflight.json").read_text(encoding="utf-8"))
+        hard_checks = (
+            "architecture_arm64", "nvidia_gpu", "docker", "python", "python_venv",
+            "system_tools", "memory", "disk", "ports",
+        )
+        failed = any(report["checks"][name]["status"] == "FAIL" for name in hard_checks)
+        self.assertEqual(result.returncode, 1 if failed else 0, result.stderr)
+
+        verify = (ROOT / "deploy/spark/verify.sh").read_text(encoding="utf-8")
+        g0 = next(line for line in verify.splitlines() if 'gate("G0"' in line)
+        self.assertNotIn("--report-only", g0)
+        self.assertIn("--allow-owned-ports", g0)
 
     def test_nemoclaw_start_skips_skills_and_skill_sync_is_content_scoped(self):
         log = self.tmp / "nemoclaw.jsonl"
@@ -395,6 +523,27 @@ class SparkLifecycleTests(unittest.TestCase):
             [args for args in lifecycle if args in (["my-assistant", "start"], ["my-assistant", "stop"])],
             [["my-assistant", "start"], ["my-assistant", "stop"]],
         )
+
+    def test_nemoclaw_status_requires_a_recognized_phase(self):
+        (self.fakebin / "nemoclaw").write_text(
+            "#!/usr/bin/env python3\n"
+            "import os,sys\n"
+            "if os.environ.get('MOCK_NEMO_FAIL')=='1': sys.exit(7)\n"
+            "print('Phase: '+os.environ.get('MOCK_NEMO_PHASE','Provisioning'))\n",
+            encoding="utf-8",
+        )
+        (self.fakebin / "nemoclaw").chmod(0o755)
+        script = "deploy/spark/services/nemoclaw.sh"
+        for phase, expected in (("Ready", "RUNNING"), ("Running", "RUNNING"), ("Stopped", "STOPPED"), ("Provisioning", "DEGRADED")):
+            self.env.pop("MOCK_NEMO_FAIL", None)
+            self.env["MOCK_NEMO_PHASE"] = phase
+            result = self.run_script(script, "status", check=False)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout.strip(), expected, phase)
+        self.env["MOCK_NEMO_FAIL"] = "1"
+        failed_query = self.run_script(script, "status", check=False)
+        self.assertEqual(failed_query.returncode, 0)
+        self.assertEqual(failed_query.stdout.strip(), "DEGRADED")
 
     def test_nemoclaw_reconciles_skill_and_policy_after_sandbox_rebuild(self):
         log = self.tmp / "nemoclaw-rebuild.jsonl"

@@ -15,7 +15,7 @@ case "${1:-status}" in
     data_dir="${SPARK_RETRIEVER_DATA_DIR:?SPARK_RETRIEVER_DATA_DIR is required}"
     mkdir -p "$data_dir"
     token_fingerprint="$(printf '%s' "${NEMO_RETRIEVER_API_TOKEN:-}" | sha256sum | awk '{print $1}')"
-    spec="$(spec_hash "$image" "$data_dir" "$token_fingerprint" "$SPARK_RETRIEVER_PORT" "$SPARK_VECTORDB_PORT")"
+    spec="$(spec_hash local-bind-v1 "$image" "$data_dir" "$token_fingerprint" "$SPARK_RETRIEVER_PORT" "$SPARK_VECTORDB_PORT" 127.0.0.1)"
     reconcile_container_spec "$name" "$spec"
     if docker ps --format '{{.Names}}' | grep -qx "$name"; then
       "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_RETRIEVER_PORT/v1/health" "${SPARK_RETRIEVER_START_TIMEOUT_S:-900}"
@@ -49,7 +49,7 @@ case "${1:-status}" in
       set -e
       cfg="$(find /workspace -type f -name retriever-service.local.yaml 2>/dev/null | head -1)"
       if [ -z "$cfg" ]; then echo "retriever-service.local.yaml not found in image" >&2; exit 42; fi
-      exec retriever service start --config "$cfg" --launch-vectordb
+      exec retriever service start --config "$cfg" --launch-vectordb --host 127.0.0.1
     '
     "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_RETRIEVER_PORT/v1/health" "${SPARK_RETRIEVER_START_TIMEOUT_S:-900}"
     "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_VECTORDB_PORT/v1/health" "${SPARK_RETRIEVER_START_TIMEOUT_S:-900}"

@@ -40,7 +40,7 @@ text_served_model=os.getenv("SPARK_TEXT_SERVED_MODEL","text-api")
 sandbox=os.getenv("NEMOCLAW_SANDBOX","my-assistant")
 db=os.getenv("DATABASE_PATH","data/memoir.db")
 gates=[
- gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')} --report-only && {q(spark_dir/'lib/docker-gpu-smoke.sh')}"),
+ gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')} --allow-owned-ports && {q(spark_dir/'lib/docker-gpu-smoke.sh')}"),
  gate("G1","Dependencies","bash scripts/codex-node.sh node --version && bash scripts/codex-node.sh npm --version && python3 --version && docker --version",False,60),
  gate("G2","Local Text Model",f"python3 {q(spark_dir/'lib/openai-smoke.py')} http://127.0.0.1:{os.getenv('SPARK_TEXT_PORT','8000')}/v1 {q(text_served_model)}",True,180),
  gate("G3","NemoClaw / OpenShell / Skills",f"test \"$({q(spark_dir/'services/nemoclaw.sh')} status)\" = RUNNING && nemoclaw {q(sandbox)} skill list && {q(spark_dir/'services/nemoclaw.sh')} smoke",True,360),
@@ -56,13 +56,78 @@ gates=[
  gate("G13","NAT","bash scripts/codex-node.sh npm run test:agent:nat:smoke",True,600),
  gate("G14","Technical Observer",f"test \"$({q(spark_dir/'services/observer.sh')} status)\" = RUNNING && python3 -c 'import json; d=json.load(open(\"runtime/diagnostics/spark/telemetry.json\")); assert d[\"platform\"]==\"dgx-spark\"; assert d[\"system_memory\"][\"total_bytes\"] is not None; assert d[\"gpu\"][\"utilization_pct\"] is None or d[\"gpu\"][\"utilization_pct\"] >= 0'",True,60),
 ]
-summary={"captured_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"dgx_spark_detected":is_spark,"gates":gates}
+gate_status={gate["id"]:gate["status"] for gate in gates}
+try:
+    git_commit=subprocess.run(["git","rev-parse","HEAD"],cwd=root,text=True,capture_output=True,check=True).stdout.strip()
+except Exception:
+    git_commit="UNAVAILABLE"
+
+def read_json(path):
+    try: return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError,json.JSONDecodeError): return {}
+
+preflight=read_json(diag/"preflight.json") if is_spark else {}
+versions=read_json(diag/"versions.json") if is_spark else {}
+checks=preflight.get("checks",{})
+hard_failed=preflight.get("hard_checks",{}).get("failed",[])
+if not is_spark:
+    gpu_runtime_status=NOT_TESTED
+elif hard_failed:
+    gpu_runtime_status="NOT TESTED - PREFLIGHT FAILED"
+elif gate_status.get("G0")=="PASS":
+    gpu_runtime_status="PASS"
+elif gate_status.get("G0")=="FAIL":
+    gpu_runtime_status="FAIL"
+else:
+    gpu_runtime_status="NOT TESTED - PREFLIGHT FAILED"
+
+def gate_result(gid):
+    return gate_status.get(gid,NOT_TESTED)
+
+def combined_result(*ids):
+    statuses=[gate_result(gid) for gid in ids]
+    if all(status=="PASS" for status in statuses): return "PASS"
+    if any(status=="FAIL" for status in statuses): return "FAIL"
+    return NOT_TESTED
+
+def observed(key, check=None):
+    if not is_spark: return NOT_TESTED
+    value=versions.get(key)
+    if value is None and check:
+        value=checks.get(check,{}).get("value")
+    return str(value) if value is not None else "UNAVAILABLE"
+
+device_gpu=" / ".join(value for value in (observed("product_identity"),observed("gpu")) if value not in {NOT_TESTED,"UNAVAILABLE"}) if is_spark else NOT_TESTED
+if is_spark and not device_gpu: device_gpu="UNAVAILABLE"
+hardware={
+    "Git Commit":git_commit,
+    "Architecture":observed("architecture","architecture_arm64"),
+    "Device / GPU":device_gpu,
+    "Driver":observed("driver"),
+    "Docker":observed("docker"),
+    "Docker GPU Runtime":gpu_runtime_status,
+    "System Memory":(f"{float(versions['system_memory_gb']):.1f} GB" if is_spark and versions.get("system_memory_gb") is not None else ("UNAVAILABLE" if is_spark else NOT_TESTED)),
+    "Free Disk":(f"{float(versions['free_disk_gb']):.1f} GB" if is_spark and versions.get("free_disk_gb") is not None else ("UNAVAILABLE" if is_spark else NOT_TESTED)),
+    "Text Model":os.getenv("SPARK_TEXT_MODEL") or versions.get("deployment",{}).get("text_model") or "nvidia/Qwen3.6-35B-A3B-NVFP4",
+    "Text Runtime":gate_result("G2"),
+    "Coach Model":os.getenv("SPARK_COACH_MODEL") or versions.get("deployment",{}).get("coach_model") or "Qwen/Qwen3-8B",
+    "Coach Runtime":gate_result("G6"),
+    "Voice Model":os.getenv("SPARK_STEPAUDIO_HF_MODEL") or versions.get("deployment",{}).get("stepaudio_hf_model") or "stepfun-ai/Step-Audio-2-mini",
+    "Voice Runtime":combined_result("G7","G8"),
+    "Retriever":gate_result("G4"),
+    "NemoClaw":gate_result("G3"),
+    "OpenClaw":gate_result("G3"),
+    "Backend":gate_result("G10"),
+}
+result_text="FAIL" if any(g["status"]=="FAIL" for g in gates) else (NOT_TESTED if not is_spark else "PASS")
+summary={"captured_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"git_commit":git_commit,"dgx_spark_detected":is_spark,"hardware_validation":hardware,"gates":gates}
 (diag/"verify.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2))
-lines=["# DGX Spark Verify","","| Gate | Check | Status | Duration | Evidence |","|---|---|---|---:|---|"]
+lines=["# DGX Spark Verify","","## DGX Spark Hardware Validation",""]
+lines.extend(f"{key}: {value}" for key,value in hardware.items())
+lines += ["",f"Result: {result_text}.","","## Verification Gates","","| Gate | Check | Status | Duration | Evidence |","|---|---|---|---:|---|"]
 for g in gates:
     lines.append(f"| {g['id']} | {g['name']} | {g['status']} | {g['duration_ms']} ms | `{g['evidence_file']}` |")
 fail=[g for g in gates if g["status"]=="FAIL"]
-lines += ["",f"Result: {'FAIL' if fail else ('NOT TESTED - REQUIRES DGX SPARK' if not is_spark else 'PASS')}."]
 (diag/"verify.md").write_text("\n".join(lines)+"\n")
 print("\n".join(lines))
 raise SystemExit(1 if fail else 0)

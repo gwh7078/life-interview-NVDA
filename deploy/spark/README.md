@@ -7,9 +7,12 @@ This directory is deployment-only. Product code remains shared with Mac.
 ```bash
 git clone https://github.com/gwh7078/life-interview-NVDA.git
 cd life-interview-NVDA
-git checkout spark
+git checkout main
 ./deploy/spark/install.sh
 ```
+
+For a frozen test run, check out the `SPARK_RC_SHA` recorded in the final
+validation handoff instead of following a moving branch.
 
 `install.sh` is the first-machine one-command flow: Runtime artifact prefetch,
 Text/Coach startup, Base bootstrap, Retriever startup, Product update, full
@@ -55,6 +58,16 @@ Base. `models.sh sync` only prepares the selected model;
 the following restart applies its container spec and does not restart other
 models.
 
+### Unified Memory budget
+
+The default vLLM utilization settings are Text `0.40`, Coach `0.18`, and
+StepAudio `0.12`, for a configured total of `0.70`. This leaves headroom for
+Retriever, KV-cache variation, CUDA, Docker, Node, OpenClaw, and the operating
+system on DGX Spark's Unified Memory. These are runtime limits, not measured peak
+usage; only the Spark run can establish actual concurrent memory use. Changing
+`SPARK_STEPAUDIO_GPU_MEMORY_UTILIZATION` changes the Voice backend fingerprint
+and recreates that backend on the next start.
+
 ## Spark Base
 
 `install.sh` invokes `bootstrap.sh` during first setup after Text is ready. On a
@@ -86,6 +99,11 @@ Run locally:
 
 Hardware-dependent verify gates are never reported as PASS off Spark; they remain
 `NOT TESTED - REQUIRES DGX SPARK`.
+
+`verify.md` records the checked-out Git commit, host architecture and device,
+GPU driver, Docker/GPU runtime, memory and free disk, configured model IDs,
+runtime gate results, and the overall result. Its Git commit is captured from
+`git rev-parse HEAD` for reproducible hardware evidence.
 
 Credentials are optional unless the selected upstream artifacts require them. The
 preflight report records only present/missing for `HF_TOKEN`, `NGC_API_KEY`,
@@ -125,10 +143,19 @@ unverified upstream API.
 
 The Spark deployment path and local Adapter/Bridge integration are implemented.
 GB10 / ARM64 runtime compatibility still requires verification on DGX Spark. The
-StepFun reference image is probed for an ARM64 manifest before use. If ARM64 is
-not proven on the real machine, `models/realtime.sh` refuses x86 emulation and
-uses only an explicit `SPARK_STEPAUDIO_NATIVE_START_CMD` fallback; no unverified
-replacement image or second voice implementation is introduced.
+StepFun reference image is checked for a verified `linux/arm64` manifest before
+prefetch. If ARM64 is not proven and `SPARK_STEPAUDIO_NATIVE_START_CMD` is empty,
+prefetch fails before downloading artifacts. A configured native command is
+reported as `NATIVE_FALLBACK`; it must bind local services to loopback and honor
+`SPARK_STEPAUDIO_GPU_MEMORY_UTILIZATION`. No unverified native command is
+provided by the deployment.
+
+Text, Coach, and the StepAudio backend publish their API ports only on
+`127.0.0.1`. The StepAudio bridge and Retriever use host networking: the bridge
+binds WebSocket and health endpoints to loopback, while Retriever is started
+with `--host 127.0.0.1`; its supervised VectorDB child also listens on loopback.
+The scoped `agent-retrieval-proxy` remains reachable on the private host address
+for the NemoClaw sandbox and continues to rely on its scoped API and token policy.
 
 ## Agent retrieval boundary
 

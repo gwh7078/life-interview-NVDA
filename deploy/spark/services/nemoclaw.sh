@@ -27,9 +27,19 @@ sandbox_ready() {
 }
 
 sandbox_running() {
+  [[ "$(sandbox_status)" == "RUNNING" ]]
+}
+
+sandbox_status() {
   local status
-  status="$(nemoclaw "$sandbox" status 2>/dev/null)" || return 1
-  grep -Eiq 'Phase:[[:space:]]*(Ready|Running)([[:space:]]|$)' <<<"$status"
+  status="$(nemoclaw "$sandbox" status 2>/dev/null)" || { echo DEGRADED; return 0; }
+  if grep -Eiq '^[[:space:]]*Phase:[[:space:]]*(Ready|Running)[[:space:]]*$' <<<"$status"; then
+    echo RUNNING
+  elif grep -Eiq '^[[:space:]]*Phase:[[:space:]]*Stopped[[:space:]]*$' <<<"$status"; then
+    echo STOPPED
+  else
+    echo DEGRADED
+  fi
 }
 
 skill_is_installed() {
@@ -233,7 +243,7 @@ case "${1:-status}" in
     ;;
   status)
     if ! have nemoclaw; then echo STOPPED; exit 0; fi
-    if sandbox_ready; then echo RUNNING; else echo DEGRADED; fi
+    sandbox_status
     ;;
   openclaw-status)
     if have nemoclaw && sandbox_ready && nemoclaw "$sandbox" exec -- openclaw --version >/dev/null 2>&1; then
