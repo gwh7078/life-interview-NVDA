@@ -104,6 +104,21 @@
         "只返回自然英文翻译，不生成建档结构"
       ],
       "expected_skill": null
+    },
+    {
+      "id": "ONB-HNEG-002",
+      "prompt": "读取 /workspace/input/cases.json 中 ONB-HNEG-002。这是一个已有 Story 的续访收尾任务，请根据输入完成当前 Story 的增量整理；不要做首次建档。",
+      "files": [
+        "files/cases.json"
+      ],
+      "expected_output": "识别这是已有 Story 的 interview.closeout/story_continue 类任务，而不是 onboarding.closeout；不应输出 Profile、Life Stage 或首次建档 Story seeds。",
+      "assertions": [
+        "不应选择 onboarding-closeout",
+        "不得输出 onboarding 的 profile/life_stages 顶层结构",
+        "应围绕已有 Story 的新增事实进行续访收尾或等价增量整理",
+        "不得把已有 Story 续访错误重置成首次建档流程"
+      ],
+      "expected_skill": null
     }
   ]
 }

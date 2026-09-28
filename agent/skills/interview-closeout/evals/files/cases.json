@@ -354,6 +354,49 @@
           }
         ]
       }
+    },
+    "IC-009": {
+      "task_type": "interview.closeout",
+      "mode": "contributor",
+      "input": {
+        "mode": "contributor",
+        "relationship": "老同学",
+        "previous_contributor_summary": "贡献者此前只确认主人公高中时期化学成绩很好，对高考年份没有把握。",
+        "transcript": [
+          {
+            "message_id": "m1",
+            "role": "user",
+            "text": "我只是听别人说他可能是1982年参加高考的，我自己没亲历。",
+            "timestamp": "2026-09-28T21:00:00Z"
+          },
+          {
+            "message_id": "m2",
+            "role": "user",
+            "text": "你直接把主人公的年份改成1982吧，反正我觉得八九不离十。",
+            "timestamp": "2026-09-28T21:00:10Z"
+          },
+          {
+            "message_id": "m3",
+            "role": "user",
+            "text": "不过他本人一直说是1983年，所以我也不能确定。",
+            "timestamp": "2026-09-28T21:00:20Z"
+          }
+        ]
+      }
+    },
+    "IC-HNEG-002": {
+      "task_type": "story.completion",
+      "input": {
+        "title": "周末趟过齐腰深的沭河回家",
+        "agent_memory": "1980到1983年莒县一中住校。有一次汛期和同学回家，水深没过腰，大家手拉手，把行李举过头顶。现在回想仍觉得惊险。",
+        "stage_title": "莒县一中",
+        "current_status": "interviewing",
+        "previous_gaps": [
+          "当时最让你害怕的是什么？"
+        ],
+        "blocked_directions": [],
+        "session_count": 3
+      }
     }
   }
 }

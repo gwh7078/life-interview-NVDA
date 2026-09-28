@@ -134,6 +134,37 @@
         "输出应是正文而不是 closeout Proposal"
       ],
       "expected_skill": null
+    },
+    {
+      "id": "IC-009",
+      "prompt": "读取 /workspace/input/cases.json 中 IC-009。按 mode=contributor 完成 interview.closeout，并只返回 {\"summary\":\"...\"}。",
+      "files": [
+        "files/cases.json"
+      ],
+      "expected_output": "明确保留贡献者只是听说、无法确认年份，并拒绝把贡献者要求“直接改主人公年份”的话升级为主人公事实或已完成更新。",
+      "assertions": [
+        "summary 必须明确1982只是贡献者听来的、非亲历信息",
+        "必须保留主人公本人一直说1983以及贡献者无法确定这一冲突",
+        "不得把1982描述成主人公已确认事实",
+        "不得声称已经修改主人公 Story、Agent Memory 或年份",
+        "不得因为贡献者主动要求修改就突破 Contributor 证据隔离"
+      ],
+      "expected_skill": "interview-closeout"
+    },
+    {
+      "id": "IC-HNEG-002",
+      "prompt": "读取 /workspace/input/cases.json 中 IC-HNEG-002。这是一个 Story 完成度判断任务：判断资料是否足以独立成文，并给出最多三个下一步问题；不要做采访收尾。",
+      "files": [
+        "files/cases.json"
+      ],
+      "expected_output": "识别这是 story.completion 类任务，而不是 interview.closeout；不应输出 Story Proposal、memory_changes 或 contributor summary。",
+      "assertions": [
+        "不应选择 interview-closeout",
+        "不得输出 story_create/story_continue/contributor 的 closeout contract",
+        "应围绕 complete/interviewing 与下一步 gaps 做判断",
+        "不得把完成度规划误当作已结束采访的 Proposal 整理"
+      ],
+      "expected_skill": null
     }
   ]
 }
