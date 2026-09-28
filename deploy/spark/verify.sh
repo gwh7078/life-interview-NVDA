@@ -36,13 +36,13 @@ def gate(gid,name,command,requires_spark=True,timeout=900):
     return {"id":gid,"name":name,"status":status,"duration_ms":round((time.monotonic()-start)*1000),"evidence_file":str(path.relative_to(root)),"safe_error":err}
 
 q=lambda s: "'" + str(s).replace("'","'\\''") + "'"
-text_model=os.getenv("SPARK_TEXT_MODEL","nvidia/Qwen3.6-35B-A3B-NVFP4")
+text_served_model=os.getenv("SPARK_TEXT_SERVED_MODEL","text-api")
 sandbox=os.getenv("NEMOCLAW_SANDBOX","my-assistant")
 db=os.getenv("DATABASE_PATH","data/memoir.db")
 gates=[
  gate("G0","Hardware / ARM64 / Docker GPU",f"{q(spark_dir/'preflight.sh')} --report-only && {q(spark_dir/'lib/docker-gpu-smoke.sh')}"),
  gate("G1","Dependencies","bash scripts/codex-node.sh node --version && bash scripts/codex-node.sh npm --version && python3 --version && docker --version",False,60),
- gate("G2","Local Text Model",f"python3 {q(spark_dir/'lib/openai-smoke.py')} http://127.0.0.1:{os.getenv('SPARK_TEXT_PORT','8000')}/v1 {q(text_model)}",True,180),
+ gate("G2","Local Text Model",f"python3 {q(spark_dir/'lib/openai-smoke.py')} http://127.0.0.1:{os.getenv('SPARK_TEXT_PORT','8000')}/v1 {q(text_served_model)}",True,180),
  gate("G3","NemoClaw / OpenShell / Skills",f"test \"$({q(spark_dir/'services/nemoclaw.sh')} status)\" = RUNNING && nemoclaw {q(sandbox)} skill list && {q(spark_dir/'services/nemoclaw.sh')} smoke",True,360),
  gate("G4","Private Retriever + Agent retrieval boundary","bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-retriever-smoke.ts && bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-agent-retrieval-smoke.ts",True,420),
  gate("G5","Era Context","bash scripts/codex-node.sh npm run era:index && bash scripts/codex-node.sh npm run era:benchmark",True,600),

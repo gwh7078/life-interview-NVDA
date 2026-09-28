@@ -41,7 +41,7 @@ toolchain_check=(
     "assert expected_uv=='latest' or version==expected_uv"
 )
 gate("Node / Python / uv toolchain",[sys.executable,"-c",toolchain_check,str(node),str(uv),
-     os.environ.get("SPARK_NODE_VERSION","24.21.0"),os.environ.get("SPARK_UV_VERSION","latest")])
+     os.environ.get("SPARK_NODE_VERSION","24.21.0"),os.environ.get("SPARK_UV_VERSION","0.12.19")])
 gate("NemoClaw / OpenShell Base",["bash","-c",
      f"command -v nemoclaw >/dev/null && command -v openshell >/dev/null && test \"$({shlex.quote(str(spark_dir/'services/nemoclaw.sh'))} status)\" = RUNNING && test \"$({shlex.quote(str(spark_dir/'services/nemoclaw.sh'))} openclaw-status)\" = RUNNING"],60)
 

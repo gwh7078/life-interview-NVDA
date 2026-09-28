@@ -86,6 +86,7 @@ class SparkLifecycleTests(unittest.TestCase):
         values = {
             "SPARK_HOME": str(self.home),
             "DATABASE_PATH": f"{self.home}/data/memoir.db",
+            "SPARK_UV_VERSION": "0.12.19",
             "SPARK_BASE_VLLM_IMAGE": "nvcr.io/nvidia/vllm@sha256:base-v1",
             "SPARK_VLLM_IMAGE": "nvcr.io/nvidia/vllm@sha256:base-v1",
             "SPARK_TEXT_MODEL": "text-model-v1",
@@ -181,6 +182,82 @@ class SparkLifecycleTests(unittest.TestCase):
                 server.server_close()
         self.addCleanup(close_servers)
 
+    def test_text_smoke_and_verify_use_served_model_name(self):
+        values = self.values()
+        values["SPARK_TEXT_MODEL"] = "model-v2"
+        values["SPARK_TEXT_SERVED_MODEL"] = "text-api"
+        values["TEXT_MODEL"] = "text-api"
+        values["SPARK_COACH_MODEL"] = "coach-model-v2"
+        values["SPARK_COACH_SERVED_MODEL"] = "coach-api"
+        values["REALTIME_COACH_MODEL"] = "coach-api"
+        self.env_file.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+
+        verify_source = (ROOT / "deploy/spark/verify.sh").read_text(encoding="utf-8")
+        self.assertRegex(verify_source, r'text_served_model\s*=\s*os\.getenv\("SPARK_TEXT_SERVED_MODEL"')
+        self.assertRegex(verify_source, r'gate\("G2".*\{q\(text_served_model\)\}')
+        self.assertNotRegex(verify_source, r'text_served_model\s*=\s*os\.getenv\("SPARK_TEXT_MODEL"')
+        text_benchmark = (ROOT / "scripts/spark-text-agent-benchmark.ts").read_text(encoding="utf-8")
+        self.assertIn("process.env.TEXT_MODEL || process.env.SPARK_TEXT_SERVED_MODEL", text_benchmark)
+        self.assertNotIn("process.env.SPARK_TEXT_MODEL", text_benchmark)
+        coach_benchmark = (ROOT / "scripts/spark-coach-benchmark.ts").read_text(encoding="utf-8")
+        self.assertIn("process.env.REALTIME_COACH_MODEL || process.env.SPARK_COACH_SERVED_MODEL", coach_benchmark)
+        self.assertNotIn("process.env.SPARK_COACH_MODEL", coach_benchmark)
+
+        requests = []
+
+        class OpenAIHandler(BaseHTTPRequestHandler):
+            def send_json(self, value):
+                body = json.dumps(value).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                if self.path == "/health":
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b"ok")
+                elif self.path == "/v1/models":
+                    self.send_json({"data": [{"id": "text-api"}]})
+                else:
+                    self.send_error(404)
+
+            def do_POST(self):
+                payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                requests.append((self.path, payload["model"]))
+                content = '{"ok":true}' if "response_format" in payload else "SPARK_OK"
+                self.send_json({"choices": [{"message": {"content": content}}]})
+
+            def log_message(self, *_args):
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", free_port()), OpenAIHandler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        base = f"http://127.0.0.1:{server.server_port}/v1"
+        smoke = ROOT / "deploy/spark/lib/openai-smoke.py"
+
+        passed = subprocess.run(
+            ["python3", str(smoke), base, values["SPARK_TEXT_SERVED_MODEL"]],
+            text=True, capture_output=True, timeout=10,
+        )
+        self.assertEqual(passed.returncode, 0, passed.stderr)
+        self.assertEqual(requests, [
+            ("/v1/chat/completions", "text-api"),
+            ("/v1/chat/completions", "text-api"),
+        ])
+
+        wrong_model = subprocess.run(
+            ["python3", str(smoke), base, values["SPARK_TEXT_MODEL"]],
+            text=True, capture_output=True, timeout=10,
+        )
+        self.assertNotEqual(wrong_model.returncode, 0)
+        self.assertIn("model_not_listed:model-v2", wrong_model.stderr)
+        self.assertEqual(len(requests), 2)
+
     def test_base_fingerprint_ignores_product_and_model_changes(self):
         script = "deploy/spark/bootstrap.sh"
         for name, body in {
@@ -198,12 +275,17 @@ class SparkLifecycleTests(unittest.TestCase):
         (self.repo / "public/unrelated.txt").write_text("new product code")
         second = self.run_script(script, "fingerprint").stdout.strip()
         self.assertEqual(first, second)
+        env_example = (ROOT / "deploy/spark/env.example").read_text(encoding="utf-8")
+        self.assertIn("SPARK_UV_VERSION=0.12.19", env_example)
         self.env["MOCK_DRIVER_VERSION"] = "580.160.01"
         changed_driver = self.run_script(script, "fingerprint").stdout.strip()
         self.assertNotEqual(second, changed_driver)
         self.env_file.write_text(self.config(SPARK_BASE_VLLM_IMAGE="nvcr.io/nvidia/vllm@sha256:base-v2"))
         changed_image = self.run_script(script, "fingerprint").stdout.strip()
         self.assertNotEqual(changed_driver, changed_image)
+        self.env_file.write_text(self.config(SPARK_UV_VERSION="0.12.18"))
+        changed_uv = self.run_script(script, "fingerprint").stdout.strip()
+        self.assertNotEqual(changed_image, changed_uv)
         self.assertEqual(self.git_log.read_text(), "")
 
     def test_install_dry_run_does_not_create_host_or_runtime_state(self):

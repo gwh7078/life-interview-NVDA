@@ -25,10 +25,14 @@ git pull
 ```
 
 `update.sh` applies Product dependencies, migrations, changed Skills and Era
-data, validates the Product, and restarts Backend/Web plus Observer. It never
-installs or upgrades Spark Base and never starts or restarts Text, Coach, Voice,
-Retriever or NemoClaw Runtime services. If Base inputs are incompatible, it
-fails with the required `bootstrap.sh` command.
+data, and validates the Product. On success it stops and restarts Backend/Web,
+the scoped retrieval proxy, and Observer; this can start them even if they were
+stopped before the update. `--no-restart` leaves those services stopped after a
+successful update. The update may call Retriever APIs to ensure collections but
+does not start or restart the Retriever service. It never installs or upgrades
+Spark Base or restarts Text, Coach, Voice, Retriever, or NemoClaw Runtime
+services. If Base inputs are incompatible, it fails with the required
+`bootstrap.sh` command.
 
 Model changes stay in the Spark Runtime profile:
 
@@ -42,9 +46,12 @@ Model changes stay in the Spark Runtime profile:
 artifacts. Container `spec_hash` reconciliation recreates only a service whose
 image, model or runtime arguments changed. `SPARK_TEXT_MODEL` and
 `SPARK_COACH_MODEL` select model artifacts; their `*_SERVED_MODEL` values keep
-the Product-facing API route stable when the underlying model changes. Changing
-Text also refreshes the NemoClaw route after its selective restart; it does not
-reinstall the NemoClaw Base. `models.sh sync` only prepares the selected model;
+the Product-facing API route stable when the underlying model changes. Set
+`TEXT_MODEL` and `AGENT_MODEL_*` to the Text served name, and `REALTIME_COACH_MODEL`
+to the Coach served name; these are API model identifiers, not weight IDs. The
+example aliases are `text-api` and `coach-api`. Changing Text also refreshes the
+NemoClaw route after its selective restart; it does not reinstall the NemoClaw
+Base. `models.sh sync` only prepares the selected model;
 the following restart applies its container spec and does not restart other
 models.
 
@@ -65,7 +72,7 @@ freeze point; `NOT TESTED - REQUIRES DGX SPARK` is not a pass.
 
 The Base fingerprint covers the host architecture, GPU/driver, Docker/NVIDIA
 Runtime, Base version inputs, managed tool versions, generic vLLM image and Base
-setup scripts. It does not include Git HEAD or the full Spark `.env`. Text,
+setup scripts. The Base pins `uv` to 0.12.19, the version used by a successful Spark CI run; changing it changes the fingerprint. It does not include Git HEAD or the full Spark `.env`. Text,
 Coach and Voice use separate container specifications; formal Skills and
 Product dependencies have their own content/lockfile fingerprints.
 
@@ -116,10 +123,12 @@ control are implemented; full duplex, interruption, playback ACK, and tool calli
 are false. This must not be changed to PASS based on model marketing or an
 unverified upstream API.
 
-The StepFun reference image is probed for an ARM64 manifest before use. If ARM64
-is not proven on the real machine, `models/realtime.sh` refuses x86 emulation and
-uses only an explicit `SPARK_STEPAUDIO_NATIVE_START_CMD` fallback. That remaining
-choice is a true GB10 compatibility task, not a second product implementation.
+The Spark deployment path and local Adapter/Bridge integration are implemented.
+GB10 / ARM64 runtime compatibility still requires verification on DGX Spark. The
+StepFun reference image is probed for an ARM64 manifest before use. If ARM64 is
+not proven on the real machine, `models/realtime.sh` refuses x86 emulation and
+uses only an explicit `SPARK_STEPAUDIO_NATIVE_START_CMD` fallback; no unverified
+replacement image or second voice implementation is introduced.
 
 ## Agent retrieval boundary
 

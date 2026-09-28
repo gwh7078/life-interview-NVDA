@@ -11,7 +11,7 @@ const iterations = process.argv.includes('--once')
 const coach = new BailianRealtimeCoach({
   provider: 'openai-compatible',
   baseUrl: process.env.REALTIME_COACH_BASE_URL || 'http://127.0.0.1:8001/v1',
-  model: process.env.REALTIME_COACH_MODEL || process.env.SPARK_COACH_MODEL || 'Qwen/Qwen3-8B',
+  model: process.env.REALTIME_COACH_MODEL || process.env.SPARK_COACH_SERVED_MODEL || 'Qwen/Qwen3-8B',
   apiKey: process.env.REALTIME_COACH_API_KEY || 'local-spark',
   requestDialect: 'vllm',
 });
@@ -137,7 +137,7 @@ for (const kind of ['memory', 'era', 'dual'] as const) {
 
 process.stdout.write(`${JSON.stringify({
   status: 'PASS',
-  model: process.env.REALTIME_COACH_MODEL || process.env.SPARK_COACH_MODEL || 'Qwen/Qwen3-8B',
+  model: process.env.REALTIME_COACH_MODEL || process.env.SPARK_COACH_SERVED_MODEL || 'Qwen/Qwen3-8B',
   iterations,
   gate: {
     p50_ms: percentile(gateLatencies, 0.50),

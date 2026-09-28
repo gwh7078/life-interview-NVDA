@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json, sys, urllib.request
 base=(sys.argv[1] if len(sys.argv)>1 else "http://127.0.0.1:8000/v1").rstrip("/")
-model=sys.argv[2] if len(sys.argv)>2 else "nvidia/Qwen3.6-35B-A3B-NVFP4"
+served_model=sys.argv[2] if len(sys.argv)>2 else "text-api"
 
 def get(path):
     with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(base.removesuffix("/v1")+path,timeout=10) as r:
@@ -15,16 +15,16 @@ def post(payload):
 health=get("/health")
 models=json.loads(get("/v1/models"))
 ids={x.get("id") for x in models.get("data",[]) if isinstance(x,dict)}
-if model not in ids:
-    raise SystemExit(f"model_not_listed:{model}")
+if served_model not in ids:
+    raise SystemExit(f"model_not_listed:{served_model}")
 
-chat=post({"model":model,"messages":[{"role":"user","content":"Reply with exactly SPARK_OK"}],"max_tokens":32,"temperature":0})
+chat=post({"model":served_model,"messages":[{"role":"user","content":"Reply with exactly SPARK_OK"}],"max_tokens":32,"temperature":0})
 content=chat["choices"][0]["message"].get("content","")
 if "SPARK_OK" not in content:
     raise SystemExit("chat_smoke_failed")
 
 structured=post({
-  "model":model,
+  "model":served_model,
   "messages":[{"role":"user","content":"Return a JSON object with ok=true and no extra keys."}],
   "max_tokens":64,"temperature":0,
   "response_format":{"type":"json_schema","json_schema":{"name":"spark_smoke","schema":{
@@ -34,4 +34,4 @@ structured=post({
 raw=structured["choices"][0]["message"].get("content","").strip()
 obj=json.loads(raw)
 if obj != {"ok":True}: raise SystemExit("structured_output_failed")
-print(json.dumps({"health":"PASS","model":model,"chat":"PASS","structured_output":"PASS"}))
+print(json.dumps({"health":"PASS","model":served_model,"chat":"PASS","structured_output":"PASS"}))

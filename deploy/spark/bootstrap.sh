@@ -58,12 +58,12 @@ uv_python="$uv_root/bin/python"
 if [[ ! -x "$uv_root/bin/uv" ]]; then
   python3 -m venv "$uv_root"
   "$uv_python" -m pip install --quiet --upgrade pip
-  if [[ "${SPARK_UV_VERSION:-latest}" == "latest" ]]; then
+  if [[ "${SPARK_UV_VERSION:-0.12.19}" == "latest" ]]; then
     "$uv_python" -m pip install --quiet --upgrade uv
   else
     "$uv_python" -m pip install --quiet --upgrade "uv==$SPARK_UV_VERSION"
   fi
-elif [[ "${SPARK_UV_VERSION:-latest}" != "latest" && "$("$uv_root/bin/uv" --version | awk '{print $2}')" != "$SPARK_UV_VERSION" ]]; then
+elif [[ "${SPARK_UV_VERSION:-0.12.19}" != "latest" && "$("$uv_root/bin/uv" --version | awk '{print $2}')" != "$SPARK_UV_VERSION" ]]; then
   "$uv_python" -m pip install --quiet --upgrade "uv==$SPARK_UV_VERSION"
 fi
 

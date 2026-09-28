@@ -12,11 +12,11 @@
 | `modelbest` | Experimental | ModelBest MiniCPM-o Realtime | provider-specific |
 | `qwen` | 兼容 adapter | DashScope | provider-specific |
 
-DGX Spark 的目标是未来替换 Mini 的执行后端，而不是改变产品层 Provider Contract。
+Spark Deployment Profile 已通过 `STEPAUDIO2_EXECUTION=local` 将 Mini 路由到 Local Adapter/Bridge；Mac 默认仍为 StepFun Cloud。GB10 / ARM64 runtime compatibility 需要真机验证，产品层 Provider Contract 不变。
 
-## 2. Mini：Fast Voice + Realtime Coach
+## 2. Mini：Fast Voice + interview-coach Skill
 
-Mini 默认不再依赖旧 Independent Memory 路线。
+Mini 默认不再依赖旧 Independent Memory 路线。实时慢系统现正式定义为 `interview-coach` Skill；为了满足语音低延迟预算，它由产品自建的 Realtime Runtime 执行，不经过通用 OpenClaw / NemoClaw Runtime。
 
 ### Story Create / Story Continue / Contributor
 
@@ -43,6 +43,18 @@ Coach Gate (Qwen3-8B)
 ```
 
 Story Create 与 Contributor 可以使用 Gate 纠偏，但不能请求 Personal Memory / Era Retrieval。
+
+### Story Continue Benchmark Profiles（opt-in）
+
+`INTERVIEW_BENCHMARK_VARIANT` 接受 `A`、`B`、`C`；未设置时保持现有 Coach 行为。三组共用 Step-Audio-2-mini、Realtime Prompt 与 audio 配置，Profile 只控制 Coach 和两路检索：
+
+| Variant | Coach Gate | Personal Memory | Era Context |
+|---|---|---|---|
+| A | 不运行 | 关闭 | 关闭 |
+| B | 运行并保留本轮指导 | 强制关闭 | 强制关闭 |
+| C | 运行并由 Gate 决定 | Gate 按需 | Gate 按需 |
+
+B/C 需要 Coach 凭据；C 还要求 `NEMO_RETRIEVER_ENABLED=true`，沿用现有 Transcript 索引和 Era collection。Trace 记录 Variant、有效能力开关及现有 Gate / retrieval / Resolve 结果；凭据是否存在不参与 Variant 选择。
 
 ### Onboarding
 

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const baseUrl = (process.env.TEXT_MODEL_BASE_URL || 'http://127.0.0.1:8000/v1').replace(/\/+$/u, '');
-const model = process.env.TEXT_MODEL || process.env.SPARK_TEXT_MODEL || 'nvidia/Qwen3.6-35B-A3B-NVFP4';
+const model = process.env.TEXT_MODEL || process.env.SPARK_TEXT_SERVED_MODEL || 'nvidia/Qwen3.6-35B-A3B-NVFP4';
 const iterations = Math.max(3, Number(process.env.SPARK_BENCH_ITERATIONS || 5));
 const NAT_PREFIX = 'LIFE_INTERVIEW_NAT_RESULT ';
 const cases = [
