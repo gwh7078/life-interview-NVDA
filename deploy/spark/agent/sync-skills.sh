@@ -5,14 +5,8 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "$DIR/lib/common.sh"
 
 have nemoclaw || die "NemoClaw CLI is missing; run deploy/spark/setup.sh first."
-status_json="$(nemoclaw "$NEMOCLAW_SANDBOX" status --json)" \
-  || die "Could not read NemoClaw sandbox status."
-STATUS_JSON="$status_json" python3 - <<'PY'
-import json, os
-status = json.loads(os.environ["STATUS_JSON"])
-if status.get("found") is not True or str(status.get("phase", "")).lower() not in {"ready", "running"}:
-    raise SystemExit("NemoClaw sandbox is not RUNNING.")
-PY
+nemoclaw_status_ready "$NEMOCLAW_SANDBOX" \
+  || die "NemoClaw sandbox is not RUNNING."
 
 skills=(
   onboarding-closeout

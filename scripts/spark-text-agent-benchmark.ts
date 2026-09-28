@@ -5,6 +5,9 @@ const baseUrl = (process.env.TEXT_MODEL_BASE_URL || 'http://127.0.0.1:8000/v1').
 const model = process.env.TEXT_MODEL || process.env.SPARK_TEXT_SERVED_MODEL || 'nvidia/Qwen3.6-35B-A3B-NVFP4';
 const iterations = Math.max(3, Number(process.env.SPARK_BENCH_ITERATIONS || 5));
 const NAT_PREFIX = 'LIFE_INTERVIEW_NAT_RESULT ';
+const authHeaders = process.env.TEXT_MODEL_API_KEY?.trim()
+  ? { authorization: `Bearer ${process.env.TEXT_MODEL_API_KEY.trim()}` }
+  : {};
 const cases = [
   'onboarding.closeout',
   'interview.closeout/story_create',
@@ -24,7 +27,7 @@ async function streamSample(): Promise<{ first_token_ms: number; total_ms: numbe
   const started = performance.now();
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer local-spark' },
+    headers: { 'content-type': 'application/json', ...authHeaders },
     body: JSON.stringify({
       model,
       stream: true,
@@ -71,7 +74,7 @@ async function structuredOutput(): Promise<{ status: string; latency_ms: number 
   const started = performance.now();
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer local-spark' },
+    headers: { 'content-type': 'application/json', ...authHeaders },
     body: JSON.stringify({
       model,
       temperature: 0,

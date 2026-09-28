@@ -205,8 +205,10 @@ https://github.com/stepfun-ai/Step-Audio2
 - Step-Audio-2-mini 为 Apache-2.0 开源模型；
 - 官方提供 vLLM backend；
 - 官方 vLLM 示例包含 streaming inference；
-- 官方镜像示例：
+- 官方上游镜像示例（仅参考，不代表本项目验证）：
   `stepfun2025/vllm:step-audio-2-v20250909`。
+
+项目验证状态：**NOT VERIFIED ON DGX SPARK / ARM64**。该具体镜像 / vLLM backend 尚未由本项目在 Spark ARM64 真机验证；使用者应按 StepFun 当前官方说明选择并启动兼容 Runtime。本仓库只要求产品 WebSocket endpoint `ws://127.0.0.1:8092/realtime`。
 
 高风险提醒：
 

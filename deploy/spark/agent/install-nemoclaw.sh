@@ -17,6 +17,7 @@ if ! have nemoclaw; then
     NEMOCLAW_AGENT=openclaw \
     NEMOCLAW_NO_EXPRESS=1 \
     NEMOCLAW_PROVIDER=vllm \
+    NEMOCLAW_WEB_SEARCH_PROVIDER=none \
     NEMOCLAW_VLLM_PORT="$port" \
     NEMOCLAW_SANDBOX_NAME="$sandbox" \
     bash
@@ -46,27 +47,24 @@ if [[ "$found" != true ]]; then
   NEMOCLAW_NON_INTERACTIVE=1 NEMOCLAW_AGENT=openclaw \
     NEMOCLAW_NO_EXPRESS=1 \
     NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1 \
-    NEMOCLAW_PROVIDER=vllm NEMOCLAW_VLLM_PORT="$port" \
+    NEMOCLAW_PROVIDER=vllm NEMOCLAW_WEB_SEARCH_PROVIDER=none \
+    NEMOCLAW_VLLM_PORT="$port" \
     NEMOCLAW_SANDBOX_NAME="$sandbox" nemoclaw onboard --non-interactive
 fi
 
-status_json="$(nemoclaw "$sandbox" status --json)" \
-  || die "Could not read status for NemoClaw sandbox '$sandbox'."
-
-phase="$(STATUS_JSON="$status_json" python3 -c 'import json,os; print(json.loads(os.environ["STATUS_JSON"]).get("phase",""))')"
-phase_lower="$(printf '%s' "$phase" | tr '[:upper:]' '[:lower:]')"
-case "$phase_lower" in
+phase="$(nemoclaw_status_phase "$sandbox")" \
+  || die "Could not read a valid status for NemoClaw sandbox '$sandbox'."
+case "$phase" in
   ready|running) ;;
   stopped)
     nemoclaw "$sandbox" start
-    status_json="$(nemoclaw "$sandbox" status --json)" \
-      || die "Could not verify the started NemoClaw sandbox."
-    phase="$(STATUS_JSON="$status_json" python3 -c 'import json,os; print(json.loads(os.environ["STATUS_JSON"]).get("phase",""))')"
-    phase_lower="$(printf '%s' "$phase" | tr '[:upper:]' '[:lower:]')"
-    [[ "$phase_lower" == ready || "$phase_lower" == running ]] \
+    nemoclaw_status_ready "$sandbox" \
       || die "NemoClaw sandbox '$sandbox' did not reach RUNNING."
     ;;
   *) die "NemoClaw sandbox '$sandbox' is not ready (phase=$phase); inspect nemoclaw status." ;;
 esac
+
+nemoclaw_status_ready "$sandbox" \
+  || die "NemoClaw sandbox '$sandbox' is not RUNNING."
 
 echo "NemoClaw sandbox '$sandbox' is RUNNING and OpenClaw reuses the existing vLLM endpoint on port $port."

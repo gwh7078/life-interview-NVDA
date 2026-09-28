@@ -152,7 +152,7 @@ Text / Agent  : http://127.0.0.1:8000/v1
 Mini Coach    : http://127.0.0.1:8001/v1
 StepAudio     : ws://127.0.0.1:8092/realtime
 Retriever     : REST / MCP 127.0.0.1:7670
-VectorDB      : internal 127.0.0.1:7671
+VectorDB      : internal to Retriever Runtime; not an application endpoint
 ```
 
 NemoClaw onboarding 复用已有 Text vLLM 的 `/v1/models` 模型清单；OpenClaw 在 NemoClaw sandbox 内执行正式会后 Agent Skills。`interview-coach` Skill 继续由产品低延迟 Realtime Runtime 执行 Qwen3-8B，不经 OpenClaw。Retriever 只通过 Service `:7670` 接入，应用不得直接访问 VectorDB。

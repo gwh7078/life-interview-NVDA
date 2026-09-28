@@ -67,7 +67,7 @@ Spark 的 Runtime 由操作者准备和维护；本仓库负责应用配置、�
 | Text / Agent | `http://127.0.0.1:8000/v1` | `nvidia/Qwen3.6-35B-A3B-NVFP4`；以 `/v1/models` 返回的 served ID 为准 |
 | Mini Coach | `http://127.0.0.1:8001/v1` | `Qwen3-8B`；产品低延迟 Realtime Runtime |
 | StepAudio contract | `ws://127.0.0.1:8092/realtime` | 外部 Realtime Runtime / bridge 应实现的应用协议 |
-| NeMo Retriever | REST / MCP `:7670`；内部 VectorDB `:7671` | 应用只访问 Retriever Service `:7670` |
+| NeMo Retriever | REST / MCP `:7670` | Retriever 内部存储由其 Runtime 管理；应用只访问 Service |
 
 官方资料：[DGX Spark vLLM agent-ready models](https://build.nvidia.com/spark/vllm/agent-ready-models)、[Qwen3.6-35B-A3B Spark recipe](https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B?features=tool_calling%2Creasoning&hardware=dgx_spark_gb10)、[Step-Audio 2](https://github.com/stepfun-ai/Step-Audio2)、[NeMo Retriever](https://docs.nvidia.com/nemo/retriever/latest/extraction/getting-started-about/)。官方 recipe 是 Runtime 准备资料，不是本项目 Spark 验收结果。
 
@@ -95,7 +95,7 @@ cp deploy/spark/env.example deploy/spark/.env
 chmod 600 deploy/spark/.env
 ```
 
-编辑 `deploy/spark/.env`：将 Text / Coach 模型名设为各自 `/v1/models` 实际返回的 ID，并核对四个 Runtime 地址、`NEMOCLAW_SANDBOX=my-assistant` 与数据库路径。Mac 根目录 `.env.example` 的 StepFun Cloud 默认值保持不变。
+编辑 `deploy/spark/.env`：将 Text / Coach 模型名设为各自 `/v1/models` 实际返回的 ID，并核对 Text、Coach、StepAudio、Retriever endpoint、`NEMOCLAW_SANDBOX=my-assistant` 与数据库路径。无需配置 Retriever 内部 VectorDB 地址。`SPARK_SEED_DEMO_DATA=false` 默认跳过示例数据；仅需比赛 Demo 数据时显式设为 `true`。Mac 根目录 `.env.example` 的 StepFun Cloud 默认值保持不变。
 
 ### 4. Setup
 
@@ -105,7 +105,7 @@ chmod 600 deploy/spark/.env
 bash deploy/spark/setup.sh
 ```
 
-setup 会检查 Spark 与外部 Runtime endpoint、安装应用依赖、初始化 / 迁移独立 Spark SQLite、确保 Retriever collections，并安装应用 Agent 配置、Skills 与 policy。缺少 NemoClaw 时，它通过 NVIDIA 官方 [`nemoclaw.sh` installer](https://www.nvidia.com/nemoclaw.sh) 安装 NemoClaw，并运行 `nemoclaw onboard`。当 Text vLLM 已在 `localhost:8000` 运行，onboard 使用 `/v1/models` 发现并复用当前模型，不另起一个 Text 服务。OpenClaw 运行在 `my-assistant` NemoClaw sandbox 内。
+setup 会检查 Spark 与外部 Runtime endpoint、安装应用依赖、迁移独立 Spark SQLite、确保 Retriever collections，并安装应用 Agent 配置、Skills 与 policy。示例数据只在 `SPARK_SEED_DEMO_DATA=true` 时写入。缺少 NemoClaw 时，它通过 NVIDIA 官方 [`nemoclaw.sh` installer](https://www.nvidia.com/nemoclaw.sh) 安装 NemoClaw，并运行 `nemoclaw onboard`。当 Text vLLM 已在 `localhost:8000` 运行，onboard 使用 `/v1/models` 发现并复用当前模型，不另起一个 Text 服务。Setup 显式关闭 NemoClaw 的可选 Web Search，避免主机上其他凭证静默启用外部搜索。OpenClaw 运行在 `my-assistant` NemoClaw sandbox 内。
 
 `interview-coach` 是正式产品 Skill。其定义可随正式 Skills 同步，但 Mini Coach 的实际 Gate / Retrieval / Resolve 仍由产品低延迟 Realtime Runtime 调用 Qwen3-8B；不经过 OpenClaw。
 
@@ -121,7 +121,15 @@ StepAudio, and Retriever continue to be provided by user-managed runtimes.
 
 ### 6. Verify
 
-在 DGX Spark 上、所有 Runtime 与应用启动后执行：
+verify 运行产品 acceptance smoke，不运行 CI 全量 `npm test` 或 NAT。NAT、Profiler 与 Benchmark 是单独的可选比赛评测：
+
+```bash
+bash scripts/codex-node.sh npm run test:agent:nat:smoke
+bash scripts/codex-node.sh npm run test:agent:nat:profile
+bash scripts/codex-node.sh npm run spark:benchmark
+```
+
+在 DGX Spark 上、所有 Runtime 与应用启动后执行基础产品验证：
 
 ```bash
 set -a
@@ -130,7 +138,7 @@ set +a
 bash deploy/spark/verify.sh
 ```
 
-报告写入 `runtime/diagnostics/spark/`。只有真机命令实际运行并保存证据后，才可把相应 gate 更新为 PASS。当前 Spark 兼容、完整 E2E、性能均为 **NOT TESTED ON DGX SPARK**。
+报告写入 `runtime/diagnostics/spark/`。基础 verify 包含 Backend / Web / SQLite、真实 Text / Coach / StepAudio / Retriever smoke、Era / Agent retrieval、NemoClaw / OpenClaw / Skills / model route、产品 acceptance 和 Technical Observer。只有真机命令实际运行并保存证据后，才可把相应 gate 更新为 PASS。当前 DGX Spark compatibility（包括 StepAudio ARM64）、完整 E2E 与性能均为 **NOT TESTED ON DGX SPARK**。
 
 > `deploy/spark/setup.sh` / `start.sh` 是外部 Runtime 已准备后的应用 setup / start 入口；它们不会代替操作者部署或启动 Text、Coach、StepAudio 与 Retriever 服务。
 

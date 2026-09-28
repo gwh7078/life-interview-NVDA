@@ -189,7 +189,7 @@ DGX Spark 的目标方式是：**用户准备并运行标准 Runtime，本仓库
 | Mini Coach | `Qwen3-8B` — `http://127.0.0.1:8001/v1` |
 | StepAudio contract | `ws://127.0.0.1:8092/realtime` |
 | NeMo Retriever Service | `127.0.0.1:7670` |
-| Retriever 内部 VectorDB | `127.0.0.1:7671`；业务应用不得直接写入 |
+| Retriever 内部存储 | 由 NeMo Retriever Runtime 管理；不是应用 Endpoint |
 
 NemoClaw / OpenClaw 位于 `my-assistant` sandbox。官方 `nemoclaw onboard` 可发现并复用已经运行的 `localhost:8000/v1/models`；这是 endpoint 配置能力，不构成 Spark 兼容性或 E2E 证明。正式会后 Agent Skills 在 OpenClaw Runtime 执行。Mini 的 `interview-coach` Skill 仍由产品低延迟 Realtime Runtime 执行，不经过 OpenClaw。
 
@@ -197,7 +197,7 @@ macOS 根 `.env.example` 默认 Step-Audio-2-mini / StepFun Cloud 保持不变�
 
 ### DGX Spark 验证状态
 
-以下项目目前统一为 **NOT TESTED ON DGX SPARK**：
+DGX Spark compatibility 当前统一为 **NOT TESTED ON DGX SPARK**；StepAudio Runtime 路径另外明确为 **NOT VERIFIED ON DGX SPARK / ARM64**。以下项目均未完成真机验收：
 
 - GB10 / DGX Spark Runtime compatibility；
 - Text / Coach / StepAudio / Retriever / NemoClaw 组合后的完整应用端到端；

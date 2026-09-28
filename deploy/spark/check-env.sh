@@ -29,33 +29,38 @@ else
 fi
 
 check_model_endpoint() {
-  local name="$1" base="$2" model="$3" api_key="$4" response url auth=()
+  local name="$1" base="$2" model="$3" api_key_env="$4" url
   if [[ -z "$base" || -z "$model" ]]; then
     fail "$name endpoint/model configuration"
     return
   fi
   url="${base%/}/models"
-  [[ -n "$api_key" ]] && auth=(-H "Authorization: Bearer $api_key")
-  response="$(curl --noproxy '*' --connect-timeout 2 --max-time 6 -fsS "${auth[@]}" "$url" 2>/dev/null || true)"
-  if [[ -n "$response" ]] && python3 -c '
-import json, sys
+  if python3 - "$url" "$model" "$api_key_env" <<'PY'
+import json, os, sys, urllib.error, urllib.request
+url, model, api_key_env = sys.argv[1:]
+api_key = os.environ.get(api_key_env, "")
+headers = {"Authorization": "Bearer " + api_key} if api_key else {}
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 try:
-    payload = json.load(sys.stdin)
-except (json.JSONDecodeError, UnicodeDecodeError):
+    with opener.open(urllib.request.Request(url, headers=headers), timeout=6) as response:
+        payload = json.load(response)
+except (OSError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError,
+        json.JSONDecodeError, UnicodeDecodeError):
     raise SystemExit(1)
 served = payload.get("data", []) if isinstance(payload, dict) else []
-raise SystemExit(0 if any(isinstance(item, dict) and item.get("id") == sys.argv[1]
+raise SystemExit(0 if any(isinstance(item, dict) and item.get("id") == model
                          for item in served) else 1)
-' "$model" <<<"$response"; then
+PY
+  then
     pass "$name endpoint and served model ($base)"
   else
     external_not_ready "$name endpoint/model ($base; expected $model from /v1/models)"
   fi
 }
 
-check_model_endpoint "Text" "${TEXT_MODEL_BASE_URL:-}" "${TEXT_MODEL:-}" "${TEXT_MODEL_API_KEY:-}"
+check_model_endpoint "Text" "${TEXT_MODEL_BASE_URL:-}" "${TEXT_MODEL:-}" TEXT_MODEL_API_KEY
 if [[ "${REALTIME_COACH_PROVIDER:-}" == openai-compatible ]]; then
-  check_model_endpoint "Coach" "${REALTIME_COACH_BASE_URL:-}" "${REALTIME_COACH_MODEL:-}" "${REALTIME_COACH_API_KEY:-}"
+  check_model_endpoint "Coach" "${REALTIME_COACH_BASE_URL:-}" "${REALTIME_COACH_MODEL:-}" REALTIME_COACH_API_KEY
 else
   fail "REALTIME_COACH_PROVIDER must be openai-compatible"
 fi
@@ -85,8 +90,20 @@ else
 fi
 
 check_http() {
-  local name="$1" url="$2"
-  if [[ -n "$url" ]] && curl --noproxy '*' --connect-timeout 2 --max-time 6 -fsS "$url" >/dev/null 2>&1; then
+  local name="$1" url="$2" api_token_env="${3:-}"
+  if [[ -n "$url" ]] && python3 - "$url" "$api_token_env" >/dev/null 2>&1 <<'PY'
+import os, sys, urllib.error, urllib.request
+url, token_env = sys.argv[1:]
+token = os.environ.get(token_env, "") if token_env else ""
+headers = {"Authorization": "Bearer " + token} if token else {}
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+try:
+    with opener.open(urllib.request.Request(url, headers=headers), timeout=6) as response:
+        raise SystemExit(0 if 200 <= response.status < 300 else 1)
+except (OSError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+    raise SystemExit(1)
+PY
+  then
     pass "$name ($url)"
   else
     external_not_ready "$name ($url)"
@@ -94,8 +111,7 @@ check_http() {
 }
 
 if [[ "${NEMO_RETRIEVER_ENABLED:-}" == true ]]; then
-  check_http "NeMo Retriever REST" "${NEMO_RETRIEVER_BASE_URL%/}/v1/health"
-  check_http "NeMo Retriever VectorDB" "${NEMO_RETRIEVER_VECTORDB_URL%/}/v1/health"
+  check_http "NeMo Retriever REST" "${NEMO_RETRIEVER_BASE_URL%/}/v1/health" NEMO_RETRIEVER_API_TOKEN
 else
   fail "NEMO_RETRIEVER_ENABLED must be true for the Spark profile"
 fi

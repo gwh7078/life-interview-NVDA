@@ -12,9 +12,8 @@ Spark 的目标部署方式是 **用户准备标准 Runtime，本仓库部署应
 | Mini Coach | `http://127.0.0.1:8001/v1` | `Qwen3-8B`；由产品低延迟 Realtime Runtime 调用 |
 | StepAudio | `ws://127.0.0.1:8092/realtime` | 应用与外部 Realtime bridge 的目标协议地址 |
 | NeMo Retriever | REST / MCP `:7670` | 后端 / Agent retrieval 使用的 Service |
-| VectorDB | `:7671` | Retriever 内部依赖；产品后端不直接访问或写入 |
 
-SQLite 始终是业务 Source of Truth；Retriever 是可重建索引。Model Service 与 Retriever Runtime 是独立服务，不由 OpenClaw 代替。
+SQLite 始终是业务 Source of Truth；Retriever 是可重建索引。Retriever 内部存储由其 Runtime 管理，产品只配置 `NEMO_RETRIEVER_ENABLED`、`NEMO_RETRIEVER_BASE_URL` 与可选 API token。Model Service 与 Retriever Runtime 是独立服务，不由 OpenClaw 代替。
 
 ## 2. NemoClaw / OpenClaw
 
@@ -26,14 +25,13 @@ OpenClaw 承担 `AgentTaskPort` 的正式会后 Task Runtime。Mini `supervisor_
 
 ## 3. NeMo Retriever 与 NAT
 
-Retriever 对外接口：
+Retriever 的应用接口只有：
 
 ```text
 REST / MCP Service : 127.0.0.1:7670
-Internal VectorDB  : 127.0.0.1:7671
 ```
 
-Web 后端只能访问 Retriever Service；不能直接写 VectorDB。Transcript 先持久化到 SQLite，再异步建立派生索引。
+VectorDB 是 Retriever Runtime 的内部依赖，不是应用 readiness gate 或应用配置项。Web 后端只访问 Retriever Service；Transcript 先持久化到 SQLite，再异步建立派生索引。
 
 NeMo Agent Toolkit（NAT）用于 Evaluation、Regression、Profiler、Trace / Trajectory 和 Benchmark。NAT 是比赛评测与应用质量证据，不接管 `AgentTaskPort`、OpenClaw 或 Mini Coach Runtime。
 
@@ -53,6 +51,7 @@ NeMo Agent Toolkit（NAT）用于 Evaluation、Regression、Profiler、Trace / T
 当前统一验收状态：
 
 - DGX Spark / GB10 Runtime compatibility：**NOT TESTED ON DGX SPARK**；
+- StepAudio Runtime image / backend on DGX Spark ARM64：**NOT VERIFIED ON DGX SPARK / ARM64**；
 - 应用 + Text / Coach / StepAudio / Retriever / NemoClaw 完整 E2E：**NOT TESTED ON DGX SPARK**；
 - 首 token / 首音、稳定性、资源占用、并发与 P50 / P95：**NOT TESTED ON DGX SPARK**。
 

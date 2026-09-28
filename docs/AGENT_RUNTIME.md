@@ -111,6 +111,8 @@ Task Definition 当前按职责映射：
 
 Mac Agent / 文本任务通过 Bailian `qwen3.6-35b-a3b` 配置。Spark 部署目标由操作者运行 OpenAI-compatible Text Service：`nvidia/Qwen3.6-35B-A3B-NVFP4`，默认 `http://127.0.0.1:8000/v1`；NemoClaw 复用 `/v1/models` 实际返回的模型 ID。Mini Coach 单独使用 `Qwen3-8B`，默认 `http://127.0.0.1:8001/v1`。两套 endpoint 分开配置，不能将 Coach 路由到 OpenClaw。
 
+Spark 基础 `verify.sh` 使用有界的产品 acceptance smoke，不运行全量 `npm test` 或 NAT。StepAudio 的具体 Runtime / ARM64 路径仍为 **NOT VERIFIED ON DGX SPARK / ARM64**。
+
 ## 8. NAT
 
 NeMo Agent Toolkit 用于：

@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT"
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+export SPARK_REPO_ROOT="$REPO_ROOT"
 
 SPARK_ENV_FILE="${SPARK_ENV_FILE:-$REPO_ROOT/deploy/spark/.env}"
 SPARK_BENCH_ROOT="${SPARK_BENCH_DIR:-$REPO_ROOT/runtime/benchmarks/spark}"
@@ -107,6 +108,8 @@ unset SPARK_BENCH_VOICE_LOAD_MS
 readiness_status="$(python3 - "$SPARK_ENV_FILE" "$SPARK_BENCH_DIR/readiness.json" <<'PY'
 import base64,hashlib,json,os,re,shutil,socket,ssl,subprocess,sys
 import urllib.error,urllib.parse,urllib.request
+sys.path.insert(0,os.path.join(os.environ["SPARK_REPO_ROOT"],"deploy/spark/lib"))
+from nemoclaw_status import validate_status_json
 
 env_file,out_path=sys.argv[1:]
 values={}
@@ -165,7 +168,8 @@ def model_endpoint(name,base,model,token):
     def check():
         if not base: raise EndpointError("endpoint not configured")
         if not model: raise EndpointError("served model not configured")
-        payload=http(base.rstrip("/")+"/models",{"authorization":"Bearer "+token},True)
+        headers={"authorization":"Bearer "+token} if token else {}
+        payload=http(base.rstrip("/")+"/models",headers,True)
         served={item.get("id") for item in payload.get("data",[]) if isinstance(item,dict)} if isinstance(payload,dict) else set()
         if model not in served: raise EndpointError("configured model unavailable at /models")
     record(name,check)
@@ -180,18 +184,16 @@ record("product",check_product)
 
 text_base=setting("TEXT_MODEL_BASE_URL") or "http://127.0.0.1:8000/v1"
 text_model=setting("TEXT_MODEL") or setting("SPARK_TEXT_SERVED_MODEL") or "nvidia/Qwen3.6-35B-A3B-NVFP4"
-model_endpoint("text_model",text_base,text_model,setting("TEXT_MODEL_API_KEY") or "local-spark")
+model_endpoint("text_model",text_base,text_model,setting("TEXT_MODEL_API_KEY"))
 coach_base=setting("REALTIME_COACH_BASE_URL") or "http://127.0.0.1:8001/v1"
 coach_model=setting("REALTIME_COACH_MODEL") or setting("SPARK_COACH_SERVED_MODEL") or "Qwen/Qwen3-8B"
-model_endpoint("coach",coach_base,coach_model,setting("REALTIME_COACH_API_KEY") or "local-spark")
+model_endpoint("coach",coach_base,coach_model,setting("REALTIME_COACH_API_KEY"))
 
 retriever=(setting("NEMO_RETRIEVER_BASE_URL") or "http://127.0.0.1:7670").rstrip("/")
 retriever_headers={}
 if setting("NEMO_RETRIEVER_API_TOKEN"):
     retriever_headers["authorization"]="Bearer "+setting("NEMO_RETRIEVER_API_TOKEN")
 record("retriever",lambda: http(retriever+"/v1/health",retriever_headers))
-vectordb=(setting("NEMO_RETRIEVER_VECTORDB_URL") or "http://127.0.0.1:7671").rstrip("/")
-record("vectordb",lambda: http(vectordb+"/v1/health"))
 
 ws_url=setting("STEPAUDIO2_LOCAL_WS_URL") or "ws://127.0.0.1:8092/realtime"
 def check_realtime():
@@ -235,20 +237,11 @@ def check_agent_runtime():
     try:
         result=subprocess.run([cli,sandbox,"status","--json"],text=True,capture_output=True,timeout=10)
     except (OSError,subprocess.TimeoutExpired): raise EndpointError("NemoClaw status unavailable") from None
-    try: status=json.loads(result.stdout)
-    except json.JSONDecodeError: raise EndpointError("NemoClaw returned invalid status JSON") from None
     configured_model=setting("AGENT_MODEL_DEFAULT")
-    if result.returncode!=0 or status.get("found") is not True or str(status.get("phase","")).lower() not in {"ready","running"}:
-        raise EndpointError("NemoClaw sandbox is not running")
-    if status.get("provider")!="vllm-local" or status.get("model")!=configured_model:
-        raise EndpointError("NemoClaw route does not match the configured Text model")
-    expected={"provider":"vllm-local","model":configured_model}
-    for route_name in ("recordedRoute","liveRoute"):
-        route=status.get(route_name)
-        if not isinstance(route,dict) or any(route.get(key)!=value for key,value in expected.items()):
-            raise EndpointError(f"NemoClaw {route_name} does not match the configured Text model")
-    if status.get("routeDrift"):
-        raise EndpointError("NemoClaw reports inference route drift")
+    if not configured_model: raise EndpointError("NemoClaw Text model is not configured")
+    status_error=validate_status_json(result.stdout,configured_model or None)
+    if result.returncode!=0 or status_error:
+        raise EndpointError(status_error or "Could not read NemoClaw sandbox status")
     try:
         openclaw=subprocess.run([cli,sandbox,"exec","--","openclaw","--version"],text=True,capture_output=True,timeout=10)
     except (OSError,subprocess.TimeoutExpired): raise EndpointError("OpenClaw status unavailable") from None
@@ -272,11 +265,16 @@ fi
 overall_fail=0
 run_json() {
   local name="$1"; shift
-  local stdout="$SPARK_BENCH_DIR/.$name.stdout" stderr="$SPARK_BENCH_DIR/.$name.stderr" target="$SPARK_BENCH_DIR/$name.json"
+  local temp_dir stdout stderr target
+  temp_dir="$(mktemp -d)"
+  stdout="$temp_dir/stdout" stderr="$temp_dir/stderr" target="$SPARK_BENCH_DIR/$name.json"
   if "$@" >"$stdout" 2>"$stderr"; then
-    if ! python3 - "$stdout" "$target" <<'PY'
+    if ! python3 - "$stdout" "$target" "$REPO_ROOT" <<'PY'
 import json,sys
-lines=[x.strip() for x in open(sys.argv[1],encoding="utf-8") if x.strip()]
+from pathlib import Path
+sys.path.insert(0,str(Path(sys.argv[3])/"scripts/spark"))
+from evidence import sanitize_text
+lines=[x.strip() for x in sanitize_text(Path(sys.argv[1]).read_text(encoding="utf-8",errors="replace")).splitlines() if x.strip()]
 if not lines: raise SystemExit(1)
 value=json.loads(lines[-1])
 with open(sys.argv[2],"w",encoding="utf-8") as out:
@@ -316,20 +314,21 @@ PY
     fi
   else
     overall_fail=1
-    python3 - "$stderr" "$target" <<'PY'
-import json,re,sys
+    python3 - "$stderr" "$target" "$REPO_ROOT" <<'PY'
+import json,sys
+from pathlib import Path
+sys.path.insert(0,str(Path(sys.argv[3])/"scripts/spark"))
+from evidence import sanitize_text
 try: text=open(sys.argv[1],encoding="utf-8",errors="replace").read()
 except Exception: text=""
-text=re.sub(r"(?i)(authorization\s*[:=]\s*bearer\s+|Bearer\s+)[^\s\"']+",r"\1[redacted]",text)
-text=re.sub(r"\b(?:nvapi-|sk-)[A-Za-z0-9_-]{8,}\b","[redacted]",text,flags=re.I)
-text=re.sub(r"(?i)\b(api[_-]?key|token|password|secret)(\s*[=:]\s*)[^\s&,;\"']+",r"\1\2[redacted]",text)
+text=sanitize_text(text)
 err=(text.strip().splitlines()[-1][-500:] if text.strip() else "benchmark command failed")
 with open(sys.argv[2],"w",encoding="utf-8") as out:
     json.dump({"status":"FAIL","safe_error":err},out,ensure_ascii=False,indent=2)
     out.write("\n")
 PY
   fi
-  rm -f "$stdout" "$stderr"
+  rm -rf "$temp_dir"
 }
 
 run_json text bash scripts/codex-node.sh node --env-file-if-exists=deploy/spark/.env --import tsx scripts/spark-text-agent-benchmark.ts

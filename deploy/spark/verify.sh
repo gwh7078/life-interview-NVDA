@@ -8,24 +8,41 @@ ensure_product_dirs
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 evidence_dir="$SPARK_DIAGNOSTICS_DIR/verify-runs/$run_id"
 mkdir -p "$evidence_dir"
-if "$DIR/check-env.sh" >"$evidence_dir/check-env.log" 2>&1; then
+check_log_raw="$(mktemp)"
+if "$DIR/check-env.sh" >"$check_log_raw" 2>&1; then
   check_exit=0
 else
   check_exit=$?
 fi
+python3 - "$check_log_raw" "$evidence_dir/check-env.log" "$REPO_ROOT" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[3]) / "scripts/spark"))
+from evidence import sanitize_text
+raw, target = Path(sys.argv[1]), Path(sys.argv[2])
+target.write_text(sanitize_text(raw.read_text(encoding="utf-8", errors="replace")), encoding="utf-8")
+raw.unlink(missing_ok=True)
+PY
 export SPARK_VERIFY_CHECK_LOG="$evidence_dir/check-env.log"
 python3 - "$REPO_ROOT" "$evidence_dir" "$DATABASE_PATH" "$check_exit" <<'PY'
-import datetime, json, os, platform, re, shutil, subprocess, sys, time
+import datetime, json, os, platform, shutil, subprocess, sys, time
 from pathlib import Path
 
 root, evidence, database = map(Path, sys.argv[1:4])
 check_exit = int(sys.argv[4])
+sys.path.insert(0, str(root / "scripts/spark"))
+sys.path.insert(0, str(root / "deploy/spark/lib"))
+from evidence import sanitize_text
+from nemoclaw_status import validate_status_json
 check_text = Path(os.environ["SPARK_VERIFY_CHECK_LOG"]).read_text(encoding="utf-8", errors="replace")
 evidence.mkdir(parents=True, exist_ok=True)
 
-def command(args, timeout=900):
+def command(args, timeout=900, extra_env=None):
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(args, cwd=root, text=True, capture_output=True,
-                          timeout=timeout, env=os.environ.copy(), check=False)
+                          timeout=timeout, env=env, check=False)
 
 def endpoint_pass(label):
     return any(line.startswith("PASS:") and label.lower() in line.lower()
@@ -41,14 +58,13 @@ is_spark = physical_spark()
 rows = []
 
 def record(gid, name, status, output="", duration_ms=0):
-    safe = re.sub(r"(?i)(authorization:?\s*bearer\s+)[^\s]+", r"\1[REDACTED]", output)
-    safe = re.sub(r"\b(?:nvapi-|sk-)[A-Za-z0-9_-]{8,}\b", "[REDACTED]", safe)
+    safe = sanitize_text(output)
     path = evidence / f"{gid}.log"
     path.write_text((safe.strip() or status) + "\n", encoding="utf-8")
     rows.append({"id": gid, "name": name, "status": status,
                  "duration_ms": duration_ms, "evidence_file": str(path.relative_to(root))})
 
-def gate(gid, name, args, timeout=900, needs=()):
+def gate(gid, name, args, timeout=900, needs=(), extra_env=None):
     if not is_spark:
         record(gid, name, "NOT TESTED ON DGX SPARK", "Physical DGX Spark GB10 host not detected.")
         return
@@ -58,7 +74,7 @@ def gate(gid, name, args, timeout=900, needs=()):
         return
     started = time.monotonic()
     try:
-        result = command(args, timeout=timeout)
+        result = command(args, timeout=timeout, extra_env=extra_env)
         output = (result.stdout or "") + (("\n" + result.stderr) if result.stderr else "")
         record(gid, name, "PASS" if result.returncode == 0 else "FAIL",
                output or f"exit={result.returncode}", round((time.monotonic() - started) * 1000))
@@ -101,12 +117,16 @@ gate("G1", "Backend + Web + SQLite", [
 gate("G2", "Text model connection", [
     "python3", "deploy/spark/lib/openai-smoke.py",
     os.environ.get("TEXT_MODEL_BASE_URL", ""), os.environ.get("TEXT_MODEL", ""),
-], timeout=180, needs=("Text endpoint and served model",))
+], timeout=180, needs=("Text endpoint and served model",), extra_env={
+    "SPARK_OPENAI_API_KEY": os.environ.get("TEXT_MODEL_API_KEY", ""),
+})
 
 gate("G3", "Coach model connection", [
     "python3", "deploy/spark/lib/openai-smoke.py",
     os.environ.get("REALTIME_COACH_BASE_URL", ""), os.environ.get("REALTIME_COACH_MODEL", ""),
-], timeout=180, needs=("Coach endpoint and served model",))
+], timeout=180, needs=("Coach endpoint and served model",), extra_env={
+    "SPARK_OPENAI_API_KEY": os.environ.get("REALTIME_COACH_API_KEY", ""),
+})
 
 fixture = Path(os.environ.get("SPARK_REALTIME_FIXTURE", "runtime/benchmarks/spark/fixtures/speech-short.wav"))
 if not fixture.is_absolute():
@@ -148,19 +168,15 @@ def verify_agent_runtime():
         return
     started = time.monotonic()
     try:
+        if not model:
+            raise RuntimeError("AGENT_MODEL_DEFAULT is not configured.")
         status = command(["nemoclaw", sandbox, "status", "--json"], timeout=60)
+        if status.returncode:
+            raise RuntimeError("Could not read NemoClaw sandbox status.")
+        status_error = validate_status_json(status.stdout, model)
+        if status_error:
+            raise RuntimeError(status_error)
         data = json.loads(status.stdout)
-        if status.returncode or data.get("found") is not True or str(data.get("phase", "")).lower() not in {"ready", "running"}:
-            raise RuntimeError("NemoClaw sandbox is not RUNNING.")
-        if data.get("provider") != "vllm-local" or data.get("model") != model:
-            raise RuntimeError("OpenClaw inference route does not match the configured Text model.")
-        expected_route = {"provider": "vllm-local", "model": model}
-        for route_name in ("recordedRoute", "liveRoute"):
-            route = data.get(route_name)
-            if not isinstance(route, dict) or any(route.get(key) != value for key, value in expected_route.items()):
-                raise RuntimeError(f"OpenClaw {route_name} does not match the configured Text model.")
-        if data.get("routeDrift"):
-            raise RuntimeError("NemoClaw reports inference route drift.")
         openclaw = command(["nemoclaw", sandbox, "exec", "--", "openclaw", "--version"], timeout=30)
         if openclaw.returncode:
             raise RuntimeError("OpenClaw is not installed or not available in the sandbox.")
@@ -187,15 +203,11 @@ def verify_agent_runtime():
 
 verify_agent_runtime()
 
-gate("G8", "Closeout + Completion + Generation + Contributor + Memory tests",
-     ["bash", "scripts/codex-node.sh", "npm", "test"], timeout=1800)
-
-gate("G9", "NAT evaluation", [
-    "bash", "scripts/codex-node.sh", "npm", "run", "test:agent:nat:smoke",
-], timeout=1200, needs=("Text endpoint and served model",))
+gate("G8", "Closeout + Completion + Generation + Contributor + Memory acceptance",
+     ["bash", "scripts/codex-node.sh", "npm", "run", "spark:product:acceptance"], timeout=900)
 
 if not is_spark:
-    record("G10", "Technical Observer", "NOT TESTED ON DGX SPARK",
+    record("G9", "Technical Observer", "NOT TESTED ON DGX SPARK",
            "Physical DGX Spark GB10 host not detected.")
 else:
     started = time.monotonic()
@@ -205,10 +217,10 @@ else:
             raise RuntimeError("Observer telemetry does not identify dgx-spark.")
         if not telemetry.get("system_memory", {}).get("total_bytes"):
             raise RuntimeError("Observer telemetry has no system memory reading.")
-        record("G10", "Technical Observer", "PASS", json.dumps(telemetry, ensure_ascii=False),
+        record("G9", "Technical Observer", "PASS", json.dumps(telemetry, ensure_ascii=False),
                round((time.monotonic() - started) * 1000))
     except Exception as error:
-        record("G10", "Technical Observer", "FAIL", str(error), round((time.monotonic() - started) * 1000))
+        record("G9", "Technical Observer", "FAIL", str(error), round((time.monotonic() - started) * 1000))
 
 try:
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, text=True,

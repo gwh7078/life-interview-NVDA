@@ -15,7 +15,8 @@ Prepare the Spark host yourself:
   repository's Node wrapper.
 - Network access and enough disk for the application and your chosen runtimes.
 - The four application endpoints below. Text must be running before NemoClaw
-  onboarding. Python 3.12 and uv are needed for the optional NAT evaluation.
+  onboarding. Python 3.12 and uv are only needed for optional NAT evaluation;
+  they are not prerequisites for application setup or verification.
 
 Official references:
 
@@ -52,7 +53,7 @@ weights, choose GPU memory limits, or restart these services.
 | Text | `nvidia/Qwen3.6-35B-A3B-NVFP4` | OpenAI-compatible `http://127.0.0.1:8000/v1` | [NVIDIA DGX Spark vLLM model recipes](https://build.nvidia.com/spark/vllm/agent-ready-models), [Qwen3.6-35B-A3B recipe](https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B?features=tool_calling%2Creasoning&hardware=dgx_spark_gb10) |
 | Coach | `Qwen/Qwen3-8B` | OpenAI-compatible `http://127.0.0.1:8001/v1` | [vLLM OpenAI-compatible server](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html) |
 | Voice | Step-Audio 2 Mini | Product WebSocket `ws://127.0.0.1:8092/realtime` | [Step-Audio 2 official repository](https://github.com/stepfun-ai/Step-Audio2) |
-| Retrieval | NeMo Retriever | REST `http://127.0.0.1:7670`; VectorDB `http://127.0.0.1:7671` | [NeMo Retriever getting started](https://docs.nvidia.com/nemo/retriever/latest/extraction/getting-started-about/) |
+| Retrieval | NeMo Retriever | REST `http://127.0.0.1:7670` | [NeMo Retriever getting started](https://docs.nvidia.com/nemo/retriever/latest/extraction/getting-started-about/) |
 
 ### Text model
 
@@ -87,29 +88,15 @@ runtime may use the same endpoint contract.
 
 ### StepAudio
 
-StepAudio Local Runtime is an external dependency. Follow StepFun's instructions
-to install and start the model runtime. The official vLLM backend command can
-publish its HTTP service on a free host port (8002 below, leaving 8000 for Text):
-
-```bash
-docker run --rm -it --gpus all \
-  -v "$STEP_AUDIO_MODEL_DIR:/Step-Audio-2-mini:ro" \
-  -p 8002:8000 \
-  stepfun2025/vllm:step-audio-2-v20250909 \
-  -- vllm serve /Step-Audio-2-mini \
-  --served-model-name step-audio-2-mini --port 8000 \
-  --max-model-len 16384 --max-num-seqs 32 --tensor-parallel-size 1 \
-  --enable-auto-tool-choice --tool-call-parser step_audio_2 \
-  --tokenizer-mode step_audio_2 --chat_template_content_format string \
-  --audio-parser step_audio_2_tts_ta4 --trust-remote-code
-```
-
-This server exposes StepFun's HTTP inference API. The product requires an
-additional Realtime bridge implementing `ws://127.0.0.1:8092/realtime`; the
-HTTP endpoint alone does not implement that WebSocket contract. The retained
-`stepaudio2_bridge.py` is the product protocol adapter. After preparing the
-StepFun source, model files, and Python dependencies using StepFun's
-instructions, run it yourself against the external backend, for example:
+StepAudio Local Runtime is an external dependency. Follow StepFun's current
+instructions to install and start it. StepFun's Docker/vLLM examples are
+upstream references only; this project has **NOT VERIFIED ON DGX SPARK / ARM64**
+the cited image or any specific StepAudio runtime path. The product only
+requires a Realtime WebSocket endpoint at
+`ws://127.0.0.1:8092/realtime`. The retained `stepaudio2_bridge.py` is the
+product protocol adapter; an HTTP model endpoint alone does not satisfy the
+WebSocket contract. After preparing the backend and its dependencies according
+to StepFun's instructions, the adapter can be run separately, for example:
 
 ```bash
 STEP_AUDIO_SOURCE_DIR=/opt/Step-Audio2 \
@@ -125,10 +112,11 @@ or manage the model or bridge processes.
 
 ### NeMo Retriever
 
-Start NeMo Retriever and its VectorDB with NVIDIA's instructions. This
-application creates its Transcript and Era collections, indexes application
-data, and uses the REST endpoint. It never starts, stops, or updates Retriever
-containers.
+Start the NeMo Retriever Service with NVIDIA's instructions. Any VectorDB is
+an internal Retriever Runtime dependency and is not an application endpoint.
+This application creates its Transcript and Era collections, indexes
+application data, and uses only the Retriever REST service. It never starts,
+stops, or updates Retriever containers.
 
 Verify the endpoints before continuing:
 
@@ -136,7 +124,6 @@ Verify the endpoints before continuing:
 curl http://127.0.0.1:8000/v1/models
 curl http://127.0.0.1:8001/v1/models
 curl http://127.0.0.1:7670/v1/health
-curl http://127.0.0.1:7671/v1/health
 ```
 
 The WebSocket handshake and model IDs are checked by `check-env.sh`.
@@ -155,20 +142,23 @@ values. Keep the Text and Agent URLs/models aligned:
 TEXT_MODEL_PROVIDER=openai-compatible
 TEXT_MODEL_BASE_URL=http://127.0.0.1:8000/v1
 TEXT_MODEL=<actual-served-model-id>
+TEXT_MODEL_API_KEY=
 
 REALTIME_COACH_PROVIDER=openai-compatible
 REALTIME_COACH_BASE_URL=http://127.0.0.1:8001/v1
 REALTIME_COACH_MODEL=<actual-served-model-id>
+REALTIME_COACH_API_KEY=
 
 STEPAUDIO2_EXECUTION=local
 STEPAUDIO2_LOCAL_WS_URL=ws://127.0.0.1:8092/realtime
 
 NEMO_RETRIEVER_ENABLED=true
 NEMO_RETRIEVER_BASE_URL=http://127.0.0.1:7670
-NEMO_RETRIEVER_VECTORDB_URL=http://127.0.0.1:7671
+NEMO_RETRIEVER_API_TOKEN=
 
 AGENT_MODEL_BASE_URL=http://127.0.0.1:8000/v1
 AGENT_MODEL_DEFAULT=<same-actual-served-text-model-id>
+SPARK_SEED_DEMO_DATA=false
 ```
 
 Do not put provider secrets in Git or print them in diagnostics. The setup script
@@ -186,14 +176,20 @@ With the endpoints running:
 `check-env.sh` only reports host and endpoint readiness. It does not install,
 repair, restart, or stop anything.
 
-`setup.sh` installs npm dependencies, migrates and seeds the application
-SQLite database, initializes Retriever collections and Era data, then installs
+`setup.sh` installs npm dependencies, migrates the application SQLite database,
+initializes Retriever collections and Era data, then installs
 and configures NemoClaw/OpenClaw and the formal Skills. It uses NVIDIA's hosted
 NemoClaw installer when the CLI is absent and the documented
 `nemoclaw onboard --non-interactive` path for a missing sandbox. It sets the
 existing vLLM provider and served model in NemoClaw, so OpenClaw reuses the
 already-running Text endpoint. It never selects `install-vllm` or starts a
-second model server.
+second model server. Non-interactive onboarding explicitly sets
+`NEMOCLAW_WEB_SEARCH_PROVIDER=none`, so unrelated host credentials do not
+silently enable optional external web search.
+
+Demo data is optional. The default `SPARK_SEED_DEMO_DATA=false` leaves a new
+database without sample people or stories. Set it to `true` in `.env` only when
+you want the demo seed.
 
 References: [NemoClaw Quickstart with OpenClaw](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart),
 [reuse an existing vLLM server](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/local-inference/set-up-vllm),
@@ -221,7 +217,9 @@ Verification writes a timestamped report and logs under
 `runtime/diagnostics/spark/verify-runs/`; each run keeps its own evidence. It
 checks the hardware profile, HTTP/WebSocket endpoints, model responses, Backend,
 Web, SQLite, realtime integration, Retriever and Era/Memory, NemoClaw/OpenClaw,
-Skills, deterministic application tests, NAT evaluation, and Technical Observer.
+Skills, selected deterministic product acceptance tests, and Technical
+Observer. NAT, profiler, and benchmark evaluation are separate optional
+competition evidence and do not gate application verification.
 
 Statuses stay explicit:
 
@@ -236,6 +234,10 @@ The full StepAudio audio-to-audio gate uses a speech WAV fixture. Set
 `SPARK_REALTIME_FIXTURE=/path/to/speech.wav` to use a prepared fixture.
 Verification does not claim DGX Spark hardware validation when run on a Mac or
 another machine.
+
+DGX Spark compatibility, including the StepAudio Runtime on ARM64, remains
+**NOT TESTED ON DGX SPARK / ARM64** until the hardware run produces reviewed
+evidence.
 
 ## Benchmark
 

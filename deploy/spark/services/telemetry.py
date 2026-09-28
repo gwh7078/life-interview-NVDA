@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-import json, os, platform, subprocess, time
+import json, os, platform, subprocess, sys, time
 from pathlib import Path
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[3]/"deploy/spark/lib"))
+from nemoclaw_status import validate_status_json
 
 OUT=Path(os.environ.get("SPARK_TELEMETRY_PATH","runtime/diagnostics/spark/telemetry.json"))
 PID_DIR=Path(os.environ.get("SPARK_PID_DIR","runtime/pids/spark"))
@@ -75,8 +78,8 @@ def nemoclaw_state():
     if now-_nemo_cache["at"] < 30:
         return _nemo_cache["state"]
     try:
-        p=subprocess.run(["nemoclaw",NEMOCLAW_SANDBOX,"status"],text=True,capture_output=True,timeout=5)
-        state="RUNNING" if p.returncode==0 else "DEGRADED"
+        p=subprocess.run(["nemoclaw",NEMOCLAW_SANDBOX,"status","--json"],text=True,capture_output=True,timeout=5)
+        state="RUNNING" if p.returncode==0 and validate_status_json(p.stdout) is None else "DEGRADED"
     except FileNotFoundError:
         state="STOPPED"
     except Exception:

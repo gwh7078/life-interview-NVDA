@@ -10,6 +10,24 @@ warn() { printf '[spark][WARN] %s\n' "$*" >&2; }
 die() { printf '[spark][FAIL] %s\n' "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
+nemoclaw_status_ready() {
+  local sandbox="$1" expected_model="${2:-}" status_json
+  have nemoclaw || return 1
+  status_json="$(nemoclaw "$sandbox" status --json 2>/dev/null)" || return 1
+  if [[ -n "$expected_model" ]]; then
+    printf '%s\n' "$status_json" | python3 "$SPARK_DIR/lib/nemoclaw_status.py" --model "$expected_model"
+  else
+    printf '%s\n' "$status_json" | python3 "$SPARK_DIR/lib/nemoclaw_status.py"
+  fi
+}
+
+nemoclaw_status_phase() {
+  local sandbox="$1" status_json
+  have nemoclaw || return 1
+  status_json="$(nemoclaw "$sandbox" status --json 2>/dev/null)" || return 1
+  printf '%s\n' "$status_json" | python3 "$SPARK_DIR/lib/nemoclaw_status.py" --phase
+}
+
 if [[ -f "$SPARK_ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090

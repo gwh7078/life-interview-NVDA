@@ -23,6 +23,8 @@ validate_product_config() {
   [[ "${STEPAUDIO2_EXECUTION:-}" == local && -n "${STEPAUDIO2_LOCAL_WS_URL:-}" ]] || die "Configure the operator-managed local StepAudio WebSocket endpoint."
   [[ "${NEMO_RETRIEVER_ENABLED:-}" == true && -n "${NEMO_RETRIEVER_BASE_URL:-}" ]] || die "Configure the operator-managed NeMo Retriever endpoint."
   [[ "${AI_TASK_RUNTIME:-}" == agent && -n "${NEMOCLAW_SANDBOX:-}" ]] || die "Spark requires AI_TASK_RUNTIME=agent and NEMOCLAW_SANDBOX."
+  [[ "${SPARK_SEED_DEMO_DATA:-false}" == true || "${SPARK_SEED_DEMO_DATA:-false}" == false ]] \
+    || die "SPARK_SEED_DEMO_DATA must be true or false."
 }
 
 validate_product_config
@@ -91,7 +93,11 @@ cd "$REPO_ROOT"
 bash scripts/codex-node.sh npm ci
 bash scripts/codex-node.sh npm run typecheck
 bash scripts/codex-node.sh npm run db:migrate
-bash scripts/codex-node.sh npm run db:seed
+if [[ "${SPARK_SEED_DEMO_DATA:-false}" == true ]]; then
+  bash scripts/codex-node.sh npm run db:seed
+else
+  log "Demo data seed skipped (set SPARK_SEED_DEMO_DATA=true to opt in)."
+fi
 
 "$DIR/services/retriever.sh" ensure-collections
 bash scripts/codex-node.sh npm run era:dataset:validate

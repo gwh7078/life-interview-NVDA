@@ -58,7 +58,7 @@ df -h
 Text       OpenAI-compatible :8000/v1
 Coach      OpenAI-compatible :8001/v1
 StepAudio  Product WebSocket ws://127.0.0.1:8092/realtime
-Retriever  REST :7670, VectorDB :7671
+Retriever  REST :7670 (its storage remains internal to the Runtime)
 ```
 
 参考模型、官方文档、health checks 与完整安装步骤见当前部署说明。
@@ -68,9 +68,8 @@ Retriever  REST :7670, VectorDB :7671
 先拿最确定的 Spark-native 闭环。
 
 ```text
-vLLM
+OpenAI-compatible vLLM
 → nvidia/Qwen3.6-35B-A3B-NVFP4
-→ /health
 → /v1/models
 → chat completion
 ```
@@ -123,7 +122,7 @@ service health
 
 必须保存 latency 与 isolation evidence。
 
-如果 Retriever 全链失败但 ARM64 image/service 正常：
+如果 Retriever 全链失败但 Retriever Service 已就绪：
 
 - 优先修 service config；
 - 不修改 SQLite Source of Truth；

@@ -18,9 +18,8 @@
 | Coach | `Qwen3-8B` | `http://127.0.0.1:8001/v1` |
 | StepAudio | Step-Audio-2-mini app contract | `ws://127.0.0.1:8092/realtime` |
 | Retriever Service | Transcript / Era retrieval | `http://127.0.0.1:7670` |
-| Retriever VectorDB | Retriever internal component | `http://127.0.0.1:7671`；application must not write directly |
 
-Text / Coach model IDs must match each endpoint's `/v1/models`. When `localhost:8000/v1` already serves a model, NemoClaw onboarding can discover and reuse it. Port values are configuration defaults, not proof of connectivity.
+Text / Coach model IDs must match each endpoint's `/v1/models`. When `localhost:8000/v1` already serves a model, NemoClaw onboarding can discover and reuse it. Port values are configuration defaults, not proof of connectivity. The Retriever's internal storage is not an application endpoint or deployment gate.
 
 ## 3. Deployment sequence
 
@@ -29,7 +28,7 @@ Follow the executable sequence in the root [README](../../../README.md#dgx-spark
 1. Clone the repository on the Spark host.
 2. Prepare and start the four operator-managed Runtime endpoints outside the app deployment.
 3. Configure ignored `deploy/spark/.env` with addresses, served model IDs, and the isolated SQLite path.
-4. Run `bash deploy/spark/setup.sh`. It checks Spark and external endpoints, installs app dependencies, initializes / migrates SQLite, prepares Retriever collections, and wires NemoClaw / OpenClaw.
+4. Run `bash deploy/spark/setup.sh`. It checks Spark and external endpoints, installs app dependencies, migrates SQLite, prepares Retriever collections, and wires NemoClaw / OpenClaw. Demo data remains off unless `SPARK_SEED_DEMO_DATA=true` is explicitly set.
 5. If NemoClaw is missing, setup invokes NVIDIA's official `https://www.nvidia.com/nemoclaw.sh` installer and `nemoclaw onboard`. With vLLM already serving on `localhost:8000`, onboarding reuses its `/v1/models` model. OpenClaw remains inside the NemoClaw sandbox.
 6. Setup syncs the project Agent Skills and product policy. Mini Coach still executes through the product low-latency Realtime Runtime.
 7. `setup.sh` verifies that the Agent sandbox is running and configured; start the application with `bash deploy/spark/start.sh`. The app start script starts Backend and Technical Observer; external model and Retriever services stay operator-managed.
@@ -41,7 +40,7 @@ Follow the executable sequence in the root [README](../../../README.md#dgx-spark
 
 - SQLite is authoritative for Transcript, Session, and Story State.
 - Retriever is a rebuildable derived index; persist Transcript first, then index through REST on `:7670`.
-- The application never writes directly to VectorDB `:7671`.
+- Retriever collections and indexes are managed through the REST service; its internal storage remains inside the operator-managed Runtime.
 - OpenClaw handles formal post-session Agent Tasks via the existing Contract / Tool boundary; it does not own business writes.
 - Mini Coach retains `supervisor_auto`, the 2s Gate, 6s overall deadline, stale protection, and fail-open behavior.
 - Technical Observer is a side channel and must not affect interview or Agent decisions.
@@ -63,6 +62,7 @@ An official model page, static config, test harness, or Mac result is not a Spar
 Until a Spark run is performed and its artifacts are reviewed, report all of the following as **NOT TESTED ON DGX SPARK**:
 
 - GB10 / DGX Spark Runtime compatibility;
+- StepAudio Runtime image / backend on DGX Spark ARM64: **NOT VERIFIED ON DGX SPARK / ARM64**;
 - StepAudio bridge protocol, streaming, full-duplex, cancel / barge-in, and first-audio behavior;
 - Full product E2E across interview, persistence, Coach, Retriever, NemoClaw, and post-session Tasks;
 - P50 / P95, stability, memory use, and concurrency.

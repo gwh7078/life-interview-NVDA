@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-import json, sys, urllib.request
+import json, os, sys, urllib.request
 base=(sys.argv[1] if len(sys.argv)>1 else "http://127.0.0.1:8000/v1").rstrip("/")
 served_model=sys.argv[2] if len(sys.argv)>2 else "text-api"
+api_key=os.environ.get("SPARK_OPENAI_API_KEY", "")
+headers={"authorization":f"Bearer {api_key}"} if api_key else {}
 
 def get(path):
-    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(base.removesuffix("/v1")+path,timeout=10) as r:
+    req=urllib.request.Request(base.removesuffix("/v1")+path,headers=headers)
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req,timeout=10) as r:
         return r.read().decode()
 
 def post(payload):
-    req=urllib.request.Request(base+"/chat/completions",data=json.dumps(payload).encode(),headers={"content-type":"application/json"})
+    req=urllib.request.Request(base+"/chat/completions",data=json.dumps(payload).encode(),headers={"content-type":"application/json",**headers})
     with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req,timeout=90) as r:
         return json.loads(r.read())
 
-health=get("/health")
 models=json.loads(get("/v1/models"))
 ids={x.get("id") for x in models.get("data",[]) if isinstance(x,dict)}
 if served_model not in ids:
@@ -34,4 +36,4 @@ structured=post({
 raw=structured["choices"][0]["message"].get("content","").strip()
 obj=json.loads(raw)
 if obj != {"ok":True}: raise SystemExit("structured_output_failed")
-print(json.dumps({"health":"PASS","model":served_model,"chat":"PASS","structured_output":"PASS"}))
+print(json.dumps({"models":"PASS","model":served_model,"chat":"PASS","structured_output":"PASS"}))

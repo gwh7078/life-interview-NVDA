@@ -16,7 +16,7 @@ DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库�
 | Text / Agent | `nvidia/Qwen3.6-35B-A3B-NVFP4` | `http://127.0.0.1:8000/v1` | 用户运行 vLLM；OpenClaw 与应用复用 served ID |
 | Mini Coach | `Qwen3-8B` | `http://127.0.0.1:8001/v1` | 用户运行；产品低延迟 Realtime Runtime 调用 |
 | StepAudio | Step-Audio-2-mini | `ws://127.0.0.1:8092/realtime` | 用户提供符合应用契约的 Realtime Runtime / bridge |
-| NeMo Retriever | Transcript / Era collections | Service `:7670`；internal VectorDB `:7671` | 用户运行；应用只访问 `:7670` |
+| NeMo Retriever | Transcript / Era collections | REST Service `:7670` | 用户运行；应用只访问 Retriever Service |
 
 `my-assistant` NemoClaw sandbox 内的 OpenClaw 承担正式会后 Agent Tasks。Mini `interview-coach` Skill 继续在产品低延迟 Runtime 中执行，不经过 OpenClaw。
 
@@ -34,8 +34,8 @@ DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库�
 
 1. Clone 本仓库。
 2. 在仓库外依官方资料准备 Text / Coach / StepAudio / Retriever Runtime。
-3. 复制 `deploy/spark/env.example` 为忽略文件 `deploy/spark/.env`，按两个 `/v1/models` endpoint 返回的 served ID 配置模型名。
-4. 四个外部 Runtime 就绪后运行 `bash deploy/spark/setup.sh`。它执行服务检查、应用依赖与数据库 setup、NVIDIA 官方 NemoClaw installer / `nemoclaw onboard`、现有 `localhost:8000/v1/models` 模型复用，以及应用 Skills / policy 接线。
+3. 复制 `deploy/spark/env.example` 为忽略文件 `deploy/spark/.env`，按两个 `/v1/models` endpoint 返回的 served ID 配置模型名；Retriever 只需 `NEMO_RETRIEVER_BASE_URL`，不配置其内部存储地址。
+4. 四个外部 Runtime 就绪后运行 `bash deploy/spark/setup.sh`。它执行服务检查、应用依赖与 SQLite migration、NVIDIA 官方 NemoClaw installer / `nemoclaw onboard`、现有 `localhost:8000/v1/models` 模型复用，以及应用 Skills / policy 接线。示例数据默认关闭，只在 `SPARK_SEED_DEMO_DATA=true` 时写入。
 5. 运行 `bash deploy/spark/start.sh`。NemoClaw setup 已保证 sandbox 运行；`start.sh` 只启动 Backend、Agent retrieval proxy 和 Technical Observer。
 6. 所有服务就绪后在真机运行 `bash deploy/spark/verify.sh`，并保留报告与 gate evidence。
 
@@ -51,6 +51,7 @@ DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库�
 ## 6. 当前验收状态
 
 - DGX Spark Runtime compatibility：**NOT TESTED ON DGX SPARK**。
+- StepAudio Runtime image / backend on ARM64：**NOT VERIFIED ON DGX SPARK / ARM64**。
 - 完整应用端到端（Text / Coach / StepAudio / Retriever / OpenClaw）：**NOT TESTED ON DGX SPARK**。
 - 性能、资源与并发 Benchmark：**NOT TESTED ON DGX SPARK**。
 
