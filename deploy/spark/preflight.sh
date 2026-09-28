@@ -121,6 +121,15 @@ versions = {
     "docker": docker_version,
     "python": python_ver,
     "node": node_ver,
+    "deployment": {
+        "text_model": os.getenv("SPARK_TEXT_MODEL"),
+        "vllm_image": os.getenv("SPARK_VLLM_IMAGE"),
+        "coach_model": os.getenv("SPARK_COACH_MODEL"),
+        "retriever_image": os.getenv("SPARK_RETRIEVER_IMAGE"),
+        "stepaudio_image": os.getenv("SPARK_STEPAUDIO_IMAGE"),
+        "stepaudio_source_ref": os.getenv("SPARK_STEPAUDIO_SOURCE_REF"),
+        "stepaudio_hf_model": os.getenv("SPARK_STEPAUDIO_HF_MODEL"),
+    },
 }
 report = {
     "captured_at": versions["captured_at"],
