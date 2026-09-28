@@ -18,13 +18,14 @@ report="$SPARK_DIAGNOSTICS_DIR/install-report.json"
 events="$SPARK_DIAGNOSTICS_DIR/install-events.jsonl"
 install_log="$SPARK_LOG_DIR/install.log"
 started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-install_fingerprint="$(
+: > "$events"
+
+current_install_fingerprint() {
   {
     git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || printf 'no-git\n'
     if [[ -f "$SPARK_ENV_FILE" ]]; then sha256sum "$SPARK_ENV_FILE"; else printf 'no-env\n'; fi
   } | sha256sum | awk '{print $1}'
-)"
-: > "$events"
+}
 
 record() {
   local name="$1" status="$2" duration="$3" message="${4:-}"
@@ -57,6 +58,8 @@ trap finalize EXIT
 run_step() {
   local name="$1"; shift
   local marker="$SPARK_STATE_DIR/install-$name.ok"
+  local install_fingerprint
+  install_fingerprint="$(current_install_fingerprint)"
   if [[ -f "$marker" && "$name" != "preflight" && "$name" != "start-services" && "$name" != "verify" ]]; then
     local recorded
     recorded="$(cat "$marker" 2>/dev/null || true)"
@@ -167,14 +170,12 @@ if (( dry_run )); then
   run_step preflight "$DIR/preflight.sh" --report-only
 else
   run_step preflight preflight_install
-fi
-run_step dependencies bootstrap_tools
-if (( ! dry_run )); then
   ensure_local_secrets
   set -a
   . "$DIR/.env"
   set +a
 fi
+run_step dependencies bootstrap_tools
 run_step model-prefetch prefetch_all
 run_step db-migrate db_migrate
 run_step text-model "$DIR/models/post-session.sh" start
