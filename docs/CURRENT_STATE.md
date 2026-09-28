@@ -85,6 +85,8 @@ Coach Packet
 当前 Mini response.create instructions
 ```
 
+比赛对照可通过 `INTERVIEW_BENCHMARK_VARIANT=A|B|C` opt-in；未设置保持现有产品路径。三组固定使用同一 Step-Audio-2-mini Provider、模型和 Realtime 配置：A 只运行 Mini，B 保留 Coach Gate 指导但关闭两路检索，C 保留 Gate 对 Personal Memory 与 Era 的按需选择。Profile 与最终有效能力写入 Realtime Trace；C 要求 Retriever/indexer 已启用。
+
 关键约束：
 
 - Gate 硬上限：2,000 ms；

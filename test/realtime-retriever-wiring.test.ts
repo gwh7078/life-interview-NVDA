@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { once } from 'node:events';
 import { performance } from 'node:perf_hooks';
 import path from 'node:path';
@@ -26,6 +26,7 @@ type JsonRecord = Record<string, unknown>;
 type TriggerMode = 'voice_tool' | 'supervisor_auto';
 
 const temporaryDirectories: string[] = [];
+mkdirSync(path.resolve('data/test-tmp'), { recursive: true });
 
 after(() => temporaryDirectories.forEach((directory) => rmSync(directory, { recursive: true, force: true })));
 
@@ -126,6 +127,7 @@ function sendProviderEvent(socket: WebSocket | undefined, event: JsonRecord): vo
 
 interface FixtureOptions {
   realtimeMemoryTriggerMode: TriggerMode;
+  benchmarkVariant?: 'A' | 'B' | 'C';
   realtimeSlowDeadlineMs?: number;
   manualTurnControl?: boolean;
   supportsContextInjection?: boolean;
@@ -264,6 +266,8 @@ async function createFixture(options: FixtureOptions) {
     openingResponseTimeoutMs: 500,
     realtimeSlowDeadlineMs: options.realtimeSlowDeadlineMs ?? 800,
     realtimeMemoryTriggerMode: options.realtimeMemoryTriggerMode,
+    interviewBenchmarkVariant: options.benchmarkVariant,
+    realtimeRetrieverEnabled: options.benchmarkVariant === 'C',
     realtimeCoachGateTimeoutMs: options.coachGateTimeoutMs,
     realtimeCoachTotalTimeoutMs: options.coachTotalTimeoutMs,
     wrapUpMs: 100_000,
@@ -533,6 +537,11 @@ async function endStorySession(fixture: Awaited<ReturnType<typeof createFixture>
   await waitFor(ended, 5_000, 'story ended');
 }
 
+function realtimeTraceRows(diagnosticsDirectory: string, sessionId: string): JsonRecord[] {
+  return readFileSync(path.join(diagnosticsDirectory, 'traces', 'realtime', `${sessionId}.jsonl`), 'utf8')
+    .trim().split('\n').map((line) => JSON.parse(line) as JsonRecord);
+}
+
 test('voice_tool routes only get_interview_context through one shared Retriever and Agent pipeline', async () => {
   const fixture = await createFixture({ realtimeMemoryTriggerMode: 'voice_tool', realtimeSlowDeadlineMs: 800 });
   try {
@@ -623,6 +632,198 @@ test('voice_tool cancels a stuck response and writes empty Tool Result plus Resu
     assert.equal(result.resume, true);
     assert.ok(performance.now() - startedAt < deadlineMs,
       'Tool Result and Resume must be written before the total Tool Call deadline');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('Interview Benchmark A skips Coach and retrieval while Mini answers the same Story Continue turn', async () => {
+  const fixture = await createFixture({
+    benchmarkVariant: 'A',
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+  });
+  const sessionId = String(fixture.ownerMessages.find((message) => message.type === 'ready')?.sessionId);
+  try {
+    await sendManualUserFinal(fixture, 'benchmark-a-turn', '那几年工作发生了一些变化。');
+    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'Variant A Mini response');
+    const instructions = String(record(response.response)?.instructions ?? '');
+
+    assert.match(instructions, /你是人生采访记者/u);
+    assert.doesNotMatch(instructions, /【采访教练】已知：|【采访教练】方向：/u);
+    assert.equal(fixture.coachGateInputs.length, 0);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+    assert.equal(fixture.searchInputs.length, 0);
+    assert.equal(fixture.eraSearchInputs.length, 0);
+    assert.equal(fixture.providerMessages.filter((message) => message.type === 'response.create').length, 1);
+    await endStorySession(fixture);
+  } finally {
+    await fixture.close();
+  }
+
+  const rows = realtimeTraceRows(fixture.diagnosticsDirectory, sessionId);
+  const started = rows.find((row) => row.event === 'session.started');
+  assert.equal(started?.benchmarkVariant, 'A');
+  assert.equal(started?.coachEnabled, false);
+  assert.equal(started?.memoryRetrievalEnabled, false);
+  assert.equal(started?.eraRetrievalEnabled, false);
+  assert.equal(started?.voiceProfile, 'stepaudio2_mini');
+  assert.equal(rows.some((row) => row.event === 'coach.gate.started'), false);
+});
+
+test('Interview Benchmark B clamps both Gate retrieval requests and keeps its current-turn guidance', async () => {
+  let gateCalls = 0;
+  const fixture = await createFixture({
+    benchmarkVariant: 'B',
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    coach: {
+      async evaluate(input) {
+        gateCalls += 1;
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: '核对过去的工作经历',
+          retrieve_era: true, era_query: '1998 年就业环境', era_start_year: 1996, era_end_year: 2000,
+          reason: 'history_reference', avoid: '不要重复问已经回答过的问题。',
+          direction: `根据本轮回答继续追问：${input.currentUserAnswer.slice(0, 12)}`,
+        };
+      },
+      async resolve() { throw new Error('Variant B must not invoke Coach Resolve.'); },
+    },
+  });
+  const sessionId = String(fixture.ownerMessages.find((message) => message.type === 'ready')?.sessionId);
+  try {
+    await sendManualUserFinal(fixture, 'benchmark-b-turn', '那几年工作发生了一些变化。');
+    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'Variant B guided Mini response');
+    const instructions = String(record(response.response)?.instructions ?? '');
+
+    assert.equal(gateCalls, 1);
+    assert.match(instructions, /【采访教练】/u);
+    assert.match(instructions, /根据本轮回答继续追问/u);
+    assert.equal(fixture.searchInputs.length, 0);
+    assert.equal(fixture.eraSearchInputs.length, 0);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+    await endStorySession(fixture);
+  } finally {
+    await fixture.close();
+  }
+
+  const rows = realtimeTraceRows(fixture.diagnosticsDirectory, sessionId);
+  const started = rows.find((row) => row.event === 'session.started');
+  const gateCompleted = rows.find((row) => row.event === 'coach.gate.completed');
+  assert.equal(started?.voiceProfile, 'stepaudio2_mini');
+  assert.equal(started?.voiceModel, 'Step-Audio-2-mini');
+  assert.equal(gateCompleted?.benchmarkVariant, 'B');
+  assert.equal(gateCompleted?.coachEnabled, true);
+  assert.equal(gateCompleted?.memoryRetrievalEnabled, false);
+  assert.equal(gateCompleted?.eraRetrievalEnabled, false);
+  assert.equal(gateCompleted?.retrieve_memory, false);
+  assert.equal(gateCompleted?.retrieve_era, false);
+});
+
+test('Interview Benchmark C uses Gate-selected Memory and Era retrieval before Coach Resolve', async () => {
+  let gateCalls = 0;
+  let resolveCalls = 0;
+  let resolveInput: CoachResolveInput | undefined;
+  const fixture = await createFixture({
+    benchmarkVariant: 'C',
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    eraEnabled: false,
+    eraContext: {
+      async search() {
+        return [{
+          start_year: 1996, end_year: 2000, category: '工作就业', title: '就业变化',
+          summary: '一些单位在这段时期调整经营与岗位。', score: 0.92,
+        }];
+      },
+    },
+    coach: {
+      async evaluate() {
+        gateCalls += 1;
+        return {
+          action: 'guide', retrieve_memory: true, memory_query: '拖欠工资',
+          retrieve_era: true, era_query: '1998 年就业环境', era_start_year: 1996, era_end_year: 2000,
+          reason: 'history_reference', avoid: null, direction: '结合检索结果确认当时的工作变化。',
+        };
+      },
+      async resolve(input) {
+        resolveCalls += 1;
+        resolveInput = input;
+        return {
+          selectedEvidenceIds: [...input.memoryEvidence.map((item) => item.id), ...input.eraEvidence.map((item) => item.id)],
+          known: ['Gate 选择的个人与时代证据已核对。'], backgroundHint: null, conflict: null,
+          avoid: null, direction: '继续追问那次工作变化对你的影响。',
+        };
+      },
+    },
+  });
+  const sessionId = String(fixture.ownerMessages.find((message) => message.type === 'ready')?.sessionId);
+  try {
+    await sendManualUserFinal(fixture, 'benchmark-c-turn', '1997 年厂里开始拖欠工资，后来情况更严重。');
+    const response = await fixture.waitForProviderMessage(
+      (message) => message.type === 'response.create'
+        && String(record(message.response)?.instructions ?? '').includes('那次工作变化对你的影响'),
+      'Variant C resolved Mini response',
+    );
+
+    assert.equal(gateCalls, 1);
+    assert.equal(fixture.searchInputs.length, 1);
+    assert.equal(fixture.searchInputs[0]?.query, '拖欠工资');
+    assert.equal(fixture.eraSearchInputs.length, 1, 'Variant C enables the existing Era adapter even when its product flag is off');
+    assert.equal(resolveCalls, 1);
+    assert.equal(resolveInput?.memoryEvidence.length, 1);
+    assert.equal(resolveInput?.eraEvidence.length, 1);
+    assert.match(String(record(response.response)?.instructions ?? ''), /【采访教练】/u);
+    await endStorySession(fixture);
+  } finally {
+    await fixture.close();
+  }
+
+  const rows = realtimeTraceRows(fixture.diagnosticsDirectory, sessionId);
+  const started = rows.find((row) => row.event === 'session.started');
+  const gateCompleted = rows.find((row) => row.event === 'coach.gate.completed');
+  assert.equal(started?.benchmarkVariant, 'C');
+  assert.equal(started?.voiceProfile, 'stepaudio2_mini');
+  assert.equal(started?.voiceModel, 'Step-Audio-2-mini');
+  assert.equal(started?.memoryRetrievalEnabled, true);
+  assert.equal(started?.eraRetrievalEnabled, true);
+  assert.equal(gateCompleted?.retrieve_memory, true);
+  assert.equal(gateCompleted?.retrieve_era, true);
+  assert.equal(rows.some((row) => row.event === 'coach.retrieval.completed'), true);
+  assert.equal(rows.some((row) => row.event === 'coach.era_retrieval.completed'), true);
+  assert.equal(rows.some((row) => row.event === 'coach.resolve.completed'), true);
+});
+
+test('Interview Benchmark C respects Gate decisions and does not retrieve on ordinary turns', async () => {
+  const fixture = await createFixture({
+    benchmarkVariant: 'C',
+    realtimeMemoryTriggerMode: 'supervisor_auto',
+    provider: 'stepaudio2_mini',
+    manualTurnControl: true,
+    eraEnabled: false,
+    eraContext: { async search() { throw new Error('Gate did not request Era Context.'); } },
+    coach: {
+      async evaluate() {
+        return {
+          action: 'guide', retrieve_memory: false, memory_query: null,
+          retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+          reason: 'missing_key_detail', avoid: null, direction: '继续追问刚才提到的关键细节。',
+        };
+      },
+      async resolve() { throw new Error('No Resolve without evidence.'); },
+    },
+  });
+  try {
+    await sendManualUserFinal(fixture, 'benchmark-c-no-retrieval', '我后来换了一份工作。');
+    const response = await fixture.waitForProviderMessage((message) => message.type === 'response.create', 'Variant C ordinary Mini response');
+    assert.match(String(record(response.response)?.instructions ?? ''), /继续追问刚才提到的关键细节/u);
+    assert.equal(fixture.searchInputs.length, 0);
+    assert.equal(fixture.eraSearchInputs.length, 0);
+    assert.equal(fixture.coachResolveInputs.length, 0);
+    await endStorySession(fixture);
   } finally {
     await fixture.close();
   }
