@@ -50,7 +50,6 @@ start_docker() {
     docker run -d --name "$bridge_name" --label "life-interview.spark.spec=$bridge_spec" --gpus all --network host --entrypoint /bin/bash       -v "$REPO_ROOT:/app:ro" -v "$source_dir:/Step-Audio2:ro" -v "$model_dir:/Step-Audio-2-mini:ro"       -e STEP_AUDIO_BACKEND_URL="http://127.0.0.1:$SPARK_STEPAUDIO_BACKEND_PORT/v1/chat/completions"       -e STEP_AUDIO_BRIDGE_PORT="$SPARK_STEPAUDIO_WS_PORT" -e STEP_AUDIO_HEALTH_PORT="$SPARK_STEPAUDIO_HEALTH_PORT"       -e STEP_AUDIO_SOURCE_DIR=/Step-Audio2 -e STEP_AUDIO_TOKEN2WAV_DIR=/Step-Audio-2-mini/token2wav       "$image" -lc 'python3 -m pip install --quiet "websockets>=14,<16" && exec python3 /app/deploy/spark/services/stepaudio2_bridge.py'
   fi
   "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_STEPAUDIO_HEALTH_PORT/health" "${SPARK_STEPAUDIO_BRIDGE_TIMEOUT_S:-600}"
-  printf '%s\n' "$native_spec" > "$native_spec_file"
 }
 
 start_native() {
@@ -75,6 +74,7 @@ start_native() {
     write_pid stepaudio-bridge "$!"
   fi
   "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_STEPAUDIO_HEALTH_PORT/health" "${SPARK_STEPAUDIO_BRIDGE_TIMEOUT_S:-600}"
+  printf '%s\n' "$native_spec" > "$native_spec_file"
 }
 
 case "${1:-status}" in
