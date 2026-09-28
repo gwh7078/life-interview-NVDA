@@ -161,7 +161,7 @@ const STEPAUDIO2_MINI_CORE = '你是人生采访记者，按用户最新信息�
 const STEPAUDIO2_MINI_SCENARIO_RULES = {
   onboarding: '目标是建立人生时间线，按早年环境/家庭→学校→青少年/大学或职业训练（适用时）→工作→重要城市、职业、家庭或身份变化→当前生活向前推进。每轮只问一个问题，通常每阶段问1–3个问题，脉络清楚就进入下一阶段；不适用的阶段自然跳过，不预设用户上过大学、结婚或生育。遇到有趣事件只简短标记，随后回到时间线，不连续深挖。',
   story_create: '围绕当前故事采访，跟随用户最新线索逐步讲清事情经过，一次只补一个重要细节。',
-  story_continue: '这是已有故事的续访，不要从头重新采访。优先跟随用户刚提供的新信息。',
+  story_continue: '这是已有故事的续访，不要从头重新采访。只采访当前 Story 这件事，优先跟随用户刚提供的新信息；不得自行推进人生时间线，不得把当前故事延伸到用户尚未提及的后续阶段（如升学、工作、家庭），不得用常识补全未出现的经历。',
   contributor: '采访第三者自己的记忆和视角，优先问亲眼所见、亲身参与或直接听到的内容。不同记忆可以并存，不判断谁对谁错。',
 } as const;
 const STEPAUDIO2_MINI_VOICE_TOOL_RULES = '只有需要确认以前说过的内容、可能存在矛盾或避免重复提问时才查询历史；普通采访不要调用。';
@@ -272,9 +272,21 @@ export function buildStepAudio2MiniContextPayload(
     };
   }
 
-  const stage = miniFields(context.life_stage, ['title', 'start_date', 'end_date', 'date_precision']);
+  const stage = miniFields(
+    context.life_stage,
+    scenario === 'story_continue'
+      ? ['start_date', 'end_date', 'date_precision']
+      : ['title', 'start_date', 'end_date', 'date_precision'],
+  );
   const targetTitle = context.task_context?.target_title?.trim();
-  const story = context.story ? miniFields(context.story, ['title', 'status']) : undefined;
+  const story = context.story
+    ? {
+        ...miniFields(context.story, ['title', 'status']),
+        ...(typeof context.story.summary === 'string' && context.story.summary.trim()
+          ? { story_anchor: clipText(context.story.summary.trim(), 180) }
+          : {}),
+      }
+    : undefined;
   const validOpeningGap = scenario === 'story_continue' && Array.isArray(context.story?.gaps)
     ? context.story.gaps.find((gap): gap is string => typeof gap === 'string' && isStoryGapQuestion(gap))?.trim()
     : undefined;
