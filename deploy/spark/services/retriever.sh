@@ -8,13 +8,20 @@ image="${SPARK_RETRIEVER_IMAGE:-nvcr.io/nvidia/nemo-microservices/nrl-service:26
 name="${SPARK_RETRIEVER_CONTAINER:-life-interview-spark-retriever}"
 data_dir="${SPARK_RETRIEVER_DATA_DIR:-$SPARK_RUNTIME_DIR/retriever}"
 mkdir -p "$data_dir"
+token_fingerprint="$(printf '%s' "${NEMO_RETRIEVER_API_TOKEN:-}" | sha256sum | awk '{print $1}')"
+spec="$(spec_hash "$image" "$data_dir" "$token_fingerprint" "$SPARK_RETRIEVER_PORT" "$SPARK_VECTORDB_PORT")"
 
 case "${1:-status}" in
   prefetch) docker_pull_cached "$image" ;;
   start)
-    if docker ps --format '{{.Names}}' | grep -qx "$name"; then exit 0; fi
+    reconcile_container_spec "$name" "$spec"
+    if docker ps --format '{{.Names}}' | grep -qx "$name"; then
+      "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_RETRIEVER_PORT/v1/health" "${SPARK_RETRIEVER_START_TIMEOUT_S:-900}"
+      "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_VECTORDB_PORT/v1/health" "${SPARK_RETRIEVER_START_TIMEOUT_S:-900}"
+      exit 0
+    fi
     docker rm "$name" >/dev/null 2>&1 || true
-    args=(run -d --name "$name" --gpus all --network host -v "$data_dir:/data" -w /data)
+    args=(run -d --name "$name" --label "life-interview.spark.spec=$spec" --gpus all --network host -v "$data_dir:/data" -w /data)
     [[ -n "${NVIDIA_API_KEY:-}" ]] && args+=(-e NVIDIA_API_KEY)
     [[ -n "${NGC_API_KEY:-}" ]] && args+=(-e NGC_API_KEY)
     [[ -n "${NEMO_RETRIEVER_API_TOKEN:-}" ]] && args+=(-e NRL_API_TOKEN="$NEMO_RETRIEVER_API_TOKEN")
