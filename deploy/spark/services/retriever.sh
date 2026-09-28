@@ -4,7 +4,7 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "$DIR/lib/common.sh"
 . "$DIR/lib/ports.sh"
 
-image="${SPARK_RETRIEVER_IMAGE:-nvcr.io/nvidia/nemo-microservices/nrl-service:26.8.2}"
+image="${SPARK_RETRIEVER_IMAGE:-nvcr.io/nvidia/nemo-microservices/nrl-service:26.8.2@sha256:6b93a1f4224387e57c3b0c5241c4a1496c57fd7c2d1f789b9e29db818a9504c1}"
 name="${SPARK_RETRIEVER_CONTAINER:-life-interview-spark-retriever}"
 data_dir="${SPARK_RETRIEVER_DATA_DIR:-$SPARK_RUNTIME_DIR/retriever}"
 mkdir -p "$data_dir"
