@@ -26,11 +26,21 @@ def meminfo():
     return d
 
 def gpu():
+    def number(value):
+        try:
+            text=str(value).strip().replace("[","").replace("]","")
+            return float(text) if text and text.upper() not in {"N/A","NA"} else None
+        except Exception:
+            return None
     try:
         p=subprocess.run(["nvidia-smi","--query-gpu=utilization.gpu,memory.used,memory.total","--format=csv,noheader,nounits"],
                          text=True,capture_output=True,timeout=3,check=True)
         first=p.stdout.strip().splitlines()[0].split(",")
-        return {"utilization_pct":float(first[0].strip()),"memory_used_mib":float(first[1].strip()),"memory_total_mib":float(first[2].strip())}
+        return {
+            "utilization_pct":number(first[0] if len(first)>0 else None),
+            "memory_used_mib":number(first[1] if len(first)>1 else None),
+            "memory_total_mib":number(first[2] if len(first)>2 else None),
+        }
     except Exception:
         return {"utilization_pct":None,"memory_used_mib":None,"memory_total_mib":None}
 
