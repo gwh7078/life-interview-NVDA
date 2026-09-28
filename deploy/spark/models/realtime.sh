@@ -46,7 +46,7 @@ start_docker() {
   reconcile_container_spec "$bridge_name" "$bridge_spec"
   if ! docker ps --format '{{.Names}}' | grep -qx "$backend_name"; then
     if docker ps -a --format '{{.Names}}' | grep -qx "$backend_name"; then docker start "$backend_name" >/dev/null; else
-      docker run -d --name "$backend_name" --label "life-interview.spark.spec=$backend_spec" --gpus all -v "$model_dir:/Step-Audio-2-mini:ro"         -p "$SPARK_STEPAUDIO_BACKEND_PORT:8000" "$image" --         vllm serve /Step-Audio-2-mini --served-model-name step-audio-2-mini --port 8000         --max-model-len "${SPARK_STEPAUDIO_MAX_MODEL_LEN:-16384}" --max-num-seqs "${SPARK_STEPAUDIO_MAX_NUM_SEQS:-4}"         --tensor-parallel-size 1 --enable-auto-tool-choice --tool-call-parser step_audio_2         --tokenizer-mode step_audio_2 --chat_template_content_format string         --audio-parser step_audio_2_tts_ta4 --trust-remote-code
+      docker run -d --name "$backend_name" --label "life-interview.spark.spec=$backend_spec" --gpus all -v "$model_dir:/Step-Audio-2-mini:ro"         -p "$SPARK_STEPAUDIO_BACKEND_PORT:8000" "$image" --         vllm serve /Step-Audio-2-mini --served-model-name step-audio-2-mini --port 8000         --max-model-len "${SPARK_STEPAUDIO_MAX_MODEL_LEN:-16384}" --max-num-seqs "${SPARK_STEPAUDIO_MAX_NUM_SEQS:-4}"         --tensor-parallel-size 1 --enable-auto-tool-choice --tool-call-parser step_audio_2         --tokenizer-mode step_audio_2 --chat_template_content_format string         --audio-parser step_audio_2_tts_ta4 --trust-remote-code --disable-log-requests
     fi
   fi
   "$DIR/lib/wait-for.sh" "http://127.0.0.1:$SPARK_STEPAUDIO_BACKEND_PORT/health" "${SPARK_STEPAUDIO_START_TIMEOUT_S:-1200}"
