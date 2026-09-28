@@ -15,6 +15,11 @@ backend_spec="$(spec_hash "$image" "${SPARK_STEPAUDIO_HF_MODEL:-stepfun-ai/Step-
 bridge_spec="$(spec_hash "$image" "$source_ref" "$SPARK_STEPAUDIO_WS_PORT" "$SPARK_STEPAUDIO_HEALTH_PORT" "$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || printf no-git)")"
 
 arm64_image() {
+  local local_arch
+  local_arch="$(docker image inspect -f '{{.Architecture}}' "$image" 2>/dev/null || true)"
+  if [[ "$local_arch" == "arm64" || "$local_arch" == "aarch64" ]]; then
+    return 0
+  fi
   docker manifest inspect "$image" >"$manifest_file" 2>/dev/null || return 1
   grep -Eq '"architecture"[[:space:]]*:[[:space:]]*"arm64"|"architecture"[[:space:]]*:[[:space:]]*"aarch64"' "$manifest_file"
 }
