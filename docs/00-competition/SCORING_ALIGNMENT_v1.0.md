@@ -1,6 +1,6 @@
 # DGX Spark Hackathon Scoring Alignment
 
-> Current working map — 2026-09-28
+> Current working map — 2026-09-29
 > 比赛原始要求：`资料库/DGX_Spark_Hackathon_比赛要求.md`  
 > 当前实现依据：[CURRENT_STATE.md](../CURRENT_STATE.md)
 
@@ -81,7 +81,7 @@ DGX Spark 目标 Runtime 接口：
 
 上述服务及 NemoClaw/OpenClaw Agent Runtime 均由操作者按 NVIDIA / StepFun 官方说明准备和维护。仓库负责端点 readiness、应用接线、OpenClaw route / Skills / policy 配置，以及真实产品与比赛验收；不以自研 installer 工程作为比赛能力。
 
-DGX Spark Runtime compatibility、完整应用 E2E、StepAudio WebSocket / 双工体验和性能 **均 NOT TESTED ON DGX SPARK**。具体 StepAudio Runtime 镜像 / backend 在目标设备上的兼容性 **NOT VERIFIED ON DGX SPARK / ARM64**。官方部署 recipe 只证明存在外部操作参考，不证明本项目真机成功。
+2026-09-29 已在 NVIDIA DGX Spark GB10（ARM64）完成部分本地现场验证：Text、Qwen3-8B Coach、StepAudio Runtime endpoint、NeMo Retriever、Backend/Web、Technical Observer 与 SQLite 均取得 PASS，因此当前平台状态为 **PARTIAL LOCAL VERIFIED**。现场 Coach 实际端口为 `:8004`，标准 Profile 默认仍为 `:8001`。NemoClaw/OpenClaw Agent Task、最新 `main` 的完整 `verify.sh`、完整业务 E2E、稳定双工体验与最终性能仍未通过，不得表述为 FULL LOCAL PASS。
 
 ## 5. 模型优化与 Benchmark — 25% 中的关键证据
 
@@ -108,4 +108,4 @@ NAT 负责 Agent Evaluation / Profiler / Regression；Technical Observer 记录�
 - “Retriever 是事实源”；
 - “所有 Agent Task 已成为 Web 默认 Runtime”。
 
-在 DGX Spark 真机日志、E2E 和 Benchmark 报告产生之前，Spark 兼容、完整 E2E 和性能状态一律写 **NOT TESTED ON DGX SPARK**。
+当前应写 **PARTIAL LOCAL VERIFIED**，并明确区分“已验证的单组件 / 应用 readiness”和“尚未通过的 OpenClaw Agent Task、完整 E2E 与最终性能”。
