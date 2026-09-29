@@ -107,7 +107,7 @@ Mac 开发 Profile 默认可使用 **Step-Audio-2-mini / StepFun Cloud**；比�
 
 ## 3. Agent Skills：把专业采访能力拆成可验证任务
 
-项目当前正式定义 **6 个 Skills**。其中比赛与演示主线聚焦 **5 个核心业务 Skills**：`interview-coach`、`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`；`interview-observer` 是低延迟观察与诊断辅助 Skill。它们都拥有明确的触发条件、输入、证据边界、输出协议和 Runtime。
+项目当前正式定义 **6 个 Skills**。其中比赛与演示主线聚焦 **5 个核心业务 Skills**：`interview-coach`、`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`；`interview-observer` 是低延迟观察与诊断辅助 Skill。它们都拥有明确的触发条件、输入、证据边界、输出协议和 Runtime。完整目录说明见 [Agent Skills Index](agent/skills/README.md)。
 
 | Skill | 职责 | 核心边界 |
 |---|---|---|
@@ -422,39 +422,7 @@ bash deploy/spark/start.sh
 
 ---
 
-## 8. Demo：评委应该看到什么
-
-最终 Demo 重点不是展示后台页面数量，而是展示一条完整的“专业采访 → 证据整理 → 成稿”链路：
-
-```text
-Story Continue 实时采访
-  ↓
-Realtime Voice 自然追问
-  ↓
-Coach Gate 判断
-  ↓
-必要时调用 Memory / Era
-  ↓
-得到更好的下一问
-  ↓
-结束采访
-  ↓
-Interview Closeout
-  ↓
-Story Completion / Gaps
-  ↓
-Story Generation
-  ↓
-回忆录正文
-```
-
-同时通过 Technical Observer 展示 Coach、Retriever、Agent Task 与运行状态，让评委可以看到“为什么这一问发生了”。
-
-录制方案见 [5 分钟 Demo 视频脚本](docs/00-competition/DEMO_VIDEO_SCRIPT_v1.0.md)。
-
----
-
-## 9. 项目完整性
+## 8. 项目完整性
 
 当前 Web 产品已经实现：
 
@@ -478,20 +446,17 @@ Story Generation
 
 ---
 
-## 10. 进一步阅读
+## 9. 评委技术入口
 
-如果需要核对实现，而不是只看比赛摘要：
+需要核对实现时，建议按以下顺序查看：
 
-1. [当前实现状态](docs/CURRENT_STATE.md)
-2. [产品定义](docs/PRODUCT.md)
-3. [整体架构](docs/ARCHITECTURE.md)
-4. [Realtime / Coach / Retrieval](docs/REALTIME.md)
-5. [Agent Runtime / Skills](docs/AGENT_RUNTIME.md)
-6. [NVIDIA / DGX Spark](docs/NVIDIA.md)
-7. [测试与验收](docs/TESTING.md)
-8. [比赛评分映射](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)
-9. [5 分钟 Demo 视频脚本](docs/00-competition/DEMO_VIDEO_SCRIPT_v1.0.md)
-10. [完整文档目录](docs/README.md)
+1. [整体架构](docs/ARCHITECTURE.md)
+2. [Agent Runtime / Skills](docs/AGENT_RUNTIME.md)
+3. [Realtime / Coach / Retrieval](docs/REALTIME.md)
+4. [NVIDIA / DGX Spark](docs/NVIDIA.md)
+5. [Spark Deployment Reference](docs/04-nvidia/spark/README.md)
+6. [SkillEvaluator 最终审查摘要](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)
+7. [DGX Spark 最终运行验证](docs/07-reports/spark-deployment-evidence-2026-09-29.md)
 
 ### 文档真相优先级
 
