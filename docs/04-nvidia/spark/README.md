@@ -1,7 +1,7 @@
 # DGX Spark Deployment Reference
 
 > 状态：Current deployment boundary and operator reference
-> 更新：2026-09-28
+> 更新：2026-09-29
 
 ## 1. 部署定位
 
@@ -22,7 +22,7 @@ DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库�
 
 ## 3. 前置条件
 
-- 可登录的 DGX Spark（ARM64 / aarch64），NVIDIA driver 可通过 nvidia-smi 检查，Docker daemon 可用；兼容性仍须在目标设备上实际验证。
+- DGX Spark（ARM64 / aarch64），NVIDIA driver 与 Docker daemon 可用。2026-09-29 已在一台 GB10 真机完成部分 readiness 验证；其他设备仍应重新检查。
 - Git、Python 3.9+、Node.js 24.16+（24.x）或 26.1+、npm；通过 `bash scripts/codex-node.sh` 调用 Node / npm。Python 3 用于应用 setup 与检查，Python 3.12 / uv 是可选 NAT tooling 的额外依赖。
 - Text、Coach、StepAudio contract、Retriever endpoint 已在 Spark 上启动。
 - Text `:8000/v1/models` 返回真实 served ID；Coach `:8001/v1/models` 与配置一致。
@@ -51,10 +51,11 @@ DGX Spark 的标准模型与检索 Runtime 由用户准备和运行；本仓库�
 
 ## 6. 当前验收状态
 
-- DGX Spark Runtime compatibility：**NOT TESTED ON DGX SPARK**。
-- StepAudio Runtime image / backend on ARM64：**NOT VERIFIED ON DGX SPARK / ARM64**。
-- 完整应用端到端（Text / Coach / StepAudio / Retriever / OpenClaw）：**NOT TESTED ON DGX SPARK**。
-- 性能、资源与并发 Benchmark：**NOT TESTED ON DGX SPARK**。
+- 整体状态：**PARTIAL LOCAL VERIFIED**。
+- 已验证：GB10 / ARM64 主机环境、Text、Qwen3-8B Coach、StepAudio Runtime endpoint、NeMo Retriever、Backend/Web、Technical Observer、SQLite。
+- 未完成：NemoClaw/OpenClaw Agent Task、最新 `main` full `verify.sh`、完整业务 E2E、稳定全双工 / barge-in 真人验收。
+- 历史性能 benchmark 已留存，但对应较早版本且整体 FAIL；不作为最新 `main` 的最终 P50 / P95 或并发结论。
+- 现场证据：[DGX Spark 部署现场证据](../../07-reports/spark-deployment-evidence-2026-09-29.md)。
 
 ## 7. 官方参考
 
