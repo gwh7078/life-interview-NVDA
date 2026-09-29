@@ -1,8 +1,10 @@
 ---
 name: story-completion
-version: 1.1.0
-description: 根据当前 Story Memory 判断资料是否足以支撑独立成文，并提出最多三个高价值后续问题。仅用于 story.completion；不读取 Transcript、不写文章或改写记忆，也不用于采访收尾。
+description: 为单个 Story 做 Evidence-aware Gap Planning：判断是否足以成文，并在必要时查询本 Story 历史回答，删除已回答或 blocked 的追问。仅用于 story.completion。
+license: MIT
 metadata:
+  author: "Weihang <27177239+gwh7078@users.noreply.github.com>"
+  version: "1.1.0"
   tags: [life-interview, story, completion, planning, gaps]
 ---
 

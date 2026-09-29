@@ -1,8 +1,10 @@
 ---
 name: story-generation
-version: 1.1.0
-description: 根据后端提供的 Story 证据生成或局部修改中文回忆录正文。仅用于 story.generation 的 initial/revision；不用于采访、完成度规划、标题或来源元数据管理。
+description: 基于主人公证据生成或局部修订中文回忆录正文；必要时按权限检索 Story、Contributor 或 Era 资料，并保持来源隔离与非虚构边界。仅用于 story.generation 的 initial/revision。
+license: MIT
 metadata:
+  author: "Weihang <27177239+gwh7078@users.noreply.github.com>"
+  version: "1.1.0"
   tags: [life-interview, memoir, story-writing, revision, evidence]
 ---
 

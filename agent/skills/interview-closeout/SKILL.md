@@ -1,8 +1,10 @@
 ---
 name: interview-closeout
-version: 1.1.0
-description: 一场 Story 或外部贡献者采访结束后，把明确证据整理为供后端验证的 Proposal。仅用于 interview.closeout 的 story_create、story_continue、contributor 模式；不用于首次建档、实时指导、完成度规划或故事写作。
+description: 将已结束的 Story 或第三方采访转成可验证的增量 Proposal：新建 Story、维护 Story Memory，或维护单一 Contributor 摘要。仅用于 interview.closeout 的 story_create、story_continue、contributor。
+license: MIT
 metadata:
+  author: "Weihang <27177239+gwh7078@users.noreply.github.com>"
+  version: "1.1.0"
   tags: [life-interview, story, contributor, evidence, closeout]
 ---
 
