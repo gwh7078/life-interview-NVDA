@@ -1,12 +1,12 @@
 # 人生采访局 · Life Interview
 
-> **AI 回忆录记者：通过持续语音采访、证据整理、专业追问与成稿，把分散的人生经历逐步变成可验证、可继续补充、可最终成书的个人回忆录。**
+> **产品目标：7 天，只说话不写字，完成一部约 10 万字的个人回忆录。AI 回忆录记者负责“听、问、辩、写”：持续采访、核对证据、发现缺口，最后才成稿。**
 
-这是人生采访局的 NVIDIA / DGX Spark Hackathon 版本。项目不是“一次输入后自动写一本书”，也不是一个普通聊天机器人；它把专业回忆录记者的工作拆成可执行的 **Realtime Interview + Agent Skills + Evidence Pipeline**：实时语音模型负责自然地“听与问”，低延迟 Coach 负责必要时纠偏，Memory / Era Retrieval 提供受限证据，采访结束后再由一组 Skills 完成事实整理、完整度判断与故事成稿。
+这是人生采访局的 NVIDIA / DGX Spark Hackathon 版本。项目不是“一次输入后自动写一本书”，也不是普通聊天机器人；它把专业回忆录记者的能力拆成 **Realtime Interview + Agent Skills + Evidence Pipeline**：实时语音负责自然地“听与问”，Coach 与 Retriever 负责必要时“辩”，会后 Skills 再完成证据整理、完整度判断与“写”。
 
 项目当前已经具备完整 Web 产品链路、四类采访场景、第三者补充、Transcript 证据链、Story Memory、Completion / Gaps、Story Generation、Book / PDF 路径，以及 NemoClaw / OpenClaw、NeMo Retriever、NeMo Agent Toolkit（NAT）与 Technical Observer 的集成路径。
 
-> **真实性说明：**截至当前 main，DGX Spark 真机兼容性、完整 E2E、StepAudio ARM64 路径以及 Spark 性能指标仍在验证中。未产生真机证据前，不把配置、官方 recipe 或 Mac 测试写成 Spark PASS。
+> **真实性说明：**2026-09-29 已在 NVIDIA DGX Spark GB10 真机完成部分本地验证：Text、Qwen3-8B Coach、StepAudio Runtime、NeMo Retriever、Backend/Web、Technical Observer 与 SQLite 均取得现场 PASS，整体状态为 **PARTIAL LOCAL VERIFIED**。NemoClaw/OpenClaw Agent Task、最新 `main` 的完整 `verify.sh`、完整业务 E2E 与最终性能验收尚未完成，因此不宣称 FULL LOCAL PASS。现场证据见 [DGX Spark 部署现场证据](docs/07-reports/spark-deployment-evidence-2026-09-29.md)。
 
 ---
 
@@ -89,7 +89,7 @@ Realtime Voice Model
 
 ## 3. Agent Skills：把专业采访能力拆成可验证任务
 
-项目当前正式定义 6 个产品 Skills。它们不是一个大 Prompt 的别名，而是分别拥有明确触发条件、输入、证据边界、输出协议和 Runtime。
+项目当前正式定义 **6 个 Skills**。其中比赛与演示主线聚焦 **5 个核心业务 Skills**：`interview-coach`、`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`；`interview-observer` 是低延迟观察与诊断辅助 Skill。它们都拥有明确的触发条件、输入、证据边界、输出协议和 Runtime。
 
 | Skill | 职责 | 核心边界 |
 |---|---|---|
@@ -265,7 +265,7 @@ With Skill
 
 首轮基线并非所有维度都单向提升：例如改造前 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Correctness 也曾从 0.9875 降到 0.9250。项目保留这些历史结果用于审计，不删除失败样本。Retrieval Upgrade 后的复测结果单独列在上表，作为当前 Skill 版本的结果。
 
-完整中文总结与 NVIDIA SkillEvaluator 原始 HTML / JSON 结果见：
+评测证据分两层：2026-09-28～29 基线批次的原始 HTML / JSON 完整保留；Retrieval Upgrade 后的新 Overall 分数已实际复测，并记录在正式报告及 `run-metadata.json` 的 `post_upgrade_validation` 中。新版复测没有保存新的 run_id / pass@2 / raw HTML / JSON，因此旧基线原始文件不能被当作新版分数的原始证据。
 
 - [NVIDIA SkillEvaluator Tier 3 正式评测报告](docs/07-reports/skills/tier3/2026-09-28/NVIDIA_SKILL_TIER3_REPORT.md)
 - [Tier 3 运行元数据](docs/07-reports/skills/tier3/2026-09-28/run-metadata.json)
@@ -299,7 +299,7 @@ C：+ Coach Gate + Personal Memory + Era
 
 ### 5.3 Spark / Runtime Performance Benchmark
 
-DGX Spark 真机完成后记录：
+DGX Spark 的最终性能验收继续记录：
 
 - Text first-token latency；
 - Coach Gate / Resolve latency；
@@ -310,7 +310,7 @@ DGX Spark 真机完成后记录：
 - 并发与资源占用；
 - 完整 E2E 结果。
 
-**当前状态：等待 DGX Spark 真机最终验证。未实测指标不在 README 中预填。**
+**当前状态：**已完成一次真机部分验证与历史性能测量，但历史 benchmark 对应较早版本且整体未通过，不能代表最新 `main`。最终 P50 / P95、并发与完整 E2E 仍待最新版本重跑；详见 [现场证据](docs/07-reports/spark-deployment-evidence-2026-09-29.md)。
 
 测试与证据规范见 [Testing & Acceptance](docs/TESTING.md) 和 [Scoring Alignment](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)。
 ---
@@ -342,7 +342,7 @@ Spark 目标接口：
 | StepAudio contract | `ws://127.0.0.1:8092/realtime` |
 | NeMo Retriever | REST / MCP `:7670` |
 
-> 当前这些接口已经完成应用侧接线设计，但 **DGX Spark / GB10 Runtime compatibility、完整 E2E、StepAudio ARM64 与性能仍需真机证据**。
+> 2026-09-29 的 DGX Spark GB10 现场已验证 Text、Coach、StepAudio endpoint、Retriever 以及应用 / Observer / SQLite 的本地 readiness；现场 Coach 实际使用 `:8004`，标准 Spark Profile 默认仍为 `:8001`。完整 OpenClaw Agent Task、最新 `main` full verify、完整 E2E 与最终性能仍未完成。
 
 ---
 
@@ -475,7 +475,7 @@ Story Generation
 | 黑客松“一日谈”征文 URL | [征文初稿](docs/00-competition/ONE_DAY_STORY_DRAFT_v1.0.md)，发布后回填 URL |
 | 团队合影 | **待提交** |
 
-Benchmark 与 Spark 真机结果完成后，只补充实际证据，不更改上述事实边界。
+后续只补充最新 `main` 的完整 E2E / 性能证据和最终外部提交链接，不把部分真机验证扩大表述为 FULL LOCAL PASS。
 
 ---
 
