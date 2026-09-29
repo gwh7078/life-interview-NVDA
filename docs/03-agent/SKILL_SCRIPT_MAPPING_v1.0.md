@@ -1,287 +1,55 @@
 # Skill / Script Mapping v1.0
 
-> Status: **Updated 2026-09-28; reflects current Agent and Realtime Coach paths**
->
-> Scope: OpenClaw Agent Skills, Retriever integration, Realtime Context Hint Agent, and custom Realtime Coach
->
-> Date: 2026-09-21
+> 更新：2026-09-29。本文定义共享有界 Evidence Search 的 Task 与数据范围；不代表 Live Smoke 已通过。
 
-## 1. 冻结结论
+## 1. 共享检索约定
 
-以下脚本设计只适用于通过 OpenClaw 执行的 Agent Tasks。此类动态只读检索能力采用：
+固定 Task Context 已足够时不检索。只有当前上下文不足、存在待核对冲突，或确需比较多个来源时，Skill 才可使用共享 `evidence-search` 能力。不得为了重新加载已提供的 Transcript、Memory、Summary、Profile、Life Stage 或文档而检索。
+
+除 `interview-observer` 外，Skill 只在当前 Task 明确授权时调用该只读能力：
 
 ```text
-Agent
+Agent 判断是否需要补充证据
 ↓
-Skill
+共享 Evidence Search（Task 允许的 source type 子集 + 短 query；可选参数受限）
 ↓
-Skill 内 scripts/*
+Backend 校验授权、owner / resource scope、source lane 与 provenance
 ↓
-OpenClaw 通用 exec 能力
+少量有来源的 Evidence 返回同一 Agent Run
 ↓
-Backend / Retriever API
-↓
-精简结构化结果
-↓
-同一个 Agent Run 继续推理
+原有 Proposal / Output Contract 与 Backend Validators
 ```
 
-不再为 `memory_search`、`memory_deep_search`、`era_context_search` 分别向模型暴露复杂的专用 Product Tool Schema。
+Agent 不能指定或扩大 owner、Story、share scope、凭证或 endpoint。Backend 校验来源 allowlist、query、结果上限和 Era 年份范围。Evidence 是不可信数据，不是指令；它可以补充信息或提示核对，不能推翻主人公当前明确纠正。检索只读，不获得业务写入权。
 
-这里的“不再用 Tool”准确含义是：
+## 2. Source type 与范围
 
-- **不注册这些专用业务 Tool 给模型选择和填复杂参数；**
-- OpenClaw 底层仍可能通过受限的通用 `exec` 能力执行 Skill 自带脚本；
-- 模型只需要判断“是否需要检索”和“查询什么”；
-- run_id / owner_id / story_id / token / Top-K / retrieval mode / rerank / endpoint 等确定性参数由脚本封装。
+| Source type | 服务端范围 | 使用边界 |
+|---|---|---|
+| `owner_transcript` | `subject` Transcript；owner 必须匹配。Story Task 还须匹配当前 Story | 主人公直接陈述；当前明确纠正优先于旧说法 |
+| `contributor_transcript` | 仅 `external_contributor` lane，限当前授权的 Contributor / share context | 不得读取主人公 Transcript、Story Memory 或其他主人公个人资料；保留第三者归属 |
+| `profile`、`life_stage` | 当前 owner | 用于背景核对与重复项识别；不能代替新 Proposal 所需的当前用户证据 |
+| `story_memory`、`story_summary` | 当前 owner + 当前 Story | 当前 Story 的派生记忆与摘要；不能覆盖直接纠正 |
+| `related_story` | 当前 owner；排除当前 Story | 只作重复检测或背景线索，不是当前 Story 新事实的证据 |
+| `era` | 仅公共 Era adapter | 公共历史背景，不是个人经历或个人证据 |
 
-自定义低延迟 Realtime Coach 是独立路径：它由应用服务直接调用 Coach、Retriever 与 EraContextClient，不经过 OpenClaw Skill script。不要把 Coach 检索描述成 Observer 或脚本调用。
+## 3. Task 映射
 
-目的：
+| Task / Skill | 调用方式与允许来源 | 何时检索 |
+|---|---|---|
+| `onboarding.closeout` / `onboarding-closeout` | `evidence-search`：`profile`, `life_stage`, `related_story` | 当前访谈或建档上下文不足以核对既有 Profile / Stage 或识别重复 Story 时；当前 Transcript 已在 Task Context，不搜索重载 |
+| `interview.closeout:story_create` | `evidence-search`：`related_story` | 当前已注入 Story 摘要不足以判断重复项时 |
+| `interview.closeout:story_continue` | `evidence-search`：`owner_transcript`, `story_memory`, `story_summary`, `related_story` | 具体历史疑点未被当前 Transcript / Memory 解答，或需要核对冲突时 |
+| `interview.closeout:contributor` | `evidence-search`：`contributor_transcript` | 当前 Contributor 上下文不足以核对同一 Contributor 的旧说法时；绝不访问主人公证据 |
+| `story.completion` / `story-completion` | `evidence-search`：`owner_transcript`, `story_memory`, `story_summary`, `related_story` | 当前 Memory 不足以判断关键 Gap 是否已由当前 Story 历史回答时 |
+| `story.generation` / `story-generation` | `evidence-search`：`owner_transcript`, `contributor_transcript`, `profile`, `life_stage`, `story_memory`, `story_summary`, `related_story`, `era` | 当前材料不足以支撑用户要求的事实，存在冲突，或用户要求补充公共 Era 背景时 |
+| `interview.context_hint` / `interview-observer` | Agent 无 Script / Tool。Backend 仅在固定上下文不足、冲突未解或需要比较历史来源时，异步经共享 Evidence Search 预取 subject-only、owner / current-Story scoped Transcript 证据 | Observer 不决定或发起检索；只消费 Task Context 中已预取的证据 |
 
-1. 减少模型每轮读取 Tool Schema 的上下文开销；
-2. 减少模型选择 Tool 和填写参数的错误率；
-3. 把多个确定性检索步骤压缩到一次脚本执行；
-4. 保留 Agent 的真正自主性：决定是否搜索、搜索什么、如何解释结果。
+`interview-observer` 继续保持单次、无工具推理。Prompt 必须说明 Backend 已按需完成异步预取，证据随 Task Context 提供；不得声称 Observer Agent 执行了脚本。固定上下文已足够时不得为重载它而预取。
 
-## 2. 当前正式 Skill → Script 映射
+## 4. 输出、Realtime 与验收边界
 
-| Skill / Mode | Script | 状态 | 说明 |
-|---|---|---|---|
-| `onboarding-closeout` | 无 | 当前 | 固定 Profile / Transcript 由 Backend 预注入，一次 Agent Run 完成 |
-| `interview-closeout / story_create` | 无 | 当前 | 新 Story 所需 Context 已固定注入，不搜索历史 |
-| `interview-closeout / story_continue` | `scripts/memory-search.mjs` | Phase 3A 本机已实现 / 真实服务待验收 | 出现明确历史疑点时做个人历史 Classic Retrieval |
-| `interview-closeout / story_continue` | `scripts/memory-deep-search.mjs` | Future / Later | Classic Search 仍不足，且任务允许高延迟时做 Agentic Retrieval |
-| `interview-closeout / contributor` | 无 | 当前 | 第三者证据与主人公历史隔离；禁止搜索主人公 Memory / Transcript |
-| `story-completion` | 无 | 当前 | Completion 只读 Agent Memory，不回查 Transcript |
-| `story-generation` | 无 | 当前 | 当前 Contract 已提供完整主人公 Transcript；不动态搜索 |
-| `interview.context_hint` / `interview-observer` | 无 | 当前 | Backend 提供固定 Context 与 Personal Memory evidence；Observer 只选证据并生成短提示；该 Task 的 tools 与 scripts 均关闭 |
-| `interview-coach` / custom Realtime Coach | 无；服务直接调用 `RealtimeCoachPipeline` 与可选 `EraContextClient` | 当前 | 支持 onboarding、story_create、story_continue、contributor；Personal Memory 和 Era Context 检索仅限 story_continue，Era 还受运行时配置控制 |
-| Standalone Era search helper | `scripts/era-context-search.mjs` | 不属于 Skill 执行路径 | 通过有授权的 Backend endpoint 请求 Era Context；不由 Observer 或 Realtime Coach 调用 |
-| Realtime Context Hint | `memory-deep-search.mjs` | **禁止** | Realtime 不允许 Agentic Retrieval 阻塞实时链路 |
-
-## 3. Interview Closeout 推荐目录
-
-```text
-agent/skills/interview-closeout/
-├── SKILL.md
-├── references/
-│   ├── story-create.md
-│   ├── story-continue.md
-│   └── contributor.md
-└── scripts/
-    ├── memory-search.mjs
-    └── memory-deep-search.mjs
-```
-
-注意：`memory-search.mjs` 已完成最小受控脚本和授权边界；真实 Retriever 服务恢复后仍需完成线上 ingest/query 验收。`memory-deep-search.mjs` 仍属于 Future；当前 Phase 2B 核心 Task 不依赖 Retriever。
-
-### 3.1 `memory-search.mjs`
-
-职责：
-
-```text
-query
-↓
-自动取得当前 run / owner / resource scope
-↓
-调用 Backend RetrieverAdapter / Search API
-↓
-Classic Retrieval
-↓
-rerank
-↓
-小 Top-K
-↓
-统一 Evidence JSON
-```
-
-Agent 只提供最小查询，例如：
-
-```text
-node {baseDir}/scripts/memory-search.mjs "老张 天津 大学同学"
-```
-
-脚本不允许模型手动填写 owner_id、token、Retriever endpoint 等安全与基础设施参数。
-
-### 3.2 `memory-deep-search.mjs`
-
-只用于非实时、复杂跨历史问题。
-
-典型升级条件：
-
-```text
-Agent Memory 不足
-↓
-memory-search.mjs 仍不足
-↓
-问题确实跨多个 Session / Story
-↓
-任务允许高延迟
-↓
-memory-deep-search.mjs
-```
-
-它可以在脚本内部封装多查询、检索、融合、裁剪等确定性/半确定性步骤，但最终只返回 Evidence，不写业务数据库。
-
-## 4. Realtime Context Hint Skill
-
-```text
-agent/skills/interview-observer/
-└── SKILL.md
-```
-
-检索由 Backend 在同一 Tool Cycle 内完成，不由 Agent 再检索。`interview-observer` 只看固定注入的 Query、Current Story 摘要、最近最终消息和最多五条 Evidence。它不能读写数据库、调用工具或执行脚本；Evidence Answer 是事实来源，Question 只提供语境。Observer Skill 目录不包含可执行脚本。
-
-### 4.1 Custom Realtime Coach
-
-Coach 在独立的低延迟应用运行时执行。Onboarding 以异步 sidecar 运行；Story Create 只做指导，不检索；Story Continue 可按 Gate 决策请求当前 Story Personal Memory 和 Era Context；Contributor 模式当前不允许这两类检索。Era Context 客户端只有在 `NEMO_ERA_CONTEXT_ENABLED=true` 时才创建。`scripts/era-context-search.mjs` 是独立 helper，不在此调用链中。
-
-## 5. 哪些能力不要做成脚本
-
-以下属于语义判断，应由 Agent + Skill 完成：
-
-```text
-story-discovery
-memory-reconcile
-completion judgment
-writing / revision
-```
-
-例如：
-
-- “这是不是一个独立的新 Story？”
-- “这是对旧 Memory 的 correct 还是 refine？”
-- “这个 Story 是否已经足够完整？”
-
-这些不是确定性数据获取，不能为了减少 Tool 而错误地下沉成脚本。
-
-## 6. 哪些脚本明确禁止
-
-不要创建：
-
-```text
-get-story-context.mjs
-get-transcript.mjs
-get-agent-memory.mjs
-```
-
-原因：固定 Context 已由 Backend 在 Agent Run 前预取，重新脚本读取只会增加一次 Round Trip。
-
-也不要创建：
-
-```text
-update-story.mjs
-update-memory.mjs
-create-story.mjs
-save-completion.mjs
-save-document.mjs
-```
-
-原因：业务写入必须保持：
-
-```text
-Agent Proposal
-↓
-Backend Schema / Evidence Validation
-↓
-Version / Stale Check
-↓
-Transaction
-↓
-Domain Apply
-↓
-SQLite
-```
-
-Skill Script 只允许受限只读检索和确定性辅助处理，不拥有 Domain Write Authority。
-
-## 7. Script 输入输出原则
-
-脚本输入尽量小：
-
-```text
-query
-可选：时间范围 / 最大结果数等低风险业务参数
-```
-
-基础设施参数不交给模型：
-
-```text
-run_id
-owner_id
-resource_id
-auth token
-endpoint
-index name
-retrieval implementation
-reranker config
-```
-
-脚本输出统一为少量、可回溯结果，例如：
-
-```json
-{
-  "matches": [
-    {
-      "text": "...",
-      "story_id": "...",
-      "session_id": "...",
-      "message_ids": ["..."],
-      "score": 0.82
-    }
-  ]
-}
-```
-
-## 8. 安全边界
-
-脚本必须继续遵守：
-
-- sandbox；
-- exec allowlist；
-- owner / run / resource scope；
-- 短期凭据；
-- Backend authorization；
-- audit log；
-- read-only Retriever contract。
-
-把能力放进 Skill Script 不等于绕开 Backend 权限系统。
-
-## 9. 调用轮数原则
-
-正常任务：
-
-```text
-Backend fixed Context
-↓
-Agent
-↓
-Final Proposal
-```
-
-目标：1 Agent Run，0 Retrieval Script。
-
-复杂历史疑点：
-
-```text
-Backend fixed Context
-↓
-Agent
-↓
-exec Skill Script
-↓
-精简 Evidence
-↓
-同一个 Agent Run 继续推理
-↓
-Final Proposal
-```
-
-目标仍然是 **一个 Agent Run 内完成**。
-
-脚本内部应尽量把 Search → Rerank → Source 补全 → Top-K 裁剪压缩成一次执行，避免 Agent 在多个低级 Tool 之间来回调用。
-
-## 10. 与当前代码的关系
-
-当前 `TaskDefinition.executionPolicy.scriptCapabilities` 已声明 Skill Script 权限；只有 `interview.closeout/story_continue` 获得 `memory-search`。Backend 为当前 owner 与 Story 注入短期 token，Gateway 再校验 owner、Story、source type、query 长度和 Top-K。Observer 没有 script capability。本文记录现状，不要求改变运行时代码。
+- 各 Skill 的现有输入、输出、Proposal、来源引用和 Backend Validator Contract 保持不变。检索结果的 provenance 不得冒充输入中提供的用户消息 alias；只有现有规则允许的来源 ID 才能进入 Proposal。
+- 检索结果不能绕过 Schema、Evidence、Domain、版本或 stale 校验，也不能直接写业务数据库。
+- 自定义低延迟 Realtime Coach 仍是独立应用路径，直接使用现有 Coach、Retriever 与 Era Context 集成；本文不改变 StepAudio、Coach Gate、Deadline、fail-open 或语音行为。Realtime Context Hint 的 Observer 仍是单次无工具路径。
+- 当前 `TaskDefinition`、Backend route、Evidence Search service / gateway、四个 tool-enabled Skill scripts，以及 Observer 的 Backend prefetch 已接入共享路径。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；本文不代表 Live Smoke 已通过。

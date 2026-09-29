@@ -41,7 +41,7 @@ class CapturingAgentTasks implements AgentTaskPort {
   }
 }
 
-test('story_continue receives a short-lived, Story-scoped retrieval script context', async () => {
+test('story_continue receives a short-lived, source-scoped evidence-search context', async () => {
   const context: StoryCloseoutContext = {
     sessionId: 'session-1',
     userId: 'owner-1',
@@ -89,9 +89,12 @@ test('story_continue receives a short-lived, Story-scoped retrieval script conte
   assert.equal(tasks.options?.scriptContext?.baseUrl, 'http://backend.test');
   assert.ok(tasks.options?.scriptContext?.token);
   const payload = tokenService.verify(tasks.options!.scriptContext!.token, {
-    tool: 'memory_search',
-    resourceType: 'story',
-    resourceId: 'story-1',
+    tool: 'evidence_search',
+    resourceType: 'agent_evidence_search',
   });
   assert.equal(payload.userId, 'owner-1');
+  assert.equal(payload.evidenceSearch?.storyId, 'story-1');
+  assert.deepEqual(payload.evidenceSearch?.allowedSourceTypes, [
+    'owner_transcript', 'story_memory', 'story_summary', 'related_story',
+  ]);
 });

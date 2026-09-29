@@ -1,5 +1,8 @@
 import { AgentToolTokenError, type AgentToolTokenService } from '../../agent/tools/token.js';
+import { EvidenceSearchError, EvidenceSearchService } from './evidence-search.js';
 import type { RetrieverAdapter, RetrieverEvidence } from './types.js';
+
+export { EvidenceSearchError, EvidenceSearchGateway } from './evidence-search.js';
 
 export class RetrieverScriptError extends Error {
   constructor(
@@ -31,10 +34,14 @@ function readQuery(body: unknown): string {
 }
 
 export class RetrieverScriptGateway {
+  private readonly evidenceSearch: EvidenceSearchService;
+
   constructor(
     private readonly adapter: RetrieverAdapter,
     private readonly tokenService: AgentToolTokenService,
-  ) {}
+  ) {
+    this.evidenceSearch = new EvidenceSearchService({ retriever: adapter });
+  }
 
   async memorySearch(token: string, body: unknown, signal?: AbortSignal): Promise<MemorySearchResult> {
     const payload = (() => {
@@ -49,29 +56,28 @@ export class RetrieverScriptGateway {
     })();
     const query = readQuery(body);
     try {
-      const matches = await this.adapter.searchTranscript({
+      const result = await this.evidenceSearch.searchScoped({
         ownerId: payload.userId,
         storyId: payload.resourceId,
-        sourceType: 'subject',
-        query,
-        topK: 5,
-        signal,
-      });
-      // The Retriever filter is an optimization boundary, not an authorization
-      // boundary. Fail closed if a result cannot prove it belongs to this Story.
+        task: 'interview.closeout:story_continue',
+        skill: 'interview-closeout',
+        allowedSourceTypes: ['owner_transcript'],
+      }, { query, source_types: ['owner_transcript'], top_k: 5 }, signal);
       return {
-        matches: matches.filter((match) => (
-          match.ownerId === payload.userId
-          && match.storyId === payload.resourceId
-          && match.sourceType === 'subject'
-          && match.sessionId.length > 0
-        )).slice(0, 5).map((match) => {
-          const { ownerId: _ownerId, sourceType: _sourceType, ...evidence } = match;
-          return evidence;
-        }),
+        matches: result.evidence.map((item) => ({
+          text: item.text,
+          score: item.score,
+          storyId: item.story_ref ?? payload.resourceId,
+          sessionId: item.source_ref,
+          messageIds: item.message_refs ?? [],
+          segmentIds: item.segment_refs ?? [],
+        })),
       };
     } catch (error) {
       if (error instanceof RetrieverScriptError) throw error;
+      if (error instanceof EvidenceSearchError) {
+        throw new RetrieverScriptError(error.message, 'INVALID_RETRIEVAL_REQUEST', error.statusCode);
+      }
       throw new RetrieverScriptError(
         error instanceof Error ? error.message : 'Retriever search failed.',
         'RETRIEVER_UNAVAILABLE',

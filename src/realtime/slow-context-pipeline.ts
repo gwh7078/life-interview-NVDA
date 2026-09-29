@@ -6,6 +6,7 @@ import type {
 } from '../agent-tasks/contracts/index.js';
 import type { AgentTaskPort } from '../agent-tasks/ports/agent-task-port.js';
 import type { RetrieverAdapter } from '../retriever/types.js';
+import { EvidenceSearchService } from '../retriever/evidence-search.js';
 import type {
   RealtimeContextHint,
   RealtimeRecallPort,
@@ -57,8 +58,9 @@ export class RealtimeSlowContextPipeline implements RealtimeRecallPort {
   constructor(
     retriever: RetrieverAdapter,
     private readonly agentTasks?: AgentTaskPort | null,
+    evidenceSearchService?: EvidenceSearchService,
   ) {
-    this.retrieval = new RetrieverRealtimeRecall(retriever);
+    this.retrieval = new RetrieverRealtimeRecall(evidenceSearchService ?? retriever);
   }
 
   async recall(

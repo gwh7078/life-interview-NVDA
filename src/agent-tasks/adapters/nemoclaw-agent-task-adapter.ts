@@ -56,7 +56,7 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
     }
 
     const definition = getAgentTaskDefinition(request.taskType, request.mode);
-    if (options.scriptContext && !definition.executionPolicy.scriptCapabilities.includes('memory-search')) {
+    if (options.scriptContext && !definition.executionPolicy.scriptCapabilities.includes('evidence-search')) {
       throw new AgentTaskContractError(
         'This Agent Task does not authorize retrieval Skill Scripts.',
         'AGENT_SCRIPT_CAPABILITY_UNAUTHORIZED',
@@ -90,6 +90,9 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
       );
     }
 
+    const executionPolicy = options.scriptContext
+      ? definition.executionPolicy
+      : { ...definition.executionPolicy, scriptCapabilities: [] };
     const executed = await this.executor.execute({
       runId: request.runId,
       ownerId: request.ownerId,
@@ -102,7 +105,7 @@ export class NemoClawAgentTaskAdapter implements AgentTaskPort {
       skill: definition.skill,
       skillVersion: definition.skillVersion,
       modelProfile: definition.modelProfile,
-      executionPolicy: definition.executionPolicy,
+      executionPolicy,
       payload: request.payload,
       ...(options.scriptContext ? { scriptContext: options.scriptContext } : {}),
       ...(options.signal ? { signal: options.signal } : {}),

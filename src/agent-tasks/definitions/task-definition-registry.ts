@@ -18,6 +18,7 @@ import {
   interviewCloseoutOutputSchemas,
 } from '../contracts/interview-closeout.js';
 import { AgentTaskContractError } from '../errors.js';
+import type { EvidenceSearchSourceType } from '../../retriever/evidence-search.js';
 
 export type AgentModelProfile = 'reasoning' | 'reasoning-fast' | 'realtime-context' | 'writing';
 
@@ -27,6 +28,7 @@ export interface AgentTaskExecutionPolicy {
   maxAttempts: number;
   timeoutMs: number;
   scriptCapabilities: readonly string[];
+  evidenceSourceTypes: readonly EvidenceSearchSourceType[];
   allowFormatRepair: boolean;
   allowValidationRepair?: boolean;
 }
@@ -48,26 +50,47 @@ const standardReasoningPolicy: AgentTaskExecutionPolicy = Object.freeze({
   maxAttempts: 3,
   timeoutMs: 180_000,
   scriptCapabilities: Object.freeze([]),
+  evidenceSourceTypes: Object.freeze([]),
   allowFormatRepair: true,
 });
 
-const storyContinuePolicy: AgentTaskExecutionPolicy = Object.freeze({
+const evidenceSearchPolicy = (
+  sourceTypes: readonly EvidenceSearchSourceType[],
+  base: AgentTaskExecutionPolicy = standardReasoningPolicy,
+): AgentTaskExecutionPolicy => Object.freeze({
+  ...base,
+  scriptCapabilities: Object.freeze(['evidence-search']),
+  evidenceSourceTypes: Object.freeze([...sourceTypes]),
+});
+
+const onboardingCloseoutPolicy = evidenceSearchPolicy(['profile', 'life_stage', 'related_story']);
+
+const storyCreatePolicy = evidenceSearchPolicy(['related_story']);
+
+const storyContinuePolicy = evidenceSearchPolicy([
+  'owner_transcript', 'story_memory', 'story_summary', 'related_story',
+]);
+
+const contributorPolicy = evidenceSearchPolicy(['contributor_transcript']);
+
+const completionPolicy: AgentTaskExecutionPolicy = evidenceSearchPolicy([
+  'owner_transcript', 'story_memory', 'story_summary', 'related_story',
+], {
   ...standardReasoningPolicy,
-  scriptCapabilities: Object.freeze(['memory-search']),
-});
-
-const completionPolicy: AgentTaskExecutionPolicy = Object.freeze({
-  maxAttempts: 3,
   timeoutMs: 120_000,
-  scriptCapabilities: Object.freeze([]),
-  allowFormatRepair: true,
 });
 
-const generationPolicy: AgentTaskExecutionPolicy = Object.freeze({
-  maxAttempts: 3,
+const generationPolicy: AgentTaskExecutionPolicy = evidenceSearchPolicy([
+  'owner_transcript', 'contributor_transcript', 'profile', 'life_stage',
+  'story_memory', 'story_summary', 'related_story', 'era',
+], {
+  ...standardReasoningPolicy,
   timeoutMs: 300_000,
-  scriptCapabilities: Object.freeze([]),
-  allowFormatRepair: true,
+});
+
+const observerEvidencePolicy: AgentTaskExecutionPolicy = Object.freeze({
+  ...standardReasoningPolicy,
+  evidenceSourceTypes: Object.freeze(['owner_transcript'] as const),
 });
 
 const realtimeContextHintPolicy: AgentTaskExecutionPolicy = Object.freeze({
@@ -76,6 +99,7 @@ const realtimeContextHintPolicy: AgentTaskExecutionPolicy = Object.freeze({
   maxAttempts: 1,
   timeoutMs: 4_800,
   scriptCapabilities: Object.freeze([]),
+  evidenceSourceTypes: observerEvidencePolicy.evidenceSourceTypes,
   allowFormatRepair: false,
   allowValidationRepair: false,
 });
@@ -90,7 +114,7 @@ const definitions: AgentTaskDefinition[] = [
     outputSchema: onboardingCloseoutTaskOutputSchema,
     contextVersion: 'v1',
     schemaVersion: 'v1',
-    executionPolicy: standardReasoningPolicy,
+    executionPolicy: onboardingCloseoutPolicy,
   },
   ...interviewCloseoutModes.map((mode): AgentTaskDefinition => ({
     taskType: 'interview.closeout',
@@ -104,7 +128,11 @@ const definitions: AgentTaskDefinition[] = [
       : interviewCloseoutOutputSchemas[mode],
     contextVersion: 'v1',
     schemaVersion: 'v1',
-    executionPolicy: mode === 'story_continue' ? storyContinuePolicy : standardReasoningPolicy,
+    executionPolicy: mode === 'story_create'
+      ? storyCreatePolicy
+      : mode === 'contributor'
+        ? contributorPolicy
+        : storyContinuePolicy,
   })),
   {
     taskType: 'interview.context_hint',

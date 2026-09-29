@@ -7,6 +7,17 @@ export interface AgentToolTokenPayload {
   resourceType: string;
   resourceId: string;
   exp: number;
+  evidenceSearch?: AgentToolEvidenceSearchScope;
+}
+
+export interface AgentToolEvidenceSearchScope {
+  task: string;
+  skill: string;
+  allowedSourceTypes: string[];
+  storyId?: string;
+  stageId?: string;
+  shareId?: string;
+  currentSessionId?: string;
 }
 
 export interface AgentToolTokenExpectation {
@@ -47,6 +58,7 @@ export class AgentToolTokenService {
       resourceType: input.resourceType,
       resourceId: input.resourceId,
       exp: this.now() + (input.ttlMs ?? 120_000),
+      ...(input.evidenceSearch ? { evidenceSearch: input.evidenceSearch } : {}),
     };
     const body = encode(payload);
     const signature = createHmac('sha256', this.secret).update(body).digest('base64url');

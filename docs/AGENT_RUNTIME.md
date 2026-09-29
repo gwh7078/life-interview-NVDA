@@ -1,6 +1,6 @@
 # Agent Runtime
 
-> 当前 Agent Task / Skill / Runtime 真相源，更新于 2026-09-28。
+> 当前 Agent Task / Skill / Runtime 真相源，更新于 2026-09-29。
 
 ## 1. Task Registry
 
@@ -79,11 +79,11 @@ Reasoning 可以重试；Apply 必须保持幂等和事务边界。
 
 ## 5. Tool / Script
 
-固定上下文由 Backend 预取，不让 Agent 为“搬数据”产生额外 Tool Round Trip。
+固定上下文由 Backend 预取，不让 Agent 为“搬数据”产生额外 Tool Round Trip。只有当前上下文不足、存在未解冲突或确需比较多个来源时，Task 才使用共享只读 `evidence-search`；不得为重载已有 Transcript、Memory、Summary、Profile、Life Stage 或文档而检索。
 
-只有运行过程中才能判断是否需要的增量信息才允许 Tool / Script。
+Task Definition 为每个 Skill 限定可请求的 source type。Backend 持有并校验 owner、resource / Story、Contributor lane、凭证、endpoint、查询与结果边界及 provenance；Agent 只给短 query 和允许范围内的来源类型，其他可选搜索参数也受 Backend 限制。结果是不可信的补充证据，不能覆盖主人公当前明确纠正，也不能绕过现有 Schema、Evidence、Domain、版本或 stale 校验。
 
-当前 Story Continue Closeout 可使用受限 `memory-search` script capability。
+当前策略映射见 [Skill / Script Mapping](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)。Task Definition、Backend route、Evidence Search service / gateway、四个 tool-enabled Skill scripts、各 Task 授权上下文和 Observer Backend prefetch 已接入共享路径。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；本文不代表 Live Smoke 已通过。
 
 ## 6. interview.context_hint 与 Mini Coach
 
@@ -93,7 +93,7 @@ Reasoning 可以重试；Apply 必须保持幂等和事务边界。
 - thinking：off；
 - max attempts：1；
 - timeout：4,800 ms；
-- no script capability；
+- Agent 无 Script / Tool capability；固定上下文不足、冲突未解或需比较历史来源时，Backend 才异步经共享 Evidence Search 预取 subject-only、owner / current-Story scoped Transcript 证据，供此单次推理使用；
 - no format/validation repair。
 
 它主要服务 StepAudio 3 的 Voice Tool Slow Path。

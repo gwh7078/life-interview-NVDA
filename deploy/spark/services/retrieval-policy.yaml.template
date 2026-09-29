@@ -12,6 +12,7 @@ network_policies:
         enforcement: enforce
         rules:
           - allow: { method: GET, path: "/health" }
+          - allow: { method: POST, path: "/internal/agent-retrieval/evidence-search" }
           - allow: { method: POST, path: "/internal/agent-retrieval/memory-search" }
           - allow: { method: POST, path: "/internal/agent-retrieval/era-context-search" }
     binaries:

@@ -39,17 +39,13 @@ import type {
   AgentRepairFeedback,
   AgentTaskPort,
 } from './ports/agent-task-port.js';
-import { getAgentTaskDefinition } from './definitions/task-definition-registry.js';
 import type {
   AgentTaskReferenceMap,
   AgentTaskResultUnion,
 } from './contracts/index.js';
-import { AgentToolTokenService } from '../../agent/tools/token.js';
+import { createEvidenceSearchScriptContext, type EvidenceSearchScriptConfig } from './evidence-search-context.js';
 
-export interface StoryCloseoutScriptConfig {
-  baseUrl: string;
-  tokenService: AgentToolTokenService;
-}
+export type StoryCloseoutScriptConfig = EvidenceSearchScriptConfig;
 
 function modelResultFromAgent(result: AgentTaskResultUnion): CloseoutModelResult {
   const usage = result.runtime.usage
@@ -158,21 +154,7 @@ export class AgentStoryCloseoutProcessor implements CloseoutProcessor {
     const mapped = mapStoryCloseoutContextToTask(input.context, randomUUID());
     const references = storyReferences(input.context, mapped.references);
     let validated: ProcessStoryCloseoutResult['output'] | undefined;
-    const storyContinuePolicy = getAgentTaskDefinition('interview.closeout', 'story_continue').executionPolicy;
-    const scriptContext = input.context.mode === 'continue' && this.scriptConfig && input.context.currentStory
-      ? {
-          baseUrl: this.scriptConfig.baseUrl,
-          token: this.scriptConfig.tokenService.issue({
-            runId: mapped.request.runId,
-            userId: input.context.userId,
-            tool: 'memory_search',
-            resourceType: 'story',
-            resourceId: input.context.currentStory.story_id,
-            ttlMs: storyContinuePolicy.timeoutMs * storyContinuePolicy.maxAttempts
-              + 60_000,
-          }),
-        }
-      : undefined;
+    const scriptContext = createEvidenceSearchScriptContext(this.scriptConfig, mapped.request);
 
     const result = await this.tasks.run(mapped.request, {
       signal: input.signal,
@@ -206,16 +188,18 @@ export class AgentStoryCloseoutProcessor implements CloseoutProcessor {
 export class AgentOnboardingCloseoutProcessor implements OnboardingCloseoutProcessor {
   private readonly validator = new OnboardingCloseoutValidator();
 
-  constructor(private readonly tasks: AgentTaskPort) {}
+  constructor(private readonly tasks: AgentTaskPort, private readonly scriptConfig?: EvidenceSearchScriptConfig) {}
 
   async process(input: ProcessOnboardingCloseoutInput): Promise<ProcessOnboardingCloseoutResult> {
     input.assertCurrentAttempt();
     const mapped = mapOnboardingCloseoutContextToTask(input.context, randomUUID());
     const references = onboardingReferences(mapped.references);
     let validated: ProcessOnboardingCloseoutResult['output'] | undefined;
+    const scriptContext = createEvidenceSearchScriptContext(this.scriptConfig, mapped.request);
 
     const result = await this.tasks.run(mapped.request, {
       signal: input.signal,
+      ...(scriptContext ? { scriptContext } : {}),
       validateProposal: (candidate) => {
         input.assertCurrentAttempt();
         validated = this.validator.validate(candidate, references);
@@ -248,7 +232,10 @@ function completionRepairFeedback(error: unknown): AgentRepairFeedback[] {
 export class AgentStoryCompletionProcessor implements StoryCompletionProcessorPort {
   private readonly validator = new StoryCompletionValidator();
 
-  constructor(private readonly tasks: AgentTaskPort) {}
+  constructor(
+    private readonly tasks: AgentTaskPort,
+    private readonly scriptConfig?: EvidenceSearchScriptConfig,
+  ) {}
 
   async process(
     context: StoryCompletionContext,
@@ -260,8 +247,10 @@ export class AgentStoryCompletionProcessor implements StoryCompletionProcessorPo
       ownerId: execution.userId,
       storyId: execution.storyId,
     });
+    const scriptContext = createEvidenceSearchScriptContext(this.scriptConfig, mapped.request);
     let validated: StoryCompletionOutput | undefined;
     const result = await this.tasks.run(mapped.request, {
+      ...(scriptContext ? { scriptContext } : {}),
       ...(execution.signal ? { signal: execution.signal } : {}),
       validateProposal: (candidate) => {
         validated = this.validator.validate(candidate);
@@ -285,7 +274,10 @@ function generationRepairFeedback(error: unknown): AgentRepairFeedback[] {
 }
 
 export class AgentStoryGenerationContextModel implements StoryGenerationContextModelPort {
-  constructor(private readonly tasks: AgentTaskPort) {}
+  constructor(
+    private readonly tasks: AgentTaskPort,
+    private readonly scriptConfig?: EvidenceSearchScriptConfig,
+  ) {}
 
   async generateContext(input: {
     ownerId: string;
@@ -299,8 +291,10 @@ export class AgentStoryGenerationContextModel implements StoryGenerationContextM
       storyId: input.storyId,
       resourceVersion: input.resourceVersion,
     });
+    const scriptContext = createEvidenceSearchScriptContext(this.scriptConfig, mapped.request);
     let validated: { content: string } | undefined;
     const result = await this.tasks.run(mapped.request, {
+      ...(scriptContext ? { scriptContext } : {}),
       validateProposal: (candidate) => {
         validated = storyGenerationOutputSchema.parse(candidate);
       },

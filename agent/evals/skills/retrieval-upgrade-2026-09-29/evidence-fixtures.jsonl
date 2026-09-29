@@ -1,0 +1,9 @@
+{"fixture_id":"OBS-R01","source_type":"owner_transcript","scope":"same-owner/current-story","text":"后来核实正式高考日期是7月15日。","provenance":{"message_ref":"m-date-1","session_ref":"s-owner-1"}}
+{"fixture_id":"ONB-R01","source_type":"life_stage","scope":"same-owner","text":"1980–1983 莒县一中。","provenance":{"stage_ref":"stage-school-1"}}
+{"fixture_id":"ONB-R02","source_type":"profile","scope":"same-owner","text":"旧 Profile 出生年份为1962。","provenance":{"profile_ref":"profile-1"}}
+{"fixture_id":"IC-R01","source_type":"owner_transcript","scope":"same-owner/current-story","text":"后来重新核对档案，正式高考日期是7月15日。","provenance":{"message_ref":"m-date-2","session_ref":"s-owner-3"}}
+{"fixture_id":"IC-R02","source_type":"related_story","scope":"same-owner","text":"已有 Story：高考前夜发烧。","provenance":{"story_ref":"story-fever-1"}}
+{"fixture_id":"SC-R01","source_type":"owner_transcript","scope":"same-owner/current-story","text":"王明晨老师连夜送我去医院输液。","provenance":{"message_ref":"m-hospital-1","session_ref":"s-owner-4"}}
+{"fixture_id":"SG-R01","source_type":"owner_transcript","scope":"same-owner/current-story","text":"王明晨；高考总分486分；化学99.5分。","provenance":{"message_ref":"m-score-1","session_ref":"s-owner-5"}}
+{"fixture_id":"SG-R02","source_type":"era","scope":"public","text":"1983年山东高考正式考试日期为7月15日。","provenance":{"start_year":1983,"end_year":1983,"category":"教育"}}
+{"fixture_id":"SG-R03","source_type":"contributor_transcript","scope":"same-owner/current-story","text":"Contributor：我听他说那晚其实很害怕。","provenance":{"message_ref":"m-contrib-2","session_ref":"s-contrib-2"}}

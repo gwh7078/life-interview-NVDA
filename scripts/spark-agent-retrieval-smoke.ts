@@ -59,13 +59,13 @@ async function waitIndexed(sessionId: string): Promise<void> {
   throw new Error('index timeout');
 }
 
-function runMemorySearch(baseUrl: string, token: string, query: string): Promise<Record<string, unknown>> {
+function runEvidenceSearch(baseUrl: string, token: string, query: string): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const shell = [
       'IFS= read -r LIFE_INTERVIEW_RETRIEVAL_TOKEN',
       'export LIFE_INTERVIEW_RETRIEVAL_TOKEN',
       'export LIFE_INTERVIEW_RETRIEVAL_BASE_URL="$1"',
-      'exec node /sandbox/.openclaw/workspace/skills/interview-closeout/scripts/memory-search.mjs "$2"',
+      'exec node /sandbox/.openclaw/workspace/skills/interview-closeout/scripts/evidence-search.mjs "$2" owner_transcript',
     ].join('; ');
     const child = spawn('nemoclaw', [
       sandbox,
@@ -96,18 +96,18 @@ function runMemorySearch(baseUrl: string, token: string, query: string): Promise
     child.once('error', reject);
     child.once('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`sandbox memory-search failed (exit=${code}): ${stderr.trim().split(/\r?\n/u).at(-1) || 'unknown'}`));
+        reject(new Error(`sandbox evidence-search failed (exit=${code}): ${stderr.trim().split(/\r?\n/u).at(-1) || 'unknown'}`));
         return;
       }
       const line = stdout.trim().split(/\r?\n/u).findLast((value) => value.startsWith('{') && value.endsWith('}'));
       if (!line) {
-        reject(new Error('sandbox memory-search returned no JSON result'));
+        reject(new Error('sandbox evidence-search returned no JSON result'));
         return;
       }
       try {
         resolve(JSON.parse(line) as Record<string, unknown>);
       } catch {
-        reject(new Error('sandbox memory-search returned invalid JSON'));
+        reject(new Error('sandbox evidence-search returned invalid JSON'));
       }
     });
     // The short-lived token crosses only stdin; it never appears in argv or logs.
@@ -137,37 +137,38 @@ try {
   });
   await waitIndexed(sessionId);
 
-  const token = tokenService.issue({
-    runId: randomUUID(),
-    userId,
-    tool: 'memory_search',
-    resourceType: 'story',
-    resourceId: storyId,
-    ttlMs: 120_000,
-  });
-  const allowed = await runMemorySearch(baseUrl, token, `${tag} bicycle`);
-  const allowedMatches = Array.isArray(allowed.matches) ? allowed.matches as Array<Record<string, unknown>> : [];
-  assert.ok(allowedMatches.some((match) => String(match.text ?? '').includes(tag)), 'authorized script did not return scoped evidence');
+  const issueStoryToken = (scopedStoryId: string) => {
+    const runId = randomUUID();
+    return tokenService.issue({
+      runId,
+      userId,
+      tool: 'evidence_search',
+      resourceType: 'agent_evidence_search',
+      resourceId: runId,
+      evidenceSearch: {
+        task: 'interview.closeout:story_continue',
+        skill: 'interview-closeout',
+        allowedSourceTypes: ['owner_transcript'],
+        storyId: scopedStoryId,
+      },
+      ttlMs: 120_000,
+    });
+  };
+  const allowed = await runEvidenceSearch(baseUrl, issueStoryToken(storyId), `${tag} bicycle`);
+  const allowedEvidence = Array.isArray(allowed.evidence) ? allowed.evidence as Array<Record<string, unknown>> : [];
+  assert.ok(allowedEvidence.some((item) => String(item.text ?? '').includes(tag)), 'authorized script did not return scoped evidence');
 
-  const wrongScopeToken = tokenService.issue({
-    runId: randomUUID(),
-    userId,
-    tool: 'memory_search',
-    resourceType: 'story',
-    resourceId: `${tag}-other-story`,
-    ttlMs: 120_000,
-  });
-  const denied = await runMemorySearch(baseUrl, wrongScopeToken, `${tag} bicycle`);
-  const deniedMatches = Array.isArray(denied.matches) ? denied.matches : [];
-  assert.equal(deniedMatches.length, 0, 'story-scoped token leaked evidence from another Story');
+  const denied = await runEvidenceSearch(baseUrl, issueStoryToken(`${tag}-other-story`), `${tag} bicycle`);
+  const deniedEvidence = Array.isArray(denied.evidence) ? denied.evidence : [];
+  assert.equal(deniedEvidence.length, 0, 'story-scoped token leaked evidence from another Story');
 
   process.stdout.write(`${JSON.stringify({
     status: 'PASS',
     sandbox,
     proxy_reachable_from_sandbox: true,
-    formal_skill_script: 'memory-search',
-    authorized_hits: allowedMatches.length,
-    wrong_story_hits: deniedMatches.length,
+    formal_skill_script: 'evidence-search',
+    authorized_hits: allowedEvidence.length,
+    wrong_story_hits: deniedEvidence.length,
     token_in_argv: false,
   })}\n`);
 } finally {
