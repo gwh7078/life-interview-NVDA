@@ -274,7 +274,6 @@ With Skill
 Retrieval Upgrade 后的当前分数已经完成实际复测并确认，与上表一致；正式报告和运行元数据保留评测条件、基线与当前结果。
 
 - [NVIDIA SkillEvaluator Tier 3 正式评测报告](docs/07-reports/skills/tier3/2026-09-28/NVIDIA_SKILL_TIER3_REPORT.md)
-- [Tier 3 运行元数据](docs/07-reports/skills/tier3/2026-09-28/run-metadata.json)
 
 > `interview-coach` 不在这 49 个 SkillEvaluator Case 中重复测试。它直接通过下面的快慢系统 Interview Quality Benchmark 验证，因为其价值体现在实时下一问质量、Memory / Era 使用、延迟与 fail-open，而不是离线 Closeout / Generation 任务。
 
