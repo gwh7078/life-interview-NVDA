@@ -13,14 +13,14 @@ The text transport result is retained as failure evidence:
 
 ## Result highlight: where B clearly improves over A
 
-**B (Mini + Coach) does not lift every case uniformly. Its clearest gain is in turns where a surface fact should be converted into a higher-value personal decision/impact question.**
+**B (Mini + Coach) does not lift every case uniformly. Its clearest gain is in turning repetitive, generic, or presumptive follow-ups into more specific questions with higher information gain.**
 
 > **Strongest direct Coach signal — C03:** A **33.0** → B **85.5**, **+52.5 points** across 2 valid paired samples.  
-> A tended to repeat what the teacher had already said or presume the teacher's intent; B redirected the interview toward how the teacher's advice affected the user's own decision.
+> A tended to repeat known information or presume the teacher's intent; B's valid outputs moved toward concrete details about the teacher's encouragement, producing a much stronger judged next question.
 
 | Evidence | A | B | B−A | What improved |
 |---|---:|---:|---:|---|
-| **C03 targeted Coach regression** | 33.0 | **85.5** | **+52.5** | From repeating a known teacher fact to pursuing the user's own decision/impact |
+| **C03 targeted Coach regression** | 33.0 | **85.5** | **+52.5** | From repetition/presumption to a more concrete, information-seeking follow-up |
 | **Targeted regression, 6 valid pairs** | 55.5 | **64.5** | **+9.0** | Higher information gain, context use, story value, depth, and non-leading scores |
 | Frozen run, 18 valid A/B pairs | 47.00 | **47.56** | +0.56 | Small overall lift; improvement is concentrated in specific failure modes |
 
