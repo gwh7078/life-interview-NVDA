@@ -34,24 +34,27 @@ async function main(): Promise<void> {
   const coach = createRealtimeCoach(process.env);
   const fixture = loadNextQuestionFixture();
   const context = makeNextQuestionContext(fixture.owner_id, fixture.story_id, fixture.database_path);
-  const selected = ['C06', 'C07'].map((id) => NEXT_QUESTION_CASES.find((item) => item.id === id)!);
+  const selected = ['C03', 'C05', 'C06', 'C10'].map((id) => NEXT_QUESTION_CASES.find((item) => item.id === id)!);
   const runId = `${new Date().toISOString().replace(/[:.]/gu, '-')}-${randomUUID().slice(0, 8)}`;
   const outputDir = path.resolve('benchmark/next-question/results', `gate-probe-${runId}`);
   mkdirSync(outputDir, { recursive: false, mode: 0o700 });
   const resultsPath = path.join(outputDir, 'gate-results.jsonl');
   writePrivate(path.join(outputDir, 'run.json'), JSON.stringify({
     benchmark: 'controlled-next-question-gate-probe',
+    benchmark_type: 'targeted_ab_regression',
     run_id: runId,
     generated_at: new Date().toISOString(),
     repetitions_per_case: 3,
     cases: selected.map((item) => item.id),
+    profile: { variant: 'B', coach_enabled: true, memory_enabled: false, era_enabled: false },
     coach: diagnostics,
     temperature: 0,
   }, null, 2));
   writePrivate(resultsPath, '');
   process.stdout.write(`COACH_CONFIG ${JSON.stringify(diagnostics)}\n`);
 
-  let passed = 0;
+  let schemaValid = 0;
+  const interventionCounts = new Map(selected.map((item) => [item.id, 0]));
   let total = 0;
   for (const item of selected) {
     const input = buildCaseGateInput(context, item);
@@ -63,20 +66,32 @@ async function main(): Promise<void> {
         const gate = await coach.evaluate(input, { signal: AbortSignal.timeout(gateTimeoutMs) });
         const latencyMs = Number((performance.now() - startedAt).toFixed(2));
         if (latencyMs >= gateTimeoutMs) throw Object.assign(new Error('Coach Gate exceeded its production deadline.'), { code: 'COACH_GATE_TIMEOUT' });
+        schemaValid += 1;
+        if (gate.action !== 'none') interventionCounts.set(item.id, interventionCounts.get(item.id)! + 1);
         row = {
           case_id: item.id,
           run,
           status: 'PASS',
+          schema_valid: true,
+          action: gate.action,
+          reason: gate.reason,
+          retrieve_memory: gate.retrieve_memory,
+          retrieve_era: gate.retrieve_era,
+          avoid: gate.avoid,
+          direction: gate.direction,
+          coach_enabled: true,
+          memory_enabled: false,
+          era_enabled: false,
           error: null,
           latency_ms: latencyMs,
           parsed_gate_result: gate,
         };
-        passed += 1;
       } catch (error) {
         row = {
           case_id: item.id,
           run,
           status: 'FAIL',
+          schema_valid: false,
           ...coachErrorDetails(error, process.env),
           latency_ms: Number((performance.now() - startedAt).toFixed(2)),
           parsed_gate_result: null,
@@ -86,8 +101,14 @@ async function main(): Promise<void> {
       process.stdout.write(`${JSON.stringify(row)}\n`);
     }
   }
-  process.stdout.write(`GATE_PROBE ${passed}/${total} PASS; ${outputDir}\n`);
-  if (passed !== total) process.exitCode = 1;
+  for (const item of selected) {
+    process.stdout.write(`${item.id} = ${interventionCounts.get(item.id)}/3 intervention\n`);
+  }
+  const interventions = [...interventionCounts.values()].reduce((sum, count) => sum + count, 0);
+  const readiness = selected.every((item) => interventionCounts.get(item.id)! >= 2) && interventions >= 8;
+  process.stdout.write(`GATE_SCHEMA ${schemaValid}/${total}\n`);
+  process.stdout.write(`GATE_READINESS ${readiness ? 'PASS' : 'FAIL'} (${interventions}/${total} interventions); ${outputDir}\n`);
+  if (!readiness) process.exitCode = 1;
 }
 
 void main().catch((error: unknown) => {

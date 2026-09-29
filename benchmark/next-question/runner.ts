@@ -829,6 +829,7 @@ async function main(): Promise<void> {
   });
   const commitSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const runId = `${new Date().toISOString().replace(/[:.]/gu, '-')}-${randomUUID().slice(0, 8)}`;
+  const benchmarkType = env('NEXT_QUESTION_BENCHMARK_TYPE', 'controlled_fixed_audio');
   const outputDir = options.outputDir
     ? path.resolve(options.outputDir)
     : path.resolve('benchmark/next-question/results', runId);
@@ -839,6 +840,7 @@ async function main(): Promise<void> {
   const planned = cases.length * options.variants.length * options.runs;
   const manifest: JsonRecord = {
     benchmark: 'controlled-next-question',
+    benchmark_type: benchmarkType,
     run_id: runId,
     generated_at: new Date().toISOString(),
     commit_sha: commitSha,
@@ -862,6 +864,7 @@ async function main(): Promise<void> {
   const repeatArgs = ['--cases', options.caseIds.join(','), '--variants', options.variants.join(','), '--runs', String(options.runs)];
   writePrivate(path.join(outputDir, 'run.json'), JSON.stringify({
     benchmark: 'controlled-next-question',
+    benchmark_type: benchmarkType,
     run_id: runId,
     generated_at: new Date().toISOString(),
     commit_sha: commitSha,
@@ -874,7 +877,7 @@ async function main(): Promise<void> {
     voice_profile: context.voiceProfile,
     story_context_sha256: hash(JSON.stringify(context)),
     judge_model: 'step-5-preview',
-    judge_endpoint: 'https://api.stepfun.com/v1/chat/completions',
+    judge_endpoint: 'https://api.stepfun.com/step_plan/v1/chat/completions',
     judge_temperature: 0,
     coach: coachRuntime,
     coach_temperature: coach ? 0 : null,

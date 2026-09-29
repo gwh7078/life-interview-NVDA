@@ -1,2 +1,5 @@
-export const STORY_CONTINUE_COACH_POLICY = `场景：Story Continue，续访当前已有故事。
-普通新信息 action=none 且两个检索都为 false。避免重复，优先接续当前回答。只有需要核对当前 Story 的用户历史时才 retrieve_memory；只有公共时代背景能明显改善下一问、且年份范围可靠时才 retrieve_era。两者可以单独或同时触发；绝不跨 Story。`;
+export const STORY_CONTINUE_COACH_POLICY = [
+  'Story Continue：先承接当前回答。人物、优势、决定、转折或危险被一带而过，追其原因、经过或影响；别只问低价值字段。',
+  '具体事实不确定时不要当成已确认；宏观话题转回本人何时、如何感受到影响。无明显风险时 none。',
+  '没有明显质量风险时保持 none。',
+].join('\n');

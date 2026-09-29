@@ -12,6 +12,28 @@ const SCORE_LIMITS = {
   depth: 15,
   non_leading: 10,
 } as const;
+const RESULT_KEYS = [
+  'information_gain', 'context_use', 'story_value', 'depth', 'non_leading', 'total_score',
+  'repeated_question', 'fact_misuse', 'leading_question', 'missed_high_value_clue', 'brief_reason',
+] as const;
+const JUDGE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    information_gain: { type: 'integer', minimum: 0, maximum: 30 },
+    context_use: { type: 'integer', minimum: 0, maximum: 25 },
+    story_value: { type: 'integer', minimum: 0, maximum: 20 },
+    depth: { type: 'integer', minimum: 0, maximum: 15 },
+    non_leading: { type: 'integer', minimum: 0, maximum: 10 },
+    total_score: { type: 'integer', minimum: 0, maximum: 100 },
+    repeated_question: { type: 'boolean' },
+    fact_misuse: { type: 'boolean' },
+    leading_question: { type: 'boolean' },
+    missed_high_value_clue: { type: 'boolean' },
+    brief_reason: { type: 'string', maxLength: 80 },
+  },
+  required: RESULT_KEYS,
+} as const;
 
 interface JudgeInput {
   case_id: string;
@@ -47,30 +69,24 @@ function validScore(value: unknown, maximum: number): value is number {
   return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= maximum;
 }
 
-function validResult(value: unknown): value is {
-  information_gain: number;
-  context_use: number;
-  story_value: number;
-  depth: number;
-  non_leading: number;
-  total_score: number;
-  repeated_question: boolean;
-  fact_misuse: boolean;
-  leading_question: boolean;
-  missed_high_value_clue: boolean;
-  brief_reason: string;
-} {
-  if (!value || typeof value !== 'object') return false;
+function validateResult(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return 'response must be an object';
   const result = value as Record<string, unknown>;
   const dimensions = Object.entries(SCORE_LIMITS);
-  if (!dimensions.every(([key, maximum]) => validScore(result[key], maximum))) return false;
+  const keys = Object.keys(result);
+  const missing = RESULT_KEYS.filter((key) => !Object.hasOwn(result, key));
+  const extra = keys.filter((key) => !RESULT_KEYS.includes(key as (typeof RESULT_KEYS)[number]));
+  if (missing.length || extra.length) return `keys mismatch; missing=${missing.join(',')}; additional=${extra.join(',')}`;
+  const invalidScore = dimensions.find(([key, maximum]) => !validScore(result[key], maximum));
+  if (invalidScore) return `${invalidScore[0]} must be an integer in 0..${invalidScore[1]}`;
   const total = dimensions.reduce((sum, [key]) => sum + Number(result[key]), 0);
-  return result.total_score === total
-    && ['repeated_question', 'fact_misuse', 'leading_question', 'missed_high_value_clue']
-      .every((key) => typeof result[key] === 'boolean')
-    && typeof result.brief_reason === 'string'
-    && result.brief_reason.trim().length > 0
-    && result.brief_reason.length <= 200;
+  if (result.total_score !== total) return `total_score must equal dimension sum ${total}`;
+  const invalidBoolean = ['repeated_question', 'fact_misuse', 'leading_question', 'missed_high_value_clue']
+    .find((key) => typeof result[key] !== 'boolean');
+  if (invalidBoolean) return `${invalidBoolean} must be boolean`;
+  if (typeof result.brief_reason !== 'string' || !result.brief_reason.trim()) return 'brief_reason must be a non-empty string';
+  if (Array.from(result.brief_reason).length > 80) return 'brief_reason exceeds 80 characters';
+  return null;
 }
 
 function systemPrompt(): string {
@@ -81,9 +97,9 @@ function systemPrompt(): string {
     '评分必须是整数：information_gain 0-30；context_use 0-25；story_value 0-20；depth 0-15；non_leading 0-10。',
     'total_score 必须等于五项之和。高分要求：能获得新信息、利用上下文且不重复、抓住高价值线索、追问具体场景/人物/因果/情绪/判断/转折/意义，并且不诱导或虚构。',
     '标签必须是布尔值：repeated_question 表示重问已知事实；fact_misuse 表示把推测/时代背景当个人事实；leading_question 表示问题诱导或预设答案；missed_high_value_clue 表示忽略当前最值得追问的线索。',
-    'brief_reason 用一句简短中文说明，最多 100 个汉字；不要展示推理过程。',
-    '输出且只输出 JSON object，不要 Markdown。结构：',
-    '{"information_gain":0,"context_use":0,"story_value":0,"depth":0,"non_leading":0,"total_score":0,"repeated_question":false,"fact_misuse":false,"leading_question":false,"missed_high_value_clue":false,"brief_reason":"简短理由"}',
+    'brief_reason 用简短中文说明，最多 80 个字符；不要展示推理过程。只返回一个 JSON object，禁止 Markdown、代码围栏、额外或缺失字段及 null；分数为整数。',
+    '必须符合此 JSON Schema：',
+    JSON.stringify(JUDGE_SCHEMA),
   ].join('\n');
 }
 
@@ -143,14 +159,15 @@ async function score(candidate: JudgeInput, apiKey: string, maxTokens: number): 
     return {
       status: 'failed', candidate_id: candidate.candidate_id, case_id: candidate.case_id,
       judge_model: MODEL, response_id: responseId, finish_reason: finishReason,
-      max_output_tokens: maxTokens, error_code: 'JUDGE_RESPONSE_INVALID_JSON',
+      max_output_tokens: maxTokens, error_code: 'JUDGE_RESPONSE_INVALID_JSON', schema_validation_error: 'response body is not valid JSON',
     };
   }
-  if (!validResult(parsed)) {
+  const schemaValidationError = validateResult(parsed);
+  if (schemaValidationError) {
     return {
       status: 'failed', candidate_id: candidate.candidate_id, case_id: candidate.case_id,
       judge_model: MODEL, response_id: responseId, finish_reason: finishReason,
-      max_output_tokens: maxTokens, error_code: 'JUDGE_RESPONSE_SCHEMA_INVALID',
+      max_output_tokens: maxTokens, error_code: 'JUDGE_RESPONSE_SCHEMA_INVALID', schema_validation_error: schemaValidationError,
     };
   }
   return {
@@ -194,7 +211,7 @@ async function main(): Promise<void> {
     attemptHistory.set(row.candidate_id, [...(attemptHistory.get(row.candidate_id) ?? []), row]);
   }
   const retryable = (row: { error_code?: string; http_status?: number }) =>
-    ['JUDGE_OUTPUT_TOKEN_LIMIT', 'JUDGE_RESPONSE_INCOMPLETE', 'JUDGE_TIMEOUT', 'JUDGE_REQUEST_FAILED', 'JUDGE_RUN_INTERRUPTED'].includes(String(row.error_code))
+    ['JUDGE_OUTPUT_TOKEN_LIMIT', 'JUDGE_RESPONSE_INCOMPLETE', 'JUDGE_RESPONSE_SCHEMA_INVALID', 'JUDGE_RESPONSE_INVALID_JSON', 'JUDGE_TIMEOUT', 'JUDGE_REQUEST_FAILED', 'JUDGE_RUN_INTERRUPTED'].includes(String(row.error_code))
     || (row.error_code === 'JUDGE_HTTP_ERROR' && Number(row.http_status) >= 500);
   const scored = new Set([...attemptHistory].filter(([, rows]) => rows.at(-1)?.status === 'scored').map(([id]) => id));
   if (!existsSync(outputPath)) writeFileSync(outputPath, '', { mode: 0o600 });
@@ -236,7 +253,10 @@ async function main(): Promise<void> {
         };
       }
       result.judge_attempt = history.length + 1;
+      result.attempt_count = history.length + 1;
       result.retry_reason = oneShotRetryReason;
+      result.finish_reason ??= null;
+      result.schema_validation_error ??= null;
       appendFileSync(outputPath, `${JSON.stringify(result)}\n`, { encoding: 'utf8', mode: 0o600 });
       history.push({
         status: String(result.status),
@@ -265,6 +285,10 @@ async function main(): Promise<void> {
         };
       }
       result.judge_attempt = attempt;
+      result.attempt_count = attempt;
+      result.retry_reason = attempt > 1 ? String(history.at(-1)?.error_code ?? 'RETRY') : null;
+      result.finish_reason ??= null;
+      result.schema_validation_error ??= null;
       appendFileSync(outputPath, `${JSON.stringify(result)}\n`, { encoding: 'utf8', mode: 0o600 });
       history.push({
         status: String(result.status),

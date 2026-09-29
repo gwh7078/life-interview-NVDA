@@ -217,7 +217,11 @@ function parseGate(value: unknown, input: CoachGateInput): CoachGateResult {
     'era_start_year', 'era_end_year', 'reason', 'avoid', 'direction',
   ];
   if (!object) throw Object.assign(new Error('Coach Gate output is not an object.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
-  if (!exactKeys(object, keys)) throw Object.assign(new Error('Coach Gate output has the wrong keys.'), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
+  if (!exactKeys(object, keys)) {
+    const received = Object.keys(object).slice(0, 12).map((key) => key.replace(/[^a-z0-9_-]/giu, '?')).join(',');
+    const missing = keys.filter((key) => !Object.hasOwn(object, key)).join(',');
+    throw Object.assign(new Error(`Coach Gate output has the wrong keys (received:${received}; missing:${missing}).`), { code: 'REALTIME_COACH_OUTPUT_INVALID' });
+  }
   if (!ACTIONS.includes(object.action as CoachAction)
     || typeof object.retrieve_memory !== 'boolean'
     || typeof object.retrieve_era !== 'boolean'
@@ -356,7 +360,6 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
   evaluate(input: CoachGateInput, options: { signal?: AbortSignal } = {}): Promise<CoachGateResult> {
     return this.complete({
       ...buildCoachGatePrompt(input),
-      maxTokens: 220,
       signal: options.signal,
     }).then((output) => parseGate(output, input));
   }
@@ -364,7 +367,6 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
   resolve(input: CoachResolveInput, options: { signal?: AbortSignal } = {}): Promise<import('./types.js').CoachPacket> {
     return this.complete({
       ...buildCoachResolvePrompt(input),
-      maxTokens: 320,
       signal: options.signal,
     }).then((output) => parsePacket(output, input));
   }
@@ -372,7 +374,6 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
   private async complete(input: {
     system: string;
     user: string;
-    maxTokens: number;
     signal?: AbortSignal;
   }): Promise<Record<string, unknown>> {
     if (!this.config.apiKey) throw Object.assign(new Error('Realtime Coach is not configured.'), { code: 'REALTIME_COACH_NOT_CONFIGURED' });
@@ -395,7 +396,6 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
           ? { chat_template_kwargs: { enable_thinking: false } }
           : { enable_thinking: false }),
         temperature: 0,
-        max_tokens: input.maxTokens,
         stream: false,
       }),
     });

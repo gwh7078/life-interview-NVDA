@@ -26,15 +26,38 @@ The probe uses the production `RetrieverIndexService` and `RetrieverClient` thro
 
 Fixture IDs and the isolated SQLite copy live under ignored `data/next-question-benchmark/`. C runs use that manifest scope and the configured production Transcript collection; unique owner/story IDs keep the benchmark records scoped. The probe writes private repeat instructions and evidence to `benchmark/next-question/results/`.
 
-## Coach Gate probe
+## Targeted Coach A/B regression
 
-Before any Realtime audio smoke, run the real production `BailianRealtimeCoach.evaluate()` three times for C06 and C07:
+The targeted regression freezes first-round A from `2026-09-28T11-54-23-404Z-27c55a4d` and runs only B for C03, C05, C06, and C10, three fresh StepFun sessions per case. It does not rerun A or execute C. The shared Coach Gate/Resolve prompts are production prompts; no case-specific runtime branch is used.
+
+Run the production `BailianRealtimeCoach.evaluate()` directly for three Gate probes per target case:
 
 ```bash
 bash scripts/codex-node.sh npm run benchmark:next-question:gate-probe
 ```
 
-The probe uses the fixture-backed `StoryInterviewContextBuilder`, the shared Gate input builder, and sanitized effective Coach settings. It records each parsed Gate result or the exact sanitized error code/message. The target is 6/6 schema-valid results; a valid `action: none` remains a real Gate decision and is not changed to force retrieval.
+The probe uses the fixture-backed `StoryInterviewContextBuilder`, shared Gate input builder, `qwen3-8b`, temperature 0, and the 2 s production Gate deadline. It records schema validity, action, reason, retrieval request, direction, latency, or the sanitized error. Readiness requires at least 2/3 interventions for each case and at least 8/12 overall; it does not force any Gate choice. Its B profile keeps Memory and Era disabled.
+
+After Gate readiness passes, run only the new B audio samples:
+
+```bash
+NEXT_QUESTION_BENCHMARK_TYPE=targeted_ab_regression bash scripts/codex-node.sh npm run benchmark:next-question -- \
+  --cases C03,C05,C06,C10 --variants B --runs 3
+```
+
+Every sample uses the existing canonical WAV and the production StepFun adapter. Frozen A and B are paired by case/run only after checking model, Story context, prompt, response parameters, previous question, audio SHA, and normalized ASR equivalence. A mismatch is excluded and retained in the private manifest.
+
+Before scoring, create a three-candidate Step 5 probe from frozen low-, middle-, and high-scoring A outputs. The Judge uses `step-5-preview`, `https://api.stepfun.com/step_plan/v1/chat/completions`, temperature 0, JSON mode, a full JSON Schema in the prompt, strict local validation, and concurrency 2. Schema-invalid JSON and output-token-limit responses may each retry at most twice; every attempt, `finish_reason`, validation error, and retry reason is retained.
+
+The report assembler is:
+
+```bash
+python3 benchmark/next-question/targeted_ab_report.py prepare-probe --result-dir benchmark/next-question/results/<RUN_ID>
+bash scripts/codex-node.sh npm run benchmark:next-question:judge -- --result-dir benchmark/next-question/results/<RUN_ID>/step5-probe
+python3 benchmark/next-question/targeted_ab_report.py assemble --result-dir benchmark/next-question/results/<RUN_ID> --gate-run-id <GATE_RUN_ID>
+bash scripts/codex-node.sh npm run benchmark:next-question:judge -- --result-dir benchmark/next-question/results/<RUN_ID>
+python3 benchmark/next-question/targeted_ab_report.py summarize --result-dir benchmark/next-question/results/<RUN_ID>
+```
 
 ## Canonical audio
 
@@ -106,4 +129,4 @@ bash scripts/codex-node.sh npm run benchmark:next-question:judge -- --result-dir
 bash scripts/codex-node.sh npm run benchmark:next-question:summary -- --result-dir benchmark/next-question/results/<RUN_ID>
 ```
 
-The Judge uses the Step Plan Chat Completions endpoint `https://api.stepfun.com/step_plan/v1/chat/completions`, `STEPFUN_API_KEY`, temperature 0, and JSON mode. It scores each candidate independently and receives no variant, Coach/Memory/Era configuration, or technical trace. `manifest.json` privately maps candidate IDs back to variants. Truncated output, request failures, timeouts, and HTTP 5xx may retry automatically; schema-invalid output remains failed by default. For an explicitly requested recovery pass, `--retry-schema-invalid-once` retries only unresolved schema-invalid candidates once, and `--retry-latest-failures-once --expect-retry-count N` retries exactly N unresolved failures once. These modes keep every attempt, do not rescore already-scored candidates, and do not change the prompt or scoring rules. Never mix scores from different Judge models or endpoints: create a separate result directory when changing either. A summary with missing or invalid Judge results, or without real C Memory evidence, is marked incomplete and must not be used as a competition conclusion. The summary reports overall and case-group scores, all ten cases, ASR exclusions, Coach/Gate/Retrieval/Era behavior, and P50/P95 latency separately from quality scores. Result traces and judge inputs may contain interview facts and remain ignored/local; only the summary and non-sensitive run manifest should be considered for Git.
+The Judge uses the Step Plan Chat Completions endpoint `https://api.stepfun.com/step_plan/v1/chat/completions`, `STEPFUN_API_KEY`, temperature 0, and JSON mode. It scores each candidate independently and receives no variant, Coach/Memory/Era configuration, or technical trace. `manifest.json` privately maps candidate IDs back to variants. Truncated output, schema-invalid JSON, request failures, timeouts, and HTTP 5xx may retry automatically up to two times after the first attempt; every attempt and validation error is preserved. Never mix scores from different Judge models or endpoints: create a separate result directory when changing either. A full-run summary with missing or invalid Judge results, or without real C Memory evidence, is marked incomplete and must not be used as a competition conclusion. The full-run summary reports overall and case-group scores, all ten cases, ASR exclusions, Coach/Gate/Retrieval/Era behavior, and P50/P95 latency separately from quality scores. Result traces and judge inputs may contain interview facts and remain ignored/local; only the summary and non-sensitive run manifest should be considered for Git.
