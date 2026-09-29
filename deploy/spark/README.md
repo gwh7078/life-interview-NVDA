@@ -198,7 +198,8 @@ When `DATABASE_PATH` does not exist, setup copies the tracked
 databases and a legacy checkout database take precedence and are preserved.
 The template includes the sample stories and interviews; the demo login phone
 is `13800000000`. `SPARK_SEED_DEMO_DATA=false` remains the default; set it to
-`true` only to run the additional built-in seed step. The tracked sample is
+`true` only to run the additional built-in seed step (`SPARK_SEED_DEMO_DATA=true`);
+the sample template is copied either way. The tracked sample is
 published with this repository; only keep data in it that is authorized for
 public sample use.
 
