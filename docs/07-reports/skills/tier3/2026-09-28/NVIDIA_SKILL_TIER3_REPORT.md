@@ -49,6 +49,31 @@ With / Without 两组保持相同的模型、Case、Fixture、运行参数和 Ju
 
 这三项对应产品最核心的专业能力：判断资料是否足以成文、在不虚构的前提下生成故事、以及把采访结果整理成可验证的 Story / Memory Proposal。
 
+## 3.1 Evidence Retrieval Upgrade 后的预期修正值（待复测）
+
+在保持 `interview-coach` 不变的前提下，其余 5 个 Skill 计划/正在升级为具备受限 Evidence Retrieval 能力的 Agent Skills。升级方向包括按任务需要查询主人公历史 Transcript、Story Memory、Related Story、Contributor Evidence 与 Era Context，并在统一证据边界下进行去重、冲突辨析、缺口验证和成稿。
+
+以下数值是基于现有 Tier 3 分项丢分与改造目标推导出的**工程预期点估计**，不是新的 NVIDIA SkillEvaluator 实测结果，也不覆盖本报告第 3 节的正式历史成绩。
+
+| Skill | 当前 Without 实测 | 当前 With 实测 | 改造后 With 预期 | 预期 Lift | 合理区间 |
+|---|---:|---:|---:|---:|---:|
+| story-completion | 0.7426 | 0.9255 | **0.9500** | **+0.2074** | 0.94–0.96 |
+| story-generation | 0.7868 | 0.9563 | **0.9600** | **+0.1732** | 0.95–0.97 |
+| interview-closeout | 0.7891 | 0.9262 | **0.9500** | **+0.1609** | 0.94–0.96 |
+| onboarding-closeout | 0.8163 | 0.9057 | **0.9300** | **+0.1137** | 0.92–0.94 |
+| interview-observer | 0.8157 | 0.8347 | **0.9400** | **+0.1243** | 0.92–0.95 |
+
+其中 `interview-observer` 的预期提升最大。当前它的 With Skill 内容质量已经较高：
+
+- Correctness：0.9667
+- Effectiveness：0.9445
+- Discoverability：0.5278
+- Efficiency：0.6250
+
+因此主要优化目标不是“让答案更像标准答案”，而是让 Agent 更稳定地发现、调用并遵循该 Skill，同时通过显式 Evidence Retrieval / Tool Use 增强可观测的 Agent 行为。
+
+正式提交、引用和对外声称的 Tier 3 成绩，在重新完成实验前仍必须使用第 3 节现有实测数据。
+
 ## 4. 评测覆盖的高风险行为
 
 49 个 Case 重点覆盖：
