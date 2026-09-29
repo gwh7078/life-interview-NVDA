@@ -99,7 +99,18 @@ elif [[ -f "$legacy_database" && -f "$DATABASE_PATH" && "$legacy_database" != "$
 fi
 
 cd "$REPO_ROOT"
-bash scripts/codex-node.sh npm ci
+node_headers_dir="$(bash scripts/codex-node.sh node --eval 'process.stdout.write(require("node:path").dirname(require("node:path").dirname(process.execPath)))' | tail -n 1)"
+if [[ ! -f "$node_headers_dir/include/node/common.gypi" && -d "$node_headers_dir/node_modules" ]]; then
+  node_headers_config="$(find "$node_headers_dir/node_modules" -maxdepth 5 -path '*/include/node/common.gypi' -print -quit)"
+  if [[ -n "$node_headers_config" ]]; then
+    node_headers_dir="${node_headers_config%/include/node/common.gypi}"
+  fi
+fi
+if [[ -f "$node_headers_dir/include/node/common.gypi" ]]; then
+  npm_config_nodedir="$node_headers_dir" bash scripts/codex-node.sh npm ci --include=dev
+else
+  bash scripts/codex-node.sh npm ci --include=dev
+fi
 bash scripts/codex-node.sh npm run typecheck
 bash scripts/codex-node.sh npm run db:migrate
 if [[ "${SPARK_SEED_DEMO_DATA:-false}" == true ]]; then
@@ -115,7 +126,7 @@ if [[ "${NEMO_ERA_CONTEXT_ENABLED:-false}" == true ]]; then
 fi
 
 "$DIR/agent/check-agent-runtime.sh"
-"$DIR/agent/configure-runtime.sh"
+bash "$DIR/agent/configure-runtime.sh"
 "$DIR/agent/sync-skills.sh"
 "$DIR/agent/configure-policy.sh"
 

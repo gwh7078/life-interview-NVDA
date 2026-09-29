@@ -6,6 +6,7 @@ import { REALTIME_COACH_CORE, REALTIME_COACH_GATE_CONTRACT, REALTIME_COACH_RESOL
 import { STORY_CREATE_COACH_POLICY } from './prompts/story-create.js';
 import { STORY_CONTINUE_COACH_POLICY } from './prompts/story-continue.js';
 import { ERA_CONTEXT_MAX_YEAR, ERA_CONTEXT_MIN_YEAR } from '../../era-context/types.js';
+import { isLoopbackTextRuntimeUrl } from '../../models/text-runtime.js';
 import type {
   CoachAction,
   CoachEvidence,
@@ -38,6 +39,49 @@ const REASONS: CoachReason[] = [
   'normal', 'repeated_question', 'direction_drift', 'history_reference',
   'possible_conflict', 'missing_key_detail', 'scenario_boundary',
 ];
+
+function coachGateResponseSchema(scenario: CoachScenario): Record<string, unknown> {
+  const keys = [
+    'action', 'retrieve_memory', 'memory_query', 'retrieve_era', 'era_query',
+    'era_start_year', 'era_end_year', 'reason', 'avoid', 'direction',
+  ];
+  const variants: Record<string, unknown>[] = [];
+  const addVariant = (action: 'none' | 'intervention', retrieveMemory: boolean, retrieveEra: boolean) => {
+    const intervening = action === 'intervention';
+    variants.push({
+      type: 'object',
+      properties: {
+        action: { enum: intervening ? ['guide', 'correct'] : ['none'] },
+        retrieve_memory: { enum: [retrieveMemory] },
+        memory_query: retrieveMemory ? { type: 'string', minLength: 1, maxLength: 200 } : { type: 'null' },
+        retrieve_era: { enum: [retrieveEra] },
+        era_query: retrieveEra ? { type: 'string', minLength: 1, maxLength: 200 } : { type: 'null' },
+        era_start_year: retrieveEra
+          ? { type: 'integer', minimum: ERA_CONTEXT_MIN_YEAR, maximum: ERA_CONTEXT_MAX_YEAR }
+          : { type: 'null' },
+        era_end_year: retrieveEra
+          ? { type: 'integer', minimum: ERA_CONTEXT_MIN_YEAR, maximum: ERA_CONTEXT_MAX_YEAR }
+          : { type: 'null' },
+        reason: { enum: intervening ? REASONS.filter((reason) => reason !== 'normal') : ['normal'] },
+        avoid: intervening
+          ? { anyOf: [{ type: 'string', minLength: 1, maxLength: 120 }, { type: 'null' }] }
+          : { type: 'null' },
+        direction: intervening ? { type: 'string', minLength: 1, maxLength: 120 } : { type: 'null' },
+      },
+      required: keys,
+      additionalProperties: false,
+    });
+  };
+
+  addVariant('none', false, false);
+  addVariant('intervention', false, false);
+  if (scenario === 'story_continue') {
+    addVariant('intervention', true, false);
+    addVariant('intervention', false, true);
+    addVariant('intervention', true, true);
+  }
+  return { oneOf: variants };
+}
 
 function row(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -360,6 +404,7 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
   evaluate(input: CoachGateInput, options: { signal?: AbortSignal } = {}): Promise<CoachGateResult> {
     return this.complete({
       ...buildCoachGatePrompt(input),
+      responseSchema: this.config.requestDialect === 'vllm' ? coachGateResponseSchema(input.scenario) : undefined,
       signal: options.signal,
     }).then((output) => parseGate(output, input));
   }
@@ -374,14 +419,18 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
   private async complete(input: {
     system: string;
     user: string;
+    responseSchema?: Record<string, unknown>;
     signal?: AbortSignal;
   }): Promise<Record<string, unknown>> {
-    if (!this.config.apiKey) throw Object.assign(new Error('Realtime Coach is not configured.'), { code: 'REALTIME_COACH_NOT_CONFIGURED' });
+    const apiKey = this.config.apiKey?.trim();
+    if (!apiKey && !isLoopbackTextRuntimeUrl(this.config.baseUrl)) {
+      throw Object.assign(new Error('Realtime Coach is not configured.'), { code: 'REALTIME_COACH_NOT_CONFIGURED' });
+    }
     const baseUrl = this.config.baseUrl.trim().replace(/\/+$/u, '');
     const response = await this.fetcher(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${this.config.apiKey}`,
+        ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
         'content-type': 'application/json',
       },
       signal: input.signal,
@@ -391,7 +440,9 @@ export class BailianRealtimeCoach implements RealtimeCoachPort {
           { role: 'system', content: input.system },
           { role: 'user', content: input.user },
         ],
-        response_format: { type: 'json_object' },
+        response_format: input.responseSchema
+          ? { type: 'json_schema', json_schema: { name: 'realtime_coach_gate', schema: input.responseSchema } }
+          : { type: 'json_object' },
         ...(this.config.requestDialect === 'vllm'
           ? { chat_template_kwargs: { enable_thinking: false } }
           : { enable_thinking: false }),

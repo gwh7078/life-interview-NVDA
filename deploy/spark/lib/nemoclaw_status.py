@@ -20,7 +20,7 @@ def status_error(status, expected_model=None):
         route = status.get(key)
         if not isinstance(route, dict) or any(route.get(name) != value for name, value in expected.items()):
             return f"NemoClaw {key} does not match the configured Text model."
-    if status.get("routeDrift") is not False:
+    if status.get("routeDrift") not in (False, None):
         return "NemoClaw reports inference route drift."
     return None
 

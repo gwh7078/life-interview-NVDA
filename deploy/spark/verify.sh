@@ -201,17 +201,27 @@ else:
         "bash", "scripts/codex-node.sh", "npm", "run", "test:spark:realtime:e2e",
     ], timeout=900, needs=("StepAudio WebSocket",), extra_env={
         "SPARK_REALTIME_FIXTURE": str(fixture),
+        "NODE_ENV": "test",
     })
 
 gate("G5", "Retriever + transcript Evidence contract", [
     "bash", "scripts/codex-node.sh", "npm", "run", "spark:retriever:smoke",
 ], timeout=420, needs=("NeMo Retriever REST",))
 
-gate("G6", "Era + Memory + Agent retrieval policy", [
-    "bash", "-lc",
-    "bash scripts/codex-node.sh npm run era:index && "
-    "bash scripts/codex-node.sh npm run spark:agent-retrieval:smoke",
-], timeout=900, needs=("NeMo Retriever REST",))
+gate("G6", "Era Context existing-index retrieval benchmark", [
+    "bash", "scripts/codex-node.sh", "npm", "run", "era:benchmark",
+], timeout=420, needs=("NeMo Retriever REST",))
+
+if not is_spark:
+    record("G6b", "Agent retrieval policy smoke", "NOT TESTED ON DGX SPARK",
+           "Physical DGX Spark GB10 host not detected.")
+elif not agent_readiness_passed:
+    record("G6b", "Agent retrieval policy smoke", "NOT TESTED",
+           "G0A Agent Runtime readiness did not pass.")
+else:
+    gate("G6b", "Agent retrieval policy smoke", [
+        "bash", "scripts/codex-node.sh", "npm", "run", "spark:agent-retrieval:smoke",
+    ], timeout=900, needs=("NeMo Retriever REST",))
 
 agent_configuration_passed = False
 
@@ -285,7 +295,14 @@ else:
     ], timeout=600, needs=("Text endpoint and served model",))
 
 gate("G8", "Closeout + Completion + Generation + Contributor + Memory acceptance",
-     ["bash", "scripts/codex-node.sh", "npm", "run", "spark:product:acceptance"], timeout=900)
+     ["bash", "scripts/codex-node.sh", "npm", "run", "spark:product:acceptance"], timeout=900,
+     extra_env={
+         "NODE_ENV": "test",
+         "AI_TASK_RUNTIME": "direct",
+         "NEMO_RETRIEVER_ENABLED": "false",
+         "NEMO_ERA_CONTEXT_ENABLED": "false",
+         "REALTIME_CONTEXT_AGENT_ENABLED": "false",
+     })
 
 if not is_spark:
     record("G9", "Technical Observer", "NOT TESTED ON DGX SPARK",

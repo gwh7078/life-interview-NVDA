@@ -89,12 +89,14 @@ import {
   type OnboardingCloseoutDependencies,
 } from './onboarding/closeout-workflow.js';
 import { getOnboardingResult } from './onboarding/result.js';
+import { ONBOARDING_COMPLETION_UTTERANCE } from './interview/onboarding/prompt.js';
 import { createStoryCompletionService } from './story/completion/runtime.js';
 import type { StoryCompletionService } from './story/completion/service.js';
 import { createStoryGenerationService } from './story/generation/runtime.js';
 import { StoryGenerationError, type StoryGenerationService } from './story/generation/index.js';
 import { DirectTextModelProvider, type TextModelProvider } from './providers/text-model-provider.js';
 import { CloseoutModelError } from './interview/llm-provider.js';
+import { isLoopbackTextRuntimeUrl } from './models/text-runtime.js';
 import { BookService, BookServiceError, parseBookSaveInput } from './book/service.js';
 import { StoryShareRepository, isStoryShareRelationship } from './repositories/story-share-repository.js';
 import { parseStoryGaps } from './story/gaps.js';
@@ -234,6 +236,7 @@ interface ProviderTranscriptMessage {
 interface AssistantResponse {
   itemId?: string;
   finalTranscript?: string;
+  onboardingCompletionTranscript?: string;
   transcriptEventId?: string;
   partialText: string;
   transcriptDeltaCount?: number;
@@ -510,6 +513,16 @@ function sendJson(response: ServerResponse, status: number, value: unknown, head
   response.end(headOnly ? undefined : JSON.stringify(value));
 }
 
+function isLocalOpenAICompatibleRuntime(provider: string | undefined, baseUrl: string | undefined, model: string | undefined): boolean {
+  return provider === 'openai-compatible'
+    && isLoopbackTextRuntimeUrl(baseUrl)
+    && Boolean(model?.trim());
+}
+
+function isTextRuntimeConfigured(apiKey: string | undefined, provider: string | undefined, baseUrl: string | undefined, model: string | undefined): boolean {
+  return Boolean(apiKey?.trim()) || isLocalOpenAICompatibleRuntime(provider, baseUrl, model);
+}
+
 function realtimeMemoryHealthSummary(config: RuntimeConfig): Record<string, string> {
   const provider = config.defaultRealtimeProvider ?? 'stepaudio2_mini';
   const contextInjectionSupported = provider === 'stepaudio3_quality'
@@ -527,7 +540,12 @@ function realtimeMemoryHealthSummary(config: RuntimeConfig): Record<string, stri
     memoryTriggerMode: resolveRealtimeMemoryTriggerMode(provider, config.realtimeMemoryTriggerMode),
     ...(provider === 'stepaudio2_mini' || provider === 'stepfun' ? {
       coachModel: config.realtimeCoachModel ?? 'qwen3-8b',
-      coachConfigured: String(Boolean(config.realtimeCoachApiKey)),
+      coachConfigured: String(isTextRuntimeConfigured(
+        config.realtimeCoachApiKey,
+        config.realtimeCoachProvider,
+        config.realtimeCoachBaseUrl,
+        config.realtimeCoachModel ?? 'qwen3-8b',
+      )),
     } : {}),
     retriever: config.realtimeRetrieverEnabled ? 'enabled' : 'disabled',
     contextAgent: config.realtimeContextAgentEnabled ? 'enabled' : 'disabled',
@@ -769,7 +787,12 @@ function createStoryWorkflowDependencies(
   const realtimeRecall = dependencies.realtimeRecall
     ?? (retriever ? new RealtimeSlowContextPipeline(retriever, realtimeContextAgentTasks) : undefined);
   const realtimeCoach = dependencies.realtimeCoach === undefined
-    ? config.realtimeCoachApiKey ? new BailianRealtimeCoach({
+    ? isTextRuntimeConfigured(
+        config.realtimeCoachApiKey,
+        config.realtimeCoachProvider,
+        config.realtimeCoachBaseUrl,
+        config.realtimeCoachModel ?? 'qwen3-8b',
+      ) ? new BailianRealtimeCoach({
         provider: config.realtimeCoachProvider ?? 'openai-compatible',
         baseUrl: config.realtimeCoachBaseUrl ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1',
         model: config.realtimeCoachModel ?? 'qwen3-8b',
@@ -1549,7 +1572,12 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           realtimeMemory: realtimeMemoryHealthSummary(config),
           providers: realtimeProviderHealthSummary(config),
           closeout: {
-            configured: Boolean(config.closeoutApiKey),
+            configured: isTextRuntimeConfigured(
+              config.closeoutApiKey,
+              config.closeoutProvider,
+              config.closeoutBaseUrl,
+              config.closeoutModel,
+            ),
             provider: config.closeoutProvider ?? 'openai-compatible',
             model: config.closeoutModel ?? 'qwen3.6-35b-a3b',
           },
@@ -1569,7 +1597,12 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           realtimeMemory: realtimeMemoryHealthSummary(config),
           providers: realtimeProviderHealthSummary(config, false),
           closeout: {
-            configured: Boolean(config.closeoutApiKey),
+            configured: isTextRuntimeConfigured(
+              config.closeoutApiKey,
+              config.closeoutProvider,
+              config.closeoutBaseUrl,
+              config.closeoutModel,
+            ),
             provider: config.closeoutProvider ?? 'openai-compatible',
             model: config.closeoutModel ?? 'qwen3.6-35b-a3b',
           },
@@ -4005,6 +4038,12 @@ function createRealtimeHandler(
     if (event.type === 'assistant.transcript.final') {
       const response = assistantResponses.get(event.responseId) ?? { partialText: '' };
       response.finalTranscript = event.text || response.partialText;
+      response.onboardingCompletionTranscript = sessionContext?.interview_type === 'onboarding'
+        && selectedProvider === 'stepaudio2_mini'
+        && config.stepaudio2Execution === 'local'
+        && event.text.trim() === ONBOARDING_COMPLETION_UTTERANCE
+        ? event.text.trim()
+        : undefined;
       response.transcriptEventId = event.eventId;
       if (event.itemId) response.itemId = event.itemId;
       assistantResponses.set(event.responseId, response);
@@ -4128,13 +4167,22 @@ function createRealtimeHandler(
           && !hardLimitReached
           && !userConfirmedEnding
           && text.trim().length > 0
-          && (signaledCompletion || closingResponse);
+          && (signaledCompletion || closingResponse
+            || (selectedProvider === 'stepaudio2_mini'
+              && config.stepaudio2Execution === 'local'
+              && buffered?.onboardingCompletionTranscript === ONBOARDING_COMPLETION_UTTERANCE));
         if (signaledCompletion) pendingOnboardingCompletionRequest = undefined;
         if (modelComplete) {
           modelCompletionReady = true;
           awaitingOnboardingCompletionClose = false;
           onboardingCompletionCloseResponseId = undefined;
-          recordTrace('onboarding.completion_close_completed', { provider: selectedProvider, chars: text.length });
+          recordTrace('onboarding.completion_close_completed', {
+            provider: selectedProvider,
+            chars: text.length,
+            source: buffered?.onboardingCompletionTranscript === ONBOARDING_COMPLETION_UTTERANCE
+              ? 'local_exact_assistant_transcript'
+              : signaledCompletion ? 'provider_signal' : 'completion_close',
+          });
         }
 
         if (text.trim()) {

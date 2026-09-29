@@ -1,5 +1,7 @@
 import { createStepfunRealtimeProvider } from './stepfun.js';
 import type { RealtimeProviderConfig, RealtimeVoiceProvider } from './provider.js';
+import type { RealtimeInterviewContext } from './prompt.js';
+import { ONBOARDING_COMPLETION_UTTERANCE } from '../interview/onboarding/prompt.js';
 import type {
   NormalizedRealtimeEvent,
   RealtimeConnectionFailure,
@@ -8,6 +10,14 @@ import type {
 
 export type StepAudio2Execution = 'stepfun-cloud' | 'local';
 export const DEFAULT_STEPAUDIO2_LOCAL_WS_URL = 'ws://127.0.0.1:8092/realtime';
+
+const LOCAL_ONBOARDING_COMPLETION_RULE = `\n\n# 本地首次建档完成协议
+只有称呼、早年背景、从早年到当前的主要人生阶段、明显时间空档，以及各主要阶段可继续采访的线索都已大致覆盖时，才结束建档。用户提前要求停止时应尊重用户，但不能将其视为建档完成。完成时只说以下固定句子，不添加称呼、总结、标点或其他内容：${ONBOARDING_COMPLETION_UTTERANCE}`;
+
+function withLocalOnboardingCompletionRule(instructions: string | undefined): string {
+  const base = instructions?.trim() ?? '';
+  return `${base}${LOCAL_ONBOARDING_COMPLETION_RULE}`;
+}
 
 const CAPABILITY_KEYS = [
   'fullDuplex',
@@ -84,6 +94,7 @@ function localConnectionFailureMessage(failure: RealtimeConnectionFailure): stri
 export function createStepAudio2LocalProvider(config: RealtimeProviderConfig): RealtimeVoiceProvider {
   const base = createStepfunRealtimeProvider(config, 'stepaudio2_mini');
   const capabilities = conservativeCapabilities();
+  let onboardingSessionActive = false;
   const url = config.stepaudio2LocalUrl?.trim() || DEFAULT_STEPAUDIO2_LOCAL_WS_URL;
   let parsed: URL;
   try { parsed = new URL(url); }
@@ -96,6 +107,51 @@ export function createStepAudio2LocalProvider(config: RealtimeProviderConfig): R
     ...base,
     capabilities,
     connectOptions: () => ({ url, headers: {} }),
+    setupSession(context: RealtimeInterviewContext) {
+      onboardingSessionActive = context.interview_type === 'onboarding';
+      const messages = base.setupSession(context);
+      if (!onboardingSessionActive) return messages;
+      return messages.map((message) => {
+        const session = record(message.session);
+        if (message.type !== 'session.update' || typeof session?.instructions !== 'string') return message;
+        return {
+          ...message,
+          session: {
+            ...session,
+            instructions: withLocalOnboardingCompletionRule(session.instructions),
+          },
+        };
+      });
+    },
+    initialResponsePlan(context: RealtimeInterviewContext) {
+      onboardingSessionActive = context.interview_type === 'onboarding';
+      const plan = base.initialResponsePlan(context);
+      if (!onboardingSessionActive) return plan;
+      return {
+        ...plan,
+        steps: plan.steps.map((step) => {
+          const response = record(step.message.response);
+          if (!response) return step;
+          return {
+            ...step,
+            message: {
+              ...step.message,
+              response: {
+                ...response,
+                instructions: withLocalOnboardingCompletionRule(
+                  typeof response.instructions === 'string' ? response.instructions : undefined,
+                ),
+              },
+            },
+          };
+        }),
+      };
+    },
+    requestAssistantTurnMessages(instruction: string) {
+      return base.requestAssistantTurnMessages(onboardingSessionActive
+        ? withLocalOnboardingCompletionRule(instruction)
+        : instruction);
+    },
     closePlan: () => ({
       steps: [{ message: { type: 'session.close' } }],
       waitFor: 'session.closed',

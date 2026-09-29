@@ -12,7 +12,8 @@ host_ip="$(safe_host_ip)"
 
 mkdir -p "$SPARK_DIAGNOSTICS_DIR"
 policy_file="$(mktemp "$SPARK_DIAGNOSTICS_DIR/.life-interview-retrieval-api.XXXXXX")"
-trap 'rm -f "$policy_file"' EXIT
+policy_yaml="${policy_file}.yaml"
+trap 'rm -f "$policy_file" "$policy_yaml"' EXIT
 python3 - "$DIR/services/retrieval-policy.yaml.template" "$policy_file" "$host_ip" "$SPARK_AGENT_RETRIEVAL_PORT" <<'PY'
 from pathlib import Path
 import sys
@@ -21,6 +22,7 @@ content = Path(source).read_text(encoding="utf-8")
 Path(destination).write_text(content.replace("__HOST__", host).replace("__PORT__", port), encoding="utf-8")
 PY
 chmod 600 "$policy_file"
-nemoclaw "$sandbox" policy add --from-file "$policy_file" \
+mv "$policy_file" "$policy_yaml"
+nemoclaw "$sandbox" policy add --from-file "$policy_yaml" \
   --trusted-private-host "$host_ip" --yes
 echo "Installed the application retrieval policy for $host_ip:$SPARK_AGENT_RETRIEVAL_PORT."

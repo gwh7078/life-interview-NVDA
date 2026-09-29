@@ -10,7 +10,9 @@ PID_DIR=Path(os.environ.get("SPARK_PID_DIR","runtime/pids/spark"))
 INTERVAL=float(os.environ.get("SPARK_TELEMETRY_INTERVAL_S","2"))
 SERVICES={
  "Text Model":("http://127.0.0.1:"+os.environ.get("SPARK_TEXT_PORT","8000")+"/health"),
- "Coach":("http://127.0.0.1:"+os.environ.get("SPARK_COACH_PORT","8001")+"/health"),
+ "Coach":((os.environ["REALTIME_COACH_BASE_URL"].strip().rstrip("/").removesuffix("/v1")+"/health")
+          if os.environ.get("REALTIME_COACH_BASE_URL","").strip() else
+          "http://127.0.0.1:"+os.environ.get("SPARK_COACH_PORT","8001")+"/health"),
  "Voice":("http://127.0.0.1:"+os.environ.get("SPARK_STEPAUDIO_HEALTH_PORT","8093")+"/health"),
  "Retriever":("http://127.0.0.1:"+os.environ.get("SPARK_RETRIEVER_PORT","7670")+"/v1/health"),
  "Backend":("http://127.0.0.1:"+os.environ.get("SPARK_BACKEND_PORT","4174")+"/api/health"),

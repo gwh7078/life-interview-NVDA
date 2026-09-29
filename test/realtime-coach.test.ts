@@ -92,6 +92,63 @@ function gateInput(scenario: CoachScenario): CoachGateInput {
   });
 }
 
+test('local vLLM Coach accepts keyless loopback requests without an Authorization header', async () => {
+  const expected: CoachGateResult = {
+    action: 'none', retrieve_memory: false, memory_query: null,
+    retrieve_era: false, era_query: null, era_start_year: null, era_end_year: null,
+    reason: 'normal', avoid: null, direction: null,
+  };
+  let requestUrl = '';
+  let requestHeaders: Headers | undefined;
+  let requestBody: Record<string, unknown> | undefined;
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible',
+    baseUrl: 'http://127.0.0.1:8004/v1',
+    model: 'Qwen3-8B',
+    requestDialect: 'vllm',
+  }, (async (input, init) => {
+    requestUrl = String(input);
+    requestHeaders = new Headers(init?.headers);
+    requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify(expected) } }],
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch);
+
+  assert.deepEqual(await coach.evaluate(gateInput('story_create')), expected);
+  assert.equal(requestUrl, 'http://127.0.0.1:8004/v1/chat/completions');
+  assert.equal(requestHeaders?.get('authorization'), null);
+  assert.deepEqual(requestBody?.chat_template_kwargs, { enable_thinking: false });
+  const responseFormat = requestBody?.response_format as {
+    type?: string;
+    json_schema?: { schema?: { oneOf?: unknown[] } };
+  } | undefined;
+  assert.equal(responseFormat?.type, 'json_schema');
+  const branches = responseFormat?.json_schema?.schema?.oneOf;
+  assert.ok(Array.isArray(branches));
+  const normalProperties = (branches[0] as Record<string, unknown>).properties as Record<string, unknown>;
+  assert.deepEqual(normalProperties.action, { enum: ['none'] });
+  assert.deepEqual(normalProperties.retrieve_memory, { enum: [false] });
+  assert.deepEqual(normalProperties.retrieve_era, { enum: [false] });
+});
+
+test('remote Coach still requires a credential when the endpoint is not loopback', async () => {
+  let requestCount = 0;
+  const coach = new BailianRealtimeCoach({
+    provider: 'openai-compatible',
+    baseUrl: 'https://coach.example/v1',
+    model: 'qwen3-8b',
+  }, (async () => {
+    requestCount += 1;
+    return new Response('{}', { status: 200 });
+  }) as typeof fetch);
+
+  await assert.rejects(coach.evaluate(gateInput('story_create')), (error: unknown) =>
+    error instanceof Error
+      && (error as Error & { code?: string }).code === 'REALTIME_COACH_NOT_CONFIGURED');
+  assert.equal(requestCount, 0);
+});
+
 test('Coach Pass A uses four distinct scenario policies and applies the returned action', async () => {
   const scenarios: Array<[CoachScenario, string]> = [
     ['onboarding', '建立人生地图'],
@@ -562,4 +619,15 @@ test('Coach uses vLLM chat_template_kwargs without changing the default DashScop
   assert.deepEqual(await coach.evaluate(gateInput('story_continue')), normal);
   assert.deepEqual(requests[0]?.chat_template_kwargs, { enable_thinking: false });
   assert.equal(Object.hasOwn(requests[0] ?? {}, 'enable_thinking'), false);
+  assert.equal((requests[0]?.response_format as Record<string, unknown>).type, 'json_schema');
+
+  const dashscopeRequests: Array<Record<string, unknown>> = [];
+  const dashscopeCoach = new BailianRealtimeCoach({
+    provider: 'openai-compatible',
+    baseUrl: 'https://dashscope.example/v1',
+    model: 'qwen3-8b',
+    apiKey: 'cloud-test-key',
+  }, fakeFetch([normal], dashscopeRequests));
+  assert.deepEqual(await dashscopeCoach.evaluate(gateInput('story_continue')), normal);
+  assert.deepEqual(dashscopeRequests[0]?.response_format, { type: 'json_object' });
 });

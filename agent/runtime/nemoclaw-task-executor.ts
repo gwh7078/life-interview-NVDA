@@ -316,6 +316,9 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
     const model = this.config.models?.[request.task.modelProfile]
       ?? this.config.defaultModel
       ?? null;
+    const modelReference = this.config.provider === 'vllm-local' && model && !model.startsWith('inference/')
+      ? `inference/${model}`
+      : model;
     const thinking = request.task.executionPolicy.thinking
       ?? this.config.thinking?.trim()
       ?? null;
@@ -378,7 +381,7 @@ export class NemoClawOpenClawAttemptRunner implements AgentTaskAttemptRunner {
         String(Math.max(1, Math.ceil(request.task.executionPolicy.timeoutMs / 1000))),
       );
     }
-    if (model) args.push('--model', model);
+    if (modelReference) args.push('--model', modelReference);
     if (thinking) args.push('--thinking', thinking);
 
     try {

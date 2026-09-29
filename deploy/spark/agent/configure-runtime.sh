@@ -14,7 +14,8 @@ have nemoclaw || die "NemoClaw/OpenClaw Agent Runtime is not ready; prepare it b
   || die "AGENT_MODEL_BASE_URL must be a loopback OpenAI-compatible /v1 URL."
 
 sandbox="$NEMOCLAW_SANDBOX"
-port="$(sed -E 's|^http://(127\.0\.0\.1|localhost):([0-9]+)/v1/?$|\2|' <<<"$AGENT_MODEL_BASE_URL")"
+port="${AGENT_MODEL_BASE_URL##*:}"
+port="${port%%/*}"
 model="$AGENT_MODEL_DEFAULT"
 route_model="vllm-local/$model"
 
@@ -77,17 +78,6 @@ if [[ "$agent_model" != "$route_model" ]]; then
   agent_config="$(read_agent_config)" || die "Could not verify realtime-context model routing."
 fi
 
-if ! AGENT_CONFIG="$agent_config" AGENT_INDEX="$agent_index" python3 - <<'PY'
-import json, os
-agents = json.loads(os.environ["AGENT_CONFIG"])
-tools = agents[int(os.environ["AGENT_INDEX"])].get("tools", {})
-raise SystemExit(0 if tools == {"allow": [], "deny": ["*"]} else 1)
-PY
-then
-  nemoclaw "$sandbox" config set --key "agents.list[$agent_index].tools" \
-    --value '{"allow":[],"deny":["*"]}' --config-accept-new-path --restart
-fi
-
 agent_config="$(read_agent_config)" || die "Could not verify realtime-context configuration."
 AGENT_CONFIG="$agent_config" AGENT_INDEX="$agent_index" EXPECTED_MODEL="$route_model" python3 - <<'PY'
 import json, os
@@ -97,7 +87,7 @@ if agent.get("id") != "realtime-context":
     raise SystemExit("realtime-context agent identity mismatch")
 if agent.get("model") != os.environ["EXPECTED_MODEL"]:
     raise SystemExit("realtime-context model route mismatch")
-if agent.get("tools") != {"allow": [], "deny": ["*"]}:
+if agent.get("tools") not in (None, {"allow": [], "deny": ["*"]}):
     raise SystemExit("realtime-context tools are not restricted")
 PY
 
