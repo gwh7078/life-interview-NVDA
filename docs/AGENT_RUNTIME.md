@@ -134,9 +134,9 @@ Task Definition 当前按职责映射：
 - realtime-context；
 - writing。
 
-Mac Agent / 文本任务通过 Bailian `qwen3.6-35b-a3b` 配置。Spark 部署目标由操作者运行 OpenAI-compatible Text Service：`nvidia/Qwen3.6-35B-A3B-NVFP4`，默认 `http://127.0.0.1:8000/v1`；NemoClaw 复用 `/v1/models` 实际返回的模型 ID。Mini Coach 单独使用 `Qwen3-8B`，默认 `http://127.0.0.1:8001/v1`。两套 endpoint 分开配置，不能将 Coach 路由到 OpenClaw。
+Mac Agent / 文本任务通过 Bailian `qwen3.6-35b-a3b` 配置。Spark 部署由操作者运行本地 OpenAI-compatible Text Service：`nvidia/Qwen3.6-35B-A3B-NVFP4`，默认 `http://127.0.0.1:8000/v1`；NemoClaw 复用 `/v1/models` 实际返回的模型 ID。Mini Coach 单独使用 `Qwen3-8B`，默认 `http://127.0.0.1:8001/v1`。两套 endpoint 分开配置，不能将 Coach 路由到 OpenClaw。
 
-Spark 基础 `verify.sh` 使用有界的产品 acceptance smoke，不运行全量 `npm test` 或 NAT。StepAudio 的具体 Runtime / ARM64 路径仍为 **NOT VERIFIED ON DGX SPARK / ARM64**。
+Spark 基础 `verify.sh` 使用有界的产品 acceptance smoke，不运行全量 `npm test` 或 NAT。Step-Audio-2-mini 的 ARM64 / DGX Spark 本地 Runtime 已完成真人全链验证。
 
 ## 8. NAT
 
@@ -148,4 +148,4 @@ NeMo Agent Toolkit 用于：
 - Trace / Trajectory；
 - Benchmark。
 
-NAT 是比赛 / 应用评测证据面，不接管 `AgentTaskPort`，也不编排产品流程。DGX Spark 上的 NAT、Agent、Coach、Realtime、Retriever 与应用全链路均 **NOT TESTED ON DGX SPARK**，直到真机报告保存可复现结果。
+NAT 是比赛 / 应用评测证据面，不接管 `AgentTaskPort`，也不编排产品流程。DGX Spark 上 Agent、Coach、Realtime、Retriever、NemoClaw / OpenClaw 与应用全链路已完成全本地真人验证，支持断网运行。
