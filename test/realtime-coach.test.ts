@@ -116,7 +116,7 @@ test('Coach Pass A uses four distinct scenario policies and applies the returned
   }
 
   const firstSystemPrompt = (requests[0]?.messages as Array<Record<string, string>>)[0]?.content ?? '';
-  assert.match(firstSystemPrompt, /"direction":"换一个未问过的细节继续追问。"/);
+  assert.match(firstSystemPrompt, /固定结构示例.*"direction":null/u);
   assert.equal(requests.every((request) => request.model === 'qwen3-8b'), true);
   assert.equal(requests.every((request) => request.enable_thinking === false), true);
   assert.equal(requests.every((request) => request.temperature === 0), true);
@@ -160,6 +160,34 @@ test('normal Gate output is accepted for every scenario and compact packets stay
     else if (scenario === 'story_continue') assert.match(packet, /避免：/);
     else assert.match(packet, /缺口：/);
   }
+});
+
+test('story-continue Coach Packet preserves both bounded avoid and direction text', () => {
+  const avoid = '不要再问已知的分数或是否擅长化学。'.repeat(6);
+  const direction = '只追问优势如何影响志愿选择。'.repeat(6);
+  const packet = renderMiniCoachPacket({
+    scenario: 'story_continue',
+    currentUserAnswer: '已知事实'.repeat(40),
+    gate: {
+      ...gateResults.story_continue,
+      retrieve_memory: false,
+      memory_query: null,
+      avoid,
+      direction,
+    },
+    packet: {
+      selectedEvidenceIds: [],
+      known: ['历史事实'.repeat(30)],
+      backgroundHint: null,
+      conflict: null,
+      avoid,
+      direction,
+    },
+  });
+
+  assert.ok(Array.from(packet).length <= 160);
+  assert.ok(packet.includes(`避免：${Array.from(avoid).slice(0, 32).join('')}`));
+  assert.ok(packet.includes(`方向：${Array.from(direction).slice(0, 48).join('')}`));
 });
 
 test('identity detour Coach Packet does not promote the model question to an interview fact', () => {
@@ -329,9 +357,9 @@ test('Coach Gate separates personal and era retrieval and narrows known-year sea
   const messages = requests[1]?.messages as Array<Record<string, string>>;
   assert.match(messages[0]?.content ?? '', /retrieve_memory/);
   assert.match(messages[0]?.content ?? '', /retrieve_era/);
-  assert.match(messages[0]?.content ?? '', /小时候很喜欢游泳/u);
-  assert.match(messages[0]?.content ?? '', /1998 年厂里开始裁人/u);
-  assert.match(messages[0]?.content ?? '', /不要默认搜整个 1970–2020/u);
+  assert.match(messages[0]?.content ?? '', /Era 只在公共背景有助于个人追问且年份可靠时使用/u);
+  assert.match(messages[1]?.content ?? '', /1998 年厂里开始裁人/u);
+  assert.match(messages[0]?.content ?? '', /跨度不超过15年/u);
 });
 
 test('Coach Gate fails closed when Era retrieval has no reliable year in Story, Life Stage or user turns', async () => {
