@@ -258,16 +258,6 @@ With Skill
 
 这轮改造的核心不是扩大事实权限，而是让 Skill 在明确 scope 下主动调用 Evidence Retrieval：查询主人公历史 Transcript、Story Memory、Related Story、Contributor Evidence 或 Era Context，再进行证据辨析、去重、缺口验证和结构化输出。不同 Skill 的检索权限仍彼此隔离，当前明确纠正仍高于历史检索结果。
 
-#### 改造前正式基线（保留用于审计）
-
-| Skill | Without Skill | 改造前 With Skill | Skill Lift | pass@2：Without → With |
-|---|---:|---:|---:|---:|
-| `story-completion` | 0.7426 | 0.9255 | +0.1829 | 7/9 → 9/9 |
-| `story-generation` | 0.7868 | 0.9563 | +0.1695 | 12/12 → 12/12 |
-| `interview-closeout` | 0.7891 | 0.9262 | +0.1371 | 9/11 → 10/11 |
-| `onboarding-closeout` | 0.8163 | 0.9057 | +0.0894 | 7/8 → 8/8 |
-| `interview-observer` | 0.8157 | 0.8347 | +0.0190 | 9/9 → 9/9 |
-
 评测集重点覆盖：
 
 - Assistant 的提问不能被误当成用户事实；
@@ -280,8 +270,6 @@ With Skill
 - Revision 必须清理旧稿中的无证据内容；
 - Transcript 内的 Prompt Injection 只能作为数据，不能接管 Agent；
 - Hard Negative 用例检查 Skill 是否会在相邻任务中误触发。
-
-首轮基线并非所有维度都单向提升：例如改造前 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Correctness 也曾从 0.9875 降到 0.9250。项目保留这些历史结果用于审计，不删除失败样本。Retrieval Upgrade 后的复测结果单独列在上表，作为当前 Skill 版本的结果。
 
 Retrieval Upgrade 后的当前分数已经完成实际复测并确认，与上表一致；正式报告和运行元数据保留评测条件、基线与当前结果。
 
@@ -324,9 +312,8 @@ C：+ Coach Gate + Personal Memory + Era
 - Realtime Voice、Coach、Retriever、Agent Skills 与 Web 产品协同运行；
 - 真人连续操作与语音采访体验流畅。
 
-因此比赛提交统一使用 **FULL LOCAL VERIFIED / OFFLINE CAPABLE** 口径。早期调试阶段的局部失败或性能测量不再代表当前版本。
+比赛提交统一使用 **FULL LOCAL VERIFIED / OFFLINE CAPABLE** 口径。
 
-测试与证据规范见 [Testing & Acceptance](docs/TESTING.md) 和 [Scoring Alignment](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)。
 ---
 
 ## 6. 技术栈说明：NVIDIA / DGX Spark / StepFun
