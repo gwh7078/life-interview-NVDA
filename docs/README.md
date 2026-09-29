@@ -21,7 +21,7 @@
 
 本轮涉及的五个 Skill 元数据版本为 `1.1.0`，Task Registry 版本为 `v1.1`。四个离线或异步核心 Skill 可按任务授权主动调用 Evidence Search：`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`。`interview-observer` 属于实时低延迟路径，继续采用 Backend 预取有界证据并进行零工具推理。
 
-Evidence Search 由 Backend 限定 owner、Story 与来源类型，Agent 不能自行扩大查询范围。2026-09-28～29 的 Skill v1.0 基线保留完整原始 HTML / JSON；v1.1 Retrieval Upgrade 后的 Overall 指标已于 2026-09-29 实际复测，并记录在正式 Tier 3 报告与 `run-metadata.json` 的 `post_upgrade_validation` 中。该次新版复测没有保存新的 run_id / pass@2 / raw HTML / JSON；20-case eval pack 继续用于未来做一轮 provenance 完整的 v1.1 Live 重跑。
+Evidence Search 由 Backend 限定 owner、Story 与来源类型，Agent 不能自行扩大查询范围。2026-09-28～29 的 Skill v1.0 基线保留完整原始结果；v1.1 Retrieval Upgrade 后的 Overall 指标已于 2026-09-29 实际复测并确认，与 README 和正式 Tier 3 报告一致。20-case eval pack 保留作为可复现评测输入。
 
 冲突时按以下顺序判断：
 
