@@ -217,7 +217,7 @@ DGX Spark 当前统一状态为 **FULL LOCAL VERIFIED / OFFLINE CAPABLE**。2026
 - “StepAudio 3 是默认 Realtime”；
 - “每轮固定 Qwen3.5-2B Judge”；
 - “Realtime 当前不 Agent/Coach 化”；
-- “Retriever 尚未正式产品集成”；
+- “Retriever 不进入正式产品链路”；
 - “Era Context 仍是 Future”；
 - “Mini 使用 Independent Memory → interview.context_hint Agent”；
 - “Phase 2B Agent Runtime Integration 仍 In Progress”。
