@@ -6,6 +6,16 @@ This is a new, source-controlled case pack for the next NVIDIA SkillEvaluator Ti
 
 For every case, With Skill and Without Skill must use the same model, current input, task, runtime settings, and judge. The only difference is whether the corresponding Skill is loaded. The harness may use `fixture_id` to provision retrieval data, but must not send it or fixture contents to the Agent.
 
+## v1.1 准备入口
+
+通过以下命令把当前 19 个 case 转成 Tier 3 准备清单（JSONL）：
+
+```bash
+bash scripts/codex-node.sh node agent/evals/skills/retrieval-upgrade-2026-09-29/prepare-evals.mjs > /tmp/retrieval-upgrade-v1.1-tier3-manifest.jsonl
+```
+
+清单包含配对条件、任务输入和独立的 fixture 预置元数据；fixture 正文不会写入任务输入。此脚本只生成清单，不会写入 Retriever，也不会运行 SkillEvaluator。执行 Live Tier 3 前，必须先按清单将 fixture 预置到对应 Retriever 范围；完整 v1.1 Tier 3 尚未运行。
+
 ## Initial smoke selection
 
 | Skill | Ordinary | Retrieval required | Hard negative |

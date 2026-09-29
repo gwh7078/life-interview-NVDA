@@ -1,6 +1,6 @@
 ---
 name: onboarding-closeout
-version: 1.0.0
+version: 1.1.0
 description: 在首次建档采访结束后，把用户明确陈述整理为候选档案、人生阶段和待整理 Story。仅用于 onboarding.closeout；不用于 Story 采访收尾、实时提示、完成度判断或文章写作。
 metadata:
   tags: [life-interview, onboarding, profile, life-stages, closeout]

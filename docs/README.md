@@ -17,6 +17,12 @@
 | [NVIDIA.md](NVIDIA.md) | NemoClaw、Retriever、NAT、DGX Spark 状态 |
 | [TESTING.md](TESTING.md) | 当前自动化、Live Smoke 与人工验收规则 |
 
+## Agent Skills v1.1
+
+本轮涉及的五个 Skill 元数据版本为 `1.1.0`，Task Registry 版本为 `v1.1`。四个离线或异步核心 Skill 可按任务授权主动调用 Evidence Search：`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`。`interview-observer` 属于实时低延迟路径，继续采用 Backend 预取有界证据并进行零工具推理。
+
+Evidence Search 由 Backend 限定 owner、Story 与来源类型，Agent 不能自行扩大查询范围。2026-09-28 NVIDIA SkillEvaluator Tier 3 结果仍是 Skill v1.0 基线；当前 v1.1 Retrieval Upgrade 的 19-case eval pack 已准备，完整 Tier 3 尚未重跑。
+
 冲突时按以下顺序判断：
 
 ```text

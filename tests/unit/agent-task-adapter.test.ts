@@ -55,7 +55,7 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
   const result = await adapter.run(request);
   assert.equal(executor.requests.length, 1);
   assert.equal(executor.requests[0]?.skill, 'story-completion');
-  assert.equal(executor.requests[0]?.skillVersion, 'v1');
+  assert.equal(executor.requests[0]?.skillVersion, 'v1.1');
   assert.equal(executor.requests[0]?.modelProfile, 'reasoning-fast');
   assert.equal(executor.requests[0]?.contextVersion, 'v1');
   assert.equal(executor.requests[0]?.executionPolicy.maxAttempts, 3);
@@ -66,7 +66,7 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
     gaps: [],
   });
   assert.equal(result.runtime.skill, 'story-completion');
-  assert.equal(result.runtime.skillVersion, 'v1');
+  assert.equal(result.runtime.skillVersion, 'v1.1');
   assert.equal(result.runtime.provider, 'stepfun');
   assert.equal(result.runtime.model, 'test-model');
   await adapter.run(request, {

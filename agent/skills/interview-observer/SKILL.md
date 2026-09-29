@@ -1,6 +1,6 @@
 ---
 name: interview-observer
-version: 1.0.0
+version: 1.1.0
 description: 为实时采访的最终用户回答提供只读证据选择、冲突提示和简短追问方向。仅用于 interview.context_hint；只使用 Task Context（含 Backend 异步预取的有界证据），不调用工具或脚本，也不用于采访收尾、完成度判断或文章写作。
 metadata:
   tags: [life-interview, realtime, context, evidence, read-only]

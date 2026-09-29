@@ -2,11 +2,13 @@
 
 > 更新：2026-09-29。本文定义共享有界 Evidence Search 的 Task 与数据范围；不代表 Live Smoke 已通过。
 
+本轮五个 Skill 的元数据版本为 `1.1.0`，Task Registry 版本为 `v1.1`。2026-09-28 NVIDIA SkillEvaluator Tier 3 报告是 Skill v1.0 基线；当前 Retrieval Upgrade 尚未重跑完整 Tier 3。
+
 ## 1. 共享检索约定
 
-固定 Task Context 已足够时不检索。只有当前上下文不足、存在待核对冲突，或确需比较多个来源时，Skill 才可使用共享 `evidence-search` 能力。不得为了重新加载已提供的 Transcript、Memory、Summary、Profile、Life Stage 或文档而检索。
+四个离线或异步核心 Skill 可按任务授权主动调用共享 Evidence Search：`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`。`interview-observer` 属于实时低延迟路径，由 Backend 按需预取有界历史证据后执行零工具分析。固定 Task Context 已足够时不检索。只有当前上下文不足、存在待核对冲突，或确需比较多个来源时，四个主动检索 Skill 才调用 `evidence-search`；不得为了重新加载已提供的 Transcript、Memory、Summary、Profile、Life Stage 或文档而检索。
 
-除 `interview-observer` 外，Skill 只在当前 Task 明确授权时调用该只读能力：
+流程如下：
 
 ```text
 Agent 判断是否需要补充证据
@@ -47,9 +49,11 @@ Agent 不能指定或扩大 owner、Story、share scope、凭证或 endpoint。B
 
 `interview-observer` 继续保持单次、无工具推理。Prompt 必须说明 Backend 已按需完成异步预取，证据随 Task Context 提供；不得声称 Observer Agent 执行了脚本。固定上下文已足够时不得为重载它而预取。
 
+四个 tool-enabled Skill 目录各自保留独立打包的 `scripts/evidence-search.mjs`。它们是同一 Backend 协议的自包含 Skill-local wrapper，必须保持内容一致；Observer 不含检索脚本。
+
 ## 4. 输出、Realtime 与验收边界
 
 - 各 Skill 的现有输入、输出、Proposal、来源引用和 Backend Validator Contract 保持不变。检索结果的 provenance 不得冒充输入中提供的用户消息 alias；只有现有规则允许的来源 ID 才能进入 Proposal。
 - 检索结果不能绕过 Schema、Evidence、Domain、版本或 stale 校验，也不能直接写业务数据库。
 - 自定义低延迟 Realtime Coach 仍是独立应用路径，直接使用现有 Coach、Retriever 与 Era Context 集成；本文不改变 StepAudio、Coach Gate、Deadline、fail-open 或语音行为。Realtime Context Hint 的 Observer 仍是单次无工具路径。
-- 当前 `TaskDefinition`、Backend route、Evidence Search service / gateway、四个 tool-enabled Skill scripts，以及 Observer 的 Backend prefetch 已接入共享路径。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；本文不代表 Live Smoke 已通过。
+- 当前 `TaskDefinition`、Backend route、Evidence Search service / gateway、四个一致的 Skill-local wrappers，以及 Observer 的 Backend prefetch 已接入共享路径。2026-09-28 Tier 3 结果保持为 Skill v1.0 基线，当前 v1.1 Retrieval Upgrade 的完整 Tier 3 尚未重跑。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；本文不代表 Live Smoke 已通过。
