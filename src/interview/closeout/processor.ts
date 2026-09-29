@@ -66,8 +66,6 @@ function retryFeedbackFor(error: unknown): Record<string, unknown> {
     INVALID_STORY_STAGE: '为 new_stories 选择输入 life_stages 中存在的 stage_id。',
     DUPLICATE_STORY: '删除与已有故事重复的新故事，或为新建 Story 选择不重复且忠于原话的标题。',
     MODEL_OUTPUT_TRUNCATED: '输出被截断；缩短摘要，只保留必要内容并提交完整 JSON。',
-    INVALID_MEMORY_CHANGE: '修正 memory_changes：previous_text/new_text 必须分别逐字来自旧/新 Agent Memory；add/correct/refine/remove 必须引用本轮用户证据，且 add/correct/refine 的新内容必须与引用消息存在直接文本依据。',
-    MEMORY_INFORMATION_LOSS: '新版 Agent Memory 丢失了旧信息。恢复未被本轮纠正/删除的旧内容；如确需修改或删除，使用有证据的 memory_changes 明确解释。',
   };
   return { code, ...(path ? { path } : {}), instruction: instructions[code] ?? '根据错误修正后重新提交完整结果。' };
 }
@@ -77,7 +75,6 @@ function canRetry(error: unknown): boolean {
   return error instanceof CloseoutWorkflowError && new Set([
     'CLOSEOUT_OUTPUT_INVALID', 'INVALID_SOURCE_MESSAGE_IDS', 'SOURCE_MESSAGE_IDS_REQUIRED',
     'UNSUPPORTED_YEAR', 'UNCERTAINTY_NOT_PRESERVED', 'INVALID_STORY_STAGE', 'DUPLICATE_STORY',
-    'INVALID_MEMORY_CHANGE', 'MEMORY_INFORMATION_LOSS',
   ]).has(error.code);
 }
 

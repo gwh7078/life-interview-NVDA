@@ -173,7 +173,7 @@ test('Story Seed schema accepts five new Stories but rejects six', () => {
 });
 
 
-test('Agent Memory guard rejects silent information loss and accepts evidence-backed correction', () => {
+test('Agent Memory business checks do not block a structurally valid Closeout', () => {
   const context = {
     sessionId: 'session-memory-guard',
     userId: 'user-1',
@@ -190,44 +190,34 @@ test('Agent Memory guard rejects silent information loss and accepts evidence-ba
     },
     lifeStages: [{ stage_id: 'stage-1', title: '工作阶段', start_date: null, end_date: null }],
     otherStories: [],
-    transcript: [{
-      message_id: 'u1',
-      role: 'user' as const,
-      text: '我刚才说错了，不是2019年，是2020年开始创业。老王还是合伙人，父亲当时确实反对。',
-      timestamp: '2026-09-19T00:01:00.000Z',
-      provider: 'test' as const,
-    }],
+    transcript: [
+      {
+        message_id: 'u1',
+        role: 'user' as const,
+        text: '我刚才说错了，不是2019年，是2020年开始创业。老王还是合伙人，父亲当时确实反对。',
+        timestamp: '2026-09-19T00:01:00.000Z',
+        provider: 'test' as const,
+      },
+      {
+        message_id: 'a1',
+        role: 'assistant' as const,
+        text: '明白了。',
+        timestamp: '2026-09-19T00:01:10.000Z',
+        provider: 'test' as const,
+      },
+    ],
   };
   const built = buildStoryCloseoutPrompt(context);
   const validator = new StoryCloseoutValidator();
-
-  assert.throws(() => validator.validate({
-    current_story: {
-      summary: '2020年我开始第一次创业。',
-      agent_memory: '【故事背景】2020年我开始第一次创业。',
-      memory_changes: [{
-        type: 'correct',
-        previous_text: '2019年我和老王第一次创业。',
-        new_text: '2020年我开始第一次创业。',
-        source_message_ids: ['u1'],
-      }],
-      source_message_ids: ['u1'],
-    },
-    new_stories: [],
-  }, context, built.references), (error: unknown) => Boolean(
-    error && typeof error === 'object' && 'code' in error
-      && (error as { code: string }).code === 'MEMORY_INFORMATION_LOSS'
-  ));
-
   const validated = validator.validate({
     current_story: {
       summary: '2020年我和老王第一次创业，父亲当时反对。',
-      agent_memory: '【故事背景】2020年我和老王第一次创业。\n【人物关系】合伙人是老王。父亲当时反对创业。',
+      agent_memory: '完全重写后的记忆，没有继承任何旧 Memory 内容。',
       memory_changes: [{
         type: 'correct',
-        previous_text: '2019年我和老王第一次创业。',
-        new_text: '2020年我和老王第一次创业。',
-        source_message_ids: ['u1'],
+        previous_text: '不存在于旧 Memory 的片段',
+        new_text: '不存在于新 Memory 或当前用户消息的片段',
+        source_message_ids: ['a1'],
       }],
       source_message_ids: ['u1'],
     },
@@ -235,15 +225,13 @@ test('Agent Memory guard rejects silent information loss and accepts evidence-ba
   }, context, built.references);
   assert.equal(validated.mode, 'continue');
   if (validated.mode === 'continue') {
-    assert.match(validated.current_story.agent_memory, /2020年/);
-    assert.match(validated.current_story.agent_memory, /老王/);
-    assert.match(validated.current_story.agent_memory, /父亲当时反对/);
+    assert.equal(validated.current_story.agent_memory, '完全重写后的记忆，没有继承任何旧 Memory 内容。');
     assert.equal('memory_changes' in validated.current_story, false,
       'memory_changes is validation-only and must not enter persistence');
   }
 });
 
-test('Agent Memory guard requires current-user evidence for destructive changes', () => {
+test('top-level source IDs still reject assistant messages', () => {
   const context = {
     sessionId: 'session-memory-evidence',
     userId: 'user-1',
@@ -289,7 +277,7 @@ test('Agent Memory guard requires current-user evidence for destructive changes'
         new_text: '',
         source_message_ids: ['a1'],
       }],
-      source_message_ids: ['u1'],
+      source_message_ids: ['a1'],
     },
     new_stories: [],
   }, context, built.references), (error: unknown) => Boolean(
@@ -298,7 +286,7 @@ test('Agent Memory guard requires current-user evidence for destructive changes'
   ));
 });
 
-test('Agent Memory rejects a real but unrelated source message for a new fact', () => {
+test('Agent Memory evidence overlap does not block a Closeout', () => {
   const context = {
     sessionId: 'session-memory-unrelated-evidence', userId: 'user-1', mode: 'continue' as const, currentStageId: 'stage-1',
     currentStory: { story_id: 'story-1', title: '一次工作经历', summary: '用户刚开始新的工作。', agent_memory: '【故事背景】用户刚开始新的工作。', status: 'interviewing', stage_id: 'stage-1', updated_at: '2026-09-19T00:00:00.000Z' },
@@ -306,10 +294,12 @@ test('Agent Memory rejects a real but unrelated source message for a new fact', 
     transcript: [{ message_id: 'u1', role: 'user' as const, text: '最近我只是更喜欢吃苹果了。', timestamp: '2026-09-19T00:01:00.000Z', provider: 'test' as const }],
   };
   const built = buildStoryCloseoutPrompt(context); const validator = new StoryCloseoutValidator();
-  assert.throws(() => validator.validate({ current_story: {
+  const validated = validator.validate({ current_story: {
     summary: '用户刚开始新的工作。', agent_memory: ['【故事背景】用户刚开始新的工作。', '【后续经历】后来在海边开了一家咖啡馆。'].join('\n'),
-    memory_changes: [{ type: 'add', previous_text: '', new_text: '后来在海边开了一家咖啡馆。', source_message_ids: ['u1'] }], source_message_ids: ['u1'],
-  }, new_stories: [] }, context, built.references), (error: unknown) => Boolean(error && typeof error === 'object' && 'code' in error
-    && (error as { code: string }).code === 'INVALID_MEMORY_CHANGE' && 'diagnostics' in error
-    && (error as { diagnostics?: Record<string, unknown> }).diagnostics?.reason === 'new_text_not_grounded_in_cited_messages'));
+    memory_changes: [{ type: 'add', previous_text: '', new_text: '后来在海边开了一家咖啡馆。', source_message_ids: ['u1'] }], source_message_ids: [],
+  }, new_stories: [] }, context, built.references);
+  assert.equal(validated.mode, 'continue');
+  if (validated.mode === 'continue') {
+    assert.match(validated.current_story.agent_memory, /后来在海边开了一家咖啡馆/u);
+  }
 });

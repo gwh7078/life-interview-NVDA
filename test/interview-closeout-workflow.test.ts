@@ -842,35 +842,26 @@ test('invalid source IDs and unsupported years trigger repairs before any persis
   });
 });
 
-test('silent Agent Memory information loss is repaired before persistence', async () => {
+test('Agent Memory information loss does not block persistence or rewrite the Transcript', async () => {
   const oldMemory = '2019年我第一次独自搬到上海生活。父亲当时帮我搬家。';
   const scenario = prepareScenario(
     true,
     '我刚才记错了，不是2019年，是2020年搬到上海。父亲帮我搬家这件事没有变化。',
     oldMemory,
   );
+  const correctedSentence = '2020年我第一次独自搬到上海生活。';
   let calls = 0;
-  await withPlanStub(async (_call, body) => {
+  await withPlanStub(async () => {
     calls += 1;
-    const userPrompt = JSON.parse(String((body.messages as Array<Record<string, unknown>>)
-      .find((message) => message.role === 'user')?.content)) as Record<string, unknown>;
-    if (calls === 2) {
-      assert.equal((userPrompt.retry_feedback as Record<string, unknown>)?.code, 'MEMORY_INFORMATION_LOSS');
-    }
-    const correctedSentence = '2020年我第一次独自搬到上海生活。';
     return planResponse(JSON.stringify({
       current_story: {
-        summary: calls === 1
-          ? correctedSentence
-          : `${correctedSentence}父亲当时帮我搬家。`,
-        agent_memory: calls === 1
-          ? correctedSentence
-          : `${correctedSentence}父亲当时帮我搬家。`,
+        summary: correctedSentence,
+        agent_memory: correctedSentence,
         memory_changes: [{
           type: 'correct',
-          previous_text: '2019年我第一次独自搬到上海生活。',
-          new_text: correctedSentence,
-          source_message_ids: ['u1'],
+          previous_text: '不是旧 Memory 中的原文',
+          new_text: '不在新 Memory 中或用户 Transcript 中的内容',
+          source_message_ids: ['assistant-message'],
         }],
         source_message_ids: ['u1'],
       },
@@ -882,15 +873,17 @@ test('silent Agent Memory information loss is repaired before persistence', asyn
       await realFetch(`${baseUrl}/api/interview-sessions/${scenario.sessionId}/closeout`, { method: 'POST' });
       const result = await waitForResult(realFetch, baseUrl, scenario.sessionId);
       assert.equal(result.closeoutStatus, 'completed');
-      assert.equal(callCount(), 2);
-      assert.equal(calls, 2);
-      assert.equal((result.modelMetadata as Record<string, unknown>).repair_attempt_count, 1);
+      assert.equal(callCount(), 1);
+      assert.equal(calls, 1);
+      assert.equal((result.modelMetadata as Record<string, unknown>).repair_attempt_count, 0);
       const database = createDatabase(scenario.databasePath);
       try {
         const story = database.db.select().from(stories).where(eq(stories.storyId, scenario.storyId)).get();
-        assert.match(story?.agentMemory ?? '', /2020年/);
-        assert.match(story?.agentMemory ?? '', /父亲当时帮我搬家/);
-        assert.doesNotMatch(story?.agentMemory ?? '', /2019年/);
+        assert.equal(story?.agentMemory, correctedSentence);
+        const session = database.db.select().from(interviewSessions)
+          .where(eq(interviewSessions.sessionId, scenario.sessionId)).get();
+        assert.ok(session);
+        assert.deepEqual(parseTranscript(session.transcriptJson), scenario.initialTranscript);
       } finally { database.close(); }
     } finally { await closeServer(server); }
   });
