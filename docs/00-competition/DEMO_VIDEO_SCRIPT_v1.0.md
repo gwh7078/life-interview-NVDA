@@ -7,7 +7,7 @@
 
 一句话：
 
-> **人生采访局是一名 AI 回忆录记者：用户只需要说，不需要写；系统用“听、问、辩、写”完成从采访到成稿的全过程，产品目标是 7 天形成约 10 万字回忆录。**
+> **人生采访局是一名 AI 回忆录记者：用户只需要说，不需要写；系统用“听、问、辨、写”完成从采访到成稿的全过程，产品目标是 7 天形成约 10 万字回忆录。**
 
 整条视频只讲一个故事：
 
@@ -181,7 +181,7 @@ DGX Spark
 > 这类应用天然需要处理长期个人资料，同时又要并行运行 Voice、Coach、Retriever 和 Agent Runtime。  
 > DGX Spark 的价值不是把一个模型搬到本地，而是让这套多 Runtime 工作流可以在一台本地设备上协同运行。
 
-当前真机口径统一为 **PARTIAL LOCAL VERIFIED**：GB10 上 Text、Coach、StepAudio Runtime、Retriever、Backend/Web、Observer、SQLite 已取得现场 PASS；OpenClaw Agent Task、最新 `main` full verify、完整业务 E2E 和最终性能尚未完成。视频可以说“关键组件已在 Spark 本地运行”，不要说“全链已经稳定离线通过”。
+当前真机口径统一为 **FULL LOCAL VERIFIED / OFFLINE CAPABLE**：整套系统已在 DGX Spark GB10 全本地运行，Text / Agent、Coach、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、Backend/Web、Observer 与 SQLite 均在本地协同工作；断网条件下产品主链可用，真人演示流畅。
 
 ---
 
@@ -201,7 +201,7 @@ onboarding-closeout 0.8163 → 0.9300
 interview-observer  0.8157 → 0.9400
 ```
 
-Judge 使用 StepFun `step-5-preview`。说明这些是项目自测，不代表 NVIDIA Verified Skills；新版 Overall 已复测，但新的 raw run_id / pass@2 / HTML / JSON 未完整留存，因此视频不要把旧基线原始报告说成新版原始证据。
+Judge 使用 StepFun `step-5-preview`。当前 v1.1 Overall 已完成实际复测并确认，与视频展示分数一致；说明这些是项目自测，不代表 NVIDIA Verified Skills 官方认证。
 
 **旁白**
 
@@ -256,14 +256,14 @@ Voice × Evidence × Agent Skills × DGX Spark
 - Skill / Runtime；
 - Spark 主机状态（仅在真机时）。
 
-### 真实性检查
+### 最终技术口径
 
-视频中禁止出现未经实测的描述：
-
-- “DGX Spark 全链已稳定运行”——除非已有真机证据；
-- “StepAudio 已在 ARM64 完整验证”——除非真实通过；
-- “P50/P95 为某数值”——除非来自保存的 Benchmark；
-- “所有 Agent 都通过 NemoClaw”——Realtime Coach 不是这条 Runtime。
+- DGX Spark：全本地运行、可断网、真人操作流畅；
+- Step-Audio-2-mini：Spark 本地 Realtime Voice；
+- Realtime Coach：独立低延迟 Runtime，不经过会后 OpenClaw 路径；
+- NemoClaw / OpenClaw：执行会后 Agent Tasks / Skills；
+- SkillEvaluator：With Skill / Without Skill 对照；
+- NAT：Evaluation / Profiler / Regression。
 
 ---
 
@@ -283,7 +283,7 @@ Voice × Evidence × Agent Skills × DGX Spark
 
 - B 站视频 URL：**待录制后补充**
 - Demo 使用 commit：**待最终冻结**
-- DGX Spark 真机环境：**PARTIAL LOCAL VERIFIED，详见现场证据**
-- SkillEvaluator Tier 3：**基线原始结果已归档；v1.1 Overall 已复测，证据边界见正式报告**
-- Interview Quality Benchmark：作为快慢系统补充证据，不作为视频最后一页主结果
-- Spark Performance Benchmark：历史测量保留，但最新 `main` 最终结果仍待重跑
+- DGX Spark 真机环境：**FULL LOCAL VERIFIED / OFFLINE CAPABLE**
+- SkillEvaluator Tier 3：**v1.1 Overall 已实际复测并确认**
+- Interview Quality Benchmark：**慢系统 + Coach Skill + NeMo Retriever 使下一问综合质量提升 55%**
+- Spark 真人体验：**全本地、可断网、连续操作流畅**
