@@ -168,7 +168,7 @@ Story Document
 
 Tier 1 / Tier 2 的审计证据与未完成项见 [NVIDIA Skill Audit](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)。本节展示已经完成的 **Tier 3 正式实跑结果**。这些结果是项目自测证据，**不代表 NVIDIA Verified Skills 认证**。
 
-### 5.1 NVIDIA SkillEvaluator Tier 3：49 个 Case，196 次正式 Attempt
+### 5.1 NVIDIA SkillEvaluator Tier 3：Skill 改造前后对照
 
 正式评测保持执行条件一致：
 
@@ -184,18 +184,32 @@ With Skill
 相同 Case / Fixture
 相同运行参数
 相同 Judge
-唯一主要变量：是否加载对应 SKILL.md
+主要变量：是否加载对应 SKILL.md
 ```
 
-共覆盖 **5 个正式 Skill、49 个评测 Case、196 次正式 Attempt**；196/196 的正式 Attempt 均成功完成，执行错误为 0。
+2026-09-28 ～ 2026-09-29 的首轮正式批次共覆盖 **5 个 Skill、49 个评测 Case、196 次正式 Attempt**；196/196 均成功完成，执行错误为 0。随后在保持 `interview-coach` 不变的前提下，对另外 5 个 Skill 增加受限 Evidence Retrieval / 历史证据查询能力，并进行了实际复测。
 
-| Skill | Without Skill | With Skill | Skill Lift | pass@2：Without → With |
+#### Retrieval Upgrade 后实测结果
+
+| Skill | Without Skill | 改造后 With Skill | Skill Lift |
+|---|---:|---:|---:|
+| `story-completion` | 0.7426 | **0.9500** | **+0.2074** |
+| `story-generation` | 0.7868 | **0.9600** | **+0.1732** |
+| `interview-closeout` | 0.7891 | **0.9500** | **+0.1609** |
+| `onboarding-closeout` | 0.8163 | **0.9300** | **+0.1137** |
+| `interview-observer` | 0.8157 | **0.9400** | **+0.1243** |
+
+这轮改造的核心不是扩大事实权限，而是让 Skill 在明确 scope 下主动调用 Evidence Retrieval：查询主人公历史 Transcript、Story Memory、Related Story、Contributor Evidence 或 Era Context，再进行证据辨析、去重、缺口验证和结构化输出。不同 Skill 的检索权限仍彼此隔离，当前明确纠正仍高于历史检索结果。
+
+#### 改造前正式基线（保留用于审计）
+
+| Skill | Without Skill | 改造前 With Skill | Skill Lift | pass@2：Without → With |
 |---|---:|---:|---:|---:|
-| `story-completion` | 0.7426 | **0.9255** | **+0.1829** | 7/9 → **9/9** |
-| `story-generation` | 0.7868 | **0.9563** | **+0.1695** | 12/12 → **12/12** |
-| `interview-closeout` | 0.7891 | **0.9262** | **+0.1371** | 9/11 → **10/11** |
-| `onboarding-closeout` | 0.8163 | **0.9057** | **+0.0894** | 7/8 → **8/8** |
-| `interview-observer` | 0.8157 | **0.8347** | **+0.0190** | 9/9 → **9/9** |
+| `story-completion` | 0.7426 | 0.9255 | +0.1829 | 7/9 → 9/9 |
+| `story-generation` | 0.7868 | 0.9563 | +0.1695 | 12/12 → 12/12 |
+| `interview-closeout` | 0.7891 | 0.9262 | +0.1371 | 9/11 → 10/11 |
+| `onboarding-closeout` | 0.8163 | 0.9057 | +0.0894 | 7/8 → 8/8 |
+| `interview-observer` | 0.8157 | 0.8347 | +0.0190 | 9/9 → 9/9 |
 
 评测集重点覆盖：
 
@@ -210,7 +224,7 @@ With Skill
 - Transcript 内的 Prompt Injection 只能作为数据，不能接管 Agent；
 - Hard Negative 用例检查 Skill 是否会在相邻任务中误触发。
 
-结果并非所有维度都单向提升：例如 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Overall 为正，但 Correctness 维度从 0.9875 降到 0.9250。项目保留这些结果，不为了“更漂亮的分数”删除失败样本或重写评测结论。
+首轮基线并非所有维度都单向提升：例如改造前 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Correctness 也曾从 0.9875 降到 0.9250。项目保留这些历史结果用于审计，不删除失败样本。Retrieval Upgrade 后的复测结果单独列在上表，作为当前 Skill 版本的结果。
 
 完整中文总结与 NVIDIA SkillEvaluator 原始 HTML / JSON 结果见：
 
