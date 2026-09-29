@@ -1,7 +1,7 @@
 # DGX Spark Official Reference Index v1.0
 
 > 更新：2026-09-27  
-> 用途：给开发 Agent 提供可直接查阅的官方来源。只记录与本项目 Spark 完整移植有关的资料。
+> 用途：给开发 Agent 提供可直接查阅的官方来源。只记录与本项目 Spark 完整移植有关的资料。  \n> 项目验证状态同步：2026-09-29。
 
 > 部署职责边界（2026-09-28）：本页是上游资料索引，不是仓库安装规范。
 > 由用户按官方说明准备 DGX OS、Driver、Docker 和 AI Runtime；应用侧流程
@@ -208,7 +208,7 @@ https://github.com/stepfun-ai/Step-Audio2
 - 官方上游镜像示例（仅参考，不代表本项目验证）：
   `stepfun2025/vllm:step-audio-2-v20250909`。
 
-项目验证状态：**NOT VERIFIED ON DGX SPARK / ARM64**。该具体镜像 / vLLM backend 尚未由本项目在 Spark ARM64 真机验证；使用者应按 StepFun 当前官方说明选择并启动兼容 Runtime。本仓库只要求产品 WebSocket endpoint `ws://127.0.0.1:8092/realtime`。
+项目产品链验证状态：**FULL LOCAL VERIFIED / OFFLINE CAPABLE**。2026-09-29 已在 DGX Spark GB10（ARM64）完成 Step-Audio-2-mini 本地 Realtime 与完整产品链真人验收；本仓库使用产品 WebSocket endpoint `ws://127.0.0.1:8092/realtime`。上文列出的 StepFun Docker image 只是上游参考示例，并非本项目最终验收口径或对该特定镜像 manifest 的兼容性声明；Runtime 操作者仍应按 StepFun 当前官方说明选择兼容实现。
 
 高风险提醒：
 
