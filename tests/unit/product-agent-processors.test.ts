@@ -1,22 +1,29 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { AgentToolTokenService } from '../../agent/tools/token.js';
 import {
+  AgentOnboardingCloseoutProcessor,
   AgentStoryCompletionProcessor,
   AgentStoryGenerationContextModel,
   type AgentTaskPort,
+  type AgentTaskRunOptions,
   type AgentTaskRequestUnion,
   type AgentTaskResultUnion,
 } from '../../src/agent-tasks/index.js';
+import type { OnboardingCloseoutContext } from '../../src/onboarding/types.js';
+import type { ProcessOnboardingCloseoutInput } from '../../src/onboarding/processor.js';
 import type { StoryCompletionContext } from '../../src/story/completion/index.js';
 import type { StoryGenerationContext } from '../../src/story/generation/index.js';
 
 class FakeAgentTasks implements AgentTaskPort {
   requests: AgentTaskRequestUnion[] = [];
+  options: AgentTaskRunOptions[] = [];
 
   constructor(private readonly outputs: Partial<Record<string, unknown>>) {}
 
-  async run(request: AgentTaskRequestUnion): Promise<AgentTaskResultUnion> {
+  async run(request: AgentTaskRequestUnion, options: AgentTaskRunOptions = {}): Promise<AgentTaskResultUnion> {
     this.requests.push(request);
+    this.options.push(options);
     const key = request.mode ? `${request.taskType}:${request.mode}` : request.taskType;
     const output = this.outputs[key];
     if (!output) throw new Error(`missing fake output for ${key}`);
@@ -58,7 +65,11 @@ test('AgentStoryCompletionProcessor sends structured Completion context through 
       gaps: ['当时你为什么决定离开家乡？'],
     },
   });
-  const processor = new AgentStoryCompletionProcessor(tasks);
+  const tokenService = new AgentToolTokenService('product-processor-test-secret-012345678901234567890');
+  const processor = new AgentStoryCompletionProcessor(tasks, {
+    baseUrl: 'http://backend.test',
+    tokenService,
+  });
 
   const output = await processor.process(context, {
     userId: 'owner-1',
@@ -83,6 +94,16 @@ test('AgentStoryCompletionProcessor sends structured Completion context through 
     blocked_directions: context.blockedDirections,
     session_count: context.sessionCount,
   });
+  const scriptContext = tasks.options[0]?.scriptContext;
+  assert.ok(scriptContext?.token);
+  const token = tokenService.verify(scriptContext!.token, {
+    tool: 'evidence_search', resourceType: 'agent_evidence_search',
+  });
+  assert.equal(token.userId, 'owner-1');
+  assert.equal(token.evidenceSearch?.storyId, 'story-1');
+  assert.deepEqual(token.evidenceSearch?.allowedSourceTypes, [
+    'owner_transcript', 'story_memory', 'story_summary', 'related_story',
+  ]);
 });
 
 test('AgentStoryGenerationContextModel sends structured Generation context and resource version', async () => {
@@ -108,7 +129,11 @@ test('AgentStoryGenerationContextModel sends structured Generation context and r
   const tasks = new FakeAgentTasks({
     'story.generation': { content: '根据原始访谈整理的正文。' },
   });
-  const model = new AgentStoryGenerationContextModel(tasks);
+  const tokenService = new AgentToolTokenService('product-generation-test-secret-012345678901234567890');
+  const model = new AgentStoryGenerationContextModel(tasks, {
+    baseUrl: 'http://backend.test',
+    tokenService,
+  });
 
   const output = await model.generateContext({
     ownerId: 'owner-1',
@@ -133,4 +158,68 @@ test('AgentStoryGenerationContextModel sends structured Generation context and r
   assert.equal(JSON.stringify(request.payload).includes('session-1'), false);
   assert.equal(JSON.stringify(request.payload).includes('message-1'), false);
   assert.equal(JSON.stringify(request.payload).includes('那次远行大约在1988年。'), true);
+  const scriptContext = tasks.options[0]?.scriptContext;
+  assert.ok(scriptContext?.token);
+  const token = tokenService.verify(scriptContext!.token, {
+    tool: 'evidence_search', resourceType: 'agent_evidence_search',
+  });
+  assert.equal(token.evidenceSearch?.storyId, 'story-1');
+  assert.deepEqual(token.evidenceSearch?.allowedSourceTypes, [
+    'owner_transcript', 'contributor_transcript', 'profile', 'life_stage',
+    'story_memory', 'story_summary', 'related_story', 'era',
+  ]);
+});
+
+test('AgentOnboardingCloseoutProcessor receives only its owner-scoped evidence sources', async () => {
+  const context: OnboardingCloseoutContext = {
+    sessionId: 'onboarding-session-1',
+    userId: 'owner-1',
+    profile: {
+      userId: 'owner-1', name: '林岚', birthDate: null, gender: null, birthPlace: null,
+      currentLocation: null, currentStatus: null, profileSummary: null,
+    } as OnboardingCloseoutContext['profile'],
+    transcripts: [{
+      sessionId: 'onboarding-session-1',
+      startedAt: '2026-09-01T10:00:00.000Z',
+      messages: [{
+        message_id: 'message-1', role: 'user', text: '我叫林岚。',
+        timestamp: '2026-09-01T10:00:00.000Z', provider: 'test',
+      }],
+      status: 'completed',
+      closeoutStatus: 'pending',
+      provider: 'test',
+    }],
+  };
+  const output = {
+    profile: {
+      name: { value: '林岚', source_refs: ['source_1'] },
+      birth_year: { value: null, source_refs: [] },
+      gender: { value: null, source_refs: [] },
+      birth_place: { value: null, source_refs: [] },
+      current_location: { value: null, source_refs: [] },
+      current_status: { value: null, source_refs: [] },
+      profile_summary: { value: null, source_refs: [] },
+    },
+    life_stages: [],
+  };
+  const tasks = new FakeAgentTasks({ 'onboarding.closeout': output });
+  const tokenService = new AgentToolTokenService('product-onboarding-test-secret-012345678901234567890');
+  const processor = new AgentOnboardingCloseoutProcessor(tasks, {
+    baseUrl: 'http://backend.test', tokenService,
+  });
+  const input: ProcessOnboardingCloseoutInput = {
+    context,
+    config: { baseUrl: 'http://unused.test', apiKey: 'unused' },
+    signal: new AbortController().signal,
+    assertCurrentAttempt() {},
+  };
+
+  await processor.process(input);
+  const scriptContext = tasks.options[0]?.scriptContext;
+  assert.ok(scriptContext?.token);
+  const token = tokenService.verify(scriptContext!.token, {
+    tool: 'evidence_search', resourceType: 'agent_evidence_search',
+  });
+  assert.equal(token.userId, 'owner-1');
+  assert.deepEqual(token.evidenceSearch?.allowedSourceTypes, ['profile', 'life_stage', 'related_story']);
 });

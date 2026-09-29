@@ -110,9 +110,11 @@ import {
   type AgentTaskPort,
 } from './agent-tasks/index.js';
 import { AgentToolTokenService } from '../agent/tools/token.js';
+import type { EvidenceSearchScriptConfig } from './agent-tasks/evidence-search-context.js';
 import { createRetrieverClientFromEnv, type RetrieverAdapter } from './retriever/client.js';
 import { RetrieverIndexService } from './retriever/indexer.js';
-import { RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
+import { EvidenceSearchError, EvidenceSearchGateway, RetrieverScriptError, RetrieverScriptGateway } from './retriever/script-gateway.js';
+import { EvidenceSearchService } from './retriever/evidence-search.js';
 import { ObservationBus, emitObservationEvent } from './observability/observation-bus.js';
 import { createObservationContext, type ObservationContext } from './observability/observation-event.js';
 import { adaptRealtimeTrace, normalizeAgentSkipReasonForObservation } from './observability/adapters/realtime-adapter.js';
@@ -216,6 +218,9 @@ export interface InterviewServiceDependencies {
   agentTasks?: AgentTaskPort | null;
   retriever?: RetrieverAdapter;
   retrieverIndex?: RetrieverIndexService;
+  evidenceSearchService?: EvidenceSearchService;
+  evidenceSearchGateway?: EvidenceSearchGateway;
+  evidenceSearchScriptConfig?: EvidenceSearchScriptConfig;
   retrieverScriptGateway?: RetrieverScriptGateway;
   eraContextClient?: EraContextAdapter;
   eraContextScriptGateway?: EraContextScriptGateway;
@@ -762,30 +767,57 @@ function createStoryWorkflowDependencies(
       ? agentTasks ?? createAgentTaskPort({ ...process.env, AI_TASK_RUNTIME: 'agent' }, {
           databasePath: config.databasePath,
           onObservationEvent,
-        })
+      })
       : null;
-  const storyCompletion = dependencies.storyCompletion
-    ?? createStoryCompletionService(
-      config.databasePath,
-      storyCompletionModelConfig(config),
-      textModelProvider,
-      agentTasks ? new AgentStoryCompletionProcessor(agentTasks) : undefined,
-    );
-  const storyGeneration = dependencies.storyGeneration
-    ?? createStoryGenerationService(
-      config.databasePath,
-      storyGenerationModelConfig(config),
-      textModelProvider,
-      agentTasks ? new AgentStoryGenerationContextModel(agentTasks) : undefined,
-    );
   const retriever = dependencies.retriever
     ?? (process.env.NEMO_RETRIEVER_ENABLED?.trim() === 'true' ? createRetrieverClientFromEnv(process.env) : undefined);
   const eraContextEnabled = process.env.NEMO_ERA_CONTEXT_ENABLED?.trim() === 'true';
   const eraContextClient = eraContextEnabled
     ? dependencies.eraContextClient ?? createEraContextClientFromEnv(process.env)
     : undefined;
+  const retrievalTokenSecret = process.env.AGENT_RETRIEVAL_TOKEN_SECRET?.trim()
+    || process.env.AGENT_TOOL_TOKEN_SECRET?.trim();
+  const retrievalTokenService = retrievalTokenSecret
+    ? new AgentToolTokenService(retrievalTokenSecret)
+    : undefined;
+  const retrievalScriptConfig = retrievalTokenService && process.env.AGENT_RETRIEVAL_BASE_URL?.trim()
+    ? {
+        baseUrl: process.env.AGENT_RETRIEVAL_BASE_URL.trim().replace(/\/+$/u, ''),
+        tokenService: retrievalTokenService,
+      }
+    : undefined;
+  const evidenceSearchService = dependencies.evidenceSearchService
+    ?? (retriever ? new EvidenceSearchService({
+        retriever,
+        ...(eraContextClient ? { eraContext: eraContextClient } : {}),
+        databasePath: config.databasePath,
+      }) : undefined);
+  const evidenceSearchGateway = dependencies.evidenceSearchGateway
+    ?? (retriever && evidenceSearchService && retrievalTokenService
+      ? new EvidenceSearchGateway({
+          retriever,
+          ...(eraContextClient ? { eraContext: eraContextClient } : {}),
+          databasePath: config.databasePath,
+          tokenService: retrievalTokenService,
+          service: evidenceSearchService,
+        })
+      : undefined);
+  const storyCompletion = dependencies.storyCompletion
+    ?? createStoryCompletionService(
+      config.databasePath,
+      storyCompletionModelConfig(config),
+      textModelProvider,
+      agentTasks ? new AgentStoryCompletionProcessor(agentTasks, retrievalScriptConfig) : undefined,
+    );
+  const storyGeneration = dependencies.storyGeneration
+    ?? createStoryGenerationService(
+      config.databasePath,
+      storyGenerationModelConfig(config),
+      textModelProvider,
+      agentTasks ? new AgentStoryGenerationContextModel(agentTasks, retrievalScriptConfig) : undefined,
+    );
   const realtimeRecall = dependencies.realtimeRecall
-    ?? (retriever ? new RealtimeSlowContextPipeline(retriever, realtimeContextAgentTasks) : undefined);
+    ?? (retriever ? new RealtimeSlowContextPipeline(retriever, realtimeContextAgentTasks, evidenceSearchService) : undefined);
   const realtimeCoach = dependencies.realtimeCoach === undefined
     ? isTextRuntimeConfigured(
         config.realtimeCoachApiKey,
@@ -804,23 +836,12 @@ function createStoryWorkflowDependencies(
     ?? (realtimeCoach ? new RealtimeCoachPipeline(realtimeCoach, retriever, eraContextClient) : undefined);
   const retrieverIndex = dependencies.retrieverIndex
     ?? (retriever ? new RetrieverIndexService(config.databasePath, retriever) : undefined);
-  const retrievalTokenSecret = process.env.AGENT_RETRIEVAL_TOKEN_SECRET?.trim()
-    || process.env.AGENT_TOOL_TOKEN_SECRET?.trim();
-  const retrievalTokenService = retrievalTokenSecret
-    ? new AgentToolTokenService(retrievalTokenSecret)
-    : undefined;
   const retrieverScriptGateway = dependencies.retrieverScriptGateway
     ?? (retriever && retrievalTokenService ? new RetrieverScriptGateway(retriever, retrievalTokenService) : undefined);
   const eraContextScriptGateway = dependencies.eraContextScriptGateway
     ?? (process.env.NEMO_ERA_CONTEXT_ENABLED?.trim() === 'true' && retrievalTokenService
       ? new EraContextScriptGateway(eraContextClient ?? createEraContextClientFromEnv(process.env), retrievalTokenService)
       : undefined);
-  const retrievalScriptConfig = retrievalTokenService && process.env.AGENT_RETRIEVAL_BASE_URL?.trim()
-    ? {
-        baseUrl: process.env.AGENT_RETRIEVAL_BASE_URL.trim().replace(/\/+$/u, ''),
-        tokenService: retrievalTokenService,
-      }
-    : undefined;
   return {
     ...dependencies,
     agentTasks,
@@ -830,6 +851,9 @@ function createStoryWorkflowDependencies(
     ...(eraContextClient ? { eraContextClient } : {}),
     ...(realtimeCoachPipeline ? { realtimeCoachPipeline } : {}),
     ...(retrieverIndex ? { retrieverIndex } : {}),
+    ...(evidenceSearchService ? { evidenceSearchService } : {}),
+    ...(evidenceSearchGateway ? { evidenceSearchGateway } : {}),
+    ...(retrievalScriptConfig ? { evidenceSearchScriptConfig: retrievalScriptConfig } : {}),
     ...(retrieverScriptGateway ? { retrieverScriptGateway } : {}),
     ...(eraContextScriptGateway ? { eraContextScriptGateway } : {}),
     storyCompletion,
@@ -855,7 +879,7 @@ function createStoryWorkflowDependencies(
     onboardingCloseout: {
       ...dependencies.onboardingCloseout,
       ...(agentTasks && !dependencies.onboardingCloseout?.processor
-        ? { processor: new AgentOnboardingCloseoutProcessor(agentTasks) }
+        ? { processor: new AgentOnboardingCloseoutProcessor(agentTasks, retrievalScriptConfig) }
         : {}),
       async afterApply(userId, storyId) {
         if (dependencies.onboardingCloseout?.afterApply) {
@@ -899,6 +923,29 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
   };
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const url = new URL(request.url ?? '/', 'http://localhost');
+    if (request.method === 'POST' && url.pathname === '/internal/agent-retrieval/evidence-search') {
+      const gateway = dependencies.evidenceSearchGateway;
+      if (!gateway) {
+        sendJson(response, 503, { error: 'Evidence Search is not configured.', errorCode: 'EVIDENCE_SEARCH_UNAVAILABLE' });
+        return;
+      }
+      const token = readBearerToken(request);
+      if (!token) {
+        sendJson(response, 401, { error: 'Missing evidence-search token.', errorCode: 'EVIDENCE_SEARCH_TOKEN_INVALID' });
+        return;
+      }
+      try {
+        const body = await readJsonObject(request);
+        sendJson(response, 200, await gateway.search(token, body));
+      } catch (error) {
+        if (error instanceof EvidenceSearchError) {
+          sendJson(response, error.statusCode, { error: error.message, errorCode: error.code });
+          return;
+        }
+        sendJson(response, 400, { error: 'Invalid evidence-search request.', errorCode: 'INVALID_EVIDENCE_SEARCH_REQUEST' });
+      }
+      return;
+    }
     if (request.method === 'POST' && url.pathname === '/internal/agent-retrieval/memory-search') {
       const gateway = dependencies.retrieverScriptGateway;
       if (!gateway) {
@@ -1422,6 +1469,7 @@ function createHttpHandler(config: RuntimeConfig, authService: AuthService, depe
           config: closeoutModelConfig(config),
           textModelProvider: dependencies.closeout?.textModelProvider,
           agentTaskPort: dependencies.agentTasks ?? undefined,
+          evidenceSearchScriptConfig: dependencies.evidenceSearchScriptConfig,
         });
         sendJson(response, 200, { ok: true });
       } catch (error) {
@@ -4552,6 +4600,7 @@ function createRealtimeHandler(
             config: closeoutModelConfig(config),
             textModelProvider: dependencies.closeout?.textModelProvider,
             agentTaskPort: dependencies.agentTasks ?? undefined,
+            evidenceSearchScriptConfig: dependencies.evidenceSearchScriptConfig,
           });
           closeout = { status: 'completed' };
         } catch (error) {

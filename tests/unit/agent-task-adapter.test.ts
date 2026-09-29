@@ -69,13 +69,13 @@ test('NemoClawAgentTaskAdapter routes Completion through frozen Skill, model pro
   assert.equal(result.runtime.skillVersion, 'v1');
   assert.equal(result.runtime.provider, 'stepfun');
   assert.equal(result.runtime.model, 'test-model');
-  await assert.rejects(
-    () => adapter.run(request, {
-      scriptContext: { baseUrl: 'http://backend.test', token: 'short-lived' },
-    }),
-    (error: unknown) => error instanceof AgentTaskContractError
-      && error.code === 'AGENT_SCRIPT_CAPABILITY_UNAUTHORIZED',
-  );
+  await adapter.run(request, {
+    scriptContext: { baseUrl: 'http://backend.test', token: 'short-lived' },
+  });
+  assert.deepEqual(executor.requests[1]?.executionPolicy.scriptCapabilities, ['evidence-search']);
+  assert.deepEqual(executor.requests[1]?.scriptContext, {
+    baseUrl: 'http://backend.test', token: 'short-lived',
+  });
 });
 
 test('NemoClawAgentTaskAdapter routes realtime context hints and preserves their trace context', async () => {
@@ -115,6 +115,7 @@ test('NemoClawAgentTaskAdapter routes realtime context hints and preserves their
   assert.equal(routed?.executionPolicy.maxAttempts, 1);
   assert.equal(routed?.executionPolicy.timeoutMs, 4_800);
   assert.deepEqual(routed?.executionPolicy.scriptCapabilities, []);
+  assert.deepEqual(routed?.executionPolicy.evidenceSourceTypes, ['owner_transcript']);
   assert.equal(routed?.executionPolicy.allowFormatRepair, false);
   assert.equal(routed?.executionPolicy.allowValidationRepair, false);
   assert.deepEqual(result.output, {
@@ -122,13 +123,10 @@ test('NemoClawAgentTaskAdapter routes realtime context hints and preserves their
     possible_conflicts: [],
     interview_hints: ['可以问问当时是谁先提出这个安排。'],
   });
-  await assert.rejects(
-    () => adapter.run(request, {
-      scriptContext: { baseUrl: 'http://backend.test', token: 'short-lived' },
-    }),
-    (error: unknown) => error instanceof AgentTaskContractError
-      && error.code === 'AGENT_SCRIPT_CAPABILITY_UNAUTHORIZED',
-  );
+  await assert.rejects(() => adapter.run(request, {
+    scriptContext: { baseUrl: 'http://backend.test', token: 'short-lived' },
+  }), (error: unknown) => error instanceof AgentTaskContractError
+    && error.code === 'AGENT_SCRIPT_CAPABILITY_UNAUTHORIZED');
 });
 
 test('NemoClawAgentTaskAdapter rejects unsupported schemaVersion before execution', async () => {
@@ -191,6 +189,7 @@ test('NemoClawAgentTaskAdapter routes contributor through interview-closeout wit
   assert.equal(executor.requests[0]?.skill, 'interview-closeout');
   assert.equal(executor.requests[0]?.modelProfile, 'reasoning');
   assert.deepEqual(executor.requests[0]?.executionPolicy.scriptCapabilities, []);
+  assert.deepEqual(executor.requests[0]?.executionPolicy.evidenceSourceTypes, ['contributor_transcript']);
   assert.equal('current_story' in (executor.requests[0]?.payload as Record<string, unknown>), false);
   assert.deepEqual(result.output, { summary: '第三者的独立回忆。' });
 });

@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import type { RetrieverAdapter, RetrieverEvidence } from '../retriever/types.js';
+import { EvidenceSearchService } from '../retriever/evidence-search.js';
 import type { RealtimeRecallRequest } from './slow-coordinator.js';
 
 const REALTIME_RECALL_TOP_K = 5;
@@ -101,7 +102,7 @@ function evidenceUnits(item: RetrieverEvidence): Array<Omit<RealtimeQAEvidence, 
  */
 export class RetrieverRealtimeRecall {
   constructor(
-    private readonly retriever: RetrieverAdapter,
+    private readonly retriever: RetrieverAdapter | EvidenceSearchService,
     private readonly topK = REALTIME_RECALL_TOP_K,
   ) {
     if (!Number.isInteger(topK) || topK <= 0) {
@@ -116,6 +117,40 @@ export class RetrieverRealtimeRecall {
     const startedAt = performance.now();
     const storyId = request.storyId?.trim();
     if (!storyId) return { candidateCount: 0, evidence: [], latencyMs: 0 };
+
+    if (this.retriever instanceof EvidenceSearchService) {
+      const result = await this.retriever.searchScoped({
+        ownerId: request.ownerId,
+        storyId,
+        task: 'interview.context_hint',
+        skill: 'interview-observer',
+        allowedSourceTypes: ['owner_transcript'],
+      }, {
+        query: request.query,
+        source_types: ['owner_transcript'],
+        top_k: this.topK,
+      }, options.signal);
+      const retrieved = result.evidence.map((item): RetrieverEvidence => ({
+        text: item.text,
+        score: item.score,
+        ownerId: request.ownerId,
+        storyId,
+        sourceType: 'subject',
+        sessionId: item.source_ref,
+        messageIds: item.message_refs ?? [],
+        segmentIds: item.segment_refs ?? [],
+      }));
+      const evidence = retrieved
+        .filter((item) => item.text.trim().length > 0)
+        .flatMap((item) => evidenceUnits(item).map((unit) => ({ ...unit, score: item.score })))
+        .slice(0, this.topK)
+        .map((item, index) => ({ ...item, id: `e${index + 1}` }));
+      return {
+        candidateCount: result.retrieval.result_count,
+        evidence,
+        latencyMs: result.retrieval.latency_ms,
+      };
+    }
 
     const retrieved = await this.retriever.searchTranscript({
       ownerId: request.ownerId,

@@ -52,11 +52,22 @@ test('TaskDefinitionRegistry exposes five tasks and three interview.closeout mod
   assert.equal(getAgentTaskDefinition('story.completion').modelProfile, 'reasoning-fast');
   assert.equal(getAgentTaskDefinition('story.generation').modelProfile, 'writing');
   assert.equal(getAgentTaskDefinition('story.completion').executionPolicy.maxAttempts, 3);
-  assert.deepEqual(getAgentTaskDefinition('story.completion').executionPolicy.scriptCapabilities, []);
-  assert.deepEqual(getAgentTaskDefinition('story.generation').executionPolicy.scriptCapabilities, []);
-  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'story_create').executionPolicy.scriptCapabilities, []);
-  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'story_continue').executionPolicy.scriptCapabilities, ['memory-search']);
-  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'contributor').executionPolicy.scriptCapabilities, []);
+  assert.deepEqual(getAgentTaskDefinition('onboarding.closeout').executionPolicy.scriptCapabilities, ['evidence-search']);
+  assert.deepEqual(getAgentTaskDefinition('interview.context_hint').executionPolicy.scriptCapabilities, []);
+  assert.deepEqual(getAgentTaskDefinition('story.completion').executionPolicy.scriptCapabilities, ['evidence-search']);
+  assert.deepEqual(getAgentTaskDefinition('story.generation').executionPolicy.scriptCapabilities, ['evidence-search']);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'story_create').executionPolicy.scriptCapabilities, ['evidence-search']);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'story_continue').executionPolicy.scriptCapabilities, ['evidence-search']);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'contributor').executionPolicy.scriptCapabilities, ['evidence-search']);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'contributor').executionPolicy.evidenceSourceTypes, ['contributor_transcript']);
+  assert.deepEqual(getAgentTaskDefinition('interview.closeout', 'story_create').executionPolicy.evidenceSourceTypes, ['related_story']);
+  assert.deepEqual(getAgentTaskDefinition('onboarding.closeout').executionPolicy.evidenceSourceTypes, [
+    'profile', 'life_stage', 'related_story',
+  ]);
+  assert.deepEqual(getAgentTaskDefinition('interview.context_hint').executionPolicy.evidenceSourceTypes, ['owner_transcript']);
+  assert.deepEqual(getAgentTaskDefinition('story.completion').executionPolicy.evidenceSourceTypes, [
+    'owner_transcript', 'story_memory', 'story_summary', 'related_story',
+  ]);
   assert.throws(
     () => getAgentTaskDefinition('interview.closeout'),
     (error: unknown) => error instanceof AgentTaskContractError

@@ -12,7 +12,8 @@
 | [PRODUCT.md](PRODUCT.md) | 当前产品模型、业务流程、四类采访场景 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 当前整体技术架构与职责边界 |
 | [REALTIME.md](REALTIME.md) | Voice / Coach / Memory / Era / Tool 路线 |
-| [AGENT_RUNTIME.md](AGENT_RUNTIME.md) | Agent Task、Skill、Runtime、Contract |
+| [AGENT_RUNTIME.md](AGENT_RUNTIME.md) | Agent Task、Skill、Runtime、Evidence Search 与 Contract |
+| [SKILL_SCRIPT_MAPPING_v1.0.md](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md) | Task-specific Evidence Search 来源范围与调用条件 |
 | [NVIDIA.md](NVIDIA.md) | NemoClaw、Retriever、NAT、DGX Spark 状态 |
 | [TESTING.md](TESTING.md) | 当前自动化、Live Smoke 与人工验收规则 |
 

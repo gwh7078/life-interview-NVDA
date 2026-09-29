@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Private reverse proxy for the two signed formal-Agent retrieval routes.
+"""Private reverse proxy for the signed formal-Agent retrieval routes.
 
 Request and response bodies are never logged. The product backend remains
 loopback-only and the OpenShell policy can target only this private listener.
@@ -15,6 +15,7 @@ UPSTREAM_HOST = os.environ.get("SPARK_BACKEND_UPSTREAM_HOST", "127.0.0.1")
 UPSTREAM_PORT = int(os.environ.get("SPARK_BACKEND_PORT", "4174"))
 MAX_BODY = int(os.environ.get("SPARK_AGENT_RETRIEVAL_MAX_BODY_BYTES", "65536"))
 ALLOWED = {
+    "/internal/agent-retrieval/evidence-search",
     "/internal/agent-retrieval/memory-search",
     "/internal/agent-retrieval/era-context-search",
 }

@@ -205,6 +205,7 @@ export function mapStoryCloseoutContextToTask(
 export interface ContributorCloseoutTaskContext {
   userId: string;
   sessionId: string;
+  storyId?: string;
   relationship: string;
   previousContributorSummary: string | null;
   transcript: TranscriptMessage[];

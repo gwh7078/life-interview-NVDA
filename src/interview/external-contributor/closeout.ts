@@ -7,6 +7,7 @@ import { DirectTextModelProvider, type TextModelProvider } from '../../providers
 import { StoryShareRepository } from '../../repositories/story-share-repository.js';
 import type { AgentTaskPort } from '../../agent-tasks/ports/agent-task-port.js';
 import { mapContributorCloseoutContextToTask } from '../../agent-tasks/mappers/context-to-task.js';
+import { createEvidenceSearchScriptContext, type EvidenceSearchScriptConfig } from '../../agent-tasks/evidence-search-context.js';
 
 const CONTRIBUTOR_SUMMARY_MAX_LENGTH = 400;
 const EXTERNAL_CONTRIBUTOR_CLOSEOUT_MAX_ATTEMPTS = 3;
@@ -96,6 +97,7 @@ export async function runExternalContributorCloseout(input: {
   config: CloseoutModelConfig;
   textModelProvider?: TextModelProvider;
   agentTaskPort?: AgentTaskPort;
+  evidenceSearchScriptConfig?: EvidenceSearchScriptConfig;
 }): Promise<void> {
   const claimed = claimExternalContributorCloseout(input.databasePath, input.userId, input.sessionId);
   if (claimed === 'completed') return;
@@ -159,13 +161,20 @@ export async function runExternalContributorCloseout(input: {
         const mapped = mapContributorCloseoutContextToTask({
           userId: input.userId,
           sessionId: input.sessionId,
+          storyId: session.storyId,
           relationship: share.relationship,
           previousContributorSummary: share.contributorSummary,
           transcript,
           shareId: share.shareId,
           resourceVersion: share.updatedAt,
         }, randomUUID());
+        const scriptContext = createEvidenceSearchScriptContext(
+          input.evidenceSearchScriptConfig,
+          mapped.request,
+          { storyId: session.storyId, shareId: share.shareId, currentSessionId: input.sessionId },
+        );
         const result = await input.agentTaskPort.run(mapped.request, {
+          ...(scriptContext ? { scriptContext } : {}),
           validateProposal(candidate) {
             validatedSummary = asSummary(candidate);
           },
