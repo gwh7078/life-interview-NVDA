@@ -1,6 +1,6 @@
 # Spark Deployment Agent Brief v1.0
 
-> 更新：2026-09-28
+> 更新：2026-09-29
 > 业务真相源：`docs/CURRENT_STATE.md`、`docs/REALTIME.md`、`docs/NVIDIA.md`
 > 部署定位：用户准备标准 Runtime；本仓库部署应用并接线。
 
@@ -8,7 +8,7 @@
 
 在 DGX Spark 上运行人生采访局应用，并使用操作者已部署的模型与检索服务。Runtime 权重、推理服务和 Retriever 由操作者管理；本仓库负责应用配置、Backend、SQLite、Agent Contract / Skills、Technical Observer 和评测接线。
 
-不把裸机 Runtime 安装、模型下载或 Runtime 管理器作为比赛应用的“一键完整安装”目标。当前 Spark compatibility、完整 E2E 与性能均 **NOT TESTED ON DGX SPARK**。
+不把裸机 Runtime 安装、模型下载或 Runtime 管理器作为比赛应用的“一键完整安装”目标。比赛配置已在 NVIDIA DGX Spark GB10（ARM64）完成最终真人全链验收，统一状态为 **FULL LOCAL VERIFIED / OFFLINE CAPABLE**。
 
 ## 2. Runtime Contract
 
@@ -58,13 +58,19 @@ An official model page, static config, test harness, or Mac result is not a Spar
 
 ## 6. Acceptance status
 
-Until a Spark run is performed and its artifacts are reviewed, report all of the following as **NOT TESTED ON DGX SPARK**:
+2026-09-29 已在 NVIDIA DGX Spark GB10（ARM64）完成最终真人全链验收，比赛配置统一状态为 **FULL LOCAL VERIFIED / OFFLINE CAPABLE**。
 
-- GB10 / DGX Spark Runtime compatibility;
-- StepAudio Runtime image / backend on DGX Spark ARM64: **NOT VERIFIED ON DGX SPARK / ARM64**;
-- StepAudio bridge protocol, streaming, full-duplex, cancel / barge-in, and first-audio behavior;
-- Full product E2E across interview, persistence, Coach, Retriever, NemoClaw, and post-session Tasks;
-- P50 / P95, stability, memory use, and concurrency.
+已验证的产品链包括：
+
+- Text / Agent：`nvidia/Qwen3.6-35B-A3B-NVFP4`；
+- Coach：`Qwen3-8B`；
+- Voice：Step-Audio-2-mini 本地 Realtime；
+- NeMo Retriever：Transcript / Era 检索；
+- NemoClaw / OpenClaw：正式 Agent Tasks 与 Skills；
+- Backend / Web、Technical Observer 与 SQLite；
+- 外部网络断开后，产品主链仍可运行。
+
+最终状态与现场证据以 [DGX Spark 部署验证报告](../../07-reports/spark-deployment-evidence-2026-09-29.md) 和当前 [Spark 部署说明](README.md) 为准。历史计划、官方上游说明或单独 Runtime 示例不应覆盖最终项目验收状态。
 
 ## 7. Official references
 
