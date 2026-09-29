@@ -2,13 +2,13 @@
 
 This is a new, source-controlled case pack for the next NVIDIA SkillEvaluator Tier 3 run. It does not replace or edit the 2026-09-28 v1 baseline.
 
-`cases.jsonl` contains 19 paired task cases: 5 ordinary, 9 retrieval-required, and 5 hard negatives. `evidence-fixtures.jsonl` is an out-of-band Retriever fixture catalog. Fixture text must be indexed behind the scoped Evidence Search endpoint; it must never be copied into the With-Skill prompt.
+`cases.jsonl` contains 20 paired task cases: 5 ordinary, 9 retrieval-required, and 6 hard negatives. `evidence-fixtures.jsonl` is an out-of-band Retriever fixture catalog. Fixture text must be indexed behind the scoped Evidence Search endpoint; it must never be copied into the With-Skill prompt.
 
 For every case, With Skill and Without Skill must use the same model, current input, task, runtime settings, and judge. The only difference is whether the corresponding Skill is loaded. The harness may use `fixture_id` to provision retrieval data, but must not send it or fixture contents to the Agent.
 
 ## v1.1 准备入口
 
-通过以下命令把当前 19 个 case 转成 Tier 3 准备清单（JSONL）：
+通过以下命令把当前 20 个 case 转成 Tier 3 准备清单（JSONL）：
 
 ```bash
 bash scripts/codex-node.sh node agent/evals/skills/retrieval-upgrade-2026-09-29/prepare-evals.mjs > /tmp/retrieval-upgrade-v1.1-tier3-manifest.jsonl
@@ -26,7 +26,7 @@ bash scripts/codex-node.sh node agent/evals/skills/retrieval-upgrade-2026-09-29/
 | story-completion | SC-N01 | SC-R01 | SC-H01 |
 | story-generation | SG-N01 | SG-R01 | SG-H01 |
 
-Additional retrieval cases cover closeout Story deduplication, Era isolation, and Contributor isolation. They belong to the later full Tier 3 run. Observer remains a fixed, no-tool inference path: verify its Backend owner/Story prefetch separately, and do not count it as Agent-initiated Skill script use.
+Additional cases cover Completion title-scope regression, closeout Story deduplication, Era isolation, and Contributor isolation. They belong to the later full Tier 3 run. Observer remains a fixed, no-tool inference path: verify its Backend owner/Story prefetch separately, and do not count it as Agent-initiated Skill script use.
 
 ## Repeat and verify
 

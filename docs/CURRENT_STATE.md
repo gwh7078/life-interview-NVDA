@@ -171,7 +171,7 @@ Task Registry 当前包含：
 
 当前五个 Agent Skill 元数据版本为 `1.1.0`，Task Registry 版本为 `v1.1`。四个离线或异步核心 Skill 可按任务授权主动调用 Evidence Search：`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`。`interview-observer` 属于实时低延迟路径，由 Backend 按需预取 owner / current-Story scoped 的有界历史证据，再执行零工具分析。Evidence Search 由 Backend 限定 owner、Story 与来源类型；Agent 无法扩大查询范围。检索只补充证据，不覆盖主人公当前明确纠正，也不改变现有 Proposal、来源引用或 Backend Validator Contract。具体映射见 [SKILL_SCRIPT_MAPPING_v1.0.md](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)。
 
-2026-09-28 NVIDIA SkillEvaluator Tier 3 结果是 Skill v1.0 基线。当前 v1.1 Retrieval Upgrade 保留独立的 19-case eval pack，尚未重跑完整 Tier 3。当前 Task Registry、Backend route、Evidence Search service / gateway、四个 Skill-local wrappers、各 Task 授权上下文及 Observer Backend prefetch 已接入共享路径。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；不据此声称 Live Smoke 已通过。
+2026-09-28 NVIDIA SkillEvaluator Tier 3 结果是 Skill v1.0 基线。当前 v1.1 Retrieval Upgrade 保留独立的 20-case eval pack，尚未重跑完整 Tier 3。当前 Task Registry、Backend route、Evidence Search service / gateway、四个 Skill-local wrappers、各 Task 授权上下文及 Observer Backend prefetch 已接入共享路径。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；不据此声称 Live Smoke 已通过。
 
 `.env.example` 当前默认：
 
