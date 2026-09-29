@@ -237,9 +237,10 @@ test('application and competition evidence share the same sanitizer', () => {
   assert.doesNotMatch(verify, /re\.sub\([^\n]*(?:authorization|nvapi|api[_-]\?key)/i);
 });
 
-test('Spark documentation keeps StepAudio ARM64 compatibility unverified and seed opt-in explicit', () => {
+test('Spark documentation reflects final GB10 ARM64 verification and seed opt-in remains explicit', () => {
   const docs = `${read('README.md')}\n${readFileSync(resolve(repoRoot, 'README.md'), 'utf8')}`;
-  assert.match(docs, /NOT VERIFIED ON DGX SPARK\s*\/\s*ARM64/i);
+  assert.match(docs, /FULL LOCAL VERIFIED\s*\/\s*OFFLINE CAPABLE/i);
+  assert.doesNotMatch(docs, /NOT VERIFIED ON DGX SPARK\s*\/\s*ARM64/i);
   assert.match(docs, /SPARK_SEED_DEMO_DATA=true/);
   assert.doesNotMatch(docs, /NEMO_RETRIEVER_VECTORDB_URL/);
   const currentDocs = [
@@ -248,8 +249,10 @@ test('Spark documentation keeps StepAudio ARM64 compatibility unverified and see
     'docs/04-nvidia/spark/README.md',
     'docs/04-nvidia/spark/ONE_DAY_SPARK_RUNBOOK_v1.0.md',
     'docs/04-nvidia/spark/SPARK_DEPLOYMENT_AGENT_BRIEF_v1.0.md',
+    'docs/04-nvidia/spark/OFFICIAL_REFERENCE_INDEX_v1.0.md',
   ].map((path) => readFileSync(resolve(repoRoot, path), 'utf8')).join('\n');
-  assert.match(currentDocs, /NOT VERIFIED ON DGX SPARK\s*\/\s*ARM64/i);
+  assert.match(currentDocs, /FULL LOCAL VERIFIED\s*\/\s*OFFLINE CAPABLE/i);
+  assert.doesNotMatch(currentDocs, /NOT (?:TESTED|VERIFIED) ON DGX SPARK(?:\s*\/\s*ARM64)?/i);
   assert.match(currentDocs, /NEMO_RETRIEVER_BASE_URL/);
 });
 
