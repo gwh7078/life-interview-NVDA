@@ -18,6 +18,7 @@ openclaw-plugin/data/
 *.db-shm
 *.sqlite
 *.sqlite3
+!data/life-interview-sample.db
 *.wav
 *.aiff
 runtime/

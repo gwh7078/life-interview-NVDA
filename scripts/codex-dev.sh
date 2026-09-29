@@ -13,6 +13,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 fi
 
 database_path="./data/codex-worktree.db"
+bash scripts/install-sample-database.sh "$database_path"
 DATABASE_PATH="$database_path" bash scripts/codex-node.sh npm run db:migrate
 
 exec bash scripts/codex-node.sh env \

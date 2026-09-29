@@ -94,6 +94,8 @@ except Exception:
     raise
 print(f"Preserved existing database at {source}; copied it to {target}.")
 PY
+elif [[ ! -e "$DATABASE_PATH" && ! -e "$DATABASE_PATH-wal" && ! -e "$DATABASE_PATH-shm" ]]; then
+  bash "$REPO_ROOT/scripts/install-sample-database.sh" "$DATABASE_PATH"
 elif [[ -f "$legacy_database" && -f "$DATABASE_PATH" && "$legacy_database" != "$DATABASE_PATH" ]]; then
   warn "Both checkout-local and persistent databases exist; keeping both and using DATABASE_PATH."
 fi

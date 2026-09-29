@@ -82,8 +82,14 @@ fi
 
 database_path="data/codex-worktree.db"
 if [[ ! -e "$database_path" && ! -e "$database_path-wal" && ! -e "$database_path-shm" ]]; then
-  echo "为这个 Worktree 创建并填充独立的 SQLite 开发数据库……"
-  DATABASE_PATH="./$database_path" bash scripts/codex-node.sh npm run db:setup
+  if [[ -f data/life-interview-sample.db ]]; then
+    echo "为这个 Worktree 安装独立的样例 SQLite 数据库……"
+    bash scripts/install-sample-database.sh "$database_path"
+    DATABASE_PATH="./$database_path" bash scripts/codex-node.sh npm run db:migrate
+  else
+    echo "样例数据库不存在，使用内置数据初始化这个 Worktree……"
+    DATABASE_PATH="./$database_path" bash scripts/codex-node.sh npm run db:setup
+  fi
 else
   echo "发现现有 Worktree 数据库，保留原样，不自动迁移或重新填充。"
 fi

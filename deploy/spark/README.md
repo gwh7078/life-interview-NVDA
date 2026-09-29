@@ -193,9 +193,14 @@ reuses the Text model already served at `TEXT_MODEL_BASE_URL`; setup does not
 start another model server. `TEXT_MODEL_API_KEY` must be empty for Spark; a
 non-empty value fails setup. `REALTIME_COACH_API_KEY` remains optional.
 
-Demo data is optional. The default `SPARK_SEED_DEMO_DATA=false` leaves a new
-database without sample people or stories. Set it to `true` in `.env` only when
-you want the demo seed.
+When `DATABASE_PATH` does not exist, setup copies the tracked
+`data/life-interview-sample.db` into the persistent data directory. Existing
+databases and a legacy checkout database take precedence and are preserved.
+The template includes the sample stories and interviews; the demo login phone
+is `13800000000`. `SPARK_SEED_DEMO_DATA=false` remains the default; set it to
+`true` only to run the additional built-in seed step. The tracked sample is
+published with this repository; only keep data in it that is authorized for
+public sample use.
 
 References: [NemoClaw Quickstart with OpenClaw](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart),
 [reuse an existing vLLM server](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/inference/local-inference/set-up-vllm),
