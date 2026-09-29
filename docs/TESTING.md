@@ -130,7 +130,7 @@ npm run test:agent:nat:eval
 - commit / baseline；
 - 环境；
 - 真实还是 deterministic；
-- PASS / FAIL / NOT TESTED；
+- PASS / FAIL；
 - 后续是否被 superseded。
 
 不要再把旧测试报告放进 Current 推荐阅读路径。
