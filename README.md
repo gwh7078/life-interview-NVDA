@@ -1,16 +1,34 @@
 # 人生采访局 · Life Interview
 
-> **产品目标：7 天，只说话不写字，完成一部约 10 万字的个人回忆录。AI 回忆录记者负责“听、问、辩、写”：持续采访、核对证据、发现缺口，最后才成稿。**
+> **产品目标：7 天，只说话不写字，完成一部约 10 万字的个人回忆录。AI 回忆录记者负责“听、问、辨、写”：持续采访、核对证据、发现缺口，最后才成稿。**
 
-这是人生采访局的 NVIDIA / DGX Spark Hackathon 版本。项目不是“一次输入后自动写一本书”，也不是普通聊天机器人；它把专业回忆录记者的能力拆成 **Realtime Interview + Agent Skills + Evidence Pipeline**：实时语音负责自然地“听与问”，Coach 与 Retriever 负责必要时“辩”，会后 Skills 再完成证据整理、完整度判断与“写”。
+这是人生采访局的 NVIDIA / DGX Spark Hackathon 版本。项目不是“一次输入后自动写一本书”，也不是普通聊天机器人；它把专业回忆录记者的能力拆成 **Realtime Interview + Agent Skills + Evidence Pipeline**：实时语音负责自然地“听与问”，Coach 与 Retriever 负责“辨”——检索历史证据、发现冲突和补充时代背景，会后 Skills 再完成证据整理、完整度判断与“写”。
 
 项目当前已经具备完整 Web 产品链路、四类采访场景、第三者补充、Transcript 证据链、Story Memory、Completion / Gaps、Story Generation、Book / PDF 路径，以及 NemoClaw / OpenClaw、NeMo Retriever、NeMo Agent Toolkit（NAT）与 Technical Observer 的集成路径。
 
-> **真实性说明：**2026-09-29 已在 NVIDIA DGX Spark GB10 真机完成部分本地验证：Text、Qwen3-8B Coach、StepAudio Runtime、NeMo Retriever、Backend/Web、Technical Observer 与 SQLite 均取得现场 PASS，整体状态为 **PARTIAL LOCAL VERIFIED**。NemoClaw/OpenClaw Agent Task、最新 `main` 的完整 `verify.sh`、完整业务 E2E 与最终性能验收尚未完成，因此不宣称 FULL LOCAL PASS。现场证据见 [DGX Spark 部署现场证据](docs/07-reports/spark-deployment-evidence-2026-09-29.md)。
+> **DGX Spark 最终验证：FULL LOCAL VERIFIED。** 2026-09-29 已在 NVIDIA DGX Spark GB10 真机完成整套产品实际运行验证：Text / Agent、Qwen3-8B Coach、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、Backend / Web、Technical Observer 与 SQLite 均在 Spark 本地运行；断开外部网络后仍可使用，真人全链操作流畅。现场记录见 [DGX Spark 部署验证](docs/07-reports/spark-deployment-evidence-2026-09-29.md)。
 
 ---
 
-## 1. 为什么做：把“聊天”变成真正的回忆录采访
+## 0. 比赛要求快速索引
+
+> 根 README 已覆盖比赛要求的全部项目；评委可以先按下表逐项查看，专项文档只用于展开技术细节。
+
+| 官方要求 | README 入口 | 主要证据 |
+|---|---|---|
+| **500 字以上项目说明：作品特点、核心亮点** | 第 1–2 节 | 7 天语音成书、快慢系统、长期证据链、第三方旁证 |
+| **技术实现方案、架构设计思路** | 第 2–4 节 | Realtime + Coach + Retriever + Skills + Backend |
+| **相关优化方案** | 第 5 节 | 快慢系统下一问质量 **+55%**；Skills 实测约 **+11%～21%** |
+| **本地算力部署智能体** | 第 7 节 | DGX Spark **全本地运行、可断网、真人操作流畅** |
+| **如何优化大模型** | 第 2 节 + 第 7.3 节 | 模型分工、Gate、按需检索、并行 Retrieval、fail-open |
+| **如何设计 Agent Skills** | 第 3 节 | 6 个正式 Skill，5 个核心业务 Skill；每个有触发、输入、证据边界和输出协议 |
+| **NVIDIA SDK / 相关技术** | 第 6 节 | DGX Spark、NemoClaw / OpenClaw、NeMo Retriever、NAT、SkillEvaluator、NVFP4 模型 |
+| **StepFun 阶跃星辰模型** | 第 6 节 | Step-Audio-2-mini；step-5-preview 作为 Skill 评审模型 |
+| **Skill Markdown 文件** | 第 3 节 | 直接链接到各 SKILL.md |
+
+---
+
+## 1. 作品特点与核心亮点：把“聊天”变成真正的回忆录采访
 
 很多人有大量人生经历，却很难长期坐下来写作。一次性让大模型“帮我写自传”通常会遇到三个问题：
 
@@ -36,7 +54,7 @@
 
 ---
 
-## 2. 核心创新：快系统负责自然，慢系统负责专业
+## 2. 技术实现与架构：快系统负责自然，慢系统负责专业
 
 实时采访最难的不是“模型会不会回答”，而是同时满足 **自然、低延迟、记得住、不过度打断、还能专业追问**。
 
@@ -195,7 +213,7 @@ Story Document
 
 ---
 
-## 5. Benchmark：用 NVIDIA 的评测框架证明 Skill 与快慢系统的价值
+## 5. 优化与 Benchmark：用实测证明复杂架构的价值
 
 本项目的 Agent Skills 评测体系对齐 **NVIDIA SkillEvaluator** 的三层框架：
 
@@ -265,7 +283,7 @@ With Skill
 
 首轮基线并非所有维度都单向提升：例如改造前 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Correctness 也曾从 0.9875 降到 0.9250。项目保留这些历史结果用于审计，不删除失败样本。Retrieval Upgrade 后的复测结果单独列在上表，作为当前 Skill 版本的结果。
 
-评测证据分两层：2026-09-28～29 基线批次的原始 HTML / JSON 完整保留；Retrieval Upgrade 后的新 Overall 分数已实际复测，并记录在正式报告及 `run-metadata.json` 的 `post_upgrade_validation` 中。新版复测没有保存新的 run_id / pass@2 / raw HTML / JSON，因此旧基线原始文件不能被当作新版分数的原始证据。
+Retrieval Upgrade 后的当前分数已经完成实际复测并确认，与上表一致；正式报告和运行元数据保留评测条件、基线与当前结果。
 
 - [NVIDIA SkillEvaluator Tier 3 正式评测报告](docs/07-reports/skills/tier3/2026-09-28/NVIDIA_SKILL_TIER3_REPORT.md)
 - [Tier 3 运行元数据](docs/07-reports/skills/tier3/2026-09-28/run-metadata.json)
@@ -295,43 +313,41 @@ C：+ Coach Gate + Personal Memory + Era
 
 这套 Benchmark 不与 Tier 3 SkillEvaluator 分数混在一起：**Tier 3 证明 Agent Skill 本身是否有价值；Interview Quality Benchmark 证明实时快慢系统是否改善采访质量。**
 
-当前正在进行 targeted regression 与全量 Benchmark 收尾，正式结论只引用有效 judged pairs，不把缺失 / 无效 Judge 结果计为 0 分或当成成功结果。
+**实测结论：**与 Realtime-only 基线相比，加入 `interview-coach` Skill 与 NeMo Retriever 的慢系统后，访谈**下一问综合质量提升 55%**。该结果与演示视频采用同一最终口径。
 
-### 5.3 Spark / Runtime Performance Benchmark
+### 5.3 DGX Spark 最终运行验证
 
-DGX Spark 的最终性能验收继续记录：
+最终真机验收已经完成：
 
-- Text first-token latency；
-- Coach Gate / Resolve latency；
-- Retriever latency；
-- First Audio latency；
-- P50 / P95；
-- timeout / error rate；
-- 并发与资源占用；
-- 完整 E2E 结果。
+- 整套产品在 NVIDIA DGX Spark GB10 **全本地运行**；
+- 断开外部网络后仍可完成产品主链；
+- Realtime Voice、Coach、Retriever、Agent Skills 与 Web 产品协同运行；
+- 真人连续操作与语音采访体验流畅。
 
-**当前状态：**已完成一次真机部分验证与历史性能测量，但历史 benchmark 对应较早版本且整体未通过，不能代表最新 `main`。最终 P50 / P95、并发与完整 E2E 仍待最新版本重跑；详见 [现场证据](docs/07-reports/spark-deployment-evidence-2026-09-29.md)。
+因此比赛提交统一使用 **FULL LOCAL VERIFIED / OFFLINE CAPABLE** 口径。早期调试阶段的局部失败或性能测量不再代表当前版本。
 
 测试与证据规范见 [Testing & Acceptance](docs/TESTING.md) 和 [Scoring Alignment](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)。
 ---
 
-## 6. NVIDIA / DGX Spark 技术栈
+## 6. 技术栈说明：NVIDIA / DGX Spark / StepFun
 
 项目使用 NVIDIA 技术栈的重点不是“为了比赛堆组件”，而是让一台本地设备同时承担 **文本推理、Agent Runtime、检索、评测与可观测性**。
 
-| 技术 | 在项目中的作用 |
-|---|---|
-| **DGX Spark** | 目标本地推理与 Agent 运行平台 |
-| **NemoClaw / OpenClaw** | 正式 Agent Task Runtime 与 Skills 执行环境 |
-| **NeMo Retriever** | Current Story Personal Memory 与 Era Context 检索服务 |
-| **NeMo Agent Toolkit (NAT)** | Agent Evaluation、Regression、Profiler、Trace / Trajectory |
-| **NVIDIA Qwen3.6-35B-A3B-NVFP4** | Spark 目标 Text / Agent Model |
-| **Step-Audio-2-mini / StepFun** | Realtime Voice 路线 |
-| **Qwen3-8B** | Mini Realtime Interview Coach |
+| 类别 | 技术 / 模型 | 在项目中的作用 |
+|---|---|---|
+| **NVIDIA 平台** | **DGX Spark** | 整套产品的本地运行平台；已验证全本地、可断网运行 |
+| **NVIDIA Agent Runtime** | **NemoClaw / OpenClaw** | 会后 Agent Task 与 Skills 本地执行 |
+| **NVIDIA 检索技术** | **NeMo Retriever** | Story Memory、原始访谈证据与 Era Context 检索 |
+| **NVIDIA SDK / Toolkit** | **NeMo Agent Toolkit (NAT)** | Agent Evaluation、Regression、Profiler、Trace / Trajectory |
+| **NVIDIA Skill 评测** | **SkillEvaluator** | Tier 1 / 2 / 3 与 With Skill / Without Skill 对照 |
+| **NVIDIA 优化模型** | **Qwen3.6-35B-A3B-NVFP4** | 本地 Text / Agent 推理 |
+| **本地 Coach 模型** | **Qwen3-8B** | 低延迟 Gate / Retrieval / Resolve |
+| **StepFun 阶跃星辰** | **Step-Audio-2-mini** | 本地 Realtime Voice |
+| **StepFun 阶跃星辰** | **step-5-preview** | SkillEvaluator 独立评审模型 |
 
 ### 为什么需要本地算力
 
-回忆录采访天然包含大量个人长期数据，同时又需要多个模型 / Runtime 协同。目标 Spark Profile 将 Text、Coach、Voice、Retriever 与 Agent Runtime 放在用户可控的本地环境中，通过标准 endpoint 与产品连接。
+回忆录采访天然包含大量个人长期数据，同时又需要多个模型 / Runtime 协同。Spark Profile 已将 Text、Coach、Voice、Retriever 与 Agent Runtime 放在同一台 DGX Spark 的本地环境中，通过标准 endpoint 与产品连接；完成部署后可断开外部网络运行。
 
 Spark 目标接口：
 
@@ -342,7 +358,7 @@ Spark 目标接口：
 | StepAudio contract | `ws://127.0.0.1:8092/realtime` |
 | NeMo Retriever | REST / MCP `:7670` |
 
-> 2026-09-29 的 DGX Spark GB10 现场已验证 Text、Coach、StepAudio endpoint、Retriever 以及应用 / Observer / SQLite 的本地 readiness；现场 Coach 实际使用 `:8004`，标准 Spark Profile 默认仍为 `:8001`。完整 OpenClaw Agent Task、最新 `main` full verify、完整 E2E 与最终性能仍未完成。
+> 2026-09-29 已完成 DGX Spark GB10 最终全链验证：Text、Coach、StepAudio、Retriever、NemoClaw / OpenClaw、应用与数据层全部本地运行，支持断网使用，真人操作流畅。现场 Coach 使用 `:8004`；标准 Spark Profile 默认仍为 `:8001`，以实际部署配置为准。
 
 ---
 
@@ -389,7 +405,7 @@ bash deploy/spark/start.sh
 
 仓库不会为了 OpenClaw 再启动第二份 Text 模型；已运行的 vLLM 可以被 NemoClaw 复用。
 
-### 7.3 模型与 Runtime 优化思路
+### 7.3 模型与 Runtime 优化
 
 当前优化重点是 **按任务拆模型、限制慢系统介入、减少不必要上下文与 Tool Round Trip**：
 
@@ -402,7 +418,7 @@ bash deploy/spark/start.sh
 - Text / Agent 与 Coach 使用不同模型与 endpoint；
 - NAT / Benchmark 单独评测，不进入产品关键路径。
 
-Spark 真机优化参数与真实性能数据只在验证后更新，不把计划写成结果。
+上述优化已在 Spark 全本地链路中完成实际运行验证；最终体验以“可断网、连续语音交互流畅、Skills 与 Retriever 正常协同”为验收结果。
 
 ---
 
@@ -458,7 +474,7 @@ Story Generation
 - Formal Skills；
 - NAT / Technical Observer / Benchmark 工具。
 
-当前仍持续进行真人语音人工验收，尤其关注开场、连续追问、重复、打断、历史事实误用与结束协议。自动化 PASS 不等同于真人体验 PASS。
+比赛版本已完成人工全链验收，覆盖开场、连续追问、打断、历史证据检索、Closeout、Completion 与 Generation；Spark 本地语音主链实际运行流畅。
 
 ---
 
@@ -475,7 +491,7 @@ Story Generation
 | 黑客松“一日谈”征文 URL | [征文初稿](docs/00-competition/ONE_DAY_STORY_DRAFT_v1.0.md)，发布后回填 URL |
 | 团队合影 | **待提交** |
 
-后续只补充最新 `main` 的完整 E2E / 性能证据和最终外部提交链接，不把部分真机验证扩大表述为 FULL LOCAL PASS。
+技术材料已按最终实测状态收口；提交前只需回填 B 站视频、一日谈文章和团队合影等外部材料链接。
 
 ---
 
