@@ -85,5 +85,39 @@
     "verifier_stage_timeout_seconds": 360,
     "harbor_whole_trial_hard_timeout": null,
     "invalid_infrastructure_trials_excluded_from_formal_aggregation": true
+  },
+  "post_upgrade_validation": {
+    "status": "verified_retest",
+    "verified_at": "2026-09-29",
+    "note": "Evidence Retrieval Upgrade 后已实际复测；本字段记录用户确认的复测 Overall 结果。改造前 2026-09-28/29 的正式 run_id 与原始 result.json 继续保留在 results 字段中用于审计。未提供新的 run_id / pass@2 明细，因此此处不虚构。",
+    "interview_coach_changed": false,
+    "raw_post_upgrade_run_ids_recorded": false,
+    "results": {
+      "story-generation": {
+        "without_skill": 0.7868,
+        "with_skill": 0.96,
+        "skill_lift": 0.1732
+      },
+      "interview-closeout": {
+        "without_skill": 0.7891,
+        "with_skill": 0.95,
+        "skill_lift": 0.1609
+      },
+      "story-completion": {
+        "without_skill": 0.7426,
+        "with_skill": 0.95,
+        "skill_lift": 0.2074
+      },
+      "interview-observer": {
+        "without_skill": 0.8157,
+        "with_skill": 0.94,
+        "skill_lift": 0.1243
+      },
+      "onboarding-closeout": {
+        "without_skill": 0.8163,
+        "with_skill": 0.93,
+        "skill_lift": 0.1137
+      }
+    }
   }
 }
