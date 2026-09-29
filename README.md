@@ -122,6 +122,43 @@ Story Document / Book
 
 固定业务流程由 Backend 决定；Agent 输出先形成 Proposal，再经过 Schema / Evidence / Domain Validation 后才 Apply。**Agent 不直接写业务 SQLite。**
 
+### Interview Scenarios 与 Skill modes
+
+产品层先区分四种 **Interview Scenarios**：
+
+```text
+Interview Scenarios
+├─ Onboarding
+├─ Story Create
+├─ Story Continue
+└─ External Contributor
+        ↓
+Backend / Task Router
+        ↓
+Agent Skills System
+```
+
+这里的 **Scenario** 是产品采访场景；**mode** 是某个 Skill 内部的执行分支。Mode 是本项目的 Runtime / Task 路由概念，不是 Agent Skills frontmatter 的标准字段。
+
+例如：
+
+```text
+Interview Coach
+└─ supported scenarios:
+   onboarding / story_create / story_continue / external_contributor
+
+Interview Closeout
+├─ story_create    → references/story-create.md
+├─ story_continue  → references/story-continue.md
+└─ contributor     → references/contributor.md
+
+Story Generation
+├─ initial
+└─ revision
+```
+
+因此第三方采访与主人公 Story Continue 可以复用同一个 `interview-closeout` Skill 的共享证据规则，但会进入**不同的 mode-specific Prompt / Reference、不同的检索权限和不同的输出 Contract**。其中 `contributor` 保持独立旁证链，不能读取或修改主人公私密 Story Memory / owner Transcript。
+
 Skill 设计审查与比赛证据见：
 
 - [NVIDIA Skill Audit](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)

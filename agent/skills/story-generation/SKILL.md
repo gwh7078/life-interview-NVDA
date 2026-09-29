@@ -18,6 +18,15 @@ metadata:
 
 规则优先级：事实边界与明确纠正 > 当前模式结构 > 用户写作要求 > 所选文风 > 文风参考。
 
+## Supported modes
+
+This Skill has two Skill-local generation modes:
+
+- `initial`
+- `revision`
+
+These are generation execution modes, not product Interview Scenarios. `revision` additionally loads `references/revision.md`.
+
 ## 证据与事实边界
 
 - 主人公当前明确纠正优先于所有旧证据。其他事实证据层级为主人公 Transcript > Story Summary > Profile / Life Stage；低优先级材料不得推翻高优先级材料。首次成稿时，Story Summary 还提供叙事骨架，Profile / Life Stage 提供背景。修改时，`selected_document` 是唯一叙事与结构骨架，事实仍须由当前证据支持。

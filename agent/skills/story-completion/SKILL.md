@@ -16,6 +16,12 @@ metadata:
 
 仅在当前上下文不足以核对一个**候选 blocking gap**是否已被回答时，才使用有界证据检索。Use only for story.completion.
 
+## Supported modes
+
+Single task; no internal mode branch:
+
+- `story.completion`
+
 ## Input
 
 The runtime provides:

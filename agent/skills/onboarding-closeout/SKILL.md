@@ -14,6 +14,12 @@ metadata:
 
 首次建档采访结束后，从结构化输入中提取有来源的候选档案、人生阶段和待整理 Story。Use only for onboarding.closeout.
 
+## Supported modes
+
+Single task; no internal mode branch:
+
+- `onboarding.closeout`
+
 ## Input
 
 The runtime provides structured Task Context containing:

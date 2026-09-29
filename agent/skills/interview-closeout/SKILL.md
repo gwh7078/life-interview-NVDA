@@ -14,17 +14,21 @@ metadata:
 
 整理已结束的 Story 或外部贡献者采访，并只提交当前模式对应的 Proposal。Use only for interview.closeout.
 
-The Task Context contains one mode:
+## Supported modes
+
+This Skill has three **Skill-local execution modes**. They share the closeout capability and safety rules, but each mode loads a different scenario reference, evidence permission set, and output contract.
 
 - `story_create`
 - `story_continue`
 - `contributor`
 
-Read the matching reference:
+Mode-specific Prompt / Reference routing:
 
-- `references/story-create.md`
-- `references/story-continue.md`
-- `references/contributor.md`
+- `story_create` → `references/story-create.md`
+- `story_continue` → `references/story-continue.md`
+- `contributor` → `references/contributor.md`
+
+In particular, `contributor` is not the same Prompt or evidence lane as `story_continue`: it maintains an independent Contributor summary and must not access or mutate the protagonist's private Story Memory / owner Transcript.
 
 ## Shared rules
 

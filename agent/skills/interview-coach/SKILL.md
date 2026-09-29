@@ -22,12 +22,14 @@ The Skill does not answer the user directly. It decides whether the next voice-m
 
 ## Supported modes
 
-- onboarding
-- story_create
-- story_continue
-- external_contributor
+These entries are product **Interview Scenarios** supported by this Skill; they are project routing concepts, not Agent Skills frontmatter fields.
 
-Behavior differs by mode.
+- `onboarding`
+- `story_create`
+- `story_continue`
+- `external_contributor`
+
+Behavior differs by scenario.
 
 ### Onboarding
 

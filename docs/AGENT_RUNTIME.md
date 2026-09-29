@@ -23,6 +23,31 @@ story.generation
 
 固定业务入口由 Backend 决定，不增加总控 Agent 重新判断已知路由。
 
+### 1.1 Interview Scenario 与 Skill mode
+
+产品层的 Interview Scenario 与 Skill 内部 mode 是两层概念：
+
+```text
+Product Interview Scenarios
+├─ onboarding
+├─ story_create
+├─ story_continue
+└─ external_contributor
+        ↓
+Backend / Task Router
+        ↓
+Skill + Skill-local mode
+```
+
+- `interview-coach` 支持四种产品 Interview Scenario，并按场景应用不同的实时约束。
+- `interview-closeout` 有三个 Skill-local mode：`story_create`、`story_continue`、`contributor`。三者共享 closeout 安全规则，但分别加载不同 reference、Evidence Search 权限和输出 Contract。
+- `interview-observer` 是单任务 `interview.context_hint`，无内部 mode 分支。
+- `onboarding-closeout` 是单任务 `onboarding.closeout`，无内部 mode 分支。
+- `story-completion` 是单任务 `story.completion`，无内部 mode 分支。
+- `story-generation` 有 `initial` / `revision` 两个 Skill-local mode。
+
+Mode 是项目 Runtime / Task 路由概念，不写成 Agent Skills frontmatter 数组字段。
+
 ## 2. Skill 与执行 Runtime
 
 当前正式产品 Skill：
