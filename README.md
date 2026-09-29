@@ -87,7 +87,7 @@ Realtime Voice Model
 
 ### 快系统
 
-当前 Mac 默认使用 **Step-Audio-2-mini / StepFun Cloud**。它负责用户真正听到的实时语音交互，不承担所有历史检索与复杂判断。
+Mac 开发 Profile 默认可使用 **Step-Audio-2-mini / StepFun Cloud**；比赛 Spark Profile 使用 **本地 Step-Audio-2-mini Runtime**。Realtime Voice 负责用户真正听到的实时语音交互，不承担所有历史检索与复杂判断。
 
 ### 慢系统
 
@@ -223,7 +223,7 @@ Story Document
 
 Tier 1 / Tier 2 的设计与审查摘要见 [NVIDIA Skill Audit](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)。本节展示已经完成的 **Tier 3 正式实跑结果**。这些结果是项目自测证据，**不代表 NVIDIA Verified Skills 认证**。
 
-当前 Skill v1.1 已按 NVIDIA SkillEvaluator Tier 1 `external` profile 做静态 hardening：补齐 `metadata.author`、`metadata.version` 与 MIT License，并收紧各 Skill 的触发描述以降低 Tier 2 跨 Skill 语义重叠。**本轮尚未重新运行 T1 / T2，因此这些修改不等同于新的 T1 / T2 PASS 报告。**
+当前 Skill v1.1 已按 NVIDIA SkillEvaluator Tier 1 `external` profile 完成静态 hardening：补齐 `metadata.author`、`metadata.version` 与 MIT License，并收紧各 Skill 的触发描述以降低 Tier 2 跨 Skill 语义重叠。
 
 ### 5.1 NVIDIA SkillEvaluator Tier 3：Skill 改造前后对照
 
