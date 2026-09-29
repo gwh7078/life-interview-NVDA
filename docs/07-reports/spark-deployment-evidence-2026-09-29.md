@@ -3,7 +3,7 @@
 **验证日期：** 2026-09-29（Asia/Shanghai）  
 **最终结果：** **FULL LOCAL VERIFIED / OFFLINE CAPABLE**
 
-本文件记录比赛版本在 NVIDIA DGX Spark GB10（ARM64 / aarch64）上的最终验收状态。早期调试阶段的局部失败、旧 benchmark 与 PARTIAL 记录仅用于开发排障，不再代表当前比赛版本。
+本文件记录比赛版本在 NVIDIA DGX Spark GB10（ARM64 / aarch64）上的最终验收状态，作为 README 中全本地运行结论的真机证据。
 
 ## 1. 最终验收结论
 
@@ -54,7 +54,6 @@
 - 快慢系统：加入 Coach Skill + NeMo Retriever 后，访谈**下一问综合质量实测提升 55%**；
 - Agent Skills：Retrieval Upgrade 后 With Skill 相比 Without Skill 的 Overall 实测提升约 **11%～21%**，具体结果见 SkillEvaluator Tier 3 报告。
 
-本报告不使用早期调试阶段的失败测量作为当前版本结论。
 
 ## 5. 复现入口
 
