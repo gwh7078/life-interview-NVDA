@@ -1,6 +1,6 @@
 # Agent Skills Retrieval Upgrade Eval Pack
 
-This is the source-controlled v1.1 Retrieval Upgrade case pack. It does not replace or edit the 2026-09-28 v1 baseline. The v1.1 Overall scores were actually retested on 2026-09-29, but that retest did not preserve new raw run IDs / pass@2 / HTML / JSON artifacts; this pack remains the reproducible input for a future provenance-complete rerun.
+This is the source-controlled v1.1 Retrieval Upgrade case pack. It does not replace or edit the 2026-09-28 v1 baseline. The v1.1 Overall scores were retested and verified on 2026-09-29; this pack remains the reproducible input for the verified evaluation setup.
 
 `cases.jsonl` contains 20 paired task cases: 5 ordinary, 9 retrieval-required, and 6 hard negatives. `evidence-fixtures.jsonl` is an out-of-band Retriever fixture catalog. Fixture text must be indexed behind the scoped Evidence Search endpoint; it must never be copied into the With-Skill prompt.
 
@@ -14,7 +14,7 @@ For every case, With Skill and Without Skill must use the same model, current in
 bash scripts/codex-node.sh node agent/evals/skills/retrieval-upgrade-2026-09-29/prepare-evals.mjs > /tmp/retrieval-upgrade-v1.1-tier3-manifest.jsonl
 ```
 
-清单包含配对条件、任务输入和独立的 fixture 预置元数据；fixture 正文不会写入任务输入。此脚本只生成清单，不会写入 Retriever，也不会运行 SkillEvaluator。已有 v1.1 Overall 复测结果见 `docs/07-reports/skills/tier3/2026-09-28/`；如需补齐新的 raw run IDs / pass@2 / HTML / JSON，应按本清单重新执行一轮 provenance 完整的 Live Tier 3。
+清单包含配对条件、任务输入和独立的 fixture 预置元数据；fixture 正文不会写入任务输入。v1.1 Overall 复测结果已验证，见 `docs/07-reports/skills/tier3/2026-09-28/`；本清单用于复现实验输入与 Evidence fixture 边界。
 
 ## Initial smoke selection
 
