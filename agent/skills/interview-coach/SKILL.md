@@ -1,8 +1,10 @@
 ---
 name: interview-coach
-version: 1.0.0
 description: Guide the next turn of a live memoir interview. Use after final user turns in onboarding, Story, or contributor modes; not for closeout or story writing.
+license: MIT
 metadata:
+  author: "Weihang <27177239+gwh7078@users.noreply.github.com>"
+  version: "1.0.0"
   tags: [life-interview, realtime, coaching, retrieval, follow-up]
 ---
 

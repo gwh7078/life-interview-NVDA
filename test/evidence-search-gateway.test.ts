@@ -298,6 +298,23 @@ test('contributor search is limited to the same share sessions and never returns
   assert.equal(result.evidence[0]?.source_type, 'contributor_transcript');
   assert.match(result.evidence[0]?.text ?? '', /Contributor/u);
   assert.equal(result.evidence.some((item) => /user_id:|session_id:|story_id:/u.test(item.text)), false);
+  assert.equal(shares.revokeForUser(seedIds.user, share.shareId), true);
+  received.length = 0;
+  const revokedContributor = await gateway.search(token(tokens, {
+    ownerId: seedIds.user,
+    storyId: seedIds.firstJob,
+    shareId: share.shareId,
+    currentSessionId: 'current-contributor-session',
+    allowedSourceTypes: ['contributor_transcript'],
+    task: 'interview.closeout:contributor',
+    skill: 'interview-closeout',
+  }), {
+    query: '那晚的感受',
+    source_types: ['contributor_transcript'],
+  });
+  assert.deepEqual(received, []);
+  assert.equal(revokedContributor.evidence.length, 0);
+
   const generation = await gateway.search(token(tokens, {
     ownerId: seedIds.user,
     storyId: seedIds.firstJob,
@@ -310,6 +327,7 @@ test('contributor search is limited to the same share sessions and never returns
   });
   assert.equal(generation.evidence.length, 3);
   assert.ok(generation.evidence.every((item) => item.source_type === 'contributor_transcript'));
+  assert.deepEqual(received.sort(), sessionIds.slice().sort());
 });
 
 test('structured profile, Life Stage, Story Memory, Summary, and related Story search stays owner scoped', async () => {

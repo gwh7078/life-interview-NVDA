@@ -37,7 +37,7 @@ export interface AgentTaskDefinition {
   taskType: AgentTaskType;
   mode?: InterviewCloseoutMode;
   skill: string;
-  skillVersion: 'v1';
+  skillVersion: 'v1' | 'v1.1';
   modelProfile: AgentModelProfile;
   inputSchema: ZodType;
   outputSchema: ZodType;
@@ -108,7 +108,7 @@ const definitions: AgentTaskDefinition[] = [
   {
     taskType: 'onboarding.closeout',
     skill: 'onboarding-closeout',
-    skillVersion: 'v1',
+    skillVersion: 'v1.1',
     modelProfile: 'reasoning',
     inputSchema: onboardingCloseoutTaskInputSchema,
     outputSchema: onboardingCloseoutTaskOutputSchema,
@@ -120,7 +120,7 @@ const definitions: AgentTaskDefinition[] = [
     taskType: 'interview.closeout',
     mode,
     skill: 'interview-closeout',
-    skillVersion: 'v1',
+    skillVersion: 'v1.1',
     modelProfile: 'reasoning',
     inputSchema: interviewCloseoutInputSchemas[mode],
     outputSchema: mode === 'contributor'
@@ -137,7 +137,7 @@ const definitions: AgentTaskDefinition[] = [
   {
     taskType: 'interview.context_hint',
     skill: 'interview-observer',
-    skillVersion: 'v1',
+    skillVersion: 'v1.1',
     modelProfile: 'realtime-context',
     inputSchema: interviewContextHintTaskInputSchema,
     outputSchema: interviewContextHintTaskOutputSchema,
@@ -148,7 +148,7 @@ const definitions: AgentTaskDefinition[] = [
   {
     taskType: 'story.completion',
     skill: 'story-completion',
-    skillVersion: 'v1',
+    skillVersion: 'v1.1',
     modelProfile: 'reasoning-fast',
     inputSchema: storyCompletionTaskInputSchema,
     outputSchema: storyCompletionTaskOutputSchema,
@@ -159,7 +159,7 @@ const definitions: AgentTaskDefinition[] = [
   {
     taskType: 'story.generation',
     skill: 'story-generation',
-    skillVersion: 'v1',
+    skillVersion: 'v1.1',
     modelProfile: 'writing',
     inputSchema: storyGenerationTaskInputSchema,
     outputSchema: storyGenerationTaskOutputSchema,

@@ -1,6 +1,11 @@
 ---
 name: story-context-inspector
-description: Read one owner-scoped Story through the Life Interview Agent Tool API and report its title and gap count. Phase 1 smoke skill; read-only.
+description: Read one owner-scoped Story through the Life Interview Agent Tool API and report its title and gap count. Phase 1 diagnostic smoke skill; read-only.
+license: MIT
+metadata:
+  author: "Weihang <27177239+gwh7078@users.noreply.github.com>"
+  version: "1.0.0"
+  tags: [life-interview, diagnostics, story, read-only, smoke]
 ---
 
 # Story Context Inspector

@@ -270,7 +270,10 @@ function sessionIdsForContributor(
   databasePath: string | undefined,
   scope: SearchScope,
 ): string[] {
-  if (!scope.storyId) return [];
+  const isContributorInterview = scope.task === 'interview.closeout:contributor';
+  if (!scope.storyId
+    || (isContributorInterview && !scope.shareId)
+    || (!isContributorInterview && scope.task !== 'story.generation')) return [];
   const connection = createDatabase(databasePath);
   try {
     return (connection.sqlite.prepare(`
@@ -285,7 +288,8 @@ function sessionIdsForContributor(
         AND (? = '' OR sessions.source_share_id = ?)
         AND sessions.source_type = 'external_contributor'
         AND sessions.session_id <> ?
-        AND shares.status = 'active'
+        AND (? = 0 OR shares.status = 'active')
+        AND sessions.status IN ('ended', 'completed')
       ORDER BY sessions.ended_at DESC, sessions.created_at DESC
       LIMIT ?
     `).all(
@@ -294,6 +298,7 @@ function sessionIdsForContributor(
       scope.shareId ?? '',
       scope.shareId ?? '',
       scope.currentSessionId ?? '',
+      isContributorInterview ? 1 : 0,
       MAX_CONTRIBUTOR_SESSIONS,
     ) as Array<{ sessionId: string }>).map((row) => row.sessionId);
   } finally {
