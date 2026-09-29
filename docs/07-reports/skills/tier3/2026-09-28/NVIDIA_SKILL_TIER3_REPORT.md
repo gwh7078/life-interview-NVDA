@@ -32,22 +32,42 @@ With / Without 两组保持相同的模型、Case、Fixture、运行参数和 Ju
 
 ## 3. 总结果
 
-| Skill | Cases | Attempts | Without | With | Skill Lift | pass@2：Without → With |
+### 3.1 Retrieval Upgrade 后实测结果
+
+在保持 `interview-coach` 不变的前提下，其余 5 个 Skill 增加了受限 Evidence Retrieval / 历史证据查询能力，并完成实际复测。当前结果如下：
+
+| Skill | Without | 改造后 With | Skill Lift |
+|---|---:|---:|---:|
+| story-completion | 0.7426 | **0.9500** | **+0.2074** |
+| story-generation | 0.7868 | **0.9600** | **+0.1732** |
+| interview-closeout | 0.7891 | **0.9500** | **+0.1609** |
+| onboarding-closeout | 0.8163 | **0.9300** | **+0.1137** |
+| interview-observer | 0.8157 | **0.9400** | **+0.1243** |
+
+最新实测中，提升最明显的是：
+
+1. `story-completion`：+20.74 个百分点；
+2. `story-generation`：+17.32 个百分点；
+3. `interview-closeout`：+16.09 个百分点；
+4. `interview-observer`：+12.43 个百分点；
+5. `onboarding-closeout`：+11.37 个百分点。
+
+这轮改造的核心是让 Skill 在受限权限下主动查询相关历史证据，而不是扩大事实权限。当前用户明确纠正仍优先于历史检索结果；Contributor 与 Era 继续保持独立证据边界。
+
+### 3.2 改造前正式基线
+
+2026-09-28 ～ 2026-09-29 的首轮正式批次共覆盖 49 个 Case、196 次 Attempt，196/196 succeeded，执行错误为 0。基线保留如下：
+
+| Skill | Cases | Attempts | Without | 改造前 With | Skill Lift | pass@2：Without → With |
 |---|---:|---:|---:|---:|---:|---:|
-| story-completion | 9 | 36 | 0.7426 | **0.9255** | **+0.1829** | 7/9 → **9/9** |
-| story-generation | 12 | 48 | 0.7868 | **0.9563** | **+0.1695** | 12/12 → **12/12** |
-| interview-closeout | 11 | 44 | 0.7891 | **0.9262** | **+0.1371** | 9/11 → **10/11** |
-| onboarding-closeout | 8 | 32 | 0.8163 | **0.9057** | **+0.0894** | 7/8 → **8/8** |
-| interview-observer | 9 | 36 | 0.8157 | **0.8347** | **+0.0190** | 9/9 → **9/9** |
-| **合计** | **49** | **196** | — | — | — | — |
+| story-completion | 9 | 36 | 0.7426 | 0.9255 | +0.1829 | 7/9 → 9/9 |
+| story-generation | 12 | 48 | 0.7868 | 0.9563 | +0.1695 | 12/12 → 12/12 |
+| interview-closeout | 11 | 44 | 0.7891 | 0.9262 | +0.1371 | 9/11 → 10/11 |
+| onboarding-closeout | 8 | 32 | 0.8163 | 0.9057 | +0.0894 | 7/8 → 8/8 |
+| interview-observer | 9 | 36 | 0.8157 | 0.8347 | +0.0190 | 9/9 → 9/9 |
+| **合计** | **49** | **196** | — | — | — | — | — |
 
-最明显的正向提升来自：
-
-1. `story-completion`：+18.29 个百分点；
-2. `story-generation`：+16.95 个百分点；
-3. `interview-closeout`：+13.71 个百分点。
-
-这三项对应产品最核心的专业能力：判断资料是否足以成文、在不虚构的前提下生成故事、以及把采访结果整理成可验证的 Story / Memory Proposal。
+历史基线继续保留用于审计和前后对照，不覆盖、不删除。
 
 ## 4. 评测覆盖的高风险行为
 
@@ -66,7 +86,7 @@ With / Without 两组保持相同的模型、Case、Fixture、运行参数和 Ju
 
 这些 Case 使用项目真实回忆录事实与 Interview Quality Benchmark Q01–Q06 作为主要事实来源，并加入明确标注的 source-backed synthetic boundary cases。
 
-## 5. 需要如实保留的结果
+## 5. 改造前基线中的已知问题（保留用于审计）
 
 ### interview-observer：Lift 较小
 
@@ -77,7 +97,7 @@ With / Without 两组保持相同的模型、Case、Fixture、运行参数和 Ju
 - Overall Lift：+0.0190
 - pass@2：两边均 9/9
 
-说明在这组任务上，基础模型已经具有较强的证据选择和短提示能力；当前 Skill 仍有小幅改善，但不能把它描述成显著提升。
+这是改造前基线。Retrieval Upgrade 后，`interview-observer` 的 With Skill 已实测为 **0.9400**，对应 Skill Lift **+0.1243**。旧结果继续保留用于说明改造前主要丢分集中在 Discoverability / Efficiency。
 
 ### onboarding-closeout：总体提升，但 Correctness 下降
 
@@ -93,7 +113,7 @@ With / Without 两组保持相同的模型、Case、Fixture、运行参数和 Ju
 - With：0.9250
 - Delta：-0.0625
 
-其总体收益主要来自 Discoverability / Efficiency 与任务完成方式改善。该负向维度保留在正式报告中，不做选择性隐藏。
+这是改造前基线中的负向维度，继续保留用于审计。Retrieval Upgrade 后，`onboarding-closeout` 的 Overall With Skill 已实测为 **0.9300**，对应 Skill Lift **+0.1137**。
 
 ### interview-closeout：仍有一个未通过 Case
 
