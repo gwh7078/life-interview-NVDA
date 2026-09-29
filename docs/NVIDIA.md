@@ -1,6 +1,6 @@
 # NVIDIA / DGX Spark
 
-> 当前 NVIDIA 集成状态，更新于 2026-09-28。DGX Spark 的兼容性、完整端到端和性能尚无真机证据。
+> 当前 NVIDIA 集成状态，更新于 2026-09-29。DGX Spark 已取得部分真机证据，完整端到端和最终性能仍未通过。
 
 ## 1. 项目职责与 Runtime 边界
 
@@ -48,11 +48,14 @@ NeMo Agent Toolkit（NAT）用于 Evaluation、Regression、Profiler、Trace / T
 
 ## 5. DGX Spark 状态
 
-当前统一验收状态：
+当前统一验收状态为 **PARTIAL LOCAL VERIFIED**：
 
-- DGX Spark / GB10 Runtime compatibility：**NOT TESTED ON DGX SPARK**；
-- StepAudio Runtime image / backend on DGX Spark ARM64：**NOT VERIFIED ON DGX SPARK / ARM64**；
-- 应用 + Text / Coach / StepAudio / Retriever / NemoClaw 完整 E2E：**NOT TESTED ON DGX SPARK**；
-- 首 token / 首音、稳定性、资源占用、并发与 P50 / P95：**NOT TESTED ON DGX SPARK**。
+- 2026-09-29 DGX Spark GB10 / ARM64 主机与基础环境：PASS；
+- Text、Qwen3-8B Coach、StepAudio Runtime endpoint、NeMo Retriever：现场 PASS；
+- Backend/Web、Technical Observer、SQLite：现场 PASS；
+- NemoClaw/OpenClaw Agent Task：NOT READY / 未完成；
+- 最新 `main` 的完整 E2E、稳定全双工体验与最终 P50 / P95 / 并发：未完成。
+
+历史 full verify 为 13/15 gates PASS，历史 Spark benchmark 也已有测量，但均对应较早版本且不能代表最新 `main`。详细证据见 [DGX Spark 部署现场证据](07-reports/spark-deployment-evidence-2026-09-29.md)。
 
 NVIDIA 的 Qwen3.6 agent-ready model / Spark recipe 是外部 Runtime 准备参考，不是本项目真机验收结果：[DGX Spark vLLM agent-ready models](https://build.nvidia.com/spark/vllm/agent-ready-models)、[Qwen3.6-35B-A3B recipe](https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B?features=tool_calling%2Creasoning&hardware=dgx_spark_gb10)。StepAudio 模型资料见 [Step-Audio 2](https://github.com/stepfun-ai/Step-Audio2)；Retriever 官方入口见 [NeMo Retriever](https://docs.nvidia.com/nemo/retriever/latest/extraction/getting-started-about/)；硬件指南见 [DGX Spark User Guide](https://docs.nvidia.com/dgx/dgx-spark/)。
