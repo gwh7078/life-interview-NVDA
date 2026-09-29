@@ -165,7 +165,7 @@ macOS 开发 Profile 仍可使用 Step-Audio-2-mini / StepFun Cloud。比赛 Spa
 
 - 每轮固定 Qwen3.5-2B Judge；
 - Independent Memory 作为 Mini 主慢系统；
-- “Retriever 未来再接”；
+- 不接 Retriever、只靠长上下文记忆；
 - “Realtime 当前不 Agent 化”；
 - 为比赛增加无业务意义的总控 Agent；
 - 让 Agent 直接修改 SQLite。
