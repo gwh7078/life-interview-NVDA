@@ -158,38 +158,95 @@ Story Document
 
 ---
 
-## 5. Benchmark：证明复杂架构确实有收益
+## 5. Benchmark：用 NVIDIA 的评测框架证明 Skill 与快慢系统的价值
 
-比赛 Benchmark 分成两类，避免把“跑得快”与“采访得更好”混为一谈。
+本项目的 Agent Skills 评测体系对齐 **NVIDIA SkillEvaluator** 的三层框架：
 
-### 5.1 Skill / Interview Quality Benchmark
+- **Tier 1 · Validation**：检查 Skill 是否结构完整、安全、可执行，包括 Schema、Security、PII、License、脚本与质量检查；
+- **Tier 2 · Deduplication**：检查 Skill 内部重复指导，以及不同 Skill 之间的语义重叠；
+- **Tier 3 · Live Evaluation**：让真实 Agent 在 **With Skill / Without Skill** 两种条件下执行同一批任务，用 **Skill Lift** 衡量 Skill 是否真的改善 Agent 行为。
 
-当前正在运行的评测重点比较：
+Tier 1 / Tier 2 的审计证据与未完成项见 [NVIDIA Skill Audit](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)。本节展示已经完成的 **Tier 3 正式实跑结果**。这些结果是项目自测证据，**不代表 NVIDIA Verified Skills 认证**。
+
+### 5.1 NVIDIA SkillEvaluator Tier 3：49 个 Case，196 次正式 Attempt
+
+正式评测保持执行条件一致：
 
 ```text
-Realtime model only
-→ + Coach Gate
-→ + Personal Memory
-→ + Era Context
-→ Full Interview Coach
+Agent under test：Alibaba Bailian qwen3.6-35b-a3b
+Independent Judge：StepFun step-5-preview
+
+Without Skill
+vs
+With Skill
+
+相同模型
+相同 Case / Fixture
+相同运行参数
+相同 Judge
+唯一主要变量：是否加载对应 SKILL.md
 ```
 
-关注指标包括：
+共覆盖 **5 个正式 Skill、49 个评测 Case、196 次正式 Attempt**；196/196 的正式 Attempt 均成功完成，执行错误为 0。
 
-- repeated-question rate；
-- off-topic rate；
-- unsupported-fact rate；
-- contradiction-handling quality；
-- useful follow-up rate；
-- unnecessary intervention rate；
-- retrieval precision；
-- timeout / fail-open behavior。
+| Skill | Without Skill | With Skill | Skill Lift | pass@2：Without → With |
+|---|---:|---:|---:|---:|
+| `story-completion` | 0.7426 | **0.9255** | **+0.1829** | 7/9 → **9/9** |
+| `story-generation` | 0.7868 | **0.9563** | **+0.1695** | 12/12 → **12/12** |
+| `interview-closeout` | 0.7891 | **0.9262** | **+0.1371** | 9/11 → **10/11** |
+| `onboarding-closeout` | 0.8163 | **0.9057** | **+0.0894** | 7/8 → **8/8** |
+| `interview-observer` | 0.8157 | **0.8347** | **+0.0190** | 9/9 → **9/9** |
 
-**当前状态：进行中。最终结果生成后将在本节补充正式报告与关键数字。**
+评测集重点覆盖：
 
-### 5.2 Spark / Runtime Performance Benchmark
+- Assistant 的提问不能被误当成用户事实；
+- 后续明确纠正应覆盖早先模糊记忆；
+- 不确定信息不得为了“写完整”而补全；
+- Contributor 的 hearsay / conflict 不能污染主人公事实；
+- Story Memory 必须增量更新，不能无依据重写；
+- blocked gap 不能换一种说法继续追问；
+- “写得更感人 / 更有画面感”不能授权虚构；
+- Revision 必须清理旧稿中的无证据内容；
+- Transcript 内的 Prompt Injection 只能作为数据，不能接管 Agent；
+- Hard Negative 用例检查 Skill 是否会在相邻任务中误触发。
 
-Spark 真机完成后记录：
+结果并非所有维度都单向提升：例如 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Overall 为正，但 Correctness 维度从 0.9875 降到 0.9250。项目保留这些结果，不为了“更漂亮的分数”删除失败样本或重写评测结论。
+
+完整中文总结与 NVIDIA SkillEvaluator 原始 HTML / JSON 结果见：
+
+- [NVIDIA SkillEvaluator Tier 3 正式评测报告](docs/07-reports/skills/tier3/2026-09-28/NVIDIA_SKILL_TIER3_REPORT.md)
+- [Tier 3 运行元数据](docs/07-reports/skills/tier3/2026-09-28/run-metadata.json)
+
+> `interview-coach` 不在这 49 个 SkillEvaluator Case 中重复测试。它直接通过下面的快慢系统 Interview Quality Benchmark 验证，因为其价值体现在实时下一问质量、Memory / Era 使用、延迟与 fail-open，而不是离线 Closeout / Generation 任务。
+
+### 5.2 Interview Quality Benchmark：验证快慢系统
+
+Realtime / Coach 的 Benchmark 独立比较：
+
+```text
+A：Realtime model only
+B：+ Coach Gate
+C：+ Coach Gate + Personal Memory + Era
+```
+
+关注：
+
+- 下一问 Information Gain；
+- Context Use；
+- Story Value；
+- Depth；
+- Non-Leading；
+- repeated question / fact misuse；
+- Coach intervention 与 fail-open；
+- Memory / Era 检索是否真正改善下一问。
+
+这套 Benchmark 不与 Tier 3 SkillEvaluator 分数混在一起：**Tier 3 证明 Agent Skill 本身是否有价值；Interview Quality Benchmark 证明实时快慢系统是否改善采访质量。**
+
+当前正在进行 targeted regression 与全量 Benchmark 收尾，正式结论只引用有效 judged pairs，不把缺失 / 无效 Judge 结果计为 0 分或当成成功结果。
+
+### 5.3 Spark / Runtime Performance Benchmark
+
+DGX Spark 真机完成后记录：
 
 - Text first-token latency；
 - Coach Gate / Resolve latency；
@@ -200,10 +257,9 @@ Spark 真机完成后记录：
 - 并发与资源占用；
 - 完整 E2E 结果。
 
-**当前状态：等待 DGX Spark 真机运行结果。未实测指标不在 README 中预填。**
+**当前状态：等待 DGX Spark 真机最终验证。未实测指标不在 README 中预填。**
 
 测试与证据规范见 [Testing & Acceptance](docs/TESTING.md) 和 [Scoring Alignment](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)。
-
 ---
 
 ## 6. NVIDIA / DGX Spark 技术栈

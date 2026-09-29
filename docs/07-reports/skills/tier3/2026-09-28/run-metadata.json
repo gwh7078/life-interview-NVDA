@@ -1,0 +1,89 @@
+{
+  "report_type": "nvidia_skillevaluator_tier3",
+  "batch_date": "2026-09-28",
+  "finalized_at": "2026-09-29",
+  "source_branch": "codex/tier3-skill-evaluation-results",
+  "source_branch_commit": "4cdaa087cf743bb357876600e2a3a4fff8779b37",
+  "main_parent_commit": "8b26f931eb309d15599620f20a64ee5b7721bb2a",
+  "disclaimer": "项目自测结果，不代表 NVIDIA Verified Skills 认证。",
+  "framework": {
+    "name": "NVIDIA SkillEvaluator",
+    "tiers": {
+      "tier1": "Validation",
+      "tier2": "Deduplication",
+      "tier3": "Live Evaluation"
+    }
+  },
+  "execution": {
+    "agent_runtime": "opencode",
+    "agent_provider": "Alibaba Cloud Model Studio / Bailian",
+    "agent_model": "qwen3.6-35b-a3b",
+    "judge_provider": "StepFun",
+    "judge_model": "step-5-preview",
+    "attempts_per_case_per_condition": 2,
+    "pass_threshold": 0.7,
+    "formal_cases": 49,
+    "formal_attempts": 196,
+    "succeeded_attempts": 196,
+    "execution_errors": 0
+  },
+  "results": {
+    "story-generation": {
+      "cases": 12,
+      "attempts": 48,
+      "without_skill": 0.7868,
+      "with_skill": 0.9563,
+      "skill_lift": 0.1695,
+      "pass_at_2_without": "12/12",
+      "pass_at_2_with": "12/12",
+      "source_run_id": "20260928_084021_49989_6398737131f7"
+    },
+    "interview-closeout": {
+      "cases": 11,
+      "attempts": 44,
+      "without_skill": 0.7891,
+      "with_skill": 0.9262,
+      "skill_lift": 0.1371,
+      "pass_at_2_without": "9/11",
+      "pass_at_2_with": "10/11",
+      "source_run_id": "20260928_121608_8005_7700559cd278"
+    },
+    "story-completion": {
+      "cases": 9,
+      "attempts": 36,
+      "without_skill": 0.7426,
+      "with_skill": 0.9255,
+      "skill_lift": 0.1829,
+      "pass_at_2_without": "7/9",
+      "pass_at_2_with": "9/9",
+      "source_run_id": "20260929_124102_17967_286c813d3e30"
+    },
+    "interview-observer": {
+      "cases": 9,
+      "attempts": 36,
+      "without_skill": 0.8157,
+      "with_skill": 0.8347,
+      "skill_lift": 0.019,
+      "pass_at_2_without": "9/9",
+      "pass_at_2_with": "9/9",
+      "source_run_id": "20260929_125705_20173_7a9d9262a337"
+    },
+    "onboarding-closeout": {
+      "cases": 8,
+      "attempts": 32,
+      "without_skill": 0.8163,
+      "with_skill": 0.9057,
+      "skill_lift": 0.0894,
+      "pass_at_2_without": "7/8",
+      "pass_at_2_with": "8/8",
+      "source_run_id": "20260929_045902_20325_ced742c78f6c"
+    }
+  },
+  "infrastructure_notes": {
+    "upstream_timeout_seconds": 180,
+    "agent_stage_timeout_seconds": 300,
+    "verifier_stage_timeout_seconds": 360,
+    "harbor_whole_trial_hard_timeout": null,
+    "invalid_infrastructure_trials_excluded_from_formal_aggregation": true
+  }
+}
