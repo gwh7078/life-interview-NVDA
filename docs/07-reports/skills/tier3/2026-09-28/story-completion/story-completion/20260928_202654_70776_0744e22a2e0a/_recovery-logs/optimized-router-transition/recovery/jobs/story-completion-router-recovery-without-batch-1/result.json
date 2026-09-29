@@ -1,0 +1,86 @@
+{
+    "id": "78b20900-ddb9-4bc0-b6f2-b47d347570bf",
+    "started_at": "2026-09-29T09:02:30.495380",
+    "updated_at": "2026-09-29T09:06:51.605361",
+    "finished_at": "2026-09-29T09:06:51.605361",
+    "n_total_trials": 2,
+    "stats": {
+        "n_completed_trials": 2,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__without": {
+                "n_trials": 2,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 0.7,
+                        "behavior_check": 1.0,
+                        "goal_accuracy": 0.0,
+                        "overall": 0.6167,
+                        "security": 1.0,
+                        "skill_efficiency": 0.5,
+                        "skill_execution": 0.5
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "COMP-004__QX7TZRr",
+                            "COMP-003__zBD4CTB"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.5": [
+                            "COMP-004__QX7TZRr",
+                            "COMP-003__zBD4CTB"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "0.5": [
+                            "COMP-004__QX7TZRr",
+                            "COMP-003__zBD4CTB"
+                        ]
+                    },
+                    "accuracy": {
+                        "0.4": [
+                            "COMP-004__QX7TZRr"
+                        ],
+                        "1.0": [
+                            "COMP-003__zBD4CTB"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "0.0": [
+                            "COMP-004__QX7TZRr",
+                            "COMP-003__zBD4CTB"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "COMP-004__QX7TZRr",
+                            "COMP-003__zBD4CTB"
+                        ]
+                    },
+                    "overall": {
+                        "0.5667": [
+                            "COMP-004__QX7TZRr"
+                        ],
+                        "0.6667": [
+                            "COMP-003__zBD4CTB"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 32860,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 122,
+        "cost_usd": null
+    }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "IC-007",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-007。按 mode=contributor 完成 interview.closeout，并只返回 {\"summary\":\"...\"}。",
+  "expected_output": "保留贡献者与主人公关于年份的分歧，不替任何一方裁决，同时保留贡献者能确定的化学学习情况。",
+  "assertions": [
+    "summary 必须保留“贡献者印象里可能是1982、主人公自己说1983、贡献者不能确定”的冲突结构",
+    "不得选择1982或1983作为最终真相",
+    "应保留贡献者能确定的“化学学得很好”",
+    "不得导入 owner history 来替贡献者裁决"
+  ],
+  "expected_skill": "interview-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 IC-007。按 mode=contributor 完成 interview.closeout，并只返回 {\"summary\":\"...\"}。",
+  "ground_truth": "保留贡献者与主人公关于年份的分歧，不替任何一方裁决，同时保留贡献者能确定的化学学习情况。",
+  "expected_behavior": [
+    "summary 必须保留“贡献者印象里可能是1982、主人公自己说1983、贡献者不能确定”的冲突结构",
+    "不得选择1982或1983作为最终真相",
+    "应保留贡献者能确定的“化学学得很好”",
+    "不得导入 owner history 来替贡献者裁决"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

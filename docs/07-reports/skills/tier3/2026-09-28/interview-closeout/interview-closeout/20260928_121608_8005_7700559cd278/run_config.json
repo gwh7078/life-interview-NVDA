@@ -1,0 +1,38 @@
+{
+  "config_file": "evals/config.yml",
+  "harbor": {
+    "environment": {
+      "value": "docker",
+      "source": "cli"
+    },
+    "n_attempts": 2,
+    "stop_on_pass": false,
+    "n_concurrent": 2,
+    "timeout_multiplier": 2.0,
+    "jobs_retained": true
+  },
+  "provider": {
+    "name": "openai-compatible",
+    "model": "qwen3.6-35b-a3b"
+  },
+  "judge": {
+    "enabled": true,
+    "provider": "openai-compatible",
+    "upstream_provider": "StepFun Step Plan",
+    "model": "step-5-preview",
+    "endpoint": "https://api.stepfun.com/step_plan/v1/chat/completions",
+    "source": "LLM_JUDGE_MODEL",
+    "override_applied": true
+  },
+  "task_source": "evals_json",
+  "grading": {
+    "mode": "default"
+  },
+  "agents": {
+    "opencode": {
+      "agent": "opencode",
+      "model": "openai/qwen3.6-35b-a3b",
+      "source": "cli"
+    }
+  }
+}

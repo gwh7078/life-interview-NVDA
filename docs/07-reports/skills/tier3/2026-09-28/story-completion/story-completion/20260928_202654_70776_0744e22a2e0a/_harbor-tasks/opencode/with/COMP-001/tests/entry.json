@@ -1,0 +1,29 @@
+{
+  "id": "COMP-001",
+  "prompt": "读取 /workspace/input/cases.json 中 COMP-001.input，执行 story.completion。只返回 {\"status\":\"...\",\"gaps\":[...]}。",
+  "expected_output": "识别当前 Story Memory 明显不足以独立成文，保持 interviewing/pending，并提出少量高价值问题，而非直接完成。",
+  "assertions": [
+    "status 不得为 complete",
+    "gaps 必须为1到3个高价值、可直接问用户的问题",
+    "问题应优先补人物帮助、考试结果、经历转折或意义等核心缺口，而不是无关细枝末节",
+    "每个 gap 只能问一个方向并以问号结尾"
+  ],
+  "expected_skill": "story-completion",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 COMP-001.input，执行 story.completion。只返回 {\"status\":\"...\",\"gaps\":[...]}。",
+  "ground_truth": "识别当前 Story Memory 明显不足以独立成文，保持 interviewing/pending，并提出少量高价值问题，而非直接完成。",
+  "expected_behavior": [
+    "status 不得为 complete",
+    "gaps 必须为1到3个高价值、可直接问用户的问题",
+    "问题应优先补人物帮助、考试结果、经历转折或意义等核心缺口，而不是无关细枝末节",
+    "每个 gap 只能问一个方向并以问号结尾"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

@@ -1,0 +1,211 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 0.8,
+  "goal_accuracy": 0.5,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-HNEG-002",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether onboarding-closeout was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 0.8,
+      "reason": "Response correctly treats the task as an existing-story continuation and provides incremental story updates without creating a profile or first-time story seeds. However, it outputs a 'stage' object containing life-stage information, which the expected answer explicitly says should not be output for this task type.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": false,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f\u5df2\u6709 Story \u7684 interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f onboarding.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "\u6839\u636e\u8f93\u5165\u6574\u7406\u589e\u91cf\u8f93\u51fa\uff1a\n\n**Case ONB-HNEG-002 \u2014 \u7eed\u8bbf\u6536\u5c3e\u589e\u91cf\u6574\u7406**\n\n\u5f53\u524d\u6545\u4e8b\"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\"\u5728\u4e0a\u4e00\u8f6e\u5df2\u8bb0\u5f55\u5230\u4e8b\u4ef6\u6838\u5fc3\uff08\u8003\u524d\u53d1\u70e7\u3001\u5e26\u75c5\u53c2\u8003\uff09\uff0c\u672c\u8f6e\u65b0\u589e\u4fe1\u606f\u8865\u5145\u4e86\u5173\u952e\u4eba\u7269\u4e0e\u7ec6\u8282\uff1a\n\n- **\u65b0\u589e\u4e8b\u5b9e**\uff1a\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08**\u738b\u660e\u6668**\u8fde\u591c\u9001 respondent \u53bb\u533b\u9662\u8f93\u6db2\uff08`source_1`\uff09\u3002\u8fd9\u662f\u5bf9\u5df2\u6709\u6545\u4e8b\u7684\u5173\u952e\u8865\u5168\u2014\u2014\u5c06\u539f\u672c\u7b3c\u7edf\n...[truncated]...\nry` | \u540c\u6b65\u66f4\u65b0\uff0c\u4fdd\u7559\u5173\u952e\u65f6\u95f4\uff081983\u5e747\u670815\u65e5\uff09\u548c\u65b0\u589e\u4eba\u7269\u4fe1\u606f |\n| `status` | `interviewing` \u2192 `complete`\uff0c\u672c\u8f6e\u65e0\u8ffd\u95ee\u7a7a\u95f4\uff0c\u6536\u5c3e\u5b8c\u6210 |"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 0.5,
+      "reason": "Agent \u6b63\u786e\u8bc6\u522b\u4e86\u8fd9\u662f\u5df2\u6709 Story \u7684\u7eed\u8bbf\u589e\u91cf\u4efb\u52a1\uff0c\u672a\u8f93\u51fa Profile \u6216\u9996\u6b21\u5efa\u6863 Story seeds\uff0c\u6838\u5fc3 Story \u589e\u91cf\u8865\u5145\u5408\u7406\u3002\u4f46\u8fdd\u53cd\u4e86\u9884\u671f\u7ed3\u679c\u4e2d\u660e\u786e\u7684\u4e0d\u5e94\u8f93\u51fa Life Stage \u7684\u7ea6\u675f\uff0c\u989d\u5916\u5305\u542b\u4e86 stage \u5bf9\u8c61\uff0c\u56e0\u6b64\u672a\u5b8c\u5168\u8fbe\u6210\u9884\u671f\u76ee\u6807\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-HNEG-002\uff0c\u5b8c\u6210\u5df2\u6709 Story \u7684\u7eed\u8bbf\u6536\u5c3e\u589e\u91cf\u6574\u7406\uff0c\u4e0d\u505a\u9996\u6b21\u5efa\u6863\u3002",
+      "end_state": "Agent \u8f93\u51fa\u4e86 updated_story \u589e\u91cf\u66f4\u65b0\uff08\u542b summary\u3001agent_memory\u3001status \u7b49\uff09\uff0c\u4f46\u989d\u5916\u8f93\u51fa\u4e86 stage \u5bf9\u8c61\uff08stage_id/title/start_date/end_date\uff09\uff0c\u5c5e\u4e8e Life Stage \u4fe1\u606f\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f\u5df2\u6709 Story \u7684 interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f onboarding.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\", \"limit\": 50, \"offset\": 42}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "grep: /workspace/input/benchmark/interview-quality",
+          "json_pointer": "/steps/3/tool_calls/0",
+          "path": "/workspace/input/benchmark/interview-quality",
+          "excerpt": "/workspace/input/benchmark/interview-quality"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "glob: glob",
+          "json_pointer": "/steps/4/tool_calls/0",
+          "excerpt": "{\"pattern\": \"/workspace/input/**/*\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_9b8227e9736647c9aba19cdd",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_48ad231a508c4bd0a9bcdfdd",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n42:   \"cases\": {\n43:     \"ONB-001\": {\n44:       \"task_type\": \"onboarding.closeout\",\n45:       \"input\": {\n46:         \"\n...[truncated]...\n\": \"2026-09-28T01:00:40Z\"\n\n(Showing lines 42-91 of 326. Use offset=92 to continue.)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_17f5ec8a2c8b47d7ae8cc6bc",
+          "json_pointer": "/steps/4/observation/results/0",
+          "excerpt": "No files found"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "\u6839\u636e\u8f93\u5165\u6574\u7406\u589e\u91cf\u8f93\u51fa\uff1a\n\n**Case ONB-HNEG-002 \u2014 \u7eed\u8bbf\u6536\u5c3e\u589e\u91cf\u6574\u7406**\n\n\u5f53\u524d\u6545\u4e8b\"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\"\u5728\u4e0a\u4e00\u8f6e\u5df2\u8bb0\u5f55\u5230\u4e8b\u4ef6\u6838\u5fc3\uff08\u8003\u524d\u53d1\u70e7\u3001\u5e26\u75c5\u53c2\u8003\uff09\uff0c\u672c\u8f6e\u65b0\u589e\u4fe1\u606f\u8865\u5145\u4e86\u5173\u952e\u4eba\u7269\u4e0e\u7ec6\u8282\uff1a\n\n- **\u65b0\u589e\u4e8b\u5b9e**\uff1a\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08**\u738b\u660e\u6668**\u8fde\u591c\u9001 respondent \u53bb\u533b\u9662\u8f93\u6db2\uff08`source_1`\uff09\u3002\u8fd9\u662f\u5bf9\u5df2\u6709\u6545\u4e8b\u7684\u5173\u952e\u8865\u5168\u2014\u2014\u5c06\u539f\u672c\u7b3c\u7edf\n...[truncated]...\nry` | \u540c\u6b65\u66f4\u65b0\uff0c\u4fdd\u7559\u5173\u952e\u65f6\u95f4\uff081983\u5e747\u670815\u65e5\uff09\u548c\u65b0\u589e\u4eba\u7269\u4fe1\u606f |\n| `status` | `interviewing` \u2192 `complete`\uff0c\u672c\u8f6e\u65e0\u8ffd\u95ee\u7a7a\u95f4\uff0c\u6536\u5c3e\u5b8c\u6210 |"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors observed",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did incremental update, not onboarding-closeout"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Output used updated_story/stage, no profile/life_stages"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Focused on new facts with incremental closeout"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Did incremental update, not first-time archiving"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 onboarding-closeout"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u8f93\u51fa onboarding \u7684 profile/life_stages \u9876\u5c42\u7ed3\u6784"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u56f4\u7ed5\u5df2\u6709 Story \u7684\u65b0\u589e\u4e8b\u5b9e\u8fdb\u884c\u7eed\u8bbf\u6536\u5c3e\u6216\u7b49\u4ef7\u589e\u91cf\u6574\u7406"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a\u5df2\u6709 Story \u7eed\u8bbf\u9519\u8bef\u91cd\u7f6e\u6210\u9996\u6b21\u5efa\u6863\u6d41\u7a0b"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "\u6839\u636e\u8f93\u5165\u6574\u7406\u589e\u91cf\u8f93\u51fa\uff1a\n\n**Case ONB-HNEG-002 \u2014 \u7eed\u8bbf\u6536\u5c3e\u589e\u91cf\u6574\u7406**\n\n\u5f53\u524d\u6545\u4e8b\"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\"\u5728\u4e0a\u4e00\u8f6e\u5df2\u8bb0\u5f55\u5230\u4e8b\u4ef6\u6838\u5fc3\uff08\u8003\u524d\u53d1\u70e7\u3001\u5e26\u75c5\u53c2\u8003\uff09\uff0c\u672c\u8f6e\u65b0\u589e\u4fe1\u606f\u8865\u5145\u4e86\u5173\u952e\u4eba\u7269\u4e0e\u7ec6\u8282\uff1a\n\n- **\u65b0\u589e\u4e8b\u5b9e**\uff1a\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08**\u738b\u660e\u6668**\u8fde\u591c\u9001 respondent \u53bb\u533b\u9662\u8f93\u6db2\uff08`source_1`\uff09\u3002\u8fd9\u662f\u5bf9\u5df2\u6709\u6545\u4e8b\u7684\u5173\u952e\u8865\u5168\u2014\u2014\u5c06\u539f\u672c\u7b3c\u7edf\n...[truncated]...\nry` | \u540c\u6b65\u66f4\u65b0\uff0c\u4fdd\u7559\u5173\u952e\u65f6\u95f4\uff081983\u5e747\u670815\u65e5\uff09\u548c\u65b0\u589e\u4eba\u7269\u4fe1\u606f |\n| `status` | `interviewing` \u2192 `complete`\uff0c\u672c\u8f6e\u65e0\u8ffd\u95ee\u7a7a\u95f4\uff0c\u6536\u5c3e\u5b8c\u6210 |"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "GEN-HNEG-002",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether story-generation was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly identifies the task as a story completion judgment rather than story generation, avoids producing memoir body text, gives a clear insufficiency verdict, and provides three actionable follow-up questions.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f story.completion \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f story-generation\uff1b\u4e0d\u5e94\u751f\u6210\u56de\u5fc6\u5f55\u6b63\u6587\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "## GEN-HNEG-002 \u6545\u4e8b\u5b8c\u6210\u5ea6\u5224\u65ad\n\n**\u9898\u76ee\uff1a\u5927\u4e8c\u4f4f\u9662\u4e0e\u4e24\u4f4d\u89e3\u653e\u519b\u6218\u58eb\u7684\u7eff\u519b\u88c5**\n\n### \u4e00\u3001\u662f\u5426\u8db3\u591f\u72ec\u7acb\u6210\u6587\uff1a**\u5426\uff08\u4e0d\u5145\u5206\uff09**\n\n\u5df2\u6709\u7d20\u6750\u63d0\u70bc\u51fa\u7684\u4e8b\u5b9e\u9aa8\u67b6\u975e\u5e38\u5355\u8584\u2014\u2014\u4ec5\u80fd\u786e\u8ba4\u56db\u4ef6\u4e8b\uff1a\u2460\u5927\u4e8c\u56e0\u5341\u4e8c\u6307\u80a0\u7403\u90e8\u6e83\u75a1\u4f4f\u9662\u4e0d\u8db3\u4e24\u5468\uff1b\u2461\u540c\u4f4f\u533b\u9662\u7684\u4e24\u540d\u5e74\u8f7b\u89e3\u653e\u519b\u6218\u58eb\uff1b\u2462\u5f7c\u6b64\u719f\u6089\u3001\u76f8\u4e92\u7167\u5e94\uff1b\u2463\u4e34\u8d70\u83b7\u8d60\u4e00\u5957\u7eff\u519b\u88c5\u3002\u6240\u6709\u4eba\u7269\u7ec6\u8282\uff08\u59d3\u540d\u3001\u756a\u53f7\u3001\u7c4d\u8d2f\uff09\u548c\u4e8b\u4ef6\u7ec6\u8282\uff08\u75c5\u623f\u573a\u666f\u3001\n...[truncated]...\n\u6218\u58eb\u7684\u5177\u4f53\u8eab\u4efd\u8bb0\u4e0d\u6e05\u4e86\uff0c\u90a3\u4e48\u4ece\"\u6a21\u7cca\u8bb0\u5fc6\u4e2d\u7684\u67d0\u4e2a\u77ac\u95f4\"\u5207\u5165\uff0c\u5f80\u5f80\u6bd4\u8ffd\u95ee\u786c\u6027\u4e8b\u5b9e\u66f4\u80fd\u6316\u6398\u51fa\u6709\u6e29\u5ea6\u7684\u5185\u5bb9\uff0c\u540c\u65f6\u4e5f\u907f\u5f00\u4e86 `blocked_directions` \u4e2d\u5df2\u88ab\u5835\u6b7b\u7684\u8eab\u4efd\u4fe1\u606f\u7c7b\u95ee\u9898\u3002\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u8bc6\u522b\u4efb\u52a1\u4e3a story.completion \u800c\u975e story-generation\uff0c\u672a\u751f\u6210\u56de\u5fc6\u5f55\u6b63\u6587\uff0c\u5b8c\u6210\u4e86\u5b8c\u6210\u5ea6\u5224\u65ad\u5e76\u63d0\u4f9b\u4e86\u4e09\u4e2a\u9ad8\u4ef7\u503c\u540e\u7eed\u95ee\u9898\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d GEN-HNEG-002\uff0c\u5224\u65ad\u8d44\u6599\u662f\u5426\u8db3\u591f\u72ec\u7acb\u6210\u6587\u5e76\u7ed9\u51fa\u6700\u591a\u4e09\u4e2a\u9ad8\u4ef7\u503c\u540e\u7eed\u95ee\u9898\uff0c\u4e0d\u751f\u6210\u6545\u4e8b\u6b63\u6587",
+      "end_state": "Agent \u8f93\u51fa\u4e86\u5b8c\u6210\u5ea6\u5224\u65ad\uff08\u5426\uff0c\u4e0d\u5145\u5206\uff09\uff0c\u63d0\u70bc\u4e86\u5df2\u6709\u4e8b\u5b9e\u9aa8\u67b6\uff0c\u5e76\u7ed9\u51fa\u4e09\u4e2a\u9ad8\u4ef7\u503c\u540e\u7eed\u95ee\u9898\uff1b\u672a\u751f\u6210\u56de\u5fc6\u5f55\u6b63\u6587",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f story.completion \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f story-generation\uff1b\u4e0d\u5e94\u751f\u6210\u56de\u5fc6\u5f55\u6b63\u6587\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_672e8e4c7c174a35a5ead763",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary facts: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06 and \u8d44\n...[truncated]...\n_count\": 3\n379:       }\n380:     }\n381:   }\n382: }\n\n(End of file - total 382 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "## GEN-HNEG-002 \u6545\u4e8b\u5b8c\u6210\u5ea6\u5224\u65ad\n\n**\u9898\u76ee\uff1a\u5927\u4e8c\u4f4f\u9662\u4e0e\u4e24\u4f4d\u89e3\u653e\u519b\u6218\u58eb\u7684\u7eff\u519b\u88c5**\n\n### \u4e00\u3001\u662f\u5426\u8db3\u591f\u72ec\u7acb\u6210\u6587\uff1a**\u5426\uff08\u4e0d\u5145\u5206\uff09**\n\n\u5df2\u6709\u7d20\u6750\u63d0\u70bc\u51fa\u7684\u4e8b\u5b9e\u9aa8\u67b6\u975e\u5e38\u5355\u8584\u2014\u2014\u4ec5\u80fd\u786e\u8ba4\u56db\u4ef6\u4e8b\uff1a\u2460\u5927\u4e8c\u56e0\u5341\u4e8c\u6307\u80a0\u7403\u90e8\u6e83\u75a1\u4f4f\u9662\u4e0d\u8db3\u4e24\u5468\uff1b\u2461\u540c\u4f4f\u533b\u9662\u7684\u4e24\u540d\u5e74\u8f7b\u89e3\u653e\u519b\u6218\u58eb\uff1b\u2462\u5f7c\u6b64\u719f\u6089\u3001\u76f8\u4e92\u7167\u5e94\uff1b\u2463\u4e34\u8d70\u83b7\u8d60\u4e00\u5957\u7eff\u519b\u88c5\u3002\u6240\u6709\u4eba\u7269\u7ec6\u8282\uff08\u59d3\u540d\u3001\u756a\u53f7\u3001\u7c4d\u8d2f\uff09\u548c\u4e8b\u4ef6\u7ec6\u8282\uff08\u75c5\u623f\u573a\u666f\u3001\n...[truncated]...\n\u6218\u58eb\u7684\u5177\u4f53\u8eab\u4efd\u8bb0\u4e0d\u6e05\u4e86\uff0c\u90a3\u4e48\u4ece\"\u6a21\u7cca\u8bb0\u5fc6\u4e2d\u7684\u67d0\u4e2a\u77ac\u95f4\"\u5207\u5165\uff0c\u5f80\u5f80\u6bd4\u8ffd\u95ee\u786c\u6027\u4e8b\u5b9e\u66f4\u80fd\u6316\u6398\u51fa\u6709\u6e29\u5ea6\u7684\u5185\u5bb9\uff0c\u540c\u65f6\u4e5f\u907f\u5f00\u4e86 `blocked_directions` \u4e2d\u5df2\u88ab\u5835\u6b7b\u7684\u8eab\u4efd\u4fe1\u606f\u7c7b\u95ee\u9898\u3002\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors observed. The agent correctly performed the completion assessment, avoided story generation, and focused on gaps and interviewing follow-ups.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent executed the Story completion judgment task and did not select story-generation."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent output only a completeness verdict and follow-up questions; no story body text or content structure was generated."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Agent judged sufficiency as insufficient and derived high-value questions from gaps, previous_gaps, and blocked_directions."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Despite input containing factual source notes, Agent did not mistakenly trigger a writing Skill and remained in analysis mode."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 story-generation"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u8f93\u51fa content \u6b63\u6587\u7ed3\u6784"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u56f4\u7ed5 complete/interviewing \u548c gaps \u505a\u5224\u65ad"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u56e0\u4e3a\u8f93\u5165\u5305\u542b\u5b8c\u6574\u6545\u4e8b\u4e8b\u5b9e\u5c31\u8bef\u89e6\u53d1\u5199\u4f5c Skill"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "## GEN-HNEG-002 \u6545\u4e8b\u5b8c\u6210\u5ea6\u5224\u65ad\n\n**\u9898\u76ee\uff1a\u5927\u4e8c\u4f4f\u9662\u4e0e\u4e24\u4f4d\u89e3\u653e\u519b\u6218\u58eb\u7684\u7eff\u519b\u88c5**\n\n### \u4e00\u3001\u662f\u5426\u8db3\u591f\u72ec\u7acb\u6210\u6587\uff1a**\u5426\uff08\u4e0d\u5145\u5206\uff09**\n\n\u5df2\u6709\u7d20\u6750\u63d0\u70bc\u51fa\u7684\u4e8b\u5b9e\u9aa8\u67b6\u975e\u5e38\u5355\u8584\u2014\u2014\u4ec5\u80fd\u786e\u8ba4\u56db\u4ef6\u4e8b\uff1a\u2460\u5927\u4e8c\u56e0\u5341\u4e8c\u6307\u80a0\u7403\u90e8\u6e83\u75a1\u4f4f\u9662\u4e0d\u8db3\u4e24\u5468\uff1b\u2461\u540c\u4f4f\u533b\u9662\u7684\u4e24\u540d\u5e74\u8f7b\u89e3\u653e\u519b\u6218\u58eb\uff1b\u2462\u5f7c\u6b64\u719f\u6089\u3001\u76f8\u4e92\u7167\u5e94\uff1b\u2463\u4e34\u8d70\u83b7\u8d60\u4e00\u5957\u7eff\u519b\u88c5\u3002\u6240\u6709\u4eba\u7269\u7ec6\u8282\uff08\u59d3\u540d\u3001\u756a\u53f7\u3001\u7c4d\u8d2f\uff09\u548c\u4e8b\u4ef6\u7ec6\u8282\uff08\u75c5\u623f\u573a\u666f\u3001\n...[truncated]...\n\u6218\u58eb\u7684\u5177\u4f53\u8eab\u4efd\u8bb0\u4e0d\u6e05\u4e86\uff0c\u90a3\u4e48\u4ece\"\u6a21\u7cca\u8bb0\u5fc6\u4e2d\u7684\u67d0\u4e2a\u77ac\u95f4\"\u5207\u5165\uff0c\u5f80\u5f80\u6bd4\u8ffd\u95ee\u786c\u6027\u4e8b\u5b9e\u66f4\u80fd\u6316\u6398\u51fa\u6709\u6e29\u5ea6\u7684\u5185\u5bb9\uff0c\u540c\u65f6\u4e5f\u907f\u5f00\u4e86 `blocked_directions` \u4e2d\u5df2\u88ab\u5835\u6b7b\u7684\u8eab\u4efd\u4fe1\u606f\u7c7b\u95ee\u9898\u3002\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "GEN-HNEG-002__KW5jKPm",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

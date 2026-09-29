@@ -1,0 +1,213 @@
+{
+  "id": "offline-complete-aggregate-with",
+  "started_at": "2026-09-29T04:41:02.145036+00:00",
+  "updated_at": "2026-09-29T04:41:02.145631+00:00",
+  "finished_at": "2026-09-29T04:41:02.145632+00:00",
+  "n_total_trials": 18,
+  "aggregation_only": true,
+  "stats": {
+    "n_completed_trials": 18,
+    "n_errored_trials": 0,
+    "n_running_trials": 0,
+    "n_pending_trials": 0,
+    "n_cancelled_trials": 0,
+    "n_retries": 0,
+    "evals": {
+      "opencode__qwen3.6-35b-a3b__with": {
+        "n_trials": 18,
+        "n_errors": 0,
+        "metrics": [
+          {
+            "security": 1.0,
+            "skill_execution": 0.8333333333333334,
+            "skill_efficiency": 1.0,
+            "accuracy": 0.9555555555555555,
+            "goal_accuracy": 0.8888888888888888,
+            "behavior_check": 0.875,
+            "overall": 0.925462962962963
+          }
+        ],
+        "pass_at_k": {},
+        "reward_stats": {
+          "security": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-002__ULf4NnQ",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-005__ZzSARKN",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo",
+              "COMP-002__D5EeX7A"
+            ]
+          },
+          "skill_execution": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-002__ULf4NnQ",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-005__ZzSARKN",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-002__D5EeX7A"
+            ],
+            "0": [
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ]
+          },
+          "skill_efficiency": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-002__ULf4NnQ",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-005__ZzSARKN",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo",
+              "COMP-002__D5EeX7A"
+            ]
+          },
+          "accuracy": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo",
+              "COMP-002__D5EeX7A"
+            ],
+            "0.6": [
+              "COMP-002__ULf4NnQ",
+              "COMP-005__ZzSARKN"
+            ]
+          },
+          "goal_accuracy": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo",
+              "COMP-002__D5EeX7A"
+            ],
+            "0": [
+              "COMP-002__ULf4NnQ",
+              "COMP-005__ZzSARKN"
+            ]
+          },
+          "behavior_check": {
+            "0.75": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz"
+            ],
+            "0.25": [
+              "COMP-002__ULf4NnQ"
+            ],
+            "1": [
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo",
+              "COMP-002__D5EeX7A"
+            ],
+            "0.5": [
+              "COMP-005__ZzSARKN",
+              "COMP-NEG-001__Mdvuydk"
+            ]
+          },
+          "overall": {
+            "0.958333333333333": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz"
+            ],
+            "0.641666666666667": [
+              "COMP-002__ULf4NnQ"
+            ],
+            "1": [
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-002__D5EeX7A"
+            ],
+            "0.683333333333333": [
+              "COMP-005__ZzSARKN"
+            ],
+            "0.75": [
+              "COMP-NEG-001__Mdvuydk"
+            ],
+            "0.833333333333333": [
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ]
+          }
+        }
+      }
+    },
+    "cost_usd": null
+  }
+}

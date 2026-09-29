@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "trial": "GEN-006__5WBh2bZ",
+  "condition": "with-skill",
+  "status": "unscoreable_provider_timeout",
+  "reason": "Required judge evaluation failed: goal_accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+  "collector_status_before_retry": "failed",
+  "scored_attempts_before_retry": 47,
+  "expected_attempts": 48,
+  "job_trial_count_before_retry": 24,
+  "recovery": "Only this trial directory was moved out of the Harbor job to preserve its raw artifacts; the same job will resume its single missing trial."
+}

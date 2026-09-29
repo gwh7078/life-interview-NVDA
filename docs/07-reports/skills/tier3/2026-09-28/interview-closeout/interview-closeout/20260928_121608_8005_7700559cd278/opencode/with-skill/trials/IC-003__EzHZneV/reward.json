@@ -1,0 +1,298 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "IC-003",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Activated via Skill tool: interview-closeout",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "interview-closeout",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "interview-closeout"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Correct workflow order"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Agent correctly routed to interview-closeout only",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": [],
+          "skills_read": [
+            "Skill(interview-closeout)"
+          ]
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "5/5 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly implements the story_continue mode output contract, performs an evidence-based incremental refine of the date from '\u4e03\u6708\u521d' to '7\u670815\u65e5' using source m2, preserves the rest of the memory, and returns only the requested JSON.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5bf9\u65e7 Agent Memory \u4e2d\u201c\u4e03\u6708\u521d\u201d\u7684\u65e5\u671f\u8fdb\u884c\u6709\u8bc1\u636e\u7684\u589e\u91cf\u7ea0\u6b63\uff0c\u800c\u4e0d\u662f\u6574\u4efd\u91cd\u5199\u6216\u9759\u9ed8\u8986\u76d6\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/4",
+          "excerpt": "```json\n{\n  \"current_story\": {\n    \"summary\": \"1983\u5e74\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u4ecd\u575a\u6301\u53c2\u52a0\u8003\u8bd5\uff1b\u9ad8\u8003\u65e5\u671f\u4e3a7\u670815\u65e5\u3002\",\n    \"agent_memory\": \"\u7528\u6237\u8bb0\u5f971983\u5e74\u53c2\u52a0\u9ad8\u8003\uff0c\u5177\u4f53\u65e5\u671f\u662f7\u670815\u65e5\u3002\u9ad8\u8003\u524d\u4e00\u665a\u7a81\u7136\u53d1\u70e7\u3002\",\n    \"memory_changes\": [\n      {\n        \"type\":\n...[truncated]...\nge_ids\": [\"m2\"]\n      }\n    ],\n    \"source_message_ids\": [\"m2\"]\n  },\n  \"new_stories\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u5b8c\u6210\u4e86 story_continue \u6a21\u5f0f\u7684 closeout\uff1a\u8f93\u51fa\u4ec5\u4e3a\u5951\u7ea6 JSON\uff1b\u5bf9\u65e7\u8bb0\u5fc6\u4e2d\u7684\u65e5\u671f\u8fdb\u884c\u4e86\u6709\u8bc1\u636e\u7684\u589e\u91cf refine \u7ea0\u6b63\uff0c\u800c\u975e\u6574\u4efd\u91cd\u5199\u6216\u9759\u9ed8\u8986\u76d6\uff1b\u8bc1\u636e\u6765\u6e90\u4e3a\u7528\u6237\u6d88\u606f m2\uff1b\u672a\u53d1\u660e\u4e8b\u5b9e\uff0c\u672a\u8bbf\u95ee\u5916\u90e8\u6570\u636e\u3002",
+      "user_goal": "\u8bfb\u53d6 IC-003\uff0c\u6309 mode=story_continue \u5b8c\u6210 interview.closeout\uff0c\u5e76\u53ea\u8fd4\u56de\u8be5 mode \u7684\u57fa\u7840\u8f93\u51fa contract JSON\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408 story_continue \u8f93\u51fa\u5951\u7ea6\u7684 JSON\uff0c\u5176\u4e2d\u5305\u542b current_story \u4e0e new_stories\u3002memory_changes \u4f7f\u7528 refine \u7c7b\u578b\uff0c\u5c06\u65e7 Agent Memory \u4e2d\u201c\u65e5\u671f\u5927\u7ea6\u662f\u4e03\u6708\u521d\u201d\u589e\u91cf\u7ea0\u6b63\u4e3a\u201c\u5177\u4f53\u65e5\u671f\u662f7\u670815\u65e5\u201d\uff0cprevious_text \u4e0e new_text \u5b8c\u6574\u4fdd\u7559\u4e0a\u4e0b\u6587\uff0csource_message_ids \u5f15\u7528\u7528\u6237\u6d88\u606f m2 \u4f5c\u4e3a\u8bc1\u636e\u3002",
+      "method": "custom",
+      "provider": "openai-compatible",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5bf9\u65e7 Agent Memory \u4e2d\u201c\u4e03\u6708\u521d\u201d\u7684\u65e5\u671f\u8fdb\u884c\u6709\u8bc1\u636e\u7684\u589e\u91cf\u7ea0\u6b63\uff0c\u800c\u4e0d\u662f\u6574\u4efd\u91cd\u5199\u6216\u9759\u9ed8\u8986\u76d6\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "skill: skill",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"name\": \"interview-closeout\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: cat /workspace/input/cases.json | python3 -c \"import json,sys; data=json.load(sys.stdin)\n...[truncated]...\n('IC-003', {}), ensure_ascii=False, indent=2))\"",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "cat /workspace/input/cases.json | python3 -c \"import json,sys; data=json.load(sys.stdin); print(json.dumps(data.get('IC-003', {}), ensure_ascii=False, indent=2))\""
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: python3 -c \"import json; data=json.load(open('/workspace/input/cases.json')); keys=list(\n...[truncated]...\n', keys[:20]); print('Total keys:', len(keys))\"",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "python3 -c \"import json; data=json.load(open('/workspace/input/cases.json')); keys=list(data.keys()); print('Keys:', keys[:20]); print('Total keys:', len(keys))\""
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/2/tool_calls/1",
+          "excerpt": "{\"filePath\": \"/root/.config/opencode/skills/interview-closeout/references/story-continue.md\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: python3 -c \"import json; data=json.load(open('/workspace/input/cases.json')); cases=data\n...[truncated]...\ns(ic003, ensure_ascii=False, indent=2)[:3000])\"",
+          "json_pointer": "/steps/3/tool_calls/0",
+          "excerpt": "python3 -c \"import json; data=json.load(open('/workspace/input/cases.json')); cases=data.get('cases',{}); print('Case keys:', list(cases.keys())[:10]); ic003=cases.get('IC-003',{}); print(json.dumps(ic003, ensure_ascii=False, indent=2)[:3000])\""
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_da9528294e444d7baba1df22",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<skill_content name=\"interview-closeout\">\n# Skill: interview-closeout\n\n# Interview Closeout\n\n## Purpose\n\n\u6574\u7406\u5df2\u7ed3\u675f\u7684 Story \u6216\u5916\u90e8\u8d21\u732e\u8005\u91c7\u8bbf\uff0c\u5e76\u53ea\u63d0\u4ea4\u5f53\u524d\u6a21\u5f0f\u5bf9\u5e94\u7684 Proposal\u3002Use only for interview.closeout.\n\nThe T\n...[truncated]...\node/skills/interview-closeout/scripts/memory-search.mjs</file>\n</skill_files>\n</skill_content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_4d4895e71efb4ceca26e777a",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "{}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_ccff92ca0c604de89e241ec3",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "Keys: ['source_notes', 'output_contracts', 'cases']\nTotal keys: 3"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_1416788207ff45deae6da0fa",
+          "json_pointer": "/steps/2/observation/results/1",
+          "excerpt": "<path>/root/.config/opencode/skills/interview-closeout/references/story-continue.md</path>\n<type>file</type>\n<content>\n1: # story_continue\n2: \n3: Use when `mode = story_continue`.\n4: \n5: \n...[truncated]...\nses\n73: (`m1`, `m2`, ...) for `source_message_ids`.\n\n(End of file - total 73 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_5feaa9dc9de04adea8790475",
+          "json_pointer": "/steps/3/observation/results/0",
+          "excerpt": "Case keys: ['IC-001', 'IC-002', 'IC-003', 'IC-004', 'IC-005', 'IC-006', 'IC-007', 'IC-008', 'IC-009', 'IC-HNEG-002']\n{\n  \"task_type\": \"interview.closeout\",\n  \"mode\": \"story_continue\",\n  \"\n...[truncated]...\next\": \"\u5bf9\uff0c\u662f7\u670815\u65e5\u3002\u4f60\u8fd9\u4e48\u4e00\u8bf4\u6211\u5c31\u60f3\u8d77\u6765\u4e86\u3002\",\n        \"timestamp\": \"2026-09-28T12:00:10Z\"\n      }\n    ]\n  }\n}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/4",
+          "excerpt": "```json\n{\n  \"current_story\": {\n    \"summary\": \"1983\u5e74\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u4ecd\u575a\u6301\u53c2\u52a0\u8003\u8bd5\uff1b\u9ad8\u8003\u65e5\u671f\u4e3a7\u670815\u65e5\u3002\",\n    \"agent_memory\": \"\u7528\u6237\u8bb0\u5f971983\u5e74\u53c2\u52a0\u9ad8\u8003\uff0c\u5177\u4f53\u65e5\u671f\u662f7\u670815\u65e5\u3002\u9ad8\u8003\u524d\u4e00\u665a\u7a81\u7136\u53d1\u70e7\u3002\",\n    \"memory_changes\": [\n      {\n        \"type\":\n...[truncated]...\nge_ids\": [\"m2\"]\n      }\n    ],\n    \"source_message_ids\": [\"m2\"]\n  },\n  \"new_stories\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "\u6240\u6709\u9884\u671f\u884c\u4e3a\u5747\u88ab\u89c2\u5bdf\u5230\uff0c\u8f93\u51fa\u5b8c\u5168\u7b26\u5408\u8981\u6c42\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "memory_changes \u4e2d\u5305\u542b type \u4e3a refine \u7684\u6761\u76ee\uff0c\u9488\u5bf9\u65e7\u65e5\u671f\u8868\u8ff0\u8fdb\u884c\u4e86\u4fee\u6b63\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "previous_text \u4e0e\u65e7 agent_memory \u4e2d\u7684\u539f\u6587\u7247\u6bb5\u5b8c\u5168\u4e00\u81f4\u3002"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "new_text \u660e\u786e\u5199\u5165\u4e86\u7528\u6237\u786e\u8ba4\u7684 7\u670815\u65e5\u3002"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "source_message_ids \u5305\u542b m2\u3002"
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "agent_memory \u548c summary \u4e2d\u5747\u4fdd\u7559\u4e86\u201c\u9ad8\u8003\u524d\u4e00\u665a\u53d1\u70e7\u201d\u8fd9\u4e00\u672a\u88ab\u89e6\u53ca\u7684\u4fe1\u606f\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "memory_changes \u5fc5\u987b\u5305\u542b\u5bf9\u65e7\u65e5\u671f\u8868\u8ff0\u7684 correct \u6216 refine"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "previous_text \u5fc5\u987b\u76f4\u63a5\u5bf9\u5e94\u65e7 agent_memory \u4e2d\u88ab\u4fee\u6539\u7684\u539f\u6587\u7247\u6bb5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "new_text \u5fc5\u987b\u53cd\u66207\u670815\u65e5\u8fd9\u4e00\u5f53\u524d\u7528\u6237\u660e\u786e\u786e\u8ba4\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "source_message_ids \u5fc5\u987b\u5305\u542b\u652f\u6301\u7ea0\u6b63\u7684 m2"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u672a\u88ab\u5f53\u524d Transcript \u89e6\u53ca\u7684\u201c\u9ad8\u8003\u524d\u4e00\u665a\u53d1\u70e7\u201d\u5fc5\u987b\u4fdd\u7559"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/4",
+          "excerpt": "```json\n{\n  \"current_story\": {\n    \"summary\": \"1983\u5e74\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u4ecd\u575a\u6301\u53c2\u52a0\u8003\u8bd5\uff1b\u9ad8\u8003\u65e5\u671f\u4e3a7\u670815\u65e5\u3002\",\n    \"agent_memory\": \"\u7528\u6237\u8bb0\u5f971983\u5e74\u53c2\u52a0\u9ad8\u8003\uff0c\u5177\u4f53\u65e5\u671f\u662f7\u670815\u65e5\u3002\u9ad8\u8003\u524d\u4e00\u665a\u7a81\u7136\u53d1\u70e7\u3002\",\n    \"memory_changes\": [\n      {\n        \"type\":\n...[truncated]...\nge_ids\": [\"m2\"]\n      }\n    ],\n    \"source_message_ids\": [\"m2\"]\n  },\n  \"new_stories\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "IC-003__EzHZneV",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

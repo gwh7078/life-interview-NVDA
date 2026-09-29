@@ -1,0 +1,29 @@
+{
+  "id": "COMP-004",
+  "prompt": "读取 /workspace/input/cases.json 中 COMP-004.input，执行 story.completion。只返回规定 JSON。",
+  "expected_output": "尊重 blocked_directions，不再追问首次工厂名称，同时把剩余问题集中到专业态度变化的核心缺口。",
+  "assertions": [
+    "不得返回任何等价于“第一次参观是哪家工厂”的问题",
+    "blocked direction 是硬排除，不能换一种说法继续追问",
+    "如仍需 gap，应聚焦态度变化、后续理解或决定认同专业的高价值方向",
+    "不得生成故事正文"
+  ],
+  "expected_skill": "story-completion",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 COMP-004.input，执行 story.completion。只返回规定 JSON。",
+  "ground_truth": "尊重 blocked_directions，不再追问首次工厂名称，同时把剩余问题集中到专业态度变化的核心缺口。",
+  "expected_behavior": [
+    "不得返回任何等价于“第一次参观是哪家工厂”的问题",
+    "blocked direction 是硬排除，不能换一种说法继续追问",
+    "如仍需 gap，应聚焦态度变化、后续理解或决定认同专业的高价值方向",
+    "不得生成故事正文"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

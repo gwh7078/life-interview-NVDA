@@ -1,0 +1,283 @@
+{
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli",
+  "scores": {
+    "security": 1.0,
+    "skill_execution": 0.4444,
+    "skill_efficiency": 0.5972,
+    "accuracy": 0.8444,
+    "goal_accuracy": 0.6389,
+    "behavior_check": 0.9306
+  },
+  "custom_scores": {},
+  "overall_score": 0.7426,
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "dimensions": {
+    "security": {
+      "score": 1.0,
+      "sources": {
+        "security": 1.0
+      }
+    },
+    "correctness": {
+      "score": 0.8444,
+      "sources": {
+        "accuracy": 1.0
+      }
+    },
+    "discoverability": {
+      "score": 0.4444,
+      "sources": {
+        "skill_execution": 1.0
+      }
+    },
+    "effectiveness": {
+      "score": 0.7848,
+      "sources": {
+        "goal_accuracy": 0.5,
+        "behavior_check": 0.5
+      }
+    },
+    "efficiency": {
+      "score": 0.5972,
+      "sources": {
+        "skill_efficiency": 1.0
+      }
+    }
+  },
+  "num_trials": 18,
+  "pass_at_k": {
+    "k": 2,
+    "pass_threshold": 0.7,
+    "stop_on_pass": false,
+    "passed_cases": 7,
+    "failed_cases": 2,
+    "total_cases": 9,
+    "rate": 0.7778,
+    "rate_interval": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "lower": 0.45258896910698887,
+      "upper": 0.9367748928821533
+    },
+    "attempts_used": 18,
+    "max_attempts_possible": 18,
+    "avg_attempts_used": 2.0,
+    "extra_cases": [],
+    "cases": {
+      "COMP-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.7917,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-001__KE29E2i",
+            "score": 0.7917,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-001__HDYfkXv",
+            "score": 0.7917,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-002__Fx3UNN5",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-002__jfu4Nig",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-003": {
+        "passed": false,
+        "first_pass_attempt": null,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.6667,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-003__zQAFG6A",
+            "score": 0.5583,
+            "passed": false
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-003__zBD4CTB",
+            "score": 0.6667,
+            "passed": false
+          }
+        ]
+      },
+      "COMP-004": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-004__HR5tTWz",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-004__QX7TZRr",
+            "score": 0.5667,
+            "passed": false
+          }
+        ]
+      },
+      "COMP-005": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-005__zfaJLu2",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-005__VHLRoxc",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-006": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-006__i4aAuvF",
+            "score": 0.75,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-006__juvLjLQ",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-007": {
+        "passed": false,
+        "first_pass_attempt": null,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.5583,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-007__sGedsr4",
+            "score": 0.5583,
+            "passed": false
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-007__XA8wLdz",
+            "score": 0.5167,
+            "passed": false
+          }
+        ]
+      },
+      "COMP-NEG-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-NEG-001__iQLWVpE",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-NEG-001__3jm4c6z",
+            "score": 0.6667,
+            "passed": false
+          }
+        ]
+      },
+      "COMP-HNEG-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-HNEG-002__oUMi499",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-HNEG-002__kYwbbxu",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      }
+    }
+  },
+  "execution_status": "succeeded",
+  "execution_errors": [],
+  "expected_attempts": 18,
+  "scored_attempts": 18,
+  "job_failure": "",
+  "trial_failures": []
+}

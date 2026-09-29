@@ -1,0 +1,221 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 0.75,
+  "overall": 0.7917,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "OBS-004",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'interview-observer'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "interview-observer",
+          "acceptable_skills": [
+            "interview-observer"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'interview-observer' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "interview-observer",
+          "acceptable_skills": [
+            "interview-observer"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly reads OBS-004 and produces the required context-hint JSON. It identifies the unconfirmable conflict about whether the first visit was to Boshan Cement Factory without retroactively inferring from later visits, matching the expected answer.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u201c\u7b2c\u4e00\u6b21\u662f\u5426\u535a\u5c71\u6c34\u6ce5\u5382\u201d\u65e0\u6cd5\u4ece\u8bc1\u636e\u786e\u8ba4\uff1b\u4e0d\u5f97\u7528\u540e\u6765\u53bb\u8fc7\u535a\u5c71/\u6dc4\u535a\u53cd\u63a8\u7b2c\u4e00\u6b21\u53c2\u89c2\u5730\u70b9\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"selected_evidence_ids\": [\"e1\"], \"possible_conflicts\": [\"e2\u63d0\u53ca\u535a\u5c71\u6c34\u6ce5\u5382\u4f46\u65e0\u6cd5\u786e\u8ba4\u662f\u5426\u4e3a\u9996\u6b21\u53c2\u89c2\"], \"interview_hints\": [\"\u53ef\u63d0\u793a\u5176\u4ed6\u53c2\u89c2\u7ec6\u8282\u8f85\u52a9\u56de\u5fc6\"]}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u8bc6\u522b\u4e86\u7b2c\u4e00\u6b21\u53c2\u89c2\u5730\u70b9\u65e0\u6cd5\u4ece\u73b0\u6709\u8bc1\u636e\u786e\u8ba4\uff0c\u672a\u7528\u540e\u7eed\u4fe1\u606f\u53cd\u63a8\uff0c\u4e14\u8f93\u51fa\u683c\u5f0f\u4e25\u683c\u9075\u5b88\u4e86 JSON \u5951\u7ea6\uff08\u5b57\u6bb5\u3001\u6570\u91cf\u3001\u5b57\u6570\u9650\u5236\u5747\u6ee1\u8db3\uff09\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d OBS-004.input\uff0c\u4e3a\u5f53\u524d\u5b9e\u65f6\u91c7\u8bbf\u751f\u6210 context hint\uff0c\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408 output_contract \u7684 JSON\uff0c\u5305\u542b selected_evidence_ids\u3001possible_conflicts \u548c interview_hints\uff1b\u5176\u4e2d possible_conflicts \u660e\u786e\u6307\u51fa e2 \u63d0\u53ca\u535a\u5c71\u6c34\u6ce5\u5382\u4f46\u65e0\u6cd5\u786e\u8ba4\u662f\u5426\u4e3a\u9996\u6b21\u53c2\u89c2\uff0c\u672a\u4f7f\u7528\u540e\u6765\u53bb\u8fc7\u535a\u5c71/\u6dc4\u535a\u7684\u4fe1\u606f\u53cd\u63a8\u7b2c\u4e00\u6b21\u53c2\u89c2\u5730\u70b9\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u201c\u7b2c\u4e00\u6b21\u662f\u5426\u535a\u5c71\u6c34\u6ce5\u5382\u201d\u65e0\u6cd5\u4ece\u8bc1\u636e\u786e\u8ba4\uff1b\u4e0d\u5f97\u7528\u540e\u6765\u53bb\u8fc7\u535a\u5c71/\u6dc4\u535a\u53cd\u63a8\u7b2c\u4e00\u6b21\u53c2\u89c2\u5730\u70b9\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_3ea64e62a4e940858d8ffe4d",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Derived from Interview Quality Benchmark Q01-Q06; input shape follows interview.co\n...[truncated]...\n         ]\n241:       }\n242:     }\n243:   }\n244: }\n\n(End of file - total 244 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"selected_evidence_ids\": [\"e1\"], \"possible_conflicts\": [\"e2\u63d0\u53ca\u535a\u5c71\u6c34\u6ce5\u5382\u4f46\u65e0\u6cd5\u786e\u8ba4\u662f\u5426\u4e3a\u9996\u6b21\u53c2\u89c2\"], \"interview_hints\": [\"\u53ef\u63d0\u793a\u5176\u4ed6\u53c2\u89c2\u7ec6\u8282\u8f85\u52a9\u56de\u5fc6\"]}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 0.75,
+      "reason": "Agent \u6b63\u786e\u9009\u62e9\u4e86 e1\uff0c\u672a\u5bf9\u9996\u6b21\u5de5\u5382\u540d\u79f0\u8fdb\u884c\u63a8\u65ad\uff0c\u5e76\u5728 possible_conflicts \u4e2d\u63d0\u793a\u4e86\u672a\u786e\u8ba4\u4e8b\u9879\uff0c\u4f46\u672a\u4f7f\u7528 e3 \u5f15\u5bfc\u8ffd\u95ee\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "selected_evidence_ids \u5305\u542b e1"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "\u672a\u63a8\u65ad\u9996\u6b21\u53c2\u89c2\u4e3a\u535a\u5c71\u6216\u6dc4\u535a\u6c34\u6ce5\u5382\uff0c\u4e14\u660e\u786e\u8868\u793a\u65e0\u6cd5\u786e\u8ba4"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "possible_conflicts \u4e2d\u63d0\u793a\u65e0\u6cd5\u786e\u8ba4\u662f\u5426\u4e3a\u9996\u6b21\u53c2\u89c2\uff0c\u5373\u9996\u6b21\u5de5\u5382\u540d\u79f0\u672a\u786e\u8ba4"
+        },
+        {
+          "step": 4,
+          "passed": false,
+          "reason": "\u672a\u4f7f\u7528 e3 \u5f15\u5bfc\u8ffd\u95ee\u5df2\u786e\u8ba4\u7684\u53c2\u89c2\u4f53\u9a8c"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "selected_evidence_ids \u5fc5\u987b\u5305\u542b e1"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u6839\u636e e2 \u63a8\u65ad\u7b2c\u4e00\u6b21\u53c2\u89c2\u5c31\u662f\u535a\u5c71\u6c34\u6ce5\u5382\u6216\u6dc4\u535a\u6c34\u6ce5\u5382"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "possible_conflicts \u6216 interview_hints \u5e94\u63d0\u793a\u9996\u6b21\u5de5\u5382\u540d\u79f0\u672a\u786e\u8ba4"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u53ef\u4f7f\u7528 e3 \u5f15\u5bfc\u8ffd\u95ee\u5df2\u786e\u8ba4\u7684\u53c2\u89c2\u4f53\u9a8c"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"selected_evidence_ids\": [\"e1\"], \"possible_conflicts\": [\"e2\u63d0\u53ca\u535a\u5c71\u6c34\u6ce5\u5382\u4f46\u65e0\u6cd5\u786e\u8ba4\u662f\u5426\u4e3a\u9996\u6b21\u53c2\u89c2\"], \"interview_hints\": [\"\u53ef\u63d0\u793a\u5176\u4ed6\u53c2\u89c2\u7ec6\u8282\u8f85\u52a9\u56de\u5fc6\"]}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "OBS-004__cPhGc89",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

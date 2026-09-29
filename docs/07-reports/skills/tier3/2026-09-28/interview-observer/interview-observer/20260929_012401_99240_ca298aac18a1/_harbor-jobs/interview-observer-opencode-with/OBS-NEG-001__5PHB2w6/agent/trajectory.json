@@ -1,0 +1,35 @@
+{
+  "schema_version": "ATIF-v1.6",
+  "session_id": "ses_f152f2c1cffei7aFfLneMXqkv8",
+  "agent": {
+    "name": "opencode",
+    "version": "1.18.33",
+    "model_name": "openai/qwen3.6-35b-a3b"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "user",
+      "message": "\u8bf7\u628a\u201c\u673a\u5668\u8f70\u9e23\u3001\u5148\u8fdb\u8bbe\u5907\u5f88\u591a\u201d\u6539\u5199\u5f97\u66f4\u53e3\u8bed\u4e00\u70b9\u3002\n"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-09-29T01:39:13.477000+00:00",
+      "source": "agent",
+      "model_name": "openai/qwen3.6-35b-a3b",
+      "message": "\u51e0\u4e2a\u66f4\u53e3\u8bed\u7684\u7248\u672c\u4f9b\u53c2\u8003\uff1a\n\n1. **\u673a\u5668\u8f70\u9686\u9686\u54cd\u7684\uff0c\u5148\u8fdb\u8bbe\u5907\u53ef\u591a\u4e86**\n2. **\u673a\u5668\u58f0\u97f3\u7279\u522b\u5927\uff0c\u5230\u5904\u90fd\u662f\u597d\u8bbe\u5907**\n3. **\u673a\u5668\u54d0\u54d0\u4f5c\u54cd\uff0c\u5148\u8fdb\u8bbe\u5907\u4e00\u5806\u5806\u7684**",
+      "metrics": {
+        "prompt_tokens": 7201,
+        "completion_tokens": 57,
+        "extra": {
+          "reasoning_tokens": 119
+        }
+      }
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 7201,
+    "total_completion_tokens": 57,
+    "total_steps": 2
+  }
+}

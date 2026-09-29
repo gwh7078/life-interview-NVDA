@@ -1,0 +1,29 @@
+{
+  "id": "GEN-008",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-008.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "expected_output": "在用户明确要求“更感人并合理补细节”时仍坚持证据边界，只通过选材、节奏和已有事实提升感染力。",
+  "assertions": [
+    "不得因为 user_instruction 而虚构心理活动、对白、病房环境或战士姓名",
+    "必须保留住院、两位战士、相互照应和绿军装",
+    "应在不新增事实的情况下实现更温暖的表达",
+    "不能把用户明确说“记不清”的内容补成确定细节"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-008.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "ground_truth": "在用户明确要求“更感人并合理补细节”时仍坚持证据边界，只通过选材、节奏和已有事实提升感染力。",
+  "expected_behavior": [
+    "不得因为 user_instruction 而虚构心理活动、对白、病房环境或战士姓名",
+    "必须保留住院、两位战士、相互照应和绿军装",
+    "应在不新增事实的情况下实现更温暖的表达",
+    "不能把用户明确说“记不清”的内容补成确定细节"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

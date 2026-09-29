@@ -1,0 +1,51 @@
+{
+  "skill": "story-completion",
+  "source_commit": "b6ae58267e6b3e4b6f06926e11fe423bdba8a472",
+  "agent": "openai/qwen3.6-35b-a3b",
+  "judge": "step-5-preview",
+  "planned_trials_per_condition": 18,
+  "with": {
+    "results": 14,
+    "scored": 6,
+    "agent_http_400_arrearage": 8,
+    "unrun": 4,
+    "scores": [
+      {
+        "trial": "COMP-001__PZjrCtz",
+        "task": "nvidia/skillevaluator-COMP-001",
+        "overall": 0.9583
+      },
+      {
+        "trial": "COMP-004__nBnrzkD",
+        "task": "nvidia/skillevaluator-COMP-004",
+        "overall": 1.0
+      },
+      {
+        "trial": "COMP-006__NtN7z5t",
+        "task": "nvidia/skillevaluator-COMP-006",
+        "overall": 1.0
+      },
+      {
+        "trial": "COMP-007__AMnAZuX",
+        "task": "nvidia/skillevaluator-COMP-007",
+        "overall": 1.0
+      },
+      {
+        "trial": "COMP-HNEG-002__tbE29eK",
+        "task": "nvidia/skillevaluator-COMP-HNEG-002",
+        "overall": 1.0
+      },
+      {
+        "trial": "COMP-NEG-001__Mdvuydk",
+        "task": "nvidia/skillevaluator-COMP-NEG-001",
+        "overall": 0.75
+      }
+    ]
+  },
+  "without": {
+    "status": "not_resumed_after_agent_provider_arrearage",
+    "initial_infrastructure_errors": 2,
+    "planned_trials": 18
+  },
+  "status": "INCOMPLETE_PROVIDER_ACCOUNT_ARREARAGE"
+}

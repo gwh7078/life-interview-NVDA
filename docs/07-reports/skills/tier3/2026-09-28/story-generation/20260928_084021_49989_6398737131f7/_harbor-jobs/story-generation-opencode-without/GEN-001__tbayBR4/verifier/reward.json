@@ -1,0 +1,9 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.1666,
+  "accuracy": 0.8,
+  "goal_accuracy": 0.5,
+  "behavior_check": 1.0,
+  "overall": 0.6611
+}

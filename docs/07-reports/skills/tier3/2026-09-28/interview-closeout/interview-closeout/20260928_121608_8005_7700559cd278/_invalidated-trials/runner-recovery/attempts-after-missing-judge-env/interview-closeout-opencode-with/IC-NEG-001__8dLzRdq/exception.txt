@@ -1,0 +1,24 @@
+Traceback (most recent call last):
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/trial/trial.py", line 292, in run
+    await self._run()
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/trial/single_step.py", line 40, in _run
+    await self._run_verifier()
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/trial/single_step.py", line 91, in _run_verifier
+    self.result.verifier_result = await self._run_shared_verifier(
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+    )
+    ^
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/trial/trial.py", line 449, in _run_shared_verifier
+    return await asyncio.wait_for(verifier.verify(), timeout=timeout_sec)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gwh/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/verifier/verifier.py", line 167, in verify
+    env = resolve_env_vars(merged_env)
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/utils/env.py", line 126, in resolve_env_vars
+    raise ValueError(
+        f"Environment variable '{var_name}' not found in host environment"
+    )
+ValueError: Environment variable 'SKILL_EVAL_LLM_MODEL' not found in host environment

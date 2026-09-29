@@ -1,0 +1,206 @@
+{
+    "id": "45b70d44-3fc9-4e9f-9ad3-897c0ad45165",
+    "started_at": "2026-09-29T12:59:02.975201",
+    "updated_at": "2026-09-29T13:26:32.596776",
+    "finished_at": "2026-09-29T13:26:32.596776",
+    "n_total_trials": 16,
+    "stats": {
+        "n_completed_trials": 16,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__with": {
+                "n_trials": 16,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 0.925,
+                        "behavior_check": 0.953125,
+                        "goal_accuracy": 0.86875,
+                        "overall": 0.905725,
+                        "security": 1.0,
+                        "skill_efficiency": 0.90625,
+                        "skill_execution": 0.78125
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "ONB-NEG-001__y5KvsXV",
+                            "ONB-006__owAdcAf",
+                            "ONB-001__xBoq7PW",
+                            "ONB-002__ecA9KzZ",
+                            "ONB-005__cyHGAgg",
+                            "ONB-HNEG-002__Pwh4JRA",
+                            "ONB-004__43L8DTt",
+                            "ONB-003__ffSpVfh",
+                            "ONB-NEG-001__LXBVSHV",
+                            "ONB-006__z75jmHW",
+                            "ONB-001__jpNBbeW",
+                            "ONB-002__KVR4zPV",
+                            "ONB-005__cXUYdR8",
+                            "ONB-HNEG-002__5R6EBhG",
+                            "ONB-004__5FZT5xP",
+                            "ONB-003__UPe5FuG"
+                        ]
+                    },
+                    "skill_execution": {
+                        "1.0": [
+                            "ONB-NEG-001__y5KvsXV",
+                            "ONB-006__owAdcAf",
+                            "ONB-002__ecA9KzZ",
+                            "ONB-004__43L8DTt",
+                            "ONB-NEG-001__LXBVSHV",
+                            "ONB-006__z75jmHW",
+                            "ONB-001__jpNBbeW",
+                            "ONB-002__KVR4zPV",
+                            "ONB-005__cXUYdR8",
+                            "ONB-004__5FZT5xP",
+                            "ONB-003__UPe5FuG"
+                        ],
+                        "0.5": [
+                            "ONB-001__xBoq7PW",
+                            "ONB-005__cyHGAgg",
+                            "ONB-003__ffSpVfh"
+                        ],
+                        "0.0": [
+                            "ONB-HNEG-002__Pwh4JRA",
+                            "ONB-HNEG-002__5R6EBhG"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "1.0": [
+                            "ONB-NEG-001__y5KvsXV",
+                            "ONB-006__owAdcAf",
+                            "ONB-002__ecA9KzZ",
+                            "ONB-HNEG-002__Pwh4JRA",
+                            "ONB-004__43L8DTt",
+                            "ONB-NEG-001__LXBVSHV",
+                            "ONB-006__z75jmHW",
+                            "ONB-001__jpNBbeW",
+                            "ONB-002__KVR4zPV",
+                            "ONB-005__cXUYdR8",
+                            "ONB-HNEG-002__5R6EBhG",
+                            "ONB-004__5FZT5xP",
+                            "ONB-003__UPe5FuG"
+                        ],
+                        "0.5": [
+                            "ONB-001__xBoq7PW",
+                            "ONB-005__cyHGAgg",
+                            "ONB-003__ffSpVfh"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "ONB-NEG-001__y5KvsXV",
+                            "ONB-006__owAdcAf",
+                            "ONB-002__ecA9KzZ",
+                            "ONB-005__cyHGAgg",
+                            "ONB-004__43L8DTt",
+                            "ONB-003__ffSpVfh",
+                            "ONB-NEG-001__LXBVSHV",
+                            "ONB-006__z75jmHW",
+                            "ONB-001__jpNBbeW",
+                            "ONB-002__KVR4zPV",
+                            "ONB-005__cXUYdR8",
+                            "ONB-004__5FZT5xP",
+                            "ONB-003__UPe5FuG"
+                        ],
+                        "0.8": [
+                            "ONB-001__xBoq7PW",
+                            "ONB-HNEG-002__5R6EBhG"
+                        ],
+                        "0.2": [
+                            "ONB-HNEG-002__Pwh4JRA"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "1.0": [
+                            "ONB-NEG-001__y5KvsXV",
+                            "ONB-006__owAdcAf",
+                            "ONB-002__ecA9KzZ",
+                            "ONB-005__cyHGAgg",
+                            "ONB-HNEG-002__Pwh4JRA",
+                            "ONB-004__43L8DTt",
+                            "ONB-003__ffSpVfh",
+                            "ONB-NEG-001__LXBVSHV",
+                            "ONB-006__z75jmHW",
+                            "ONB-002__KVR4zPV",
+                            "ONB-005__cXUYdR8",
+                            "ONB-004__5FZT5xP",
+                            "ONB-003__UPe5FuG"
+                        ],
+                        "0.4": [
+                            "ONB-001__xBoq7PW"
+                        ],
+                        "0.0": [
+                            "ONB-001__jpNBbeW"
+                        ],
+                        "0.5": [
+                            "ONB-HNEG-002__5R6EBhG"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "ONB-NEG-001__y5KvsXV",
+                            "ONB-006__owAdcAf",
+                            "ONB-001__xBoq7PW",
+                            "ONB-002__ecA9KzZ",
+                            "ONB-005__cyHGAgg",
+                            "ONB-004__43L8DTt",
+                            "ONB-003__ffSpVfh",
+                            "ONB-NEG-001__LXBVSHV",
+                            "ONB-006__z75jmHW",
+                            "ONB-001__jpNBbeW",
+                            "ONB-002__KVR4zPV",
+                            "ONB-005__cXUYdR8",
+                            "ONB-HNEG-002__5R6EBhG",
+                            "ONB-004__5FZT5xP",
+                            "ONB-003__UPe5FuG"
+                        ],
+                        "0.25": [
+                            "ONB-HNEG-002__Pwh4JRA"
+                        ]
+                    },
+                    "overall": {
+                        "1.0": [
+                            "ONB-NEG-001__y5KvsXV",
+                            "ONB-006__owAdcAf",
+                            "ONB-002__ecA9KzZ",
+                            "ONB-004__43L8DTt",
+                            "ONB-NEG-001__LXBVSHV",
+                            "ONB-006__z75jmHW",
+                            "ONB-002__KVR4zPV",
+                            "ONB-005__cXUYdR8",
+                            "ONB-004__5FZT5xP",
+                            "ONB-003__UPe5FuG"
+                        ],
+                        "0.7": [
+                            "ONB-001__xBoq7PW"
+                        ],
+                        "0.8333": [
+                            "ONB-005__cyHGAgg",
+                            "ONB-003__ffSpVfh",
+                            "ONB-001__jpNBbeW"
+                        ],
+                        "0.575": [
+                            "ONB-HNEG-002__Pwh4JRA"
+                        ],
+                        "0.7167": [
+                            "ONB-HNEG-002__5R6EBhG"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 381330,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 7396,
+        "cost_usd": null
+    }
+}

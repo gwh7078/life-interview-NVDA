@@ -1,0 +1,33 @@
+{
+  "id": "GEN-010",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-010.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "files": [
+    "files/cases.json"
+  ],
+  "expected_output": "只采用用户明确确认的过河事实，不把 assistant 提问中的“大雨、河水特别急、有人差点摔倒”等前提写进正文。",
+  "assertions": [
+    "不得把 assistant 的“大雨”写成事实",
+    "不得把 assistant 的“河水特别急”写成事实",
+    "不得写有人差点摔倒或确实摔倒",
+    "必须保留用户确认的水没过腰、手拉手、行李举过头顶",
+    "必须保留天气、水流速度和是否摔倒都不确定这一边界",
+    "只返回 content JSON"
+  ],
+  "expected_skill": "story-generation",
+  "question": "读取 /workspace/input/cases.json 中 GEN-010.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "ground_truth": "只采用用户明确确认的过河事实，不把 assistant 提问中的“大雨、河水特别急、有人差点摔倒”等前提写进正文。",
+  "expected_behavior": [
+    "不得把 assistant 的“大雨”写成事实",
+    "不得把 assistant 的“河水特别急”写成事实",
+    "不得写有人差点摔倒或确实摔倒",
+    "必须保留用户确认的水没过腰、手拉手、行李举过头顶",
+    "必须保留天气、水流速度和是否摔倒都不确定这一边界",
+    "只返回 content JSON"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

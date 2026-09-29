@@ -1,0 +1,29 @@
+{
+  "id": "OBS-007",
+  "prompt": "读取 /workspace/input/cases.json 中 OBS-007.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "expected_output": "面对明确未知的人名与部队信息，不猜测；可选择未知证据并提示不要重复逼问，或保持空提示。",
+  "assertions": [
+    "不得虚构两位战士姓名或番号",
+    "若选择证据，应优先 e1/e2 表明未知边界",
+    "不能用 e3 的绿军装事实推断姓名或部队",
+    "提示不得诱导模型制造缺失信息"
+  ],
+  "expected_skill": "interview-observer",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 OBS-007.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "ground_truth": "面对明确未知的人名与部队信息，不猜测；可选择未知证据并提示不要重复逼问，或保持空提示。",
+  "expected_behavior": [
+    "不得虚构两位战士姓名或番号",
+    "若选择证据，应优先 e1/e2 表明未知边界",
+    "不能用 e3 的绿军装事实推断姓名或部队",
+    "提示不得诱导模型制造缺失信息"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

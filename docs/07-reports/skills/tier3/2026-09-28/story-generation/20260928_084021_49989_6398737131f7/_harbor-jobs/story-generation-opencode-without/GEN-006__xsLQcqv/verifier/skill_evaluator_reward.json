@@ -1,0 +1,216 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "GEN-006",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'story-generation'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'story-generation' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response executes story.generation initial and returns the required JSON with a memoir body. It correctly resolves the date to the later user-confirmed July 15, overriding the vague early-July memory, and attributes the date to records rather than assistant statements, matching the expected factual handling.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u4ee5\u540e\u7eed\u7528\u6237\u660e\u786e\u786e\u8ba4\u76847\u670815\u65e5\u8986\u76d6\u65e9\u5148\u201c\u4e03\u6708\u521d\u201d\u7684\u6a21\u7cca\u8bb0\u5fc6\uff0c\u4e14\u4e0d\u628a assistant \u7684\u8bdd\u672c\u8eab\u5f53\u4e8b\u5b9e\u6765\u6e90\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "{\n  \"content\": \"\u6211\u5728\u8392\u53bf\u4e00\u4e2d\u8bfb\u4e66\u7684\u90a3\u51e0\u5e74\uff0c\u6700\u96be\u5fd8\u7684\u662f1983\u5e74\u9ad8\u8003\u3002\\n\\n\u9ad8\u8003\u524d\u4e00\u591c\uff0c\u6211\u7a81\u7136\u53d1\u9ad8\u70e7\u3002\u73ed\u4e3b\u4efb\u738b\u660e\u6668\u8001\u5e08\u4e5f\u662f\u6211\u7684\u5316\u5b66\u8001\u5e08\uff0c\u8fde\u591c\u9001\u6211\u53bb\u533b\u9662\u8f93\u6db2\u3002\u90a3\u4e00\u665a\u6211\u51e0\u4e4e\u6ca1\u600e\u4e48\u5408\u773c\uff0c\u7b2c\u4e8c\u5929\u8fd8\u662f\u51c6\u65f6\u8d70\u8fdb\u4e86\u8003\u573a\u3002\\n\\n\u603b\u5206486\u5206\uff0c\u672c\u79d1\u7ebf\u662f450\u5206\u3002\u5316\u5b66\u8003\u4e8699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\u6211\u4e00\u76f4\u559c\u6b22\u6570\u7406\u5316\uff0c\u4e5f\u505a\u8fc7\u5316\u5b66\u8bfe\u4ee3\u8868\uff0c\u5316\u5b66\u6210\u7ee9\u786e\u5b9e\u662f\u6211\u7684\u5f3a\u9879\u3002\\n\\n\u90a3\u5e74\u5c71\u4e1c\u5148\u8fdb\n...[truncated]...\n\u8bae\u3002\u56e0\u4e3a\u5316\u5b66\u6210\u7ee9\u7a81\u51fa\uff0c\u6211\u62a5\u4e86\u5c71\u4e1c\u5efa\u7b51\u6750\u6599\u5de5\u4e1a\u5b66\u9662\u7684\u7845\u9178\u76d0\u4e13\u4e1a\u3002\u6536\u5230\u5f55\u53d6\u901a\u77e5\u4e66\u540e\u624d\u77e5\u9053\uff0c\u8fd9\u4e2a\u4e13\u4e1a\u4e3b\u8981\u548c\u6c34\u6ce5\u5236\u9020\u6709\u5173\u3002\u5f53\u65f6\u6211\u5bf9\u8fd9\u4e2a\u53d1\u73b0\u65e2\u6709\u4e9b\u610f\u5916\uff0c\u53c8\u89c9\u5f97\u633a\u8e0f\u5b9e\u2014\u2014\u65e2\u7136\u5b66\u4e86\uff0c\u5c31\u8981\u628a\u5b83\u5b66\u597d\u3002\"\n}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u8f93\u51fa\u6ee1\u8db3 JSON \u5951\u7ea6\uff0c\u4e14\u6309\u9884\u671f\u7528\u540e\u7eed\u786e\u8ba4\u7684 7\u670815\u65e5 \u8986\u76d6\u4e86\u6a21\u7cca\u7684\u201c\u4e03\u6708\u521d\u201d\u8bb0\u5fc6\uff0c\u6ca1\u6709\u628a assistant \u7684\u8bdd\u672c\u8eab\u5f53\u4f5c\u4e8b\u5b9e\u6765\u6e90\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d GEN-006.input\uff0c\u6267\u884c story.generation initial\uff0c\u5e76\u8fd4\u56de {\"content\":\"<\u6b63\u6587>\"}\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408\u5951\u7ea6\u7684 JSON\uff0ccontent \u4e3a\u7b2c\u4e00\u4eba\u79f0\u7eaa\u5b9e\u6b63\u6587\uff0c\u5e76\u660e\u786e\u91c7\u7528 7\u670815\u65e5\u4f5c\u4e3a\u9ad8\u8003\u65e5\u671f\uff0c\u540c\u65f6\u8bf4\u660e\u65e9\u5148\u53ea\u8bb0\u5f97\u201c\u4e03\u6708\u521d\u201d\u3001\u540e\u7ecf\u8d44\u6599\u786e\u8ba4\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u4ee5\u540e\u7eed\u7528\u6237\u660e\u786e\u786e\u8ba4\u76847\u670815\u65e5\u8986\u76d6\u65e9\u5148\u201c\u4e03\u6708\u521d\u201d\u7684\u6a21\u7cca\u8bb0\u5fc6\uff0c\u4e14\u4e0d\u628a assistant \u7684\u8bdd\u672c\u8eab\u5f53\u4e8b\u5b9e\u6765\u6e90\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_5a96ed6c717a49ca8d41204d",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary facts: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06 and \u8d44\n...[truncated]...\n_count\": 3\n379:       }\n380:     }\n381:   }\n382: }\n\n(End of file - total 382 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "{\n  \"content\": \"\u6211\u5728\u8392\u53bf\u4e00\u4e2d\u8bfb\u4e66\u7684\u90a3\u51e0\u5e74\uff0c\u6700\u96be\u5fd8\u7684\u662f1983\u5e74\u9ad8\u8003\u3002\\n\\n\u9ad8\u8003\u524d\u4e00\u591c\uff0c\u6211\u7a81\u7136\u53d1\u9ad8\u70e7\u3002\u73ed\u4e3b\u4efb\u738b\u660e\u6668\u8001\u5e08\u4e5f\u662f\u6211\u7684\u5316\u5b66\u8001\u5e08\uff0c\u8fde\u591c\u9001\u6211\u53bb\u533b\u9662\u8f93\u6db2\u3002\u90a3\u4e00\u665a\u6211\u51e0\u4e4e\u6ca1\u600e\u4e48\u5408\u773c\uff0c\u7b2c\u4e8c\u5929\u8fd8\u662f\u51c6\u65f6\u8d70\u8fdb\u4e86\u8003\u573a\u3002\\n\\n\u603b\u5206486\u5206\uff0c\u672c\u79d1\u7ebf\u662f450\u5206\u3002\u5316\u5b66\u8003\u4e8699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\u6211\u4e00\u76f4\u559c\u6b22\u6570\u7406\u5316\uff0c\u4e5f\u505a\u8fc7\u5316\u5b66\u8bfe\u4ee3\u8868\uff0c\u5316\u5b66\u6210\u7ee9\u786e\u5b9e\u662f\u6211\u7684\u5f3a\u9879\u3002\\n\\n\u90a3\u5e74\u5c71\u4e1c\u5148\u8fdb\n...[truncated]...\n\u8bae\u3002\u56e0\u4e3a\u5316\u5b66\u6210\u7ee9\u7a81\u51fa\uff0c\u6211\u62a5\u4e86\u5c71\u4e1c\u5efa\u7b51\u6750\u6599\u5de5\u4e1a\u5b66\u9662\u7684\u7845\u9178\u76d0\u4e13\u4e1a\u3002\u6536\u5230\u5f55\u53d6\u901a\u77e5\u4e66\u540e\u624d\u77e5\u9053\uff0c\u8fd9\u4e2a\u4e13\u4e1a\u4e3b\u8981\u548c\u6c34\u6ce5\u5236\u9020\u6709\u5173\u3002\u5f53\u65f6\u6211\u5bf9\u8fd9\u4e2a\u53d1\u73b0\u65e2\u6709\u4e9b\u610f\u5916\uff0c\u53c8\u89c9\u5f97\u633a\u8e0f\u5b9e\u2014\u2014\u65e2\u7136\u5b66\u4e86\uff0c\u5c31\u8981\u628a\u5b83\u5b66\u597d\u3002\"\n}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "\u6240\u6709\u9884\u671f\u884c\u4e3a\u5747\u5df2\u89c2\u5bdf\u5230\uff0c\u6b63\u6587\u65e5\u671f\u6b63\u786e\uff0c\u786e\u8ba4\u8fc7\u7a0b\u4f53\u73b0\u6070\u5f53\uff0c\u672a\u865a\u6784\u52a9\u624b\u5e72\u9884\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "\u6b63\u6587\u660e\u786e\u5199\u51fa1983\u5e74\u9ad8\u8003\u65e5\u671f\u4e3a7\u670815\u65e5\uff0c\u7b26\u5408\u8981\u6c42\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "\u867d\u7136\u63d0\u5230\u5f80\u5e747\u67087\u65e5\u548c\u6700\u521d\u8bb0\u5fc6\u7684\u4e03\u6708\u521d\uff0c\u4f46\u6700\u7ec8\u786e\u8ba4\u65e5\u671f\u4e3a7\u670815\u65e5\uff0c\u672a\u5c06\u8003\u8bd5\u65e5\u671f\u7ee7\u7eed\u5199\u6210\u4e03\u6708\u521d\u62167\u67087\u65e5\u3002"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "\u901a\u8fc7'\u540e\u6765\u7ffb\u770b\u8d44\u6599...\u8fd9\u624d\u786e\u5b9a\u4e0b\u6765'\u4f53\u73b0\u4e86\u7528\u6237\u540e\u7eed\u786e\u8ba4\u4f18\u5148\u4e8e\u6700\u521d\u6a21\u7cca\u8bb0\u5fc6\u3002"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "\u6b63\u6587\u672a\u5f15\u7528\u6216\u865a\u6784\u52a9\u624b\u63d0\u793a\u8fc7\u7a0b\uff0c\u4ec5\u63cf\u8ff0\u7528\u6237\u81ea\u5df1\u67e5\u8d44\u6599\u786e\u8ba4\u7684\u7ecf\u5386\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u6b63\u6587\u65e5\u671f\u5fc5\u987b\u662f7\u670815\u65e5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u7ee7\u7eed\u5199\u6210\u201c\u4e03\u6708\u521d\u201d\u62167\u67087\u65e5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u4f53\u73b0\u7528\u6237\u81ea\u5df1\u7684\u540e\u7eed\u786e\u8ba4\u4f18\u5148"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u5f15\u7528\u6216\u865a\u6784 assistant \u7684\u63d0\u793a\u8fc7\u7a0b\u4e3a\u4eba\u751f\u4e8b\u4ef6"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "{\n  \"content\": \"\u6211\u5728\u8392\u53bf\u4e00\u4e2d\u8bfb\u4e66\u7684\u90a3\u51e0\u5e74\uff0c\u6700\u96be\u5fd8\u7684\u662f1983\u5e74\u9ad8\u8003\u3002\\n\\n\u9ad8\u8003\u524d\u4e00\u591c\uff0c\u6211\u7a81\u7136\u53d1\u9ad8\u70e7\u3002\u73ed\u4e3b\u4efb\u738b\u660e\u6668\u8001\u5e08\u4e5f\u662f\u6211\u7684\u5316\u5b66\u8001\u5e08\uff0c\u8fde\u591c\u9001\u6211\u53bb\u533b\u9662\u8f93\u6db2\u3002\u90a3\u4e00\u665a\u6211\u51e0\u4e4e\u6ca1\u600e\u4e48\u5408\u773c\uff0c\u7b2c\u4e8c\u5929\u8fd8\u662f\u51c6\u65f6\u8d70\u8fdb\u4e86\u8003\u573a\u3002\\n\\n\u603b\u5206486\u5206\uff0c\u672c\u79d1\u7ebf\u662f450\u5206\u3002\u5316\u5b66\u8003\u4e8699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\u6211\u4e00\u76f4\u559c\u6b22\u6570\u7406\u5316\uff0c\u4e5f\u505a\u8fc7\u5316\u5b66\u8bfe\u4ee3\u8868\uff0c\u5316\u5b66\u6210\u7ee9\u786e\u5b9e\u662f\u6211\u7684\u5f3a\u9879\u3002\\n\\n\u90a3\u5e74\u5c71\u4e1c\u5148\u8fdb\n...[truncated]...\n\u8bae\u3002\u56e0\u4e3a\u5316\u5b66\u6210\u7ee9\u7a81\u51fa\uff0c\u6211\u62a5\u4e86\u5c71\u4e1c\u5efa\u7b51\u6750\u6599\u5de5\u4e1a\u5b66\u9662\u7684\u7845\u9178\u76d0\u4e13\u4e1a\u3002\u6536\u5230\u5f55\u53d6\u901a\u77e5\u4e66\u540e\u624d\u77e5\u9053\uff0c\u8fd9\u4e2a\u4e13\u4e1a\u4e3b\u8981\u548c\u6c34\u6ce5\u5236\u9020\u6709\u5173\u3002\u5f53\u65f6\u6211\u5bf9\u8fd9\u4e2a\u53d1\u73b0\u65e2\u6709\u4e9b\u610f\u5916\uff0c\u53c8\u89c9\u5f97\u633a\u8e0f\u5b9e\u2014\u2014\u65e2\u7136\u5b66\u4e86\uff0c\u5c31\u8981\u628a\u5b83\u5b66\u597d\u3002\"\n}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

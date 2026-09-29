@@ -1,0 +1,35 @@
+{
+  "schema_version": "ATIF-v1.6",
+  "session_id": "ses_f17bda760ffea3rtTAZf0MFABt",
+  "agent": {
+    "name": "opencode",
+    "version": "1.18.33",
+    "model_name": "openai/qwen3.6-35b-a3b"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "user",
+      "message": "\u8bf7\u6839\u636e\u4ee5\u4e0b\u4e00\u53e5\u8bdd\u5199\u4e00\u6bb5100\u5b57\u5de6\u53f3\u7684\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587\uff1a\u201c\u90a3\u6b21\u8fc7\u6cb3\u6c34\u5df2\u7ecf\u6ca1\u5230\u8170\u4e86\u3002\u201d\n"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-09-28T13:44:27.578000+00:00",
+      "source": "agent",
+      "model_name": "openai/qwen3.6-35b-a3b",
+      "message": "\u90a3\u5e74\u590f\u5929\uff0c\u6751\u53e3\u7684\u5c0f\u6cb3\u6da8\u6c34\u7279\u522b\u51f6\u3002\u6211\u8ddf\u7740\u5927\u4eba\u4eec\u53bb\u5bf9\u5cb8\u7530\u91cc\u6536\u5e84\u7a3c\uff0c\u770b\u7740\u6d51\u6d4a\u7684\u6c34\u6d41\u6e4d\u6025\u5730\u5377\u7740\u67af\u679d\u6253\u8f6c\uff0c\u5fc3\u91cc\u76f4\u6253\u9f13\u3002\u8131\u4e86\u978b\u8e29\u8fdb\u53bb\uff0c\u6ce5\u6c99\u4ece\u811a\u5e95\u6d8c\u4e0a\u6765\uff0c\u6c34\u51c9\u5f97\u523a\u9aa8\u3002\u8d70\u4e0d\u4e86\u51e0\u6b65\uff0c\u6c34\u4f4d\u5df2\u7ecf\u6f2b\u8fc7\u819d\u76d6\uff0c\u6ca1\u8fc7\u5c0f\u817f\u3002\u518d\u5f80\u524d\u6e38\u5f0b\u4e00\u6bb5\uff0c\u90a3\u51b0\u51c9\u7684\u89e6\u611f\u7ec8\u4e8e\u7f20\u4e0a\u8170\u9645\uff0c\u6c34\u6d41\u63a8\u7740\u8eab\u5b50\u6643\uff0c\u6211\u53ea\u80fd\u6b7b\u6b7b\u6525\u4f4f\u65c1\u8fb9\u5927\u53d4\u7684\u8863\u89d2\uff0c\u4e00\u6b65\u4e00\u6b65\u632a\u7740\u8d70\u3002",
+      "metrics": {
+        "prompt_tokens": 7117,
+        "completion_tokens": 118,
+        "extra": {
+          "reasoning_tokens": 56
+        }
+      }
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 7117,
+    "total_completion_tokens": 118,
+    "total_steps": 2
+  }
+}

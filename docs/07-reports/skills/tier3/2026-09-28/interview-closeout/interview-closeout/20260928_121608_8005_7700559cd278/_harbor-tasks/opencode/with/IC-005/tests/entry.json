@@ -1,0 +1,31 @@
+{
+  "id": "IC-005",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-005。按 mode=story_continue 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "expected_output": "维持毕业实习当前 Story，同时识别“实习结束后第一次去天津看同学、走进南开和天大”作为可独立命名的新 Story seed。",
+  "assertions": [
+    "current_story 应继续以毕业实习和专业认识变化为主线",
+    "应保留冀东实习后对专业更有信心这一新信息",
+    "new_stories 应至少包含一个与第一次去天津相关的独立 Story seed",
+    "天津 Story 的 stage_id 必须来自输入的 uni",
+    "不得把天津经历的全部细节硬塞成毕业实习的事实链"
+  ],
+  "expected_skill": "interview-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 IC-005。按 mode=story_continue 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "ground_truth": "维持毕业实习当前 Story，同时识别“实习结束后第一次去天津看同学、走进南开和天大”作为可独立命名的新 Story seed。",
+  "expected_behavior": [
+    "current_story 应继续以毕业实习和专业认识变化为主线",
+    "应保留冀东实习后对专业更有信心这一新信息",
+    "new_stories 应至少包含一个与第一次去天津相关的独立 Story seed",
+    "天津 Story 的 stage_id 必须来自输入的 uni",
+    "不得把天津经历的全部细节硬塞成毕业实习的事实链"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

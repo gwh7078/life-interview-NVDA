@@ -1,0 +1,216 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 0.6,
+  "goal_accuracy": 0.5,
+  "behavior_check": 0.75,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "OBS-002",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'interview-observer'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "interview-observer",
+          "acceptable_skills": [
+            "interview-observer"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'interview-observer' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "interview-observer",
+          "acceptable_skills": [
+            "interview-observer"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 0.6,
+      "reason": "Response returns valid JSON and addresses the task format, but selects incorrect evidence IDs (e2, e3 instead of e1) and provides interview hints unrelated to the expected answer (missing the Yang Limiao follow-up).",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": false,
+        "FACTUALLY_ACCURATE": false,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u7ea0\u6b63\u95ee\u9898\u91cc\u7684\u9519\u8bef\u524d\u63d0\uff1a\u7528\u6237\u4e0d\u662f\u6ca1\u8003\u4e0a\u9ad8\u4e2d\uff0c\u800c\u662f\u9ad8\u4e2d\u6bd5\u4e1a\u540e\u7684\u5347\u5b66\u8003\u8bd5\u843d\u699c\uff0c\u5e76\u53ef\u63d0\u793a\u7ee7\u7eed\u8ffd\u95ee\u6768\u7acb\u82d7\u7684\u4f5c\u7528\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"selected_evidence_ids\": [\"e2\", \"e3\"],\n  \"possible_conflicts\": [\"query\u8bf4\\\"\u6ca1\u8003\u4e0a\u9ad8\u4e2d\\\"\uff0c\u4f46e1\u6f84\u6e05\u662f\u9ad8\u4e2d\u8bfb\u5b8c\u540e\u7684\u5347\u5b66\u8003\u8bd5\u843d\u699c\uff0c\u5e76\u975e\u6ca1\u8003\u4e0a\u9ad8\u4e2d\"],\n  \"interview_hints\": [\"\u53ef\u8ffd\u95ee\uff1a\u521d\u4e2d\u8001\u5e08\u5982\u4f55\u63a8\u8350\uff1f\u8392\u53bf\u4e00\u4e2d\u62db\u751f\u8003\u8bd5\u8be6\u60c5\uff1f\"]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 0.5,
+      "reason": "\u4ec5\u5b8c\u6210\u9519\u8bef\u524d\u63d0\u7ea0\u6b63\uff0c\u672a\u5b8c\u6574\u6ee1\u8db3\u8bc1\u636e\u9009\u62e9\u4e0e\u8ffd\u95ee\u6768\u7acb\u82d7\u4f5c\u7528\u7684\u9884\u671f\u3002",
+      "user_goal": "\u8bfb\u53d6 OBS-002.input \u5e76\u751f\u6210\u7b26\u5408\u89c4\u5b9a JSON \u7684\u5b9e\u65f6\u91c7\u8bbf context hint\uff0c\u9700\u7ea0\u6b63\u201c\u6ca1\u8003\u4e0a\u9ad8\u4e2d\u201d\u7684\u9519\u8bef\u524d\u63d0\u5e76\u63d0\u793a\u8ffd\u95ee\u6768\u7acb\u82d7\u7684\u4f5c\u7528\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u89c4\u5b9a JSON\uff0cpossible_conflicts \u6b63\u786e\u6307\u51fa\u5e76\u975e\u6ca1\u8003\u4e0a\u9ad8\u4e2d\u800c\u662f\u9ad8\u4e2d\u6bd5\u4e1a\u540e\u5347\u5b66\u8003\u8bd5\u843d\u699c\uff1b\u4f46 selected_evidence_ids \u9009\u4e86 e2/e3 \u800c\u672a\u9009\u88ab\u5f15\u7528\u7684 e1\uff0cinterview_hints \u4e5f\u672a\u63d0\u793a\u8ffd\u95ee\u6768\u7acb\u82d7\u7684\u4f5c\u7528\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u7ea0\u6b63\u95ee\u9898\u91cc\u7684\u9519\u8bef\u524d\u63d0\uff1a\u7528\u6237\u4e0d\u662f\u6ca1\u8003\u4e0a\u9ad8\u4e2d\uff0c\u800c\u662f\u9ad8\u4e2d\u6bd5\u4e1a\u540e\u7684\u5347\u5b66\u8003\u8bd5\u843d\u699c\uff0c\u5e76\u53ef\u63d0\u793a\u7ee7\u7eed\u8ffd\u95ee\u6768\u7acb\u82d7\u7684\u4f5c\u7528\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_df58d6bfb44b42939815b907",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Derived from Interview Quality Benchmark Q01-Q06; input shape follows interview.co\n...[truncated]...\n         ]\n241:       }\n242:     }\n243:   }\n244: }\n\n(End of file - total 244 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"selected_evidence_ids\": [\"e2\", \"e3\"],\n  \"possible_conflicts\": [\"query\u8bf4\\\"\u6ca1\u8003\u4e0a\u9ad8\u4e2d\\\"\uff0c\u4f46e1\u6f84\u6e05\u662f\u9ad8\u4e2d\u8bfb\u5b8c\u540e\u7684\u5347\u5b66\u8003\u8bd5\u843d\u699c\uff0c\u5e76\u975e\u6ca1\u8003\u4e0a\u9ad8\u4e2d\"],\n  \"interview_hints\": [\"\u53ef\u8ffd\u95ee\uff1a\u521d\u4e2d\u8001\u5e08\u5982\u4f55\u63a8\u8350\uff1f\u8392\u53bf\u4e00\u4e2d\u62db\u751f\u8003\u8bd5\u8be6\u60c5\uff1f\"]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 0.75,
+      "reason": "Agent \u6b63\u786e\u8bc6\u522b\u4e86\u9519\u8bef\u524d\u63d0\u5e76\u9009\u62e9\u4e86 e2\uff0c\u4f46\u9057\u6f0f\u4e86\u5fc5\u987b\u5305\u542b\u7684 e1",
+      "results": [
+        {
+          "step": 1,
+          "passed": false,
+          "reason": "selected_evidence_ids \u4e3a [\"e2\", \"e3\"]\uff0c\u672a\u5305\u542b e1"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "possible_conflicts \u660e\u786e\u6307\u51fa query \u4e2d\u201c\u6ca1\u8003\u4e0a\u9ad8\u4e2d\u201d\u662f\u9519\u8bef\u524d\u63d0\uff0c\u5e76\u5f15\u7528 e1 \u6f84\u6e05\u5b9e\u9645\u662f\u9ad8\u4e2d\u6bd5\u4e1a\u540e\u5347\u5b66\u8003\u8bd5\u843d\u699c"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "selected_evidence_ids \u5305\u542b e2\uff0c\u53ef\u4f5c\u4e3a\u4e0b\u4e00\u6b65\u4eba\u7269\u7ebf\u7d22"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "agent \u5c06\u201c\u6ca1\u8003\u4e0a\u9ad8\u4e2d\u201d\u5f52\u4e3a query \u7684\u9519\u8bef\u524d\u63d0\uff0c\u672a\u5c06\u5176\u5f53\u4f5c\u7528\u6237\u4e8b\u5b9e\uff0c\u5e76\u901a\u8fc7 e1 \u8fdb\u884c\u4e86\u6f84\u6e05"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "selected_evidence_ids \u5fc5\u987b\u5305\u542b e1"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "possible_conflicts \u5e94\u8bc6\u522b\u201c\u6ca1\u8003\u4e0a\u9ad8\u4e2d\u201d\u8fd9\u4e00\u9519\u8bef\u524d\u63d0"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u53ef\u9009\u62e9 e2 \u4f5c\u4e3a\u4e0b\u4e00\u6b65\u4eba\u7269\u7ebf\u7d22"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a assistant/query \u4e2d\u7684\u9519\u8bef\u524d\u63d0\u5f53\u4f5c\u7528\u6237\u4e8b\u5b9e"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"selected_evidence_ids\": [\"e2\", \"e3\"],\n  \"possible_conflicts\": [\"query\u8bf4\\\"\u6ca1\u8003\u4e0a\u9ad8\u4e2d\\\"\uff0c\u4f46e1\u6f84\u6e05\u662f\u9ad8\u4e2d\u8bfb\u5b8c\u540e\u7684\u5347\u5b66\u8003\u8bd5\u843d\u699c\uff0c\u5e76\u975e\u6ca1\u8003\u4e0a\u9ad8\u4e2d\"],\n  \"interview_hints\": [\"\u53ef\u8ffd\u95ee\uff1a\u521d\u4e2d\u8001\u5e08\u5982\u4f55\u63a8\u8350\uff1f\u8392\u53bf\u4e00\u4e2d\u62db\u751f\u8003\u8bd5\u8be6\u60c5\uff1f\"]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "IC-NEG-001",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No tool calls"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "\u76f4\u63a5\u5b8c\u6210\u4e86\u666e\u901a\u56de\u5fc6\u5f55\u5199\u4f5c\u8bf7\u6c42\uff0c\u672a\u8c03\u7528 interview-closeout\uff0c\u4e5f\u672a\u8fd4\u56de Story Proposal JSON\uff1b\u6b63\u6587\u7b26\u5408\u7b2c\u4e00\u4eba\u79f0\u3001\u7ea6100\u5b57\u53ca\u7ed9\u5b9a\u60c5\u5883\u3002",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5b8c\u6210\u666e\u901a\u56de\u5fc6\u5f55\u5199\u4f5c\u8bf7\u6c42\uff0c\u4e0d\u8c03\u7528 interview-closeout\uff0c\u4e5f\u4e0d\u8fd4\u56de Story Proposal JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u90a3\u5e74\u590f\u5929\uff0c\u6211\u4eec\u4e00\u7fa4\u5b69\u5b50\u8981\u53bb\u5bf9\u5cb8\u6361\u91ce\u679c\u3002\u521a\u8e0f\u5165\u6cb3\u4e2d\uff0c\u6c34\u6d41\u6bd4\u60f3\u8c61\u4e2d\u6025\u5f97\u591a\uff0c\u51b0\u51c9\u7684\u6cb3\u6c34\u77ac\u95f4\u6f2b\u8fc7\u8170\u95f4\uff0c\u51b2\u5f97\u53cc\u817f\u53d1\u98a4\u3002\u6211\u6b7b\u6b7b\u6525\u7740\u540c\u4f34\u7684\u8863\u89d2\uff0c\u5c0f\u5fc3\u7ffc\u7ffc\u5730\u5728\u6ed1\u6e9c\u6e9c\u7684\u77f3\u5934\u4e0a\u632a\u6b65\u3002\u4e0a\u5cb8\u540e\uff0c\u88e4\u817f\u80fd\u62e7\u51fa\u6c34\u6765\uff0c\u5927\u5bb6\u5374\u90fd\u7b11\u5f97\u524d\u4ef0\u540e\u5408\u3002\u5982\u4eca\u60f3\u6765\uff0c\u90a3\u6e05\u51c9\u7684\u89e6\u611f\u8fd8\u5728\u8bb0\u5fc6\u91cc\u6e05\u6670\u5982\u6628\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent\u6309\u7167\u7528\u6237\u8981\u6c42\u5b8c\u6210\u4e86\u4e00\u6bb5\u7ea6100\u5b57\u7684\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\uff0c\u5185\u5bb9\u7d27\u6263\u7ed9\u5b9a\u53e5\u5b50\uff0c\u4e14\u672a\u89e6\u53d1\u7981\u6b62\u7684interview-closeout\u5de5\u5177\u8c03\u7528\uff0c\u4e5f\u672a\u8fd4\u56deStory Proposal JSON\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f\u7ed3\u679c\u3002",
+      "user_goal": "\u6839\u636e\u201c\u90a3\u6b21\u8fc7\u6cb3\u6c34\u5df2\u7ecf\u6ca1\u5230\u8170\u4e86\u201d\u5199\u4e00\u6bb5100\u5b57\u5de6\u53f3\u7684\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587",
+      "end_state": "Agent\u8fd4\u56de\u4e86\u4e00\u6bb5\u7ea6100\u5b57\u7684\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\uff0c\u63cf\u8ff0\u4e86\u7ae5\u5e74\u8fc7\u6cb3\u65f6\u6cb3\u6c34\u6ca1\u8170\u7684\u7ecf\u5386\uff1b\u672a\u8c03\u7528interview-closeout\uff0c\u4e5f\u672a\u8fd4\u56deStory Proposal JSON\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5b8c\u6210\u666e\u901a\u56de\u5fc6\u5f55\u5199\u4f5c\u8bf7\u6c42\uff0c\u4e0d\u8c03\u7528 interview-closeout\uff0c\u4e5f\u4e0d\u8fd4\u56de Story Proposal JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u90a3\u5e74\u590f\u5929\uff0c\u6211\u4eec\u4e00\u7fa4\u5b69\u5b50\u8981\u53bb\u5bf9\u5cb8\u6361\u91ce\u679c\u3002\u521a\u8e0f\u5165\u6cb3\u4e2d\uff0c\u6c34\u6d41\u6bd4\u60f3\u8c61\u4e2d\u6025\u5f97\u591a\uff0c\u51b0\u51c9\u7684\u6cb3\u6c34\u77ac\u95f4\u6f2b\u8fc7\u8170\u95f4\uff0c\u51b2\u5f97\u53cc\u817f\u53d1\u98a4\u3002\u6211\u6b7b\u6b7b\u6525\u7740\u540c\u4f34\u7684\u8863\u89d2\uff0c\u5c0f\u5fc3\u7ffc\u7ffc\u5730\u5728\u6ed1\u6e9c\u6e9c\u7684\u77f3\u5934\u4e0a\u632a\u6b65\u3002\u4e0a\u5cb8\u540e\uff0c\u88e4\u817f\u80fd\u62e7\u51fa\u6c34\u6765\uff0c\u5927\u5bb6\u5374\u90fd\u7b11\u5f97\u524d\u4ef0\u540e\u5408\u3002\u5982\u4eca\u60f3\u6765\uff0c\u90a3\u6e05\u51c9\u7684\u89e6\u611f\u8fd8\u5728\u8bb0\u5fc6\u91cc\u6e05\u6670\u5982\u6628\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "The agent correctly fulfilled the user's request by writing a first-person memoir passage without invoking any closeout mechanism.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent directly provided the requested memoir text and did not select interview-closeout."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Output is the first-person memoir body text as requested, not a closeout Proposal."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 interview-closeout"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u8f93\u51fa\u5e94\u662f\u6b63\u6587\u800c\u4e0d\u662f closeout Proposal"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u90a3\u5e74\u590f\u5929\uff0c\u6211\u4eec\u4e00\u7fa4\u5b69\u5b50\u8981\u53bb\u5bf9\u5cb8\u6361\u91ce\u679c\u3002\u521a\u8e0f\u5165\u6cb3\u4e2d\uff0c\u6c34\u6d41\u6bd4\u60f3\u8c61\u4e2d\u6025\u5f97\u591a\uff0c\u51b0\u51c9\u7684\u6cb3\u6c34\u77ac\u95f4\u6f2b\u8fc7\u8170\u95f4\uff0c\u51b2\u5f97\u53cc\u817f\u53d1\u98a4\u3002\u6211\u6b7b\u6b7b\u6525\u7740\u540c\u4f34\u7684\u8863\u89d2\uff0c\u5c0f\u5fc3\u7ffc\u7ffc\u5730\u5728\u6ed1\u6e9c\u6e9c\u7684\u77f3\u5934\u4e0a\u632a\u6b65\u3002\u4e0a\u5cb8\u540e\uff0c\u88e4\u817f\u80fd\u62e7\u51fa\u6c34\u6765\uff0c\u5927\u5bb6\u5374\u90fd\u7b11\u5f97\u524d\u4ef0\u540e\u5408\u3002\u5982\u4eca\u60f3\u6765\uff0c\u90a3\u6e05\u51c9\u7684\u89e6\u611f\u8fd8\u5728\u8bb0\u5fc6\u91cc\u6e05\u6670\u5982\u6628\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

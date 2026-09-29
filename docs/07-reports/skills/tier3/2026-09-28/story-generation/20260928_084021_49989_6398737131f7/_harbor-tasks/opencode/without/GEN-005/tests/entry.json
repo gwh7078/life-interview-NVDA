@@ -1,0 +1,31 @@
+{
+  "id": "GEN-005",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-005.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "expected_output": "围绕毕业实习如何加深专业理解成文，准确保留两站时长、冀东总工讲解和专业认识变化，并保持日期未知。",
+  "assertions": [
+    "必须保留山东水泥试验厂1周、冀东水泥厂2周",
+    "必须保留冀东总工讲项目引进/筹建/建设/投产全过程",
+    "必须保留实习后对专业更有信心及对行业差距的认识",
+    "不得虚构精确实习日期",
+    "天津段若写入，应只使用郭同进、南开大学、天津大学和学习气氛等已知事实"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-005.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "ground_truth": "围绕毕业实习如何加深专业理解成文，准确保留两站时长、冀东总工讲解和专业认识变化，并保持日期未知。",
+  "expected_behavior": [
+    "必须保留山东水泥试验厂1周、冀东水泥厂2周",
+    "必须保留冀东总工讲项目引进/筹建/建设/投产全过程",
+    "必须保留实习后对专业更有信心及对行业差距的认识",
+    "不得虚构精确实习日期",
+    "天津段若写入，应只使用郭同进、南开大学、天津大学和学习气氛等已知事实"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

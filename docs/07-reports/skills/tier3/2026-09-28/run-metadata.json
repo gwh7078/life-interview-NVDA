@@ -1,0 +1,65 @@
+{
+  "artifact_type": "preflight_only",
+  "status": "blocked_before_smoke",
+  "test_date": "2026-09-28",
+  "git": {
+    "remote": "gwh7078/life-interview-NVDA",
+    "branch_context": "detached worktree at origin/main",
+    "pull_ff_only": "up_to_date",
+    "commit": "f33e20e18bfce16cab56c1ea19a044e26f97a339"
+  },
+  "skillevaluator": {
+    "version": "0.3.0",
+    "tier3_validation": {
+      "strict": true,
+      "result": "PASS",
+      "skills_passed": 5,
+      "skills_total": 5,
+      "case_counts": {
+        "onboarding-closeout": 8,
+        "interview-closeout": 11,
+        "interview-observer": 9,
+        "story-completion": 9,
+        "story-generation": 12
+      }
+    }
+  },
+  "agent": {
+    "provider": "Alibaba Cloud Model Studio / Bailian",
+    "model": "qwen3.6-35b-a3b",
+    "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "direct_minimal_inference": {
+      "status": "FAIL",
+      "http_status": 403,
+      "provider_error_code": "AllocationQuota.FreeTierOnly",
+      "detail": "Free quota exhausted; provider requires paid quota or disabling free-tier-only mode."
+    }
+  },
+  "judge": {
+    "provider": "StepFun",
+    "model": "step-5-preview",
+    "endpoint": "https://api.stepfun.com/v1",
+    "direct_minimal_inference": {
+      "status": "PASS",
+      "returned_model": "step-5-preview",
+      "finish_reason": "stop",
+      "content_present": true
+    }
+  },
+  "planned_run_policy": {
+    "comparison": "with-skill vs without-skill",
+    "attempts": 2,
+    "pass_threshold": 0.7,
+    "initial_concurrency": 1
+  },
+  "runtime_readiness": {
+    "docker": "FAIL: Docker Compose v2 unavailable",
+    "local": "FAIL: OpenCode CLI unavailable",
+    "ai_environment": "PASS: Retriever, VectorDB, OpenClaw forward, Codex MCP"
+  },
+  "provider_route_separation": "BLOCKED: installed SkillEvaluator uses one OpenAI-compatible endpoint and credential for OpenCode and standard judging; judge model override does not select another endpoint.",
+  "smoke_test": "NOT RUN",
+  "formal_evaluation": "NOT RUN",
+  "scores": null,
+  "api_keys_recorded": false
+}

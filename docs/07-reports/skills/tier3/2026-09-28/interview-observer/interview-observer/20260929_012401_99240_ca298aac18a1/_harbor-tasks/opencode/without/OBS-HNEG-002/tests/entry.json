@@ -1,0 +1,29 @@
+{
+  "id": "OBS-HNEG-002",
+  "prompt": "读取 /workspace/input/cases.json 中 OBS-HNEG-002。这是一场已经结束的采访，请整理为 Story Proposal；不要生成实时 context hint。",
+  "files": [
+    "files/cases.json"
+  ],
+  "expected_output": "识别这是 interview.closeout/story_create 类任务，而不是 interview-observer；不应返回 selected_evidence_ids / possible_conflicts / interview_hints。",
+  "assertions": [
+    "不应选择 interview-observer",
+    "不得输出 context-hint 三字段结构",
+    "应围绕已结束采访整理 Story Proposal 或等价收尾结果",
+    "不得把 post-session closeout 错误处理成实时只读提示"
+  ],
+  "expected_skill": null,
+  "question": "读取 /workspace/input/cases.json 中 OBS-HNEG-002。这是一场已经结束的采访，请整理为 Story Proposal；不要生成实时 context hint。",
+  "ground_truth": "识别这是 interview.closeout/story_create 类任务，而不是 interview-observer；不应返回 selected_evidence_ids / possible_conflicts / interview_hints。",
+  "expected_behavior": [
+    "不应选择 interview-observer",
+    "不得输出 context-hint 三字段结构",
+    "应围绕已结束采访整理 Story Proposal 或等价收尾结果",
+    "不得把 post-session closeout 错误处理成实时只读提示"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

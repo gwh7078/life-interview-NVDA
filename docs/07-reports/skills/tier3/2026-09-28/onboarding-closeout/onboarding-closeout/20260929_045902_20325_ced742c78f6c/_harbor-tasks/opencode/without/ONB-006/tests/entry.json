@@ -1,0 +1,31 @@
+{
+  "id": "ONB-006",
+  "prompt": "读取 /workspace/input/cases.json 中 ONB-006 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "expected_output": "在稀疏且不确定的首次建档输入中保持空缺，而不是为了结构完整虚构年份、学校或精确出生地。",
+  "assertions": [
+    "birth_year 必须为 null",
+    "不得虚构具体出生村庄",
+    "不得虚构具体上学年份或学校",
+    "若创建 Life Stage，其年份必须保持 null 或只使用输入能支持的模糊信息；不能制造精确年表",
+    "缺证据的 Profile 字段必须为 null 且 source_refs 为空"
+  ],
+  "expected_skill": "onboarding-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 ONB-006 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "ground_truth": "在稀疏且不确定的首次建档输入中保持空缺，而不是为了结构完整虚构年份、学校或精确出生地。",
+  "expected_behavior": [
+    "birth_year 必须为 null",
+    "不得虚构具体出生村庄",
+    "不得虚构具体上学年份或学校",
+    "若创建 Life Stage，其年份必须保持 null 或只使用输入能支持的模糊信息；不能制造精确年表",
+    "缺证据的 Profile 字段必须为 null 且 source_refs 为空"
+  ],
+  "evaluated_skill": "onboarding-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

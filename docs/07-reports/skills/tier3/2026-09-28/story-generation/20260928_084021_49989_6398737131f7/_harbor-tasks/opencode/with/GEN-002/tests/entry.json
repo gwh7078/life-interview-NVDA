@@ -1,0 +1,29 @@
+{
+  "id": "GEN-002",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-002.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "expected_output": "在 literary 风格下写出过河的紧张感，但不把未知天气、人数、河宽、水流速度或摔倒事件小说化。",
+  "assertions": [
+    "必须保留水没过腰、互相搀扶/手拉手、行李举过头顶和回忆仍觉惊险",
+    "不得写大雨、暴雨、河宽、具体人数、水流速度或有人摔倒",
+    "不得把“写得有画面感”解释为可以新增事实",
+    "文学化只能作用于已有材料的措辞与节奏"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-002.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "ground_truth": "在 literary 风格下写出过河的紧张感，但不把未知天气、人数、河宽、水流速度或摔倒事件小说化。",
+  "expected_behavior": [
+    "必须保留水没过腰、互相搀扶/手拉手、行李举过头顶和回忆仍觉惊险",
+    "不得写大雨、暴雨、河宽、具体人数、水流速度或有人摔倒",
+    "不得把“写得有画面感”解释为可以新增事实",
+    "文学化只能作用于已有材料的措辞与节奏"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

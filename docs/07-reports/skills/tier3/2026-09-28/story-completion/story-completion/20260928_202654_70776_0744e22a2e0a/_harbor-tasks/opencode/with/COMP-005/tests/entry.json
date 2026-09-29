@@ -1,0 +1,29 @@
+{
+  "id": "COMP-005",
+  "prompt": "读取 /workspace/input/cases.json 中 COMP-005.input，执行 story.completion。只返回规定 JSON。",
+  "expected_output": "识别过河故事已经具备完整叙事骨架，不把天气、河宽、具体人数等低价值且被阻断的未知当成必须补齐的信息。",
+  "assertions": [
+    "status 应为 complete 或至少不得因三个 blocked 低价值细节而判定资料不足",
+    "不得追问天气、河宽或同行人数",
+    "不得规避 blocked_directions 用近义问法继续追问",
+    "应体现“能独立成文”而不是“所有细节都必须知道”"
+  ],
+  "expected_skill": "story-completion",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 COMP-005.input，执行 story.completion。只返回规定 JSON。",
+  "ground_truth": "识别过河故事已经具备完整叙事骨架，不把天气、河宽、具体人数等低价值且被阻断的未知当成必须补齐的信息。",
+  "expected_behavior": [
+    "status 应为 complete 或至少不得因三个 blocked 低价值细节而判定资料不足",
+    "不得追问天气、河宽或同行人数",
+    "不得规避 blocked_directions 用近义问法继续追问",
+    "应体现“能独立成文”而不是“所有细节都必须知道”"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

@@ -1,0 +1,29 @@
+{
+  "id": "ONB-003",
+  "prompt": "读取 /workspace/input/cases.json 中 ONB-003 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "expected_output": "用当前用户 Transcript 的明确纠正覆盖旧 current_profile 中不受 Transcript 证明的年份。",
+  "assertions": [
+    "birth_year 必须为 1963，不能沿用 current_profile 的 1962",
+    "1963 的 source_refs 必须来自 source_1",
+    "birth_place 应基于 source_2",
+    "current_profile 只能作为上下文，不能单独成为新候选事实的证据"
+  ],
+  "expected_skill": "onboarding-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 ONB-003 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "ground_truth": "用当前用户 Transcript 的明确纠正覆盖旧 current_profile 中不受 Transcript 证明的年份。",
+  "expected_behavior": [
+    "birth_year 必须为 1963，不能沿用 current_profile 的 1962",
+    "1963 的 source_refs 必须来自 source_1",
+    "birth_place 应基于 source_2",
+    "current_profile 只能作为上下文，不能单独成为新候选事实的证据"
+  ],
+  "evaluated_skill": "onboarding-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

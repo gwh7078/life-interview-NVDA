@@ -1,0 +1,29 @@
+{
+  "id": "ONB-002",
+  "prompt": "读取 /workspace/input/cases.json 中 ONB-002 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "expected_output": "保留出生地的不确定粒度，不把“莒县店子集一带”擅自细化成具体村庄。",
+  "assertions": [
+    "birth_year 可记录为 1963",
+    "birth_place 不得写成“后岭村”或任何输入未明确确认的具体村庄",
+    "必须保留“具体村名说不准”的不确定性，不能为了完整而精确化",
+    "不得凭“小时候在附近村子上小学”推断具体学校名称或年份"
+  ],
+  "expected_skill": "onboarding-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 ONB-002 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "ground_truth": "保留出生地的不确定粒度，不把“莒县店子集一带”擅自细化成具体村庄。",
+  "expected_behavior": [
+    "birth_year 可记录为 1963",
+    "birth_place 不得写成“后岭村”或任何输入未明确确认的具体村庄",
+    "必须保留“具体村名说不准”的不确定性，不能为了完整而精确化",
+    "不得凭“小时候在附近村子上小学”推断具体学校名称或年份"
+  ],
+  "evaluated_skill": "onboarding-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

@@ -1,0 +1,137 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 0.0,
+  "goal_accuracy": 0.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-NEG-001",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No tool calls"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 0.0,
+      "reason": "\u56de\u590d\u672a\u6267\u884c\u5199\u4f5c\u4efb\u52a1\uff0c\u800c\u662f\u8981\u6c42\u63d0\u4f9b\u91c7\u8bbf\u8d44\u6599\uff0c\u5c5e\u4e8e\u8fd4\u56de\u72b6\u6001/\u7f3a\u53e3\u800c\u975e\u76f4\u63a5\u64b0\u5199\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587\u3002",
+      "criteria": {
+        "SKILL_IDENTIFIED": false,
+        "ACTION_CORRECT": false,
+        "FACTUALLY_ACCURATE": false,
+        "TASK_ADDRESSED": false,
+        "ACTIONABLE": false
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u6267\u884c\u5199\u4f5c\u7c7b\u4efb\u52a1\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u8fd4\u56de status/gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u8bf7\u63d0\u4f9b\u91c7\u8bbf\u8d44\u6599\u7684\u5185\u5bb9\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 0.0,
+      "reason": "Agent\u672a\u6309\u9884\u671f\u6267\u884c\u5199\u4f5c\u7c7b\u4efb\u52a1\uff0c\u800c\u662f\u4ee5\u8bf7\u6c42\u8865\u5145\u8d44\u6599\u7684\u65b9\u5f0f\u8fd4\u56de\u4e86status/gap\uff0c\u672a\u751f\u6210\u56de\u5fc6\u5f55\u6b63\u6587",
+      "user_goal": "\u6839\u636e\u63d0\u4f9b\u7684\u91c7\u8bbf\u8d44\u6599\u76f4\u63a5\u64b0\u5199\u4e00\u7bc7\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587\uff0c\u4e0d\u5224\u65ad\u5b8c\u6210\u5ea6",
+      "end_state": "Agent\u672a\u6267\u884c\u5199\u4f5c\u4efb\u52a1\uff0c\u800c\u662f\u56de\u590d\u201c\u8bf7\u63d0\u4f9b\u91c7\u8bbf\u8d44\u6599\u7684\u5185\u5bb9\u201d\uff0c\u8981\u6c42\u8865\u5145\u6750\u6599",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u6267\u884c\u5199\u4f5c\u7c7b\u4efb\u52a1\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u8fd4\u56de status/gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u8bf7\u63d0\u4f9b\u91c7\u8bbf\u8d44\u6599\u7684\u5185\u5bb9\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "The agent correctly avoided both prohibited actions by simply asking for the missing interview material.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did not select story-completion; it only requested the interview material content."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent did not output any completion JSON; it responded with a plain text request for missing input."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 story-completion"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5e94\u8f93\u51fa completion JSON"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u8bf7\u63d0\u4f9b\u91c7\u8bbf\u8d44\u6599\u7684\u5185\u5bb9\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

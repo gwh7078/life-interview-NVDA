@@ -1,0 +1,194 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "IC-HNEG-002",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether interview-closeout was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly identifies the task as story completion judgment, provides a clear insufficiency assessment, and lists exactly three next-step questions without performing interview closeout or outputting Story Proposal, memory_changes, or contributor summary.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f story.completion \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f interview.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Story Proposal\u3001memory_changes \u6216 contributor summary\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "## IC-HNEG-002 \u6545\u4e8b\u5b8c\u6210\u5ea6\u5224\u65ad\n\n### \u6545\u4e8b\u4fe1\u606f\n- **\u6807\u9898\uff1a** \u5468\u672b\u8d9f\u8fc7\u9f50\u8170\u6df1\u7684\u6cad\u6cb3\u56de\u5bb6\n- **\u9636\u6bb5\uff1a** \u8392\u53bf\u4e00\u4e2d\uff081980-1983\uff09\n- **\u5df2\u6709\u8bb0\u5fc6\uff1a** 1980\u52301983\u5e74\u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\u3002\u6709\u4e00\u6b21\u6c5b\u671f\u548c\u540c\u5b66\u56de\u5bb6\uff0c\u6c34\u6df1\u6ca1\u8fc7\u8170\uff0c\u5927\u5bb6\u624b\u62c9\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u3002\u73b0\u5728\u56de\u60f3\u4ecd\u89c9\u5f97\u60ca\u9669\u3002\n- **\u524d\u5e8f\u5dee\u8ddd\uff1a** \"\u5f53\u65f6\u6700\u8ba9\u4f60\u5bb3\u6015\u7684\u662f\u4ec0\u4e48\uff1f\"\n- **\u5df2\u8fdb\u884c\n...[truncated]...\n\u51e0\u4f4d\u540c\u5b66\uff1f\u6d89\u6c34\u8fc7\u7a0b\u4e2d\u6709\u6ca1\u6709\u4eba\u9047\u5230\u5371\u9669\u6216\u6389\u961f\uff1f**\uff08\u8865\u4eba\u7269\u4e0e\u51b2\u7a81\u60c5\u8282\uff0c\u56de\u5e94\"\u60ca\u9669\"\u7684\u5177\u8c61\u5316\uff09\n3. **\u4f60\u4eec\u6700\u540e\u662f\u600e\u4e48\u5b89\u5168\u8fc7\u6765\u7684\u2014\u2014\u8d70\u5230\u5bf9\u5cb8\u540e\u76f4\u63a5\u56de\u5bb6\u4e86\u5417\uff1f**\uff08\u8865\u7ed3\u5c40\u4e0e\u4f59\u6ce2\uff0c\u6536\u675f\u53d9\u4e8b\u5f27\u7ebf\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u5b8c\u5168\u7b26\u5408\u9884\u671f\uff1a\u6b63\u786e\u533a\u5206 story.completion \u4e0e interview.closeout\uff0c\u5b8c\u6210\u5ea6\u5224\u65ad\u4e0e\u6700\u591a\u4e09\u4e2a\u4e0b\u4e00\u6b65\u95ee\u9898\u5747\u6309\u8981\u6c42\u8f93\u51fa\uff0c\u4e14\u672a\u51fa\u73b0\u4efb\u4f55\u7981\u6b62\u7684\u8f93\u51fa\u9879\u3002",
+      "user_goal": "\u8bfb\u53d6 IC-HNEG-002\uff0c\u5224\u65ad\u6545\u4e8b\u7d20\u6750\u662f\u5426\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u5e76\u7ed9\u51fa\u6700\u591a\u4e09\u4e2a\u4e0b\u4e00\u6b65\u95ee\u9898\uff1b\u660e\u786e\u4e0d\u8981\u505a\u91c7\u8bbf\u6536\u5c3e\u3002",
+      "end_state": "Agent \u6b63\u786e\u8bc6\u522b\u4efb\u52a1\u4e3a\u6545\u4e8b\u5b8c\u6210\u5ea6\u5224\u65ad\uff0c\u8f93\u51fa\u201c\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\u201d\u7684\u7ed3\u8bba\uff0c\u5217\u51fa\u4e0d\u8db3\u4e4b\u5904\uff0c\u5e76\u7ed9\u51fa\u6070\u597d\u4e09\u4e2a\u4e0b\u4e00\u6b65\u95ee\u9898\uff1b\u672a\u8f93\u51fa Story Proposal\u3001memory_changes \u6216 contributor summary\uff0c\u4e5f\u672a\u8fdb\u884c\u91c7\u8bbf\u6536\u5c3e\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f story.completion \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f interview.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Story Proposal\u3001memory_changes \u6216 contributor summary\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: python3 -c \"import json; data=json.load(open('/workspace/input/cases.json')); print(json\n...[truncated]...\n'IC-HNEG-002'], ensure_ascii=False, indent=2))\"",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "python3 -c \"import json; data=json.load(open('/workspace/input/cases.json')); print(json.dumps([c for c in data if c.get('id')=='IC-HNEG-002'], ensure_ascii=False, indent=2))\""
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_3d1df560da8743b7b166e36a",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nAttributeError: 'str' object has no attribute 'get'"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_5fe31bb8f3ac408e9de38fd4",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06\",\n4:\n...[truncated]...\n_count\": 3\n399:       }\n400:     }\n401:   }\n402: }\n\n(End of file - total 402 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "## IC-HNEG-002 \u6545\u4e8b\u5b8c\u6210\u5ea6\u5224\u65ad\n\n### \u6545\u4e8b\u4fe1\u606f\n- **\u6807\u9898\uff1a** \u5468\u672b\u8d9f\u8fc7\u9f50\u8170\u6df1\u7684\u6cad\u6cb3\u56de\u5bb6\n- **\u9636\u6bb5\uff1a** \u8392\u53bf\u4e00\u4e2d\uff081980-1983\uff09\n- **\u5df2\u6709\u8bb0\u5fc6\uff1a** 1980\u52301983\u5e74\u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\u3002\u6709\u4e00\u6b21\u6c5b\u671f\u548c\u540c\u5b66\u56de\u5bb6\uff0c\u6c34\u6df1\u6ca1\u8fc7\u8170\uff0c\u5927\u5bb6\u624b\u62c9\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u3002\u73b0\u5728\u56de\u60f3\u4ecd\u89c9\u5f97\u60ca\u9669\u3002\n- **\u524d\u5e8f\u5dee\u8ddd\uff1a** \"\u5f53\u65f6\u6700\u8ba9\u4f60\u5bb3\u6015\u7684\u662f\u4ec0\u4e48\uff1f\"\n- **\u5df2\u8fdb\u884c\n...[truncated]...\n\u51e0\u4f4d\u540c\u5b66\uff1f\u6d89\u6c34\u8fc7\u7a0b\u4e2d\u6709\u6ca1\u6709\u4eba\u9047\u5230\u5371\u9669\u6216\u6389\u961f\uff1f**\uff08\u8865\u4eba\u7269\u4e0e\u51b2\u7a81\u60c5\u8282\uff0c\u56de\u5e94\"\u60ca\u9669\"\u7684\u5177\u8c61\u5316\uff09\n3. **\u4f60\u4eec\u6700\u540e\u662f\u600e\u4e48\u5b89\u5168\u8fc7\u6765\u7684\u2014\u2014\u8d70\u5230\u5bf9\u5cb8\u540e\u76f4\u63a5\u56de\u5bb6\u4e86\u5417\uff1f**\uff08\u8865\u7ed3\u5c40\u4e0e\u4f59\u6ce2\uff0c\u6536\u675f\u53d9\u4e8b\u5f27\u7ebf\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors observed. The agent correctly performed a story completion judgment without interview closeout.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did not select interview-closeout; it produced a story completion judgment as requested."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "No closeout contract for story_create/story_continue/contributor was output."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Judgment centered on completeness and next-step gaps, listing shortcomings and up to three follow-up questions."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Response treated the task as completion planning with gaps, not as a proposal for an already-ended interview."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 interview-closeout"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u8f93\u51fa story_create/story_continue/contributor \u7684 closeout contract"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u56f4\u7ed5 complete/interviewing \u4e0e\u4e0b\u4e00\u6b65 gaps \u505a\u5224\u65ad"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a\u5b8c\u6210\u5ea6\u89c4\u5212\u8bef\u5f53\u4f5c\u5df2\u7ed3\u675f\u91c7\u8bbf\u7684 Proposal \u6574\u7406"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "## IC-HNEG-002 \u6545\u4e8b\u5b8c\u6210\u5ea6\u5224\u65ad\n\n### \u6545\u4e8b\u4fe1\u606f\n- **\u6807\u9898\uff1a** \u5468\u672b\u8d9f\u8fc7\u9f50\u8170\u6df1\u7684\u6cad\u6cb3\u56de\u5bb6\n- **\u9636\u6bb5\uff1a** \u8392\u53bf\u4e00\u4e2d\uff081980-1983\uff09\n- **\u5df2\u6709\u8bb0\u5fc6\uff1a** 1980\u52301983\u5e74\u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\u3002\u6709\u4e00\u6b21\u6c5b\u671f\u548c\u540c\u5b66\u56de\u5bb6\uff0c\u6c34\u6df1\u6ca1\u8fc7\u8170\uff0c\u5927\u5bb6\u624b\u62c9\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u3002\u73b0\u5728\u56de\u60f3\u4ecd\u89c9\u5f97\u60ca\u9669\u3002\n- **\u524d\u5e8f\u5dee\u8ddd\uff1a** \"\u5f53\u65f6\u6700\u8ba9\u4f60\u5bb3\u6015\u7684\u662f\u4ec0\u4e48\uff1f\"\n- **\u5df2\u8fdb\u884c\n...[truncated]...\n\u51e0\u4f4d\u540c\u5b66\uff1f\u6d89\u6c34\u8fc7\u7a0b\u4e2d\u6709\u6ca1\u6709\u4eba\u9047\u5230\u5371\u9669\u6216\u6389\u961f\uff1f**\uff08\u8865\u4eba\u7269\u4e0e\u51b2\u7a81\u60c5\u8282\uff0c\u56de\u5e94\"\u60ca\u9669\"\u7684\u5177\u8c61\u5316\uff09\n3. **\u4f60\u4eec\u6700\u540e\u662f\u600e\u4e48\u5b89\u5168\u8fc7\u6765\u7684\u2014\u2014\u8d70\u5230\u5bf9\u5cb8\u540e\u76f4\u63a5\u56de\u5bb6\u4e86\u5417\uff1f**\uff08\u8865\u7ed3\u5c40\u4e0e\u4f59\u6ce2\uff0c\u6536\u675f\u53d9\u4e8b\u5f27\u7ebf\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "IC-HNEG-002__JjjeesA",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "evaluator_version": "0.3.0",
+  "dataset": [
+    {
+      "id": "COMP-001"
+    },
+    {
+      "id": "COMP-002"
+    },
+    {
+      "id": "COMP-003"
+    },
+    {
+      "id": "COMP-004"
+    },
+    {
+      "id": "COMP-005"
+    },
+    {
+      "id": "COMP-006"
+    },
+    {
+      "id": "COMP-007"
+    },
+    {
+      "id": "COMP-NEG-001"
+    },
+    {
+      "id": "COMP-HNEG-002"
+    }
+  ],
+  "dataset_summary": {
+    "total_tasks": 9,
+    "positive_tasks": 0,
+    "negative_tasks": 0,
+    "unclassified_tasks": 9,
+    "source": "dataset"
+  },
+  "dataset_digest": "sha256:2bc8c955264c7b7638dec1cb60cb59a5da8ba83ca7439e46f4fa6aae045f2b9b",
+  "dataset_digest_algorithm": "skill-evaluator-dataset-snapshot/1"
+}

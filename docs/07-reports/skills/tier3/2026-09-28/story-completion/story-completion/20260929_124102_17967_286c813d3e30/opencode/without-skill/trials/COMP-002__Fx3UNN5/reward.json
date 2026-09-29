@@ -1,0 +1,242 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-002",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'story-completion'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent executed before reading SKILL.md for 'story-completion'"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "2/2 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The agent correctly executed story.completion for COMP-002 by reading the input, verifying that both previous gaps are answered in agent_memory, and returning the required JSON with status 'complete' and empty gaps.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u4e8b\u5b9e\u94fe\u5df2\u8db3\u4ee5\u652f\u6491\u4e00\u7bc7\u72ec\u7acb\u6587\u7ae0\uff0c\u5e76\u5220\u9664\u5df2\u7ecf\u88ab Memory \u56de\u7b54\u7684\u65e7 gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "```json\n{\"status\": \"complete\", \"gaps\": []}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u4ee3\u7406\u6b63\u786e\u8bc6\u522b\u4e8b\u5b9e\u94fe\u5df2\u8db3\u591f\u652f\u6491\u72ec\u7acb\u6587\u7ae0\uff0c\u5220\u9664\u4e86\u5df2\u88ab Memory \u56de\u7b54\u7684\u65e7 gaps\uff0c\u5e76\u4ec5\u8fd4\u56de\u4e86\u7b26\u5408 output_contract \u7684 JSON\u3002",
+      "user_goal": "\u8bfb\u53d6 COMP-002.input\uff0c\u6267\u884c story.completion\uff0c\u5e76\u4ec5\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+      "end_state": "\u4ee3\u7406\u8bfb\u53d6\u4e86 COMP-002.input\uff0c\u8bc6\u522b\u51fa previous_gaps \u5df2\u88ab agent_memory \u56de\u7b54\uff0c\u8f93\u51fa {\"status\":\"complete\",\"gaps\":[]}\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u4e8b\u5b9e\u94fe\u5df2\u8db3\u4ee5\u652f\u6491\u4e00\u7bc7\u72ec\u7acb\u6587\u7ae0\uff0c\u5e76\u5220\u9664\u5df2\u7ecf\u88ab Memory \u56de\u7b54\u7684\u65e7 gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: cat << 'EOF' > /tmp/execute_comp002.py\nimport json\n\nwith open('/workspace/input/cases.js\n...[truncated]...\n indent=2))\nEOF\npython3 /tmp/execute_comp002.py",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "cat << 'EOF' > /tmp/execute_comp002.py\nimport json\n\nwith open('/workspace/input/cases.json', 'r') as f:\n    data = json.load(f)\n\ncomp002 = data['cases']['COMP-002']\ninp = comp002['input']\n...[truncated]...\n}\n\nprint(json.dumps(result, ensure_ascii=False, indent=2))\nEOF\npython3 /tmp/execute_comp002.py"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_2b2e504a832148beb5e8623d",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_3f1a5afe52ed477e9507ef76",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "{\n  \"status\": \"complete\",\n  \"gaps\": []\n}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "```json\n{\"status\": \"complete\", \"gaps\": []}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors observed: status is complete, gaps is empty, and answered questions are not retained.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent returned status 'complete' as required."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "The gaps array is empty, so the questions about who took to hospital and exam score are not retained."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "gaps is an empty array, containing no previously answered questions."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Agent did not mechanically keep 'interviewing'; it correctly marked the case as complete based on resolved gaps."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "status \u5e94\u4e3a complete"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u7ee7\u7eed\u4fdd\u7559\u201c\u662f\u8c01\u9001\u4f60\u53bb\u533b\u9662\u7684\uff1f\u201d\u6216\u201c\u4f60\u6700\u540e\u8003\u4e86\u591a\u5c11\u5206\uff1f\u201d"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "gaps \u5e94\u4e3a\u7a7a\u6216\u4e0d\u518d\u5305\u542b\u5df2\u660e\u786e\u56de\u7b54\u7684\u95ee\u9898"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u56e0\u4e3a\u8fd8\u80fd\u7ee7\u7eed\u95f2\u804a\u5c31\u673a\u68b0\u4fdd\u6301 interviewing"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "file_change",
+          "label": "bash: cat << 'EOF' > /tmp/execute_comp002.py\nimport json\n\nwith open('/workspace/input/cases.js\n...[truncated]...\n indent=2))\nEOF\npython3 /tmp/execute_comp002.py",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "cat << 'EOF' > /tmp/execute_comp002.py\nimport json\n\nwith open('/workspace/input/cases.json', 'r') as f:\n    data = json.load(f)\n\ncomp002 = data['cases']['COMP-002']\ninp = comp002['input']\n...[truncated]...\n}\n\nprint(json.dumps(result, ensure_ascii=False, indent=2))\nEOF\npython3 /tmp/execute_comp002.py"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "```json\n{\"status\": \"complete\", \"gaps\": []}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "COMP-002__Fx3UNN5",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

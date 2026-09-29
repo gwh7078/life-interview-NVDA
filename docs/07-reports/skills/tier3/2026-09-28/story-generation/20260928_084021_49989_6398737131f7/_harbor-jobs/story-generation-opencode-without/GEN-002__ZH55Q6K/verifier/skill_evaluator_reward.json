@@ -1,0 +1,216 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 0.75,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "GEN-002",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'story-generation'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'story-generation' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Returns the required JSON memoir body in literary style, conveys the crossing tension, and explicitly avoids inventing unknown weather, headcount, river width, current speed, or falling events.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5728 literary \u98ce\u683c\u4e0b\u5199\u51fa\u8fc7\u6cb3\u7684\u7d27\u5f20\u611f\uff0c\u4f46\u4e0d\u628a\u672a\u77e5\u5929\u6c14\u3001\u4eba\u6570\u3001\u6cb3\u5bbd\u3001\u6c34\u6d41\u901f\u5ea6\u6216\u6454\u5012\u4e8b\u4ef6\u5c0f\u8bf4\u5316\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"content\":\"\u8392\u53bf\u4e00\u4e2d\u7684\u4e09\u5e74\uff0c\u6211\u4f4f\u5728\u5b66\u6821\uff0c\u6bcf\u4e2a\u5468\u672b\u90fd\u8981\u6b65\u884c\u56de\u5bb6\u3002\\n\\n\u8def\u8981\u7ecf\u8fc7\u6cad\u6cb3\u3002\u5e73\u65e5\u91cc\u6c34\u4e0d\u6df1\uff0c\u8d70\u8d77\u6765\u8fd8\u7b97\u8e0f\u5b9e\u3002\u53ef\u6709\u4e00\u56de\uff0c\u662f\u590f\u5929\u6c5b\u671f\uff0c\u96e8\u8fc7\u540e\u6cb3\u6c34\u6da8\u4e86\u8d77\u6765\u3002\u5230\u4e86\u6cb3\u8fb9\u4e00\u770b\uff0c\u6c34\u5df2\u7ecf\u9f50\u8170\u6df1\uff0c\u6d51\u6d4a\u7684\u6cb3\u6c34\u5728\u811a\u8fb9\u6e4d\u6025\u5730\u6d41\u7740\u3002\\n\\n\u540c\u884c\u7684\u6709\u51e0\u4e2a\u540c\u5b66\uff0c\u5927\u5bb6\u4e0d\u6562\u8d38\u7136\u4e0b\u6c34\u3002\u7ad9\u5728\u5cb8\u8fb9\u72b9\u8c6b\u4e86\u4e00\u4f1a\u513f\uff0c\u7136\u540e\u624b\u62c9\u7740\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\uff0c\u4e00\u6b65\u4e00\u6b65\u5f80\u6cb3\u91cc\u8fc8\u3002\u6c34\u6d41\u51b2\u5728\u817f\u4e0a\uff0c\u529b\u6c14\u4e0d\n...[truncated]...\n\uff0c\u5f53\u5929\u7684\u5929\u6c14\u5982\u4f55\uff0c\u6cad\u6cb3\u5230\u5e95\u6709\u591a\u5bbd\u3001\u6c34\u6d41\u591a\u5feb\uff0c\u8fd9\u4e9b\u6211\u90fd\u8bf4\u4e0d\u51c6\u4e86\u3002\u751a\u81f3\u6709\u6ca1\u6709\u4eba\u6ed1\u5012\u8e29\u8fdb\u6c34\u91cc\uff0c\u4e5f\u60f3\u4e0d\u8d77\u6765\u4e86\u3002\u6211\u53ea\u8bb0\u5f97\uff0c\u6c34\u548c\u8170\u9f50\u5e73\uff0c\u6c34\u9762\u4e0a\u662f\u6211\u4eec\u4e3e\u7740\u7684\u4e66\u5305\u548c\u884c\u674e\uff0c\u8fd8\u6709\u5f7c\u6b64\u62c9\u7740\u7684\u624b\u3002\\n\"}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u6b63\u6587\u7b26\u5408\u8f93\u51fa\u5951\u7ea6\uff0c\u5728 literary \u98ce\u683c\u4e0b\u5448\u73b0\u4e86\u8fc7\u6cb3\u7d27\u5f20\u611f\uff0c\u540c\u65f6\u5bf9\u672a\u77e5\u7ec6\u8282\u4fdd\u6301\u4e0d\u786e\u5b9a\uff0c\u672a\u7f16\u9020\u786e\u5b9a\u4fe1\u606f\u3002",
+      "user_goal": "\u8bfb\u53d6 GEN-002.input \u5e76\u6267\u884c initial \u6545\u4e8b\u751f\u6210\uff0c\u8fd4\u56de\u53ea\u542b content \u7684\u6b63\u6587 JSON\u3002",
+      "end_state": "\u8fd4\u56de\u4e86\u5408\u6cd5 JSON\uff0ccontent \u4e3a\u975e\u7a7a\u6b63\u6587\uff1b\u4ee5\u6587\u5b66\u5316\u624b\u6cd5\u63cf\u5199\u4e86\u8fc7\u6cb3\u7684\u7d27\u5f20\u611f\uff0c\u5e76\u5f3a\u8c03\u5929\u6c14\u3001\u4eba\u6570\u3001\u6cb3\u5bbd\u3001\u6c34\u6d41\u901f\u5ea6\u3001\u662f\u5426\u6454\u5012\u7b49\u7ec6\u8282\u8bb0\u4e0d\u51c6\uff0c\u672a\u5c06\u5176\u5177\u4f53\u5c0f\u8bf4\u5316\u3002",
+      "method": "custom",
+      "provider": "openai-compatible",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5728 literary \u98ce\u683c\u4e0b\u5199\u51fa\u8fc7\u6cb3\u7684\u7d27\u5f20\u611f\uff0c\u4f46\u4e0d\u628a\u672a\u77e5\u5929\u6c14\u3001\u4eba\u6570\u3001\u6cb3\u5bbd\u3001\u6c34\u6d41\u901f\u5ea6\u6216\u6454\u5012\u4e8b\u4ef6\u5c0f\u8bf4\u5316\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_9183006cccc9423aa7d6cfec",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary facts: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06 and \u8d44\n...[truncated]...\n_count\": 3\n379:       }\n380:     }\n381:   }\n382: }\n\n(End of file - total 382 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"content\":\"\u8392\u53bf\u4e00\u4e2d\u7684\u4e09\u5e74\uff0c\u6211\u4f4f\u5728\u5b66\u6821\uff0c\u6bcf\u4e2a\u5468\u672b\u90fd\u8981\u6b65\u884c\u56de\u5bb6\u3002\\n\\n\u8def\u8981\u7ecf\u8fc7\u6cad\u6cb3\u3002\u5e73\u65e5\u91cc\u6c34\u4e0d\u6df1\uff0c\u8d70\u8d77\u6765\u8fd8\u7b97\u8e0f\u5b9e\u3002\u53ef\u6709\u4e00\u56de\uff0c\u662f\u590f\u5929\u6c5b\u671f\uff0c\u96e8\u8fc7\u540e\u6cb3\u6c34\u6da8\u4e86\u8d77\u6765\u3002\u5230\u4e86\u6cb3\u8fb9\u4e00\u770b\uff0c\u6c34\u5df2\u7ecf\u9f50\u8170\u6df1\uff0c\u6d51\u6d4a\u7684\u6cb3\u6c34\u5728\u811a\u8fb9\u6e4d\u6025\u5730\u6d41\u7740\u3002\\n\\n\u540c\u884c\u7684\u6709\u51e0\u4e2a\u540c\u5b66\uff0c\u5927\u5bb6\u4e0d\u6562\u8d38\u7136\u4e0b\u6c34\u3002\u7ad9\u5728\u5cb8\u8fb9\u72b9\u8c6b\u4e86\u4e00\u4f1a\u513f\uff0c\u7136\u540e\u624b\u62c9\u7740\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\uff0c\u4e00\u6b65\u4e00\u6b65\u5f80\u6cb3\u91cc\u8fc8\u3002\u6c34\u6d41\u51b2\u5728\u817f\u4e0a\uff0c\u529b\u6c14\u4e0d\n...[truncated]...\n\uff0c\u5f53\u5929\u7684\u5929\u6c14\u5982\u4f55\uff0c\u6cad\u6cb3\u5230\u5e95\u6709\u591a\u5bbd\u3001\u6c34\u6d41\u591a\u5feb\uff0c\u8fd9\u4e9b\u6211\u90fd\u8bf4\u4e0d\u51c6\u4e86\u3002\u751a\u81f3\u6709\u6ca1\u6709\u4eba\u6ed1\u5012\u8e29\u8fdb\u6c34\u91cc\uff0c\u4e5f\u60f3\u4e0d\u8d77\u6765\u4e86\u3002\u6211\u53ea\u8bb0\u5f97\uff0c\u6c34\u548c\u8170\u9f50\u5e73\uff0c\u6c34\u9762\u4e0a\u662f\u6211\u4eec\u4e3e\u7740\u7684\u4e66\u5305\u548c\u884c\u674e\uff0c\u8fd8\u6709\u5f7c\u6b64\u62c9\u7740\u7684\u624b\u3002\\n\"}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 0.75,
+      "reason": "\u4fdd\u7559\u5173\u952e\u4e8b\u5b9e\uff0c\u4f46\u672b\u6bb5\u63d0\u53ca\u591a\u9879\u7981\u6b62\u7ec6\u8282",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "\u5fc5\u9700\u5143\u7d20\u5168\u90e8\u4fdd\u7559"
+        },
+        {
+          "step": 2,
+          "passed": false,
+          "reason": "\u63d0\u53ca\u6cb3\u5bbd\u3001\u4eba\u6570\u3001\u6d41\u901f\u3001\u6454\u5012"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "\u672a\u65b0\u589e\u4e8b\u5b9e\uff0c\u4ec5\u6587\u5b66\u5316\u5df2\u6709\u6750\u6599"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "\u6587\u5b66\u5316\u9650\u4e8e\u63aa\u8f9e\u4e0e\u8282\u594f"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u5fc5\u987b\u4fdd\u7559\u6c34\u6ca1\u8fc7\u8170\u3001\u4e92\u76f8\u6400\u6276/\u624b\u62c9\u624b\u3001\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u548c\u56de\u5fc6\u4ecd\u89c9\u60ca\u9669"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u5199\u5927\u96e8\u3001\u66b4\u96e8\u3001\u6cb3\u5bbd\u3001\u5177\u4f53\u4eba\u6570\u3001\u6c34\u6d41\u901f\u5ea6\u6216\u6709\u4eba\u6454\u5012"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u5f97\u628a\u201c\u5199\u5f97\u6709\u753b\u9762\u611f\u201d\u89e3\u91ca\u4e3a\u53ef\u4ee5\u65b0\u589e\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u6587\u5b66\u5316\u53ea\u80fd\u4f5c\u7528\u4e8e\u5df2\u6709\u6750\u6599\u7684\u63aa\u8f9e\u4e0e\u8282\u594f"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"content\":\"\u8392\u53bf\u4e00\u4e2d\u7684\u4e09\u5e74\uff0c\u6211\u4f4f\u5728\u5b66\u6821\uff0c\u6bcf\u4e2a\u5468\u672b\u90fd\u8981\u6b65\u884c\u56de\u5bb6\u3002\\n\\n\u8def\u8981\u7ecf\u8fc7\u6cad\u6cb3\u3002\u5e73\u65e5\u91cc\u6c34\u4e0d\u6df1\uff0c\u8d70\u8d77\u6765\u8fd8\u7b97\u8e0f\u5b9e\u3002\u53ef\u6709\u4e00\u56de\uff0c\u662f\u590f\u5929\u6c5b\u671f\uff0c\u96e8\u8fc7\u540e\u6cb3\u6c34\u6da8\u4e86\u8d77\u6765\u3002\u5230\u4e86\u6cb3\u8fb9\u4e00\u770b\uff0c\u6c34\u5df2\u7ecf\u9f50\u8170\u6df1\uff0c\u6d51\u6d4a\u7684\u6cb3\u6c34\u5728\u811a\u8fb9\u6e4d\u6025\u5730\u6d41\u7740\u3002\\n\\n\u540c\u884c\u7684\u6709\u51e0\u4e2a\u540c\u5b66\uff0c\u5927\u5bb6\u4e0d\u6562\u8d38\u7136\u4e0b\u6c34\u3002\u7ad9\u5728\u5cb8\u8fb9\u72b9\u8c6b\u4e86\u4e00\u4f1a\u513f\uff0c\u7136\u540e\u624b\u62c9\u7740\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\uff0c\u4e00\u6b65\u4e00\u6b65\u5f80\u6cb3\u91cc\u8fc8\u3002\u6c34\u6d41\u51b2\u5728\u817f\u4e0a\uff0c\u529b\u6c14\u4e0d\n...[truncated]...\n\uff0c\u5f53\u5929\u7684\u5929\u6c14\u5982\u4f55\uff0c\u6cad\u6cb3\u5230\u5e95\u6709\u591a\u5bbd\u3001\u6c34\u6d41\u591a\u5feb\uff0c\u8fd9\u4e9b\u6211\u90fd\u8bf4\u4e0d\u51c6\u4e86\u3002\u751a\u81f3\u6709\u6ca1\u6709\u4eba\u6ed1\u5012\u8e29\u8fdb\u6c34\u91cc\uff0c\u4e5f\u60f3\u4e0d\u8d77\u6765\u4e86\u3002\u6211\u53ea\u8bb0\u5f97\uff0c\u6c34\u548c\u8170\u9f50\u5e73\uff0c\u6c34\u9762\u4e0a\u662f\u6211\u4eec\u4e3e\u7740\u7684\u4e66\u5305\u548c\u884c\u674e\uff0c\u8fd8\u6709\u5f7c\u6b64\u62c9\u7740\u7684\u624b\u3002\\n\"}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

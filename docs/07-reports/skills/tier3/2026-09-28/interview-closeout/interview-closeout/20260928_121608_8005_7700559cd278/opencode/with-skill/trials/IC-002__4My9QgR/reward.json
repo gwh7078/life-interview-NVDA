@@ -1,0 +1,297 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.9375,
+  "skill_efficiency": 0.4167,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 0.75,
+  "overall": 0.8507,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "IC-002",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 0.75,
+        "reason": "SKILL.md found in tool observation",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "interview-closeout",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "interview-closeout"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Correct workflow order"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 0.8333,
+        "reason": "5/6 productive calls (83%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly produces the story_create output contract JSON for IC-002, capturing the professional attitude transformation without inventing a specific factory name, thus preserving the factual boundary. It directly addresses the task and provides actionable structured output.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5f62\u6210\u4e13\u4e1a\u6001\u5ea6\u8f6c\u53d8\u7684 Story Proposal\uff0c\u540c\u65f6\u4fdd\u7559\u201c\u7b2c\u4e00\u6b21\u65b0\u751f\u53c2\u89c2\u5177\u4f53\u5de5\u5382\u4e0d\u80fd\u786e\u5b9a\u201d\u7684\u4e8b\u5b9e\u8fb9\u754c\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "```json\n{\n  \"story\": {\n    \"title\": \"\u4ece\u5acc\u5f03\u6c34\u6ce5\u4e13\u4e1a\u5230\u771f\u6b63\u8ba4\u540c\",\n    \"summary\": \"\u521a\u8fdb\u5165\u5927\u5b66\u65f6\u5bf9\u6c34\u6ce5\u4e13\u4e1a\u611f\u5230\u5931\u671b\uff0c\u8ba4\u4e3a\u5b83\u7070\u6251\u6251\u7684\u3002\u5728\u65b0\u751f\u53c2\u89c2\u4e86\u5de5\u5382\u540e\uff0c\u770b\u5230\u9ad8\u5927\u7684\u7a91\u7089\u3001\u8f70\u9e23\u7684\u8bbe\u5907\u4ee5\u53ca\u771f\u5b9e\u7684\u751f\u4ea7\u6d41\u7a0b\uff0c\u5f00\u59cb\u610f\u8bc6\u5230\u8fd9\u4e2a\u4e13\u4e1a\u8fdc\u6bd4\u60f3\u8c61\u4e2d\u590d\u6742\u3002\u4e4b\u540e\u53c8\u901a\u8fc7\u8001\u5e08\u7684\u62a5\u544a\u3001\u8bfe\u5802\u6559\u5b66\u3001\u4e0e\u540c\u5b66\u8ba8\u8bba\u4ee5\u53ca\u53c2\u89c2\u4e13\u4e1a\u5c55\u89c8\u7b49\u65b9\u5f0f\uff0c\u9010\u6e10\u5bf9\u8fd9\u4e2a\u4e13\u4e1a\u5efa\u7acb\u4e86\u8ba4\u540c\n...[truncated]...\n\u89c8\u7b49\u6e20\u9053\u9010\u6b65\u5efa\u7acb\u4e13\u4e1a\u8ba4\u540c\u3002\",\n    \"source_message_ids\": [\n      \"m1\",\n      \"m3\",\n      \"m4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u8bfb\u53d6 IC-002 \u5e76\u6309 story_create \u6a21\u5f0f\u4ec5\u8fd4\u56de\u57fa\u7840\u8f93\u51fa\u5951\u7ea6 JSON\u3002Story Proposal \u6e05\u6670\u523b\u753b\u4e86\u4e13\u4e1a\u6001\u5ea6\u8f6c\u53d8\uff1b\u540c\u65f6\u4e25\u683c\u9075\u5b88\u4e8b\u5b9e\u8fb9\u754c\uff0c\u672a\u5c06 assistant \u6d88\u606f m2 \u4e2d\u7684\u2018\u535a\u5c71\u6c34\u6ce5\u5382\u2019\u5f53\u4f5c\u8bc1\u636e\uff0csummary \u4e0e agent_memory \u5747\u53ea\u4f7f\u7528\u2018\u5de5\u5382\u2019\u8fd9\u4e00\u4e0d\u786e\u5b9a\u8868\u8ff0\uff0c\u5b8c\u6574\u4fdd\u7559\u4e86 m3 \u4e2d\u7528\u6237\u58f0\u660e\u7684\u2018\u5177\u4f53\u5de5\u5382\u4e0d\u80fd\u786e\u5b9a\u2019\u3002source_message_ids \u4ec5\u5305\u542b user \u6d88\u606f m1\u3001m3\u3001m4\uff0c\u7b26\u5408\u8bc1\u636e\u89c4\u5219\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d IC-002\uff0c\u6309 mode=story_create \u5b8c\u6210 interview.closeout\uff0c\u5e76\u53ea\u8fd4\u56de\u8be5 mode \u7684\u57fa\u7840\u8f93\u51fa contract JSON\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408 story_create \u5951\u7ea6\u7684 JSON\uff0c\u5305\u542b story.title\u3001story.summary\u3001story.agent_memory \u548c story.source_message_ids\u3002\u5185\u5bb9\u5448\u73b0\u4e86\u4ece\u5acc\u5f03\u6c34\u6ce5\u4e13\u4e1a\u5230\u5efa\u7acb\u8ba4\u540c\u7684\u6001\u5ea6\u8f6c\u53d8\uff0c\u4e14\u672a\u675c\u64b0\u5177\u4f53\u5de5\u5382\u540d\u79f0\uff0c\u4fdd\u7559\u4e86\u7528\u6237\u5bf9\u7b2c\u4e00\u6b21\u65b0\u751f\u53c2\u89c2\u5de5\u5382\u4e0d\u786e\u5b9a\u7684\u4e8b\u5b9e\u8fb9\u754c\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5f62\u6210\u4e13\u4e1a\u6001\u5ea6\u8f6c\u53d8\u7684 Story Proposal\uff0c\u540c\u65f6\u4fdd\u7559\u201c\u7b2c\u4e00\u6b21\u65b0\u751f\u53c2\u89c2\u5177\u4f53\u5de5\u5382\u4e0d\u80fd\u786e\u5b9a\u201d\u7684\u4e8b\u5b9e\u8fb9\u754c\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/root/.config/opencode/skills/interview-closeout/SKILL.md\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: cat /workspace/input/cases.json | python3 -c \"import sys,json; data=json.load(sys.stdin)\n...[truncated]...\nps(dict((k,data[k]) for k in keys), indent=2))\"",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "cat /workspace/input/cases.json | python3 -c \"import sys,json; data=json.load(sys.stdin); print(json.dumps({k:v for k,v in data.items() if 'IC-002' in k} or {i:k for k,v in data.items() f\n...[truncated]...\nfor k in data if 'IC-002' in k]; print(json.dumps(dict((k,data[k]) for k in keys), indent=2))\""
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "glob: glob",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"pattern\": \"/root/.config/opencode/skills/interview-closeout/references/*.md\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: python3 -c \"\nimport json\nwith open('/workspace/input/cases.json') as f:\n    data = json.\n...[truncated]...\nscii=False))\nelse:\n    print(type(data))\n\" 2>&1",
+          "json_pointer": "/steps/2/tool_calls/1",
+          "excerpt": "python3 -c \"\nimport json\nwith open('/workspace/input/cases.json') as f:\n    data = json.load(f)\nif isinstance(data, list):\n    for item in data:\n        if isinstance(item, dict):\n       \n...[truncated]...\nint(json.dumps({k: data[k]}, indent=2, ensure_ascii=False))\nelse:\n    print(type(data))\n\" 2>&1"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/3/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\", \"limit\": 100}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: python3 -c \"\nimport json\nwith open('/workspace/input/cases.json') as f:\n    data = json.\n...[truncated]...\nases[k]}, indent=2, ensure_ascii=False))\n\" 2>&1",
+          "json_pointer": "/steps/4/tool_calls/0",
+          "excerpt": "python3 -c \"\nimport json\nwith open('/workspace/input/cases.json') as f:\n    data = json.load(f)\ncases = data.get('cases', data)\nif 'IC-002' in cases:\n    print(json.dumps(cases['IC-002'],\n...[truncated]...\nC-002' in k:\n            print(json.dumps({k: cases[k]}, indent=2, ensure_ascii=False))\n\" 2>&1"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_f21242921d694685b07a7462",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/root/.config/opencode/skills/interview-closeout/SKILL.md</path>\n<type>file</type>\n<content>\n1: ---\n2: name: interview-closeout\n3: version: 1.0.0\n4: description: \u4e00\u573a Story \u6216\u5916\u90e8\u8d21\u732e\u8005\u91c7\u8bbf\u7ed3\u675f\n...[truncated]...\n-thought, commentary, or any line after the result.\n\n(End of file - total 54 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_430685b33f504c0dad30fd5a",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "{}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_325f4b1bd2ba4e8bac8ed0e5",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "No files found"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_9dfd10e5c4fa4ec18e973277",
+          "json_pointer": "/steps/2/observation/results/1",
+          "excerpt": "(no output)"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_3116f3e2f75748b7bf6560bc",
+          "json_pointer": "/steps/3/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06\",\n4:\n...[truncated]...\n00:50Z\"\n100:           }\n\n(Showing lines 1-100 of 402. Use offset=101 to continue.)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_4a1fde41464a4b1194871f6b",
+          "json_pointer": "/steps/4/observation/results/0",
+          "excerpt": "{\n  \"task_type\": \"interview.closeout\",\n  \"mode\": \"story_create\",\n  \"input\": {\n    \"mode\": \"story_create\",\n    \"target_stage\": {\n      \"stage_id\": \"uni\",\n      \"title\": \"\u5927\u5b66\u65f6\u671f\",\n      \"star\n...[truncated]...\n\u5e08\u62a5\u544a\u3001\u8bfe\u5802\u3001\u540c\u5b66\u8ba8\u8bba\u548c\u4e13\u4e1a\u5c55\u89c8\uff0c\u6211\u624d\u6162\u6162\u8ba4\u540c\u8fd9\u4e2a\u4e13\u4e1a\u3002\",\n        \"timestamp\": \"2026-09-28T11:00:30Z\"\n      }\n    ]\n  }\n}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "```json\n{\n  \"story\": {\n    \"title\": \"\u4ece\u5acc\u5f03\u6c34\u6ce5\u4e13\u4e1a\u5230\u771f\u6b63\u8ba4\u540c\",\n    \"summary\": \"\u521a\u8fdb\u5165\u5927\u5b66\u65f6\u5bf9\u6c34\u6ce5\u4e13\u4e1a\u611f\u5230\u5931\u671b\uff0c\u8ba4\u4e3a\u5b83\u7070\u6251\u6251\u7684\u3002\u5728\u65b0\u751f\u53c2\u89c2\u4e86\u5de5\u5382\u540e\uff0c\u770b\u5230\u9ad8\u5927\u7684\u7a91\u7089\u3001\u8f70\u9e23\u7684\u8bbe\u5907\u4ee5\u53ca\u771f\u5b9e\u7684\u751f\u4ea7\u6d41\u7a0b\uff0c\u5f00\u59cb\u610f\u8bc6\u5230\u8fd9\u4e2a\u4e13\u4e1a\u8fdc\u6bd4\u60f3\u8c61\u4e2d\u590d\u6742\u3002\u4e4b\u540e\u53c8\u901a\u8fc7\u8001\u5e08\u7684\u62a5\u544a\u3001\u8bfe\u5802\u6559\u5b66\u3001\u4e0e\u540c\u5b66\u8ba8\u8bba\u4ee5\u53ca\u53c2\u89c2\u4e13\u4e1a\u5c55\u89c8\u7b49\u65b9\u5f0f\uff0c\u9010\u6e10\u5bf9\u8fd9\u4e2a\u4e13\u4e1a\u5efa\u7acb\u4e86\u8ba4\u540c\n...[truncated]...\n\u89c8\u7b49\u6e20\u9053\u9010\u6b65\u5efa\u7acb\u4e13\u4e1a\u8ba4\u540c\u3002\",\n    \"source_message_ids\": [\n      \"m1\",\n      \"m3\",\n      \"m4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 0.75,
+      "reason": "3 of 4 expected behaviors observed. The agent avoided naming the factory, kept the narrative arc, and did not inject guesses as facts, but it did not explicitly preserve the uncertainty about the first factory's name in agent_memory.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Final response refers only to a generic '\u5de5\u5382' and never names it as '\u535a\u5c71\u6c34\u6ce5\u5382'."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "No speculative or guessed content is presented as fact; the summary and agent_memory stay within transcript evidence."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "The summary preserves the main arc from initial disappointment to gradual identification through the factory visit and subsequent learning."
+        },
+        {
+          "step": 4,
+          "passed": false,
+          "reason": "agent_memory omits the factory name but does not explicitly state that the first factory name is uncertain; it fails to '\u660e\u786e\u4fdd\u7559' the uncertainty."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5f97\u628a\u7b2c\u4e00\u6b21\u53c2\u89c2\u5de5\u5382\u5199\u6210\u535a\u5c71\u6c34\u6ce5\u5382"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "assistant \u7684\u731c\u6d4b\u4e0d\u80fd\u4f5c\u4e3a\u4eba\u751f\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u4fdd\u7559\u4ece\u6700\u521d\u5931\u843d\u5230\u901a\u8fc7\u5de5\u5382\u53c2\u89c2\u53ca\u540e\u7eed\u5b66\u4e60\u9010\u6e10\u8ba4\u540c\u4e13\u4e1a\u7684\u4e3b\u7ebf"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "agent_memory \u5e94\u660e\u786e\u4fdd\u7559\u9996\u6b21\u53c2\u89c2\u5de5\u5382\u540d\u79f0\u4e0d\u786e\u5b9a\uff0c\u800c\u4e0d\u662f\u81ea\u884c\u8865\u5168"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "```json\n{\n  \"story\": {\n    \"title\": \"\u4ece\u5acc\u5f03\u6c34\u6ce5\u4e13\u4e1a\u5230\u771f\u6b63\u8ba4\u540c\",\n    \"summary\": \"\u521a\u8fdb\u5165\u5927\u5b66\u65f6\u5bf9\u6c34\u6ce5\u4e13\u4e1a\u611f\u5230\u5931\u671b\uff0c\u8ba4\u4e3a\u5b83\u7070\u6251\u6251\u7684\u3002\u5728\u65b0\u751f\u53c2\u89c2\u4e86\u5de5\u5382\u540e\uff0c\u770b\u5230\u9ad8\u5927\u7684\u7a91\u7089\u3001\u8f70\u9e23\u7684\u8bbe\u5907\u4ee5\u53ca\u771f\u5b9e\u7684\u751f\u4ea7\u6d41\u7a0b\uff0c\u5f00\u59cb\u610f\u8bc6\u5230\u8fd9\u4e2a\u4e13\u4e1a\u8fdc\u6bd4\u60f3\u8c61\u4e2d\u590d\u6742\u3002\u4e4b\u540e\u53c8\u901a\u8fc7\u8001\u5e08\u7684\u62a5\u544a\u3001\u8bfe\u5802\u6559\u5b66\u3001\u4e0e\u540c\u5b66\u8ba8\u8bba\u4ee5\u53ca\u53c2\u89c2\u4e13\u4e1a\u5c55\u89c8\u7b49\u65b9\u5f0f\uff0c\u9010\u6e10\u5bf9\u8fd9\u4e2a\u4e13\u4e1a\u5efa\u7acb\u4e86\u8ba4\u540c\n...[truncated]...\n\u89c8\u7b49\u6e20\u9053\u9010\u6b65\u5efa\u7acb\u4e13\u4e1a\u8ba4\u540c\u3002\",\n    \"source_message_ids\": [\n      \"m1\",\n      \"m3\",\n      \"m4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "IC-002__4My9QgR",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

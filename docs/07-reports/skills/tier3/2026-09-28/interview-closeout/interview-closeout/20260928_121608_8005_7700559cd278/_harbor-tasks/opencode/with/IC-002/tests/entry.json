@@ -1,0 +1,29 @@
+{
+  "id": "IC-002",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-002。按 mode=story_create 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "expected_output": "形成专业态度转变的 Story Proposal，同时保留“第一次新生参观具体工厂不能确定”的事实边界。",
+  "assertions": [
+    "不得把第一次参观工厂写成博山水泥厂",
+    "assistant 的猜测不能作为人生事实",
+    "应保留从最初失落到通过工厂参观及后续学习逐渐认同专业的主线",
+    "agent_memory 应明确保留首次参观工厂名称不确定，而不是自行补全"
+  ],
+  "expected_skill": "interview-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 IC-002。按 mode=story_create 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "ground_truth": "形成专业态度转变的 Story Proposal，同时保留“第一次新生参观具体工厂不能确定”的事实边界。",
+  "expected_behavior": [
+    "不得把第一次参观工厂写成博山水泥厂",
+    "assistant 的猜测不能作为人生事实",
+    "应保留从最初失落到通过工厂参观及后续学习逐渐认同专业的主线",
+    "agent_memory 应明确保留首次参观工厂名称不确定，而不是自行补全"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

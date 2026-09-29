@@ -1,0 +1,58 @@
+{
+    "id": "49bed38f-0caf-46d6-8d62-b9d7a034c424",
+    "started_at": "2026-09-29T04:26:58.710322",
+    "updated_at": "2026-09-29T04:49:33.720244",
+    "finished_at": "2026-09-29T04:49:33.720244",
+    "n_total_trials": 18,
+    "stats": {
+        "n_completed_trials": 18,
+        "n_errored_trials": 18,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__with": {
+                "n_trials": 0,
+                "n_errors": 18,
+                "metrics": [
+                    {
+                        "mean": 0.0
+                    }
+                ],
+                "pass_at_k": {
+                    "2": 0.0
+                },
+                "reward_stats": {},
+                "exception_stats": {
+                    "EnvironmentStartTimeoutError": [
+                        "COMP-NEG-001__vSgzarn"
+                    ],
+                    "RuntimeError": [
+                        "COMP-007__Y8cQquR",
+                        "COMP-006__kpn8bpP",
+                        "COMP-001__x27UkYJ",
+                        "COMP-HNEG-002__pC4dJGp",
+                        "COMP-004__HP2N3Uk",
+                        "COMP-003__DyP3bcB",
+                        "COMP-002__nvnGhT2",
+                        "COMP-005__UopGxee",
+                        "COMP-NEG-001__oWu5EuW",
+                        "COMP-007__cCAb5WP",
+                        "COMP-006__9aLJdT5",
+                        "COMP-001__y56cG4k",
+                        "COMP-HNEG-002__GYwv5M3",
+                        "COMP-004__vG66FYq",
+                        "COMP-003__x3e3ARw",
+                        "COMP-002__7JzVszd",
+                        "COMP-005__Aqv2kaN"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null
+    }
+}

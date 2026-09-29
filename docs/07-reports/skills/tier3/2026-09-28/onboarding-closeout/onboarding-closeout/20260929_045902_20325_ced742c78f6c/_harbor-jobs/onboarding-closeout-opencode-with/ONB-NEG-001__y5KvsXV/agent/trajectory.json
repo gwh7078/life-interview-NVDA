@@ -1,0 +1,35 @@
+{
+  "schema_version": "ATIF-v1.6",
+  "session_id": "ses_f1477557cffeiViAeeG59ONkm9",
+  "agent": {
+    "name": "opencode",
+    "version": "1.18.33",
+    "model_name": "openai/qwen3.6-35b-a3b"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "user",
+      "message": "\u8bf7\u628a\u201c\u9ad8\u8003\u524d\u4e00\u665a\u7a81\u7136\u53d1\u70e7\u201d\u7ffb\u8bd1\u6210\u82f1\u6587\uff0c\u53ea\u8fd4\u56de\u8bd1\u6587\u3002\n"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-09-29T04:59:59.267000+00:00",
+      "source": "agent",
+      "model_name": "openai/qwen3.6-35b-a3b",
+      "message": "I had a sudden fever the night before the gaokao (college entrance exam).",
+      "metrics": {
+        "prompt_tokens": 7202,
+        "completion_tokens": 22,
+        "extra": {
+          "reasoning_tokens": 39
+        }
+      }
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 7202,
+    "total_completion_tokens": 22,
+    "total_steps": 2
+  }
+}

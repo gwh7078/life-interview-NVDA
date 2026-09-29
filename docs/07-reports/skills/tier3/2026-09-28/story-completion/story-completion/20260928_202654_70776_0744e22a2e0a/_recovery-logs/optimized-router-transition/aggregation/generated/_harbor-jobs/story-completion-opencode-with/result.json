@@ -1,0 +1,211 @@
+{
+  "id": "offline-aggregate-with",
+  "started_at": "2026-09-29T00:00:00Z",
+  "updated_at": "2026-09-29T04:23:16.798634+00:00",
+  "finished_at": "2026-09-29T04:23:16.799064+00:00",
+  "n_total_trials": 18,
+  "aggregation_only": true,
+  "stats": {
+    "n_completed_trials": 18,
+    "n_errored_trials": 1,
+    "n_running_trials": 0,
+    "n_pending_trials": 0,
+    "n_cancelled_trials": 0,
+    "n_retries": 0,
+    "evals": {
+      "opencode__qwen3.6-35b-a3b__with": {
+        "n_trials": 18,
+        "n_errors": 1,
+        "metrics": [
+          {
+            "security": 1.0,
+            "skill_execution": 0.8235294117647058,
+            "skill_efficiency": 1.0,
+            "accuracy": 0.9529411764705882,
+            "goal_accuracy": 0.8823529411764706,
+            "behavior_check": 0.8676470588235294,
+            "overall": 0.921078431372549
+          }
+        ],
+        "pass_at_k": {},
+        "reward_stats": {
+          "security": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-002__ULf4NnQ",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-005__ZzSARKN",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ]
+          },
+          "skill_execution": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-002__ULf4NnQ",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-005__ZzSARKN",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK"
+            ],
+            "0": [
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ]
+          },
+          "skill_efficiency": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-002__ULf4NnQ",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-005__ZzSARKN",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ]
+          },
+          "accuracy": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ],
+            "0.6": [
+              "COMP-002__ULf4NnQ",
+              "COMP-005__ZzSARKN"
+            ]
+          },
+          "goal_accuracy": {
+            "1": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz",
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__Mdvuydk",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ],
+            "0": [
+              "COMP-002__ULf4NnQ",
+              "COMP-005__ZzSARKN"
+            ]
+          },
+          "behavior_check": {
+            "0.75": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz"
+            ],
+            "0.25": [
+              "COMP-002__ULf4NnQ"
+            ],
+            "1": [
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK",
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ],
+            "0.5": [
+              "COMP-005__ZzSARKN",
+              "COMP-NEG-001__Mdvuydk"
+            ]
+          },
+          "overall": {
+            "0.958333333333333": [
+              "COMP-001__DAwbPzs",
+              "COMP-001__PZjrCtz"
+            ],
+            "0.641666666666667": [
+              "COMP-002__ULf4NnQ"
+            ],
+            "1": [
+              "COMP-003__6HdVmke",
+              "COMP-003__PrhvVgt",
+              "COMP-004__EE5ykP6",
+              "COMP-004__nBnrzkD",
+              "COMP-005__WJZmtCv",
+              "COMP-006__DpwPGSu",
+              "COMP-006__NtN7z5t",
+              "COMP-007__AMnAZuX",
+              "COMP-007__oBy2Z4c",
+              "COMP-HNEG-002__tbE29eK"
+            ],
+            "0.683333333333333": [
+              "COMP-005__ZzSARKN"
+            ],
+            "0.75": [
+              "COMP-NEG-001__Mdvuydk"
+            ],
+            "0.833333333333333": [
+              "COMP-NEG-001__o6Eieor",
+              "COMP-HNEG-002__PZ5ZeSo"
+            ]
+          }
+        },
+        "exception_stats": {
+          "LLMJudgeError": [
+            "COMP-002__UhkPzpz"
+          ]
+        }
+      }
+    },
+    "cost_usd": null
+  }
+}

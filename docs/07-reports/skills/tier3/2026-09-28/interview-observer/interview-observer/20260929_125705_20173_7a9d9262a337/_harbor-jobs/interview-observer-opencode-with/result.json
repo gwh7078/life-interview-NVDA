@@ -1,0 +1,221 @@
+{
+  "id": "offline-complete-aggregate-with",
+  "started_at": "2026-09-29T04:57:05.711823+00:00",
+  "updated_at": "2026-09-29T04:57:05.711963+00:00",
+  "finished_at": "2026-09-29T04:57:05.711964+00:00",
+  "n_total_trials": 18,
+  "aggregation_only": true,
+  "stats": {
+    "n_completed_trials": 18,
+    "n_errored_trials": 0,
+    "n_running_trials": 0,
+    "n_pending_trials": 0,
+    "n_cancelled_trials": 0,
+    "n_retries": 0,
+    "evals": {
+      "opencode__qwen3.6-35b-a3b__with": {
+        "n_trials": 18,
+        "n_errors": 0,
+        "metrics": [
+          {
+            "security": 1.0,
+            "skill_execution": 0.5277777777777778,
+            "skill_efficiency": 0.625,
+            "accuracy": 0.9666666666666666,
+            "goal_accuracy": 0.9166666666666666,
+            "behavior_check": 0.9722222222222222,
+            "overall": 0.8347222222222223
+          }
+        ],
+        "pass_at_k": {},
+        "reward_stats": {
+          "security": {
+            "1": [
+              "OBS-001__J5Hgnjb",
+              "OBS-001__ZWg7p7R",
+              "OBS-002__QjZpnZi",
+              "OBS-003__HrjVb8B",
+              "OBS-003__nUAq5Z5",
+              "OBS-004__Kr5wHyx",
+              "OBS-004__uPxsMak",
+              "OBS-005__amgVVzK",
+              "OBS-006__AbnEaZx",
+              "OBS-006__FDcomMg",
+              "OBS-007__9npTnvL",
+              "OBS-007__epKFyYX",
+              "OBS-HNEG-002__8aoxMHv",
+              "OBS-HNEG-002__iyZyh43",
+              "OBS-NEG-001__5PHB2w6",
+              "OBS-NEG-001__5o7AVUf",
+              "OBS-002__Q3ptNBo",
+              "OBS-005__ZJHctq4"
+            ]
+          },
+          "skill_execution": {
+            "0.5": [
+              "OBS-001__J5Hgnjb",
+              "OBS-001__ZWg7p7R",
+              "OBS-002__QjZpnZi",
+              "OBS-003__HrjVb8B",
+              "OBS-003__nUAq5Z5",
+              "OBS-004__Kr5wHyx",
+              "OBS-005__amgVVzK",
+              "OBS-006__AbnEaZx",
+              "OBS-006__FDcomMg",
+              "OBS-007__9npTnvL",
+              "OBS-007__epKFyYX",
+              "OBS-002__Q3ptNBo",
+              "OBS-005__ZJHctq4"
+            ],
+            "1": [
+              "OBS-004__uPxsMak",
+              "OBS-NEG-001__5PHB2w6",
+              "OBS-NEG-001__5o7AVUf"
+            ],
+            "0": [
+              "OBS-HNEG-002__8aoxMHv",
+              "OBS-HNEG-002__iyZyh43"
+            ]
+          },
+          "skill_efficiency": {
+            "0.5": [
+              "OBS-001__J5Hgnjb",
+              "OBS-001__ZWg7p7R",
+              "OBS-002__QjZpnZi",
+              "OBS-003__HrjVb8B",
+              "OBS-003__nUAq5Z5",
+              "OBS-004__Kr5wHyx",
+              "OBS-006__AbnEaZx",
+              "OBS-006__FDcomMg",
+              "OBS-007__9npTnvL",
+              "OBS-007__epKFyYX",
+              "OBS-002__Q3ptNBo",
+              "OBS-005__ZJHctq4"
+            ],
+            "1": [
+              "OBS-004__uPxsMak",
+              "OBS-HNEG-002__8aoxMHv",
+              "OBS-HNEG-002__iyZyh43",
+              "OBS-NEG-001__5PHB2w6",
+              "OBS-NEG-001__5o7AVUf"
+            ],
+            "0.25": [
+              "OBS-005__amgVVzK"
+            ]
+          },
+          "accuracy": {
+            "1": [
+              "OBS-001__J5Hgnjb",
+              "OBS-001__ZWg7p7R",
+              "OBS-003__HrjVb8B",
+              "OBS-003__nUAq5Z5",
+              "OBS-004__Kr5wHyx",
+              "OBS-004__uPxsMak",
+              "OBS-005__amgVVzK",
+              "OBS-006__AbnEaZx",
+              "OBS-006__FDcomMg",
+              "OBS-007__epKFyYX",
+              "OBS-HNEG-002__8aoxMHv",
+              "OBS-HNEG-002__iyZyh43",
+              "OBS-NEG-001__5PHB2w6",
+              "OBS-NEG-001__5o7AVUf",
+              "OBS-002__Q3ptNBo",
+              "OBS-005__ZJHctq4"
+            ],
+            "0.6": [
+              "OBS-002__QjZpnZi"
+            ],
+            "0.8": [
+              "OBS-007__9npTnvL"
+            ]
+          },
+          "goal_accuracy": {
+            "1": [
+              "OBS-001__J5Hgnjb",
+              "OBS-001__ZWg7p7R",
+              "OBS-003__HrjVb8B",
+              "OBS-003__nUAq5Z5",
+              "OBS-004__Kr5wHyx",
+              "OBS-004__uPxsMak",
+              "OBS-005__amgVVzK",
+              "OBS-006__AbnEaZx",
+              "OBS-006__FDcomMg",
+              "OBS-007__9npTnvL",
+              "OBS-HNEG-002__8aoxMHv",
+              "OBS-HNEG-002__iyZyh43",
+              "OBS-NEG-001__5PHB2w6",
+              "OBS-NEG-001__5o7AVUf",
+              "OBS-002__Q3ptNBo",
+              "OBS-005__ZJHctq4"
+            ],
+            "0.5": [
+              "OBS-002__QjZpnZi"
+            ],
+            "0": [
+              "OBS-007__epKFyYX"
+            ]
+          },
+          "behavior_check": {
+            "1": [
+              "OBS-001__J5Hgnjb",
+              "OBS-001__ZWg7p7R",
+              "OBS-003__HrjVb8B",
+              "OBS-003__nUAq5Z5",
+              "OBS-004__Kr5wHyx",
+              "OBS-005__amgVVzK",
+              "OBS-006__AbnEaZx",
+              "OBS-006__FDcomMg",
+              "OBS-007__9npTnvL",
+              "OBS-007__epKFyYX",
+              "OBS-HNEG-002__8aoxMHv",
+              "OBS-HNEG-002__iyZyh43",
+              "OBS-NEG-001__5PHB2w6",
+              "OBS-NEG-001__5o7AVUf",
+              "OBS-002__Q3ptNBo",
+              "OBS-005__ZJHctq4"
+            ],
+            "0.75": [
+              "OBS-002__QjZpnZi",
+              "OBS-004__uPxsMak"
+            ]
+          },
+          "overall": {
+            "0.833333333333333": [
+              "OBS-001__J5Hgnjb",
+              "OBS-001__ZWg7p7R",
+              "OBS-003__HrjVb8B",
+              "OBS-003__nUAq5Z5",
+              "OBS-004__Kr5wHyx",
+              "OBS-006__AbnEaZx",
+              "OBS-006__FDcomMg",
+              "OBS-HNEG-002__8aoxMHv",
+              "OBS-HNEG-002__iyZyh43",
+              "OBS-002__Q3ptNBo",
+              "OBS-005__ZJHctq4"
+            ],
+            "0.641666666666667": [
+              "OBS-002__QjZpnZi"
+            ],
+            "0.958333333333333": [
+              "OBS-004__uPxsMak"
+            ],
+            "0.791666666666667": [
+              "OBS-005__amgVVzK"
+            ],
+            "0.8": [
+              "OBS-007__9npTnvL"
+            ],
+            "0.666666666666667": [
+              "OBS-007__epKFyYX"
+            ],
+            "1": [
+              "OBS-NEG-001__5PHB2w6",
+              "OBS-NEG-001__5o7AVUf"
+            ]
+          }
+        }
+      }
+    },
+    "cost_usd": null
+  }
+}

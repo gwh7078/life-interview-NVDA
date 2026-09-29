@@ -1,0 +1,239 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-003",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Activated via Skill tool: story-completion",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "story-completion",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "story-completion"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Skill activated (no execution needed)"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Agent correctly routed to story-completion only",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": [],
+          "skills_read": [
+            "Skill(story-completion)"
+          ]
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "2/2 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Response follows the story-completion output contract, removes already answered teacher/score gaps, and retains one valuable unanswered question.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u91cd\u65b0\u8bc4\u4f30 previous_gaps\uff0c\u5220\u9664\u5df2\u7ecf\u56de\u7b54\u7684\u8001\u5e08\u548c\u5206\u6570\u95ee\u9898\uff0c\u53ea\u4fdd\u7559\u4ecd\u6709\u4ef7\u503c\u4e14\u672a\u56de\u7b54\u7684\u65b9\u5411\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\": \"interviewing\", \"gaps\": [\"\u9ad8\u70e7\u90a3\u665a\u4f60\u5728\u533b\u9662\u662f\u4ec0\u4e48\u5fc3\u60c5\uff1f\"]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u5df2\u5220\u9664\u5df2\u56de\u7b54\u7684\u8001\u5e08\u4e0e\u5206\u6570\u95ee\u9898\uff0c\u4fdd\u7559\u672a\u56de\u7b54\u4e14\u6709\u4ef7\u503c\u7684\u65b9\u5411\uff0c\u7b26\u5408\u9884\u671f\u3002",
+      "user_goal": "\u8bfb\u53d6 COMP-003.input \u6267\u884c story.completion\uff0c\u91cd\u65b0\u8bc4\u4f30 previous_gaps\uff0c\u5220\u9664\u5df2\u56de\u7b54\u7684\u8001\u5e08\u4e0e\u5206\u6570\u95ee\u9898\uff0c\u53ea\u4fdd\u7559\u6709\u4ef7\u503c\u672a\u56de\u7b54\u65b9\u5411\u5e76\u8fd4\u56de\u89c4\u5b9a JSON",
+      "end_state": "LIFE_INTERVIEW_RESULT {\"status\": \"interviewing\", \"gaps\": [\"\u9ad8\u70e7\u90a3\u665a\u4f60\u5728\u533b\u9662\u662f\u4ec0\u4e48\u5fc3\u60c5\uff1f\"]}",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u91cd\u65b0\u8bc4\u4f30 previous_gaps\uff0c\u5220\u9664\u5df2\u7ecf\u56de\u7b54\u7684\u8001\u5e08\u548c\u5206\u6570\u95ee\u9898\uff0c\u53ea\u4fdd\u7559\u4ecd\u6709\u4ef7\u503c\u4e14\u672a\u56de\u7b54\u7684\u65b9\u5411\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "skill: skill",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"name\": \"story-completion\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_2ea99e40a4b0452c831de917",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<skill_content name=\"story-completion\">\n# Skill: story-completion\n\n# Story Completion / Planner\n\n## Purpose\n\n\u53ea\u4f9d\u636e\u5f53\u524d Story Memory \u5224\u65ad\u5b8c\u6210\u72b6\u6001\u5e76\u7ef4\u62a4\u6709\u4ef7\u503c\u7684 gaps\u3002Use only for story.completion.\n\n## Input\n...[truncated]...\nis base directory.\nNote: file list is sampled.\n\n<skill_files>\n\n</skill_files>\n</skill_content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_4def47361c64477eb067d729",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\": \"interviewing\", \"gaps\": [\"\u9ad8\u70e7\u90a3\u665a\u4f60\u5728\u533b\u9662\u662f\u4ec0\u4e48\u5fc3\u60c5\uff1f\"]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "\u6240\u6709\u9884\u671f\u884c\u4e3a\u5747\u88ab\u9075\u5b88\uff0cAgent \u672a\u91cd\u590d\u7981\u7528\u95ee\u9898\uff0c\u4fdd\u7559\u4e86\u65b0\u7684\u3001\u6709\u4ef7\u503c\u7684 gap\uff0c\u4e14\u672a\u7167\u6284 previous_gaps\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent \u8fd4\u56de\u7684 gap \u4e3a\u201c\u9ad8\u70e7\u90a3\u665a\u4f60\u5728\u533b\u9662\u662f\u4ec0\u4e48\u5fc3\u60c5\uff1f\u201d\uff0c\u672a\u51fa\u73b0\u201c\u662f\u8c01\u9001\u4f60\u53bb\u533b\u9662\u7684\uff1f\u201d"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent \u8fd4\u56de\u7684 gap \u4e3a\u201c\u9ad8\u70e7\u90a3\u665a\u4f60\u5728\u533b\u9662\u662f\u4ec0\u4e48\u5fc3\u60c5\uff1f\u201d\uff0c\u672a\u51fa\u73b0\u201c\u4f60\u6700\u540e\u8003\u4e86\u591a\u5c11\u5206\uff1f\u201d"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "\u4fdd\u7559\u7684 gap \u662f\u5173\u4e8e\u533b\u9662\u5f53\u665a\u5fc3\u60c5\u7684\u65b0\u95ee\u9898\uff0c\u5c5e\u4e8e\u5f53\u524d Memory \u5c1a\u672a\u56de\u7b54\u4e14\u5bf9\u6210\u6587\u6709\u4ef7\u503c\u7684\u95ee\u9898"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "\u8fd4\u56de\u7684 gap \u4e3a\u65b0\u751f\u6210\u95ee\u9898\uff0c\u672a\u5c06 previous_gaps \u539f\u6837\u7167\u6284"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5f97\u91cd\u590d\u201c\u662f\u8c01\u9001\u4f60\u53bb\u533b\u9662\u7684\uff1f\u201d"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u91cd\u590d\u201c\u4f60\u6700\u540e\u8003\u4e86\u591a\u5c11\u5206\uff1f\u201d"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5982\u679c\u4fdd\u7559 gaps\uff0c\u53ea\u80fd\u4fdd\u7559\u5f53\u524d Memory \u5c1a\u672a\u56de\u7b54\u4e14\u5bf9\u6210\u6587\u6709\u4ef7\u503c\u7684\u95ee\u9898"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a previous_gaps \u539f\u6837\u7167\u6284"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\": \"interviewing\", \"gaps\": [\"\u9ad8\u70e7\u90a3\u665a\u4f60\u5728\u533b\u9662\u662f\u4ec0\u4e48\u5fc3\u60c5\uff1f\"]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

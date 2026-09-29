@@ -1,0 +1,306 @@
+{
+    "id": "f0b98237-1f7e-4f09-973a-893c040566c6",
+    "started_at": "2026-09-28T16:40:22.542511",
+    "updated_at": "2026-09-28T20:00:46.335766",
+    "finished_at": "2026-09-28T20:00:46.335766",
+    "n_total_trials": 24,
+    "stats": {
+        "n_completed_trials": 24,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__without": {
+                "n_trials": 24,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 0.9333333333333332,
+                        "behavior_check": 0.93125,
+                        "goal_accuracy": 0.8958333333333334,
+                        "overall": 0.7868499999999999,
+                        "security": 1.0,
+                        "skill_efficiency": 0.45133333333333336,
+                        "skill_execution": 0.509375
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "GEN-001__epucLB5",
+                            "GEN-007__twVTQAb",
+                            "GEN-006__v5EcNnr",
+                            "GEN-008__3dLBiDJ",
+                            "GEN-NEG-001__nHJbw3U",
+                            "GEN-002__ZH55Q6K",
+                            "GEN-009__ZJyQCjQ",
+                            "GEN-005__VgJwSGo",
+                            "GEN-004__K3Wgqjs",
+                            "GEN-003__9k9aTN4",
+                            "GEN-HNEG-002__ZWfT6Jx",
+                            "GEN-010__zQgq2mq",
+                            "GEN-006__xsLQcqv",
+                            "GEN-001__tbayBR4",
+                            "GEN-008__qyfrjfW",
+                            "GEN-NEG-001__ni9VVPi",
+                            "GEN-009__uvtULME",
+                            "GEN-007__9ZHD5z4",
+                            "GEN-002__NiKjr7Z",
+                            "GEN-005__rZXYfMp",
+                            "GEN-004__KgY8mf7",
+                            "GEN-003__fKhkzDr",
+                            "GEN-HNEG-002__KW5jKPm",
+                            "GEN-010__YG62VV4"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.5": [
+                            "GEN-001__epucLB5",
+                            "GEN-007__twVTQAb",
+                            "GEN-006__v5EcNnr",
+                            "GEN-008__3dLBiDJ",
+                            "GEN-002__ZH55Q6K",
+                            "GEN-009__ZJyQCjQ",
+                            "GEN-005__VgJwSGo",
+                            "GEN-004__K3Wgqjs",
+                            "GEN-003__9k9aTN4",
+                            "GEN-010__zQgq2mq",
+                            "GEN-006__xsLQcqv",
+                            "GEN-001__tbayBR4",
+                            "GEN-008__qyfrjfW",
+                            "GEN-009__uvtULME",
+                            "GEN-007__9ZHD5z4",
+                            "GEN-002__NiKjr7Z",
+                            "GEN-005__rZXYfMp",
+                            "GEN-004__KgY8mf7"
+                        ],
+                        "1.0": [
+                            "GEN-NEG-001__nHJbw3U",
+                            "GEN-NEG-001__ni9VVPi"
+                        ],
+                        "0.0": [
+                            "GEN-HNEG-002__ZWfT6Jx",
+                            "GEN-HNEG-002__KW5jKPm"
+                        ],
+                        "0.475": [
+                            "GEN-003__fKhkzDr"
+                        ],
+                        "0.75": [
+                            "GEN-010__YG62VV4"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "0.5": [
+                            "GEN-001__epucLB5",
+                            "GEN-006__v5EcNnr",
+                            "GEN-008__3dLBiDJ",
+                            "GEN-002__ZH55Q6K",
+                            "GEN-006__xsLQcqv",
+                            "GEN-008__qyfrjfW"
+                        ],
+                        "0.25": [
+                            "GEN-007__twVTQAb",
+                            "GEN-004__K3Wgqjs",
+                            "GEN-010__zQgq2mq",
+                            "GEN-009__uvtULME",
+                            "GEN-007__9ZHD5z4"
+                        ],
+                        "1.0": [
+                            "GEN-NEG-001__nHJbw3U",
+                            "GEN-HNEG-002__ZWfT6Jx",
+                            "GEN-NEG-001__ni9VVPi",
+                            "GEN-HNEG-002__KW5jKPm"
+                        ],
+                        "0.3572": [
+                            "GEN-009__ZJyQCjQ"
+                        ],
+                        "0.35": [
+                            "GEN-005__VgJwSGo"
+                        ],
+                        "0.3333": [
+                            "GEN-003__9k9aTN4",
+                            "GEN-002__NiKjr7Z"
+                        ],
+                        "0.1666": [
+                            "GEN-001__tbayBR4",
+                            "GEN-005__rZXYfMp"
+                        ],
+                        "0.2143": [
+                            "GEN-004__KgY8mf7"
+                        ],
+                        "0.2857": [
+                            "GEN-003__fKhkzDr"
+                        ],
+                        "0.375": [
+                            "GEN-010__YG62VV4"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "GEN-001__epucLB5",
+                            "GEN-007__twVTQAb",
+                            "GEN-008__3dLBiDJ",
+                            "GEN-NEG-001__nHJbw3U",
+                            "GEN-002__ZH55Q6K",
+                            "GEN-009__ZJyQCjQ",
+                            "GEN-005__VgJwSGo",
+                            "GEN-004__K3Wgqjs",
+                            "GEN-003__9k9aTN4",
+                            "GEN-HNEG-002__ZWfT6Jx",
+                            "GEN-010__zQgq2mq",
+                            "GEN-006__xsLQcqv",
+                            "GEN-NEG-001__ni9VVPi",
+                            "GEN-002__NiKjr7Z",
+                            "GEN-005__rZXYfMp",
+                            "GEN-004__KgY8mf7",
+                            "GEN-003__fKhkzDr",
+                            "GEN-HNEG-002__KW5jKPm"
+                        ],
+                        "0.8": [
+                            "GEN-006__v5EcNnr",
+                            "GEN-001__tbayBR4",
+                            "GEN-007__9ZHD5z4",
+                            "GEN-010__YG62VV4"
+                        ],
+                        "0.6": [
+                            "GEN-008__qyfrjfW",
+                            "GEN-009__uvtULME"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "1.0": [
+                            "GEN-001__epucLB5",
+                            "GEN-007__twVTQAb",
+                            "GEN-006__v5EcNnr",
+                            "GEN-008__3dLBiDJ",
+                            "GEN-NEG-001__nHJbw3U",
+                            "GEN-002__ZH55Q6K",
+                            "GEN-009__ZJyQCjQ",
+                            "GEN-005__VgJwSGo",
+                            "GEN-004__K3Wgqjs",
+                            "GEN-003__9k9aTN4",
+                            "GEN-HNEG-002__ZWfT6Jx",
+                            "GEN-010__zQgq2mq",
+                            "GEN-006__xsLQcqv",
+                            "GEN-NEG-001__ni9VVPi",
+                            "GEN-007__9ZHD5z4",
+                            "GEN-002__NiKjr7Z",
+                            "GEN-005__rZXYfMp",
+                            "GEN-004__KgY8mf7",
+                            "GEN-003__fKhkzDr",
+                            "GEN-HNEG-002__KW5jKPm",
+                            "GEN-010__YG62VV4"
+                        ],
+                        "0.5": [
+                            "GEN-001__tbayBR4"
+                        ],
+                        "0.0": [
+                            "GEN-008__qyfrjfW",
+                            "GEN-009__uvtULME"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "GEN-001__epucLB5",
+                            "GEN-007__twVTQAb",
+                            "GEN-006__v5EcNnr",
+                            "GEN-008__3dLBiDJ",
+                            "GEN-NEG-001__nHJbw3U",
+                            "GEN-009__ZJyQCjQ",
+                            "GEN-005__VgJwSGo",
+                            "GEN-004__K3Wgqjs",
+                            "GEN-003__9k9aTN4",
+                            "GEN-HNEG-002__ZWfT6Jx",
+                            "GEN-010__zQgq2mq",
+                            "GEN-006__xsLQcqv",
+                            "GEN-001__tbayBR4",
+                            "GEN-NEG-001__ni9VVPi",
+                            "GEN-009__uvtULME",
+                            "GEN-007__9ZHD5z4",
+                            "GEN-005__rZXYfMp",
+                            "GEN-003__fKhkzDr",
+                            "GEN-HNEG-002__KW5jKPm",
+                            "GEN-010__YG62VV4"
+                        ],
+                        "0.75": [
+                            "GEN-002__ZH55Q6K"
+                        ],
+                        "0.5": [
+                            "GEN-008__qyfrjfW",
+                            "GEN-002__NiKjr7Z"
+                        ],
+                        "0.6": [
+                            "GEN-004__KgY8mf7"
+                        ]
+                    },
+                    "overall": {
+                        "0.8333": [
+                            "GEN-001__epucLB5",
+                            "GEN-008__3dLBiDJ",
+                            "GEN-HNEG-002__ZWfT6Jx",
+                            "GEN-006__xsLQcqv",
+                            "GEN-HNEG-002__KW5jKPm"
+                        ],
+                        "0.7917": [
+                            "GEN-007__twVTQAb",
+                            "GEN-002__ZH55Q6K",
+                            "GEN-004__K3Wgqjs",
+                            "GEN-010__zQgq2mq"
+                        ],
+                        "0.8": [
+                            "GEN-006__v5EcNnr"
+                        ],
+                        "1.0": [
+                            "GEN-NEG-001__nHJbw3U",
+                            "GEN-NEG-001__ni9VVPi"
+                        ],
+                        "0.8095": [
+                            "GEN-009__ZJyQCjQ"
+                        ],
+                        "0.8083": [
+                            "GEN-005__VgJwSGo"
+                        ],
+                        "0.8056": [
+                            "GEN-003__9k9aTN4"
+                        ],
+                        "0.6611": [
+                            "GEN-001__tbayBR4"
+                        ],
+                        "0.5167": [
+                            "GEN-008__qyfrjfW"
+                        ],
+                        "0.5583": [
+                            "GEN-009__uvtULME"
+                        ],
+                        "0.7583": [
+                            "GEN-007__9ZHD5z4"
+                        ],
+                        "0.7222": [
+                            "GEN-002__NiKjr7Z"
+                        ],
+                        "0.7778": [
+                            "GEN-005__rZXYfMp"
+                        ],
+                        "0.7191": [
+                            "GEN-004__KgY8mf7"
+                        ],
+                        "0.7934": [
+                            "GEN-003__fKhkzDr"
+                        ],
+                        "0.8208": [
+                            "GEN-010__YG62VV4"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 1134866,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 14055,
+        "cost_usd": null
+    }
+}

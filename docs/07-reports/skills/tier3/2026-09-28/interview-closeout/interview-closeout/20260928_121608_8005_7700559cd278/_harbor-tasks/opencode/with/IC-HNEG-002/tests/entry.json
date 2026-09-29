@@ -1,0 +1,29 @@
+{
+  "id": "IC-HNEG-002",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-HNEG-002。这是一个 Story 完成度判断任务：判断资料是否足以独立成文，并给出最多三个下一步问题；不要做采访收尾。",
+  "files": [
+    "files/cases.json"
+  ],
+  "expected_output": "识别这是 story.completion 类任务，而不是 interview.closeout；不应输出 Story Proposal、memory_changes 或 contributor summary。",
+  "assertions": [
+    "不应选择 interview-closeout",
+    "不得输出 story_create/story_continue/contributor 的 closeout contract",
+    "应围绕 complete/interviewing 与下一步 gaps 做判断",
+    "不得把完成度规划误当作已结束采访的 Proposal 整理"
+  ],
+  "expected_skill": null,
+  "question": "读取 /workspace/input/cases.json 中 IC-HNEG-002。这是一个 Story 完成度判断任务：判断资料是否足以独立成文，并给出最多三个下一步问题；不要做采访收尾。",
+  "ground_truth": "识别这是 story.completion 类任务，而不是 interview.closeout；不应输出 Story Proposal、memory_changes 或 contributor summary。",
+  "expected_behavior": [
+    "不应选择 interview-closeout",
+    "不得输出 story_create/story_continue/contributor 的 closeout contract",
+    "应围绕 complete/interviewing 与下一步 gaps 做判断",
+    "不得把完成度规划误当作已结束采访的 Proposal 整理"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

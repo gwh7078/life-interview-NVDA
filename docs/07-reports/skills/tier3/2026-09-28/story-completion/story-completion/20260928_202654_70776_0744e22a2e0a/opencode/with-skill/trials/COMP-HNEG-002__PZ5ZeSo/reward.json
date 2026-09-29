@@ -1,0 +1,180 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-HNEG-002",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether story-completion was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly performs incremental story organization (updating agent_memory, handling previous_gaps, maintaining interviewing status) rather than completion planning, aligning with the expected interview.closeout/story_continue task.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u5e94\u53ea\u8fd4\u56de status/gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "COMP-HNEG-002 \u7684\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff1a\n\n**\u5f53\u524d\u6545\u4e8b\u72b6\u6001\uff1a** `interviewing` \u2192 \u65b0\u589e\u4e00\u6761\u7528\u6237\u6d88\u606f\uff0c\u8bb2\u8ff0\u901a\u8fc7\u591a\u79cd\u65b9\u5f0f\uff08\u8001\u5e08\u62a5\u544a\u3001\u8bfe\u5802\u3001\u540c\u5b66\u8ba8\u8bba\u3001\u4e13\u4e1a\u5c55\u89c8\uff09\u9010\u6b65\u8ba4\u540c\u4e13\u4e1a\u7684\u8fc7\u7a0b\u3002\n\n**\u9700\u8981\u589e\u91cf\u66f4\u65b0\u7684\u5185\u5bb9\uff1a**\n\n1. **agent_memory** \u2014 \u5728\u539f\u6709\u300c\u65b0\u751f\u53c2\u89c2\u540e\u5f00\u59cb\u7406\u89e3\u4e13\u4e1a\u4ef7\u503c\u300d\u57fa\u7840\u4e0a\uff0c\u8865\u5145\u540e\u7eed\u6df1\u5316\u8def\u5f84\uff1a\u6559\u5e08\u62a5\u544a\u3001\u8bfe\u7a0b\u6559\u5b66\u3001\u540c\u4f34\u4ea4\u6d41\u3001\u4e13\u4e1a\n...[truncated]...\n\u7406\u7531\u662f\u7528\u6237\u660e\u786e\u8868\u793a\u662f\u4e00\u4e2a\u6e10\u8fdb\u7684\u591a\u56e0\u7d20\u8fc7\u7a0b\u800c\u975e\u5355\u4e00\u4e8b\u4ef6\u3002\n\n3. **status** \u2014 \u4ec5\u51ed\u4e00\u6761\u7b80\u77ed\u6536\u5c3e\u6d88\u606f\u8fd8\u4e0d\u8db3\u4ee5\u5c06\u6545\u4e8b\u8bbe\u4e3a `complete`\uff0c\u7ef4\u6301 `interviewing`\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u4ee3\u7406\u6b63\u786e\u8bc6\u522b\u4efb\u52a1\u7c7b\u578b\uff0c\u5b8c\u6210\u4e86\u5f53\u524d Story \u7684\u589e\u91cf\u6574\u7406\uff0c\u672a\u5c06\u5176\u5f53\u4f5c story-completion \u5904\u7406\u3002",
+      "user_goal": "\u8bfb\u53d6 COMP-HNEG-002 \u5e76\u8fdb\u884c Story Continue \u91c7\u8bbf\u540e\u7684\u6536\u5c3e\u589e\u91cf\u6574\u7406\uff0c\u800c\u975e\u505a\u5b8c\u6210\u5ea6\u89c4\u5212\u3002",
+      "end_state": "\u4ee3\u7406\u8bc6\u522b\u4e3a interview.closeout/story_continue \u4efb\u52a1\uff0c\u8f93\u51fa\u4e86\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff1a\u66f4\u65b0 agent_memory\u3001\u5c06\u539f gap \u6807\u8bb0\u4e3a blocked\u3001\u7ef4\u6301 interviewing \u72b6\u6001\uff0c\u5e76\u672a\u53ea\u8fd4\u56de status/gaps\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u5e94\u53ea\u8fd4\u56de status/gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_7969e8f815ea410fa1a94c6f",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "COMP-HNEG-002 \u7684\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff1a\n\n**\u5f53\u524d\u6545\u4e8b\u72b6\u6001\uff1a** `interviewing` \u2192 \u65b0\u589e\u4e00\u6761\u7528\u6237\u6d88\u606f\uff0c\u8bb2\u8ff0\u901a\u8fc7\u591a\u79cd\u65b9\u5f0f\uff08\u8001\u5e08\u62a5\u544a\u3001\u8bfe\u5802\u3001\u540c\u5b66\u8ba8\u8bba\u3001\u4e13\u4e1a\u5c55\u89c8\uff09\u9010\u6b65\u8ba4\u540c\u4e13\u4e1a\u7684\u8fc7\u7a0b\u3002\n\n**\u9700\u8981\u589e\u91cf\u66f4\u65b0\u7684\u5185\u5bb9\uff1a**\n\n1. **agent_memory** \u2014 \u5728\u539f\u6709\u300c\u65b0\u751f\u53c2\u89c2\u540e\u5f00\u59cb\u7406\u89e3\u4e13\u4e1a\u4ef7\u503c\u300d\u57fa\u7840\u4e0a\uff0c\u8865\u5145\u540e\u7eed\u6df1\u5316\u8def\u5f84\uff1a\u6559\u5e08\u62a5\u544a\u3001\u8bfe\u7a0b\u6559\u5b66\u3001\u540c\u4f34\u4ea4\u6d41\u3001\u4e13\u4e1a\n...[truncated]...\n\u7406\u7531\u662f\u7528\u6237\u660e\u786e\u8868\u793a\u662f\u4e00\u4e2a\u6e10\u8fdb\u7684\u591a\u56e0\u7d20\u8fc7\u7a0b\u800c\u975e\u5355\u4e00\u4e8b\u4ef6\u3002\n\n3. **status** \u2014 \u4ec5\u51ed\u4e00\u6761\u7b80\u77ed\u6536\u5c3e\u6d88\u606f\u8fd8\u4e0d\u8db3\u4ee5\u5c06\u6545\u4e8b\u8bbe\u4e3a `complete`\uff0c\u7ef4\u6301 `interviewing`\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed. The agent correctly performed incremental story organization without marking completion, without outputting only a completion structure, by updating memory/gaps, and without misjudging the closeout as next-round gap planning.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent explicitly maintained status as `interviewing` and stated it was insufficient to set the story to `complete`, avoiding story-completion."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent provided incremental updates to agent_memory, previous_gaps, and status rather than only outputting a completion status/gaps structure."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Agent processed the new transcript by incrementally updating agent_memory with the four deepening channels and marking the prior gap as blocked, which is an equivalent closeout."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Agent did not propose new questions or plan the next round; it treated the closing message as an incremental update and blocked the existing gap, not as gap planning."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 story-completion"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u53ea\u8f93\u51fa completion \u7684 status/gaps \u7ed3\u6784"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u5904\u7406\u5f53\u524d Transcript \u5bf9 Story Memory/summary \u7684\u589e\u91cf\u66f4\u65b0\u6216\u7b49\u4ef7 closeout"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a\u91c7\u8bbf\u6536\u5c3e\u8bef\u5224\u4e3a\u4e0b\u4e00\u8f6e\u7f3a\u53e3\u89c4\u5212"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "COMP-HNEG-002 \u7684\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff1a\n\n**\u5f53\u524d\u6545\u4e8b\u72b6\u6001\uff1a** `interviewing` \u2192 \u65b0\u589e\u4e00\u6761\u7528\u6237\u6d88\u606f\uff0c\u8bb2\u8ff0\u901a\u8fc7\u591a\u79cd\u65b9\u5f0f\uff08\u8001\u5e08\u62a5\u544a\u3001\u8bfe\u5802\u3001\u540c\u5b66\u8ba8\u8bba\u3001\u4e13\u4e1a\u5c55\u89c8\uff09\u9010\u6b65\u8ba4\u540c\u4e13\u4e1a\u7684\u8fc7\u7a0b\u3002\n\n**\u9700\u8981\u589e\u91cf\u66f4\u65b0\u7684\u5185\u5bb9\uff1a**\n\n1. **agent_memory** \u2014 \u5728\u539f\u6709\u300c\u65b0\u751f\u53c2\u89c2\u540e\u5f00\u59cb\u7406\u89e3\u4e13\u4e1a\u4ef7\u503c\u300d\u57fa\u7840\u4e0a\uff0c\u8865\u5145\u540e\u7eed\u6df1\u5316\u8def\u5f84\uff1a\u6559\u5e08\u62a5\u544a\u3001\u8bfe\u7a0b\u6559\u5b66\u3001\u540c\u4f34\u4ea4\u6d41\u3001\u4e13\u4e1a\n...[truncated]...\n\u7406\u7531\u662f\u7528\u6237\u660e\u786e\u8868\u793a\u662f\u4e00\u4e2a\u6e10\u8fdb\u7684\u591a\u56e0\u7d20\u8fc7\u7a0b\u800c\u975e\u5355\u4e00\u4e8b\u4ef6\u3002\n\n3. **status** \u2014 \u4ec5\u51ed\u4e00\u6761\u7b80\u77ed\u6536\u5c3e\u6d88\u606f\u8fd8\u4e0d\u8db3\u4ee5\u5c06\u6545\u4e8b\u8bbe\u4e3a `complete`\uff0c\u7ef4\u6301 `interviewing`\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "COMP-HNEG-002__PZ5ZeSo",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

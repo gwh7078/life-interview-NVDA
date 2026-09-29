@@ -1,0 +1,59 @@
+schema_version = "1.3"
+
+[task]
+name = "nvidia/skillevaluator-GEN-003"
+description = "Skill evaluation task for story-generation"
+
+[metadata]
+skill = "story-generation"
+entry_id = "GEN-003"
+has_skill = true
+
+[agent]
+timeout_sec = 300.0
+
+[verifier]
+timeout_sec = 600.0
+
+[verifier.env]
+OPENAI_API_KEY = "${OPENAI_API_KEY}"
+OPENAI_BASE_URL = "${OPENAI_BASE_URL}"
+SKILL_EVAL_LLM_MODEL = "${SKILL_EVAL_LLM_MODEL}"
+SKILL_EVAL_LLM_PROVIDER = "${SKILL_EVAL_LLM_PROVIDER}"
+
+[environment]
+cpus = 2
+memory_mb = 4096
+storage_mb = 2048
+network_mode = "public"
+skills_dir = "/workspace/skills"
+
+[environment.env]
+"BASH_ENV" = ""
+"CLASSPATH" = ""
+"CLAUDE_CODE_DISABLE_POLICY_SKILLS" = "1"
+"DYLD_INSERT_LIBRARIES" = ""
+"ENV" = ""
+"GCONV_PATH" = ""
+"JAVA_TOOL_OPTIONS" = ""
+"LD_AUDIT" = ""
+"LD_LIBRARY_PATH" = ""
+"LD_PRELOAD" = ""
+"LOCPATH" = ""
+"LUA_CPATH" = ""
+"LUA_INIT" = ""
+"LUA_PATH" = ""
+"NLSPATH" = ""
+"NODE_OPTIONS" = ""
+"OPENAI_API_KEY" = "${OPENAI_API_KEY}"
+"OPENAI_BASE_URL" = "${OPENAI_BASE_URL}"
+"PERL5LIB" = ""
+"PERL5OPT" = ""
+"PYTHONHOME" = ""
+"PYTHONINSPECT" = ""
+"PYTHONPATH" = ""
+"PYTHONSTARTUP" = ""
+"RUBYLIB" = ""
+"RUBYOPT" = ""
+"ZDOTDIR" = ""
+"_JAVA_OPTIONS" = ""

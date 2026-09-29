@@ -1,0 +1,75 @@
+{
+    "id": "446bcac2-954f-4b48-9fc9-5e1b80e4be67",
+    "started_at": "2026-09-29T12:35:04.967662",
+    "updated_at": "2026-09-29T12:36:34.231667",
+    "finished_at": "2026-09-29T12:36:34.231667",
+    "n_total_trials": 1,
+    "stats": {
+        "n_completed_trials": 1,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__with": {
+                "n_trials": 1,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 1.0,
+                        "behavior_check": 1.0,
+                        "goal_accuracy": 1.0,
+                        "overall": 1.0,
+                        "security": 1.0,
+                        "skill_efficiency": 1.0,
+                        "skill_execution": 1.0
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "COMP-002__D5EeX7A"
+                        ]
+                    },
+                    "skill_execution": {
+                        "1.0": [
+                            "COMP-002__D5EeX7A"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "1.0": [
+                            "COMP-002__D5EeX7A"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "COMP-002__D5EeX7A"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "1.0": [
+                            "COMP-002__D5EeX7A"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "COMP-002__D5EeX7A"
+                        ]
+                    },
+                    "overall": {
+                        "1.0": [
+                            "COMP-002__D5EeX7A"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 17075,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 88,
+        "cost_usd": null
+    }
+}

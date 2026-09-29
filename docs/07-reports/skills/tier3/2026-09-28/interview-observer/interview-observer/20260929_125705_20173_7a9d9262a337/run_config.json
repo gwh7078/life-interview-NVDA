@@ -1,0 +1,44 @@
+{
+  "config_file": "agent/skills/interview-observer/evals/config.yml",
+  "harbor": {
+    "environment": {
+      "value": "docker",
+      "source": "retained task configuration"
+    },
+    "n_attempts": 2,
+    "stop_on_pass": false,
+    "n_concurrent": 2,
+    "jobs_retained": true
+  },
+  "provider": {
+    "name": "openai-compatible",
+    "model": "qwen3.6-35b-a3b"
+  },
+  "judge": {
+    "enabled": true,
+    "provider": "openai-compatible",
+    "model": "step-5-preview",
+    "endpoint": "https://api.stepfun.com/step_plan/v1/chat/completions"
+  },
+  "task_source": "evals_json",
+  "grading": {
+    "mode": "default"
+  },
+  "agents": {
+    "opencode": {
+      "agent": "opencode",
+      "model": "openai/qwen3.6-35b-a3b",
+      "source": "cli"
+    }
+  },
+  "evaluated_source": {
+    "repository": "gwh7078/life-interview-NVDA",
+    "commit": "b6ae58267e6b3e4b6f06926e11fe423bdba8a472"
+  },
+  "aggregation": {
+    "kind": "offline-retained-trial-aggregation",
+    "aggregation_model_calls": 0,
+    "manifest": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/interview-observer/interview-observer/20260929_125705_20173_7a9d9262a337/aggregation_manifest.json",
+    "source_run": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/interview-observer/interview-observer/20260929_012401_99240_ca298aac18a1"
+  }
+}

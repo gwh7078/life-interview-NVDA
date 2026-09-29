@@ -1,0 +1,228 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "IC-009",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'interview-closeout'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'interview-closeout' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly produces the contributor-mode closeout summary, preserving that the contributor only heard the year secondhand and cannot confirm it, without upgrading the suggestion to a fact. It matches the required output format and addresses the task directly.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u660e\u786e\u4fdd\u7559\u8d21\u732e\u8005\u53ea\u662f\u542c\u8bf4\u3001\u65e0\u6cd5\u786e\u8ba4\u5e74\u4efd\uff0c\u5e76\u62d2\u7edd\u628a\u8d21\u732e\u8005\u8981\u6c42\u201c\u76f4\u63a5\u6539\u4e3b\u4eba\u516c\u5e74\u4efd\u201d\u7684\u8bdd\u5347\u7ea7\u4e3a\u4e3b\u4eba\u516c\u4e8b\u5b9e\u6216\u5df2\u5b8c\u6210\u66f4\u65b0\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "{\"summary\":\"\u8fd9\u4f4d\u8001\u540c\u5b66\u8865\u5145\u63d0\u5230\uff0c\u81ea\u5df1\u53ea\u662f\u542c\u4ed6\u4eba\u8bf4\u8d77\u4e3b\u4eba\u516c\u53ef\u80fd\u4e8e1982\u5e74\u9ad8\u8003\uff0c\u5e76\u66fe\u5efa\u8bae\u5c06\u5e74\u4efd\u6539\u4e3a1982\uff0c\u4f46\u5f3a\u8c03\u4e3b\u4eba\u516c\u672c\u4eba\u4e00\u76f4\u8bf4\u662f1983\u5e74\uff0c\u56e0\u6b64\u4ed6\u5bf9\u6b64\u4ecd\u65e0\u6cd5\u786e\u5b9a\u3002\u8be5\u4fe1\u606f\u4e0e\u6b64\u524d\u5df2\u6709\u8bb0\u5f55\u4e00\u81f4\uff1a\u786e\u8ba4\u4e3b\u4eba\u516c\u9ad8\u4e2d\u5316\u5b66\u6210\u7ee9\u7a81\u51fa\uff0c\u4f46\u5bf9\u9ad8\u8003\u5177\u4f53\u5e74\u4efd\u59cb\u7ec8\u65e0\u6cd5\u786e\u8bc1\u3002\"}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u6700\u7ec8\u54cd\u5e94\u7b26\u5408 contributor \u8f93\u51fa\u5951\u7ea6\uff0c\u660e\u786e\u4fdd\u7559\u4e86\u8d21\u732e\u8005\u4fe1\u606f\u7684\u4f20\u95fb\u6027\u8d28\u548c\u4e0d\u786e\u5b9a\u6027\uff0c\u6ca1\u6709\u628a\u201c\u5efa\u8bae\u6539\u5e74\u4efd\u201d\u5347\u7ea7\u4e3a\u4e3b\u4eba\u516c\u4e8b\u5b9e\u6216\u5df2\u5b8c\u6210\u66f4\u65b0\u3002",
+      "user_goal": "\u8bfb\u53d6 IC-009\uff0c\u6309 mode=contributor \u5b8c\u6210 interview.closeout\uff0c\u5e76\u53ea\u8fd4\u56de {\"summary\":\"...\"}\u3002",
+      "end_state": "\u8fd4\u56de\u4e86\u4ec5\u542b summary \u7684 JSON\uff0c\u5185\u5bb9\u4fdd\u7559\u4e86\u8d21\u732e\u8005\u53ea\u662f\u542c\u8bf4\u3001\u65e0\u6cd5\u786e\u8ba4\u9ad8\u8003\u5e74\u4efd\uff0c\u5e76\u8bf4\u660e\u5176\u66fe\u5efa\u8bae\u6539\u4e3a1982\u4f46\u672a\u4f5c\u4e3a\u4e8b\u5b9e\u6216\u5df2\u5b8c\u6210\u66f4\u65b0\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u660e\u786e\u4fdd\u7559\u8d21\u732e\u8005\u53ea\u662f\u542c\u8bf4\u3001\u65e0\u6cd5\u786e\u8ba4\u5e74\u4efd\uff0c\u5e76\u62d2\u7edd\u628a\u8d21\u732e\u8005\u8981\u6c42\u201c\u76f4\u63a5\u6539\u4e3b\u4eba\u516c\u5e74\u4efd\u201d\u7684\u8bdd\u5347\u7ea7\u4e3a\u4e3b\u4eba\u516c\u4e8b\u5b9e\u6216\u5df2\u5b8c\u6210\u66f4\u65b0\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_5eff5b802e564aa89a478db2",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06\",\n4:\n...[truncated]...\n_count\": 3\n399:       }\n400:     }\n401:   }\n402: }\n\n(End of file - total 402 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "{\"summary\":\"\u8fd9\u4f4d\u8001\u540c\u5b66\u8865\u5145\u63d0\u5230\uff0c\u81ea\u5df1\u53ea\u662f\u542c\u4ed6\u4eba\u8bf4\u8d77\u4e3b\u4eba\u516c\u53ef\u80fd\u4e8e1982\u5e74\u9ad8\u8003\uff0c\u5e76\u66fe\u5efa\u8bae\u5c06\u5e74\u4efd\u6539\u4e3a1982\uff0c\u4f46\u5f3a\u8c03\u4e3b\u4eba\u516c\u672c\u4eba\u4e00\u76f4\u8bf4\u662f1983\u5e74\uff0c\u56e0\u6b64\u4ed6\u5bf9\u6b64\u4ecd\u65e0\u6cd5\u786e\u5b9a\u3002\u8be5\u4fe1\u606f\u4e0e\u6b64\u524d\u5df2\u6709\u8bb0\u5f55\u4e00\u81f4\uff1a\u786e\u8ba4\u4e3b\u4eba\u516c\u9ad8\u4e2d\u5316\u5b66\u6210\u7ee9\u7a81\u51fa\uff0c\u4f46\u5bf9\u9ad8\u8003\u5177\u4f53\u5e74\u4efd\u59cb\u7ec8\u65e0\u6cd5\u786e\u8bc1\u3002\"}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors observed. The summary correctly attributes 1982 to hearsay, preserves the 1983 vs. 1982 conflict and contributor uncertainty, avoids presenting 1982 as confirmed, makes no false modification claims, and maintains contributor evidence isolation.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Summary explicitly states the contributor '\u53ea\u662f\u542c\u4ed6\u4eba\u8bf4\u8d77' the 1982 exam year, clearly marking it as secondhand hearsay rather than firsthand experience."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Summary preserves the conflict by noting the protagonist '\u672c\u4eba\u4e00\u76f4\u8bf4\u662f1983\u5e74' and the contributor '\u5bf9\u6b64\u4ecd\u65e0\u6cd5\u786e\u5b9a'."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "1982 is framed only as something the contributor heard from others and suggested, not as a confirmed fact about the protagonist."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "No claim is made that any Story, Agent Memory, or year was actually modified; the summary only reports the contributor's suggestion and uncertainty."
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "Despite the contributor suggesting a change to 1982, the agent maintains evidence isolation by retaining the protagonist's own claim of 1983 and the contributor's uncertainty, without adopting the suggested change as fact."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "summary \u5fc5\u987b\u660e\u786e1982\u53ea\u662f\u8d21\u732e\u8005\u542c\u6765\u7684\u3001\u975e\u4eb2\u5386\u4fe1\u606f"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u5fc5\u987b\u4fdd\u7559\u4e3b\u4eba\u516c\u672c\u4eba\u4e00\u76f4\u8bf41983\u4ee5\u53ca\u8d21\u732e\u8005\u65e0\u6cd5\u786e\u5b9a\u8fd9\u4e00\u51b2\u7a81"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u5f97\u628a1982\u63cf\u8ff0\u6210\u4e3b\u4eba\u516c\u5df2\u786e\u8ba4\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u58f0\u79f0\u5df2\u7ecf\u4fee\u6539\u4e3b\u4eba\u516c Story\u3001Agent Memory \u6216\u5e74\u4efd"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u4e0d\u5f97\u56e0\u4e3a\u8d21\u732e\u8005\u4e3b\u52a8\u8981\u6c42\u4fee\u6539\u5c31\u7a81\u7834 Contributor \u8bc1\u636e\u9694\u79bb"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "{\"summary\":\"\u8fd9\u4f4d\u8001\u540c\u5b66\u8865\u5145\u63d0\u5230\uff0c\u81ea\u5df1\u53ea\u662f\u542c\u4ed6\u4eba\u8bf4\u8d77\u4e3b\u4eba\u516c\u53ef\u80fd\u4e8e1982\u5e74\u9ad8\u8003\uff0c\u5e76\u66fe\u5efa\u8bae\u5c06\u5e74\u4efd\u6539\u4e3a1982\uff0c\u4f46\u5f3a\u8c03\u4e3b\u4eba\u516c\u672c\u4eba\u4e00\u76f4\u8bf4\u662f1983\u5e74\uff0c\u56e0\u6b64\u4ed6\u5bf9\u6b64\u4ecd\u65e0\u6cd5\u786e\u5b9a\u3002\u8be5\u4fe1\u606f\u4e0e\u6b64\u524d\u5df2\u6709\u8bb0\u5f55\u4e00\u81f4\uff1a\u786e\u8ba4\u4e3b\u4eba\u516c\u9ad8\u4e2d\u5316\u5b66\u6210\u7ee9\u7a81\u51fa\uff0c\u4f46\u5bf9\u9ad8\u8003\u5177\u4f53\u5e74\u4efd\u59cb\u7ec8\u65e0\u6cd5\u786e\u8bc1\u3002\"}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

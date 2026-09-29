@@ -1,0 +1,327 @@
+{
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli",
+  "scores": {
+    "security": 1.0,
+    "skill_execution": 0.867,
+    "skill_efficiency": 0.9242,
+    "accuracy": 0.9636,
+    "goal_accuracy": 0.8682,
+    "behavior_check": 0.9341
+  },
+  "custom_scores": {},
+  "overall_score": 0.9262,
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "dimensions": {
+    "security": {
+      "score": 1.0,
+      "sources": {
+        "security": 1.0
+      }
+    },
+    "correctness": {
+      "score": 0.9636,
+      "sources": {
+        "accuracy": 1.0
+      }
+    },
+    "discoverability": {
+      "score": 0.867,
+      "sources": {
+        "skill_execution": 1.0
+      }
+    },
+    "effectiveness": {
+      "score": 0.9012,
+      "sources": {
+        "goal_accuracy": 0.5,
+        "behavior_check": 0.5
+      }
+    },
+    "efficiency": {
+      "score": 0.9242,
+      "sources": {
+        "skill_efficiency": 1.0
+      }
+    }
+  },
+  "num_trials": 22,
+  "pass_at_k": {
+    "k": 2,
+    "pass_threshold": 0.7,
+    "stop_on_pass": false,
+    "passed_cases": 10,
+    "failed_cases": 1,
+    "total_cases": 11,
+    "rate": 0.9091,
+    "rate_interval": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "lower": 0.6226415635484043,
+      "upper": 0.9837678271141151
+    },
+    "attempts_used": 22,
+    "max_attempts_possible": 22,
+    "avg_attempts_used": 2.0,
+    "extra_cases": [],
+    "cases": {
+      "IC-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-001__ZPaz686",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-001__Xuvi24F",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "IC-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-002__HVYDnTx",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-002__4My9QgR",
+            "score": 0.8507,
+            "passed": true
+          }
+        ]
+      },
+      "IC-003": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-003__EzHZneV",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-003__B7JeUnB",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "IC-004": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-004__26pJEcY",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-004__iXn4QjK",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "IC-005": {
+        "passed": false,
+        "first_pass_attempt": null,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.6667,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-005__EjE5S4y",
+            "score": 0.6583,
+            "passed": false
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-005__QeUNCWc",
+            "score": 0.6667,
+            "passed": false
+          }
+        ]
+      },
+      "IC-006": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-006__AJficG7",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-006__QHz3nVn",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "IC-007": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-007__DsVghr6",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-007__4BrQkfh",
+            "score": 0.8507,
+            "passed": true
+          }
+        ]
+      },
+      "IC-008": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.9667,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-008__X4p4mgt",
+            "score": 0.9167,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-008__JdnDxm2",
+            "score": 0.9667,
+            "passed": true
+          }
+        ]
+      },
+      "IC-009": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-009__jLyqEjF",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-009__s6pptxX",
+            "score": 0.9667,
+            "passed": true
+          }
+        ]
+      },
+      "IC-HNEG-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-HNEG-002__hbzu5h7",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-HNEG-002__jGg66na",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "IC-NEG-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "IC-NEG-001__gAjgVPs",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "IC-NEG-001__uwCqgJE",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      }
+    }
+  },
+  "execution_status": "succeeded",
+  "execution_errors": [],
+  "expected_attempts": 22,
+  "scored_attempts": 22,
+  "job_failure": "",
+  "trial_failures": []
+}

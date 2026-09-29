@@ -1,0 +1,32 @@
+{
+  "status": "unscored",
+  "trial": "COMP-002__8HDKrLP",
+  "agent": "opencode",
+  "variant": "without_skill",
+  "artifacts": [
+    "result.json",
+    "config.json",
+    "exception.txt",
+    "trial.log",
+    "trajectory.json",
+    "opencode.txt",
+    "reward.json"
+  ],
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli",
+  "evaluation_status": "failed",
+  "evaluation_errors": {
+    "accuracy": "LLM judge error: Public provider call failed for step-5-preview: timed out"
+  },
+  "task_id": {
+    "path": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-002"
+  },
+  "task_name": "nvidia/skillevaluator-COMP-002",
+  "trial_name": "COMP-002__8HDKrLP",
+  "started_at": "2026-09-29T00:08:52.149234Z",
+  "finished_at": "2026-09-29T00:25:48.527555Z",
+  "error": {
+    "type": "HarborTrialError",
+    "message": "Retained SkillEvaluator verifier sidecar records evaluation_status=failed. The accuracy Judge call to step-5-preview timed out; this trial has no score and is not a zero."
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "GEN-007",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-007.input，执行 story.generation revision。返回 {\"content\":\"<修订正文>\"}。",
+  "expected_output": "删除 selected_document 中无证据的大雨、湍急、差点冲倒、同学摔倒等细节，同时尽量保留原有两段结构和故事重点。",
+  "assertions": [
+    "必须删除或改写“大雨”“河水湍急”“差点被冲倒”“同学摔了一跤”等当前证据不支持内容",
+    "必须保留水没过腰、手拉手/互相搀扶、行李举过头顶、现在仍觉惊险",
+    "不得把未知天气或是否摔倒写成确定事实",
+    "除清理无依据内容外，应尽量保持 selected_document 的两段结构和叙事顺序",
+    "不得用 Story Summary 重新搭一套完全不同文章"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-007.input，执行 story.generation revision。返回 {\"content\":\"<修订正文>\"}。",
+  "ground_truth": "删除 selected_document 中无证据的大雨、湍急、差点冲倒、同学摔倒等细节，同时尽量保留原有两段结构和故事重点。",
+  "expected_behavior": [
+    "必须删除或改写“大雨”“河水湍急”“差点被冲倒”“同学摔了一跤”等当前证据不支持内容",
+    "必须保留水没过腰、手拉手/互相搀扶、行李举过头顶、现在仍觉惊险",
+    "不得把未知天气或是否摔倒写成确定事实",
+    "除清理无依据内容外，应尽量保持 selected_document 的两段结构和叙事顺序",
+    "不得用 Story Summary 重新搭一套完全不同文章"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

@@ -1,0 +1,22 @@
+{
+  "id": "ONB-NEG-001",
+  "prompt": "请把“高考前一晚突然发烧”翻译成英文，只返回译文。",
+  "expected_output": "正确完成普通翻译任务，不调用 onboarding-closeout，也不输出 Profile/Life Stage JSON。",
+  "assertions": [
+    "不应选择 onboarding-closeout",
+    "只返回自然英文翻译，不生成建档结构"
+  ],
+  "expected_skill": null,
+  "question": "请把“高考前一晚突然发烧”翻译成英文，只返回译文。",
+  "ground_truth": "正确完成普通翻译任务，不调用 onboarding-closeout，也不输出 Profile/Life Stage JSON。",
+  "expected_behavior": [
+    "不应选择 onboarding-closeout",
+    "只返回自然英文翻译，不生成建档结构"
+  ],
+  "evaluated_skill": "onboarding-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

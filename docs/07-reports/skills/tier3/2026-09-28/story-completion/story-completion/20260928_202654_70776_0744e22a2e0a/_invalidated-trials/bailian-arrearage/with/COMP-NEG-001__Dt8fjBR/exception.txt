@@ -1,0 +1,34 @@
+Traceback (most recent call last):
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/trial/single_step.py", line 63, in _run_agent
+    await self._run_agent_phase(
+    ...<4 lines>...
+    )
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/trial/trial.py", line 376, in _run_agent_phase
+    await asyncio.wait_for(
+    ...<6 lines>...
+    )
+  File "/Users/gwh/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/agents/installed/base.py", line 39, in wrapper
+    return await fn(self, instruction, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/agents/installed/opencode.py", line 556, in run
+    await self.exec_as_agent(
+    ...<8 lines>...
+    )
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/agents/installed/base.py", line 354, in exec_as_agent
+    return await self._exec(
+           ^^^^^^^^^^^^^^^^^
+        environment, command, env=env, cwd=cwd, timeout_sec=timeout_sec
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/gwh/.local/share/uv/tools/skillevaluator/lib/python3.13/site-packages/harbor/agents/installed/base.py", line 317, in _exec
+    raise NonZeroAgentExitCodeError(
+    ...<3 lines>...
+    )
+harbor.agents.installed.base.NonZeroAgentExitCodeError: Command failed (exit 1): . ~/.nvm/nvm.sh; opencode --model=openai/qwen3.6-35b-a3b run --format=json --thinking --dangerously-skip-permissions -- '请根据这段采访资料直接写一篇第一人称回忆录正文，不要判断完成度。
+' 2>&1 </dev/null | stdbuf -oL tee /logs/agent/opencode.txt
+stdout: {"type":"error","timestamp":1790631709293,"sessionID":"ses_f16087cacffetBTCkTeO6oq26i","error":{"name":"APIError","data":{"message":"Bad Request: id:1\nevent:error\n:HTTP_STATUS/400\ndata:{\"request_id\":\"f919a187-40de-961f-846f-684e3820146f\",\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://help.aliyun.com/zh/model-studio/error-code#overdue-payment\"}","statusCode":400,"isRetryable":false,"responseHeaders":{"connection":"close","content-length":"276","content-type":"text/event-stream;charset=UTF-8","date":"Mon, 28 Sep 2026 21:41:49 GMT","server":"BaseHTTP/0.6 Python/3.13.15"},"responseBody":"id:1\nevent:error\n:HTTP_STATUS/400\ndata:{\"request_id\":\"f919a187-40de-961f-846f-684e3820146f\",\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://help.aliyun.com/zh/model-studio/error-code#overdue-payment\"}\n\n","metadata":{"url":"[REDA ... [truncated]
+stderr: None

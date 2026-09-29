@@ -1,0 +1,216 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-003",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'onboarding-closeout'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'onboarding-closeout' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Returns the onboarding.closeout JSON and applies the transcript correction, setting birth_year to 1963 over the unsupported 1962 value.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u7528\u5f53\u524d\u7528\u6237 Transcript \u7684\u660e\u786e\u7ea0\u6b63\u8986\u76d6\u65e7 current_profile \u4e2d\u4e0d\u53d7 Transcript \u8bc1\u660e\u7684\u5e74\u4efd\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": { \"value\": 1963, \"source_refs\": [\"source_1\"] },\n    \"gender\": null,\n    \"birth_place\": { \"value\": \"\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\", \"source_ref\n...[truncated]...\n\u5e74\u4efd\u5df2\u7531\u65e7\u8bb0\u5f55\u76841962\u5e74\u66f4\u6b63\u4e3a1963\u5e74\uff1b\u51fa\u751f\u5730\u4e3a\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\u3002\", \"source_refs\": [\"source_1\", \"source_2\"] }\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6309\u9884\u671f\u7528 Transcript \u4e2d\u7684\u660e\u786e\u7ea0\u6b63\u8986\u76d6\u4e86\u65e7 current_profile \u4e2d\u672a\u83b7\u8bc1\u660e\u7684\u51fa\u751f\u5e74\u4efd\uff081962\u21921963\uff09\uff0c\u8f93\u51fa\u4e3a\u65e0\u89e3\u91ca\u7684 JSON\uff0c\u4e14\u5b57\u6bb5\u7ed3\u6784\u57fa\u672c\u7b26\u5408 output_contract\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-003 \u7684 Task Context\uff0c\u5b8c\u6210 onboarding.closeout\uff0c\u8fd4\u56de\u7b26\u5408 output_contract \u7684 JSON \u4e14\u4e0d\u9644\u52a0\u89e3\u91ca\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408 output_contract \u7684 profile JSON\uff0c\u5176\u4e2d birth_year \u88ab\u663e\u5f0f\u7ea0\u6b63\u4e3a 1963\uff08\u65e7\u8bb0\u5f55\u4e3a 1962\uff09\uff0c\u5e76\u5728 profile_summary \u4e2d\u6ce8\u660e\u4e86\u8be5\u7ea0\u6b63\uff0c\u540c\u65f6\u63d0\u4f9b\u4e86 source_refs\uff1b\u672a\u9644\u52a0\u81ea\u7136\u8bed\u8a00\u89e3\u91ca\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u7528\u5f53\u524d\u7528\u6237 Transcript \u7684\u660e\u786e\u7ea0\u6b63\u8986\u76d6\u65e7 current_profile \u4e2d\u4e0d\u53d7 Transcript \u8bc1\u660e\u7684\u5e74\u4efd\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_ee6cf4b0396c4918a9cb955b",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": { \"value\": 1963, \"source_refs\": [\"source_1\"] },\n    \"gender\": null,\n    \"birth_place\": { \"value\": \"\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\", \"source_ref\n...[truncated]...\n\u5e74\u4efd\u5df2\u7531\u65e7\u8bb0\u5f55\u76841962\u5e74\u66f4\u6b63\u4e3a1963\u5e74\uff1b\u51fa\u751f\u5730\u4e3a\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\u3002\", \"source_refs\": [\"source_1\", \"source_2\"] }\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "\u6240\u6709\u9884\u671f\u884c\u4e3a\u5747\u5df2\u89c2\u5bdf\u5230",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "birth_year \u503c\u4e3a 1963\uff0c\u672a\u6cbf\u7528 current_profile \u7684 1962"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "birth_year \u7684 source_refs \u4e3a [\"source_1\"]\uff0c\u7b26\u5408\u8981\u6c42"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "birth_place \u7684 source_refs \u4e3a [\"source_2\"]\uff0c\u57fa\u4e8e source_2"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "\u6240\u6709\u4e8b\u5b9e\u7684 source_refs \u5747\u6765\u81ea source_1 \u6216 source_2\uff0c\u672a\u5c06 current_profile \u4f5c\u4e3a\u8bc1\u636e"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "birth_year \u5fc5\u987b\u4e3a 1963\uff0c\u4e0d\u80fd\u6cbf\u7528 current_profile \u7684 1962"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "1963 \u7684 source_refs \u5fc5\u987b\u6765\u81ea source_1"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "birth_place \u5e94\u57fa\u4e8e source_2"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "current_profile \u53ea\u80fd\u4f5c\u4e3a\u4e0a\u4e0b\u6587\uff0c\u4e0d\u80fd\u5355\u72ec\u6210\u4e3a\u65b0\u5019\u9009\u4e8b\u5b9e\u7684\u8bc1\u636e"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": { \"value\": 1963, \"source_refs\": [\"source_1\"] },\n    \"gender\": null,\n    \"birth_place\": { \"value\": \"\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\", \"source_ref\n...[truncated]...\n\u5e74\u4efd\u5df2\u7531\u65e7\u8bb0\u5f55\u76841962\u5e74\u66f4\u6b63\u4e3a1963\u5e74\uff1b\u51fa\u751f\u5730\u4e3a\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\u3002\", \"source_refs\": [\"source_1\", \"source_2\"] }\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

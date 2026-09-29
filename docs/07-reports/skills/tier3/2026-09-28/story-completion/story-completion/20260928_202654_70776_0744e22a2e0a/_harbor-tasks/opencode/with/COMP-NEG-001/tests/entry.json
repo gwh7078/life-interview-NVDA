@@ -1,0 +1,22 @@
+{
+  "id": "COMP-NEG-001",
+  "prompt": "请根据这段采访资料直接写一篇第一人称回忆录正文，不要判断完成度。",
+  "expected_output": "执行写作类任务而不是 story-completion；不返回 status/gaps。",
+  "assertions": [
+    "不应选择 story-completion",
+    "不应输出 completion JSON"
+  ],
+  "expected_skill": null,
+  "question": "请根据这段采访资料直接写一篇第一人称回忆录正文，不要判断完成度。",
+  "ground_truth": "执行写作类任务而不是 story-completion；不返回 status/gaps。",
+  "expected_behavior": [
+    "不应选择 story-completion",
+    "不应输出 completion JSON"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

@@ -1,0 +1,251 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-006",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Activated via Skill tool: onboarding-closeout",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "onboarding-closeout",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "onboarding-closeout"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Skill activated (no execution needed)"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Agent correctly routed to onboarding-closeout only",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": [],
+          "skills_read": [
+            "Skill(onboarding-closeout)"
+          ]
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "2/2 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly applies the onboarding-closeout skill by returning null values with empty source_refs for all profile fields and an empty life_stages array, maintaining gaps rather than fabricating facts, and conforms to the output contract without explanation.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5728\u7a00\u758f\u4e14\u4e0d\u786e\u5b9a\u7684\u9996\u6b21\u5efa\u6863\u8f93\u5165\u4e2d\u4fdd\u6301\u7a7a\u7f3a\uff0c\u800c\u4e0d\u662f\u4e3a\u4e86\u7ed3\u6784\u5b8c\u6574\u865a\u6784\u5e74\u4efd\u3001\u5b66\u6821\u6216\u7cbe\u786e\u51fa\u751f\u5730\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": {\"value\": null, \"source_refs\": []},\n    \"birth_year\": {\"value\": null, \"source_refs\": []},\n    \"gender\": {\"value\": null, \"source_refs\": []},\n    \"birth\n...[truncated]...\n []},\n    \"profile_summary\": {\"value\": null, \"source_refs\": []}\n  },\n  \"life_stages\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "The agent returned valid JSON conforming to the output_contract with no explanation. In the sparse and uncertain ONB-006 input, it correctly maintained gaps by returning null values and empty source_refs rather than fabricating years, schools, or precise birthplaces, matching the expected outcome.",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-006 \u7684 Task Context\uff0c\u5b8c\u6210 onboarding.closeout\u3002\u8fd4\u56de\u7b26\u5408 output_contract \u7684 JSON\uff1b\u4e0d\u8981\u89e3\u91ca\u3002",
+      "end_state": "Agent returned a JSON object with all profile fields set to null and empty source_refs, and an empty life_stages array, without any explanation.",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5728\u7a00\u758f\u4e14\u4e0d\u786e\u5b9a\u7684\u9996\u6b21\u5efa\u6863\u8f93\u5165\u4e2d\u4fdd\u6301\u7a7a\u7f3a\uff0c\u800c\u4e0d\u662f\u4e3a\u4e86\u7ed3\u6784\u5b8c\u6574\u865a\u6784\u5e74\u4efd\u3001\u5b66\u6821\u6216\u7cbe\u786e\u51fa\u751f\u5730\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "skill: skill",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"name\": \"onboarding-closeout\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_b10ff7ee4fc54e76a6024d56",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<skill_content name=\"onboarding-closeout\">\n# Skill: onboarding-closeout\n\n# Onboarding Closeout\n\n## Purpose\n\n\u9996\u6b21\u5efa\u6863\u91c7\u8bbf\u7ed3\u675f\u540e\uff0c\u4ece\u7ed3\u6784\u5316\u8f93\u5165\u4e2d\u63d0\u53d6\u6709\u6765\u6e90\u7684\u5019\u9009\u6863\u6848\u3001\u4eba\u751f\u9636\u6bb5\u548c\u5f85\u6574\u7406 Story\u3002Use only for onboarding.closeout.\n\n#\n...[truncated]...\nis base directory.\nNote: file list is sampled.\n\n<skill_files>\n\n</skill_files>\n</skill_content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_38597a19da7e40afa03ba7a7",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": {\"value\": null, \"source_refs\": []},\n    \"birth_year\": {\"value\": null, \"source_refs\": []},\n    \"gender\": {\"value\": null, \"source_refs\": []},\n    \"birth\n...[truncated]...\n []},\n    \"profile_summary\": {\"value\": null, \"source_refs\": []}\n  },\n  \"life_stages\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors observed; agent returned a fully null/empty profile with no fabricated details.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "birth_year is null in the output."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "birth_place is null; no specific village was fabricated."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "No school years or school names were fabricated; life_stages is empty."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "No Life Stage was created, so no precise chronology was manufactured."
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "All profile fields are null with empty source_refs."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "birth_year \u5fc5\u987b\u4e3a null"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u865a\u6784\u5177\u4f53\u51fa\u751f\u6751\u5e84"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u5f97\u865a\u6784\u5177\u4f53\u4e0a\u5b66\u5e74\u4efd\u6216\u5b66\u6821"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u82e5\u521b\u5efa Life Stage\uff0c\u5176\u5e74\u4efd\u5fc5\u987b\u4fdd\u6301 null \u6216\u53ea\u4f7f\u7528\u8f93\u5165\u80fd\u652f\u6301\u7684\u6a21\u7cca\u4fe1\u606f\uff1b\u4e0d\u80fd\u5236\u9020\u7cbe\u786e\u5e74\u8868"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u7f3a\u8bc1\u636e\u7684 Profile \u5b57\u6bb5\u5fc5\u987b\u4e3a null \u4e14 source_refs \u4e3a\u7a7a"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": {\"value\": null, \"source_refs\": []},\n    \"birth_year\": {\"value\": null, \"source_refs\": []},\n    \"gender\": {\"value\": null, \"source_refs\": []},\n    \"birth\n...[truncated]...\n []},\n    \"profile_summary\": {\"value\": null, \"source_refs\": []}\n  },\n  \"life_stages\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

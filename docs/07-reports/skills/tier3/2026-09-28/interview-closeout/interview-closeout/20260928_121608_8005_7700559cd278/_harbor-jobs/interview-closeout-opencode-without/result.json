@@ -1,0 +1,258 @@
+{
+    "id": "4acc4985-6340-4c80-86bb-0a7d4084b4ef",
+    "started_at": "2026-09-28T20:16:09.317497",
+    "updated_at": "2026-09-29T03:50:18.262791",
+    "finished_at": "2026-09-29T03:50:18.262791",
+    "n_total_trials": 22,
+    "stats": {
+        "n_completed_trials": 22,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__without": {
+                "n_trials": 22,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 0.9454545454545454,
+                        "behavior_check": 0.9,
+                        "goal_accuracy": 0.8181818181818182,
+                        "overall": 0.789059090909091,
+                        "security": 1.0,
+                        "skill_efficiency": 0.5719681818181818,
+                        "skill_execution": 0.49886363636363634
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "IC-005__Ngd2UDZ",
+                            "IC-001__wh9DJuE",
+                            "IC-003__bbo9QPf",
+                            "IC-007__FSv2jpQ",
+                            "IC-NEG-001__CVYusbA",
+                            "IC-004__PsmBiaj",
+                            "IC-008__M35dCeK",
+                            "IC-HNEG-002__JjjeesA",
+                            "IC-009__ENriiE4",
+                            "IC-006__pu9jVJM",
+                            "IC-007__kyCcqjC",
+                            "IC-HNEG-002__kQHTCr7",
+                            "IC-009__injf5Jy",
+                            "IC-002__qxN4C2p",
+                            "IC-NEG-001__Xn7SL9d",
+                            "IC-008__5bRXH6Y",
+                            "IC-001__tzNXzvV",
+                            "IC-006__sD89Dax",
+                            "IC-003__jnp7275",
+                            "IC-004__HR3X7FQ",
+                            "IC-005__s4D566K",
+                            "IC-002__uwaiVq2"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.5": [
+                            "IC-005__Ngd2UDZ",
+                            "IC-001__wh9DJuE",
+                            "IC-003__bbo9QPf",
+                            "IC-007__FSv2jpQ",
+                            "IC-004__PsmBiaj",
+                            "IC-008__M35dCeK",
+                            "IC-006__pu9jVJM",
+                            "IC-007__kyCcqjC",
+                            "IC-009__injf5Jy",
+                            "IC-002__qxN4C2p",
+                            "IC-008__5bRXH6Y",
+                            "IC-001__tzNXzvV",
+                            "IC-006__sD89Dax",
+                            "IC-003__jnp7275",
+                            "IC-004__HR3X7FQ",
+                            "IC-005__s4D566K",
+                            "IC-002__uwaiVq2"
+                        ],
+                        "1.0": [
+                            "IC-NEG-001__CVYusbA",
+                            "IC-NEG-001__Xn7SL9d"
+                        ],
+                        "0.0": [
+                            "IC-HNEG-002__JjjeesA",
+                            "IC-HNEG-002__kQHTCr7"
+                        ],
+                        "0.475": [
+                            "IC-009__ENriiE4"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "0.5": [
+                            "IC-005__Ngd2UDZ",
+                            "IC-001__wh9DJuE",
+                            "IC-003__bbo9QPf",
+                            "IC-007__FSv2jpQ",
+                            "IC-004__PsmBiaj",
+                            "IC-008__M35dCeK",
+                            "IC-009__ENriiE4",
+                            "IC-006__pu9jVJM",
+                            "IC-007__kyCcqjC",
+                            "IC-009__injf5Jy",
+                            "IC-008__5bRXH6Y",
+                            "IC-001__tzNXzvV",
+                            "IC-006__sD89Dax",
+                            "IC-004__HR3X7FQ",
+                            "IC-005__s4D566K",
+                            "IC-002__uwaiVq2"
+                        ],
+                        "1.0": [
+                            "IC-NEG-001__CVYusbA",
+                            "IC-HNEG-002__JjjeesA",
+                            "IC-HNEG-002__kQHTCr7",
+                            "IC-NEG-001__Xn7SL9d"
+                        ],
+                        "0.3333": [
+                            "IC-002__qxN4C2p"
+                        ],
+                        "0.25": [
+                            "IC-003__jnp7275"
+                        ]
+                    },
+                    "accuracy": {
+                        "0.6": [
+                            "IC-005__Ngd2UDZ",
+                            "IC-005__s4D566K"
+                        ],
+                        "1.0": [
+                            "IC-001__wh9DJuE",
+                            "IC-003__bbo9QPf",
+                            "IC-007__FSv2jpQ",
+                            "IC-NEG-001__CVYusbA",
+                            "IC-004__PsmBiaj",
+                            "IC-008__M35dCeK",
+                            "IC-HNEG-002__JjjeesA",
+                            "IC-009__ENriiE4",
+                            "IC-006__pu9jVJM",
+                            "IC-007__kyCcqjC",
+                            "IC-HNEG-002__kQHTCr7",
+                            "IC-009__injf5Jy",
+                            "IC-NEG-001__Xn7SL9d",
+                            "IC-008__5bRXH6Y",
+                            "IC-001__tzNXzvV",
+                            "IC-006__sD89Dax",
+                            "IC-003__jnp7275",
+                            "IC-004__HR3X7FQ"
+                        ],
+                        "0.8": [
+                            "IC-002__qxN4C2p",
+                            "IC-002__uwaiVq2"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "0.0": [
+                            "IC-005__Ngd2UDZ",
+                            "IC-002__qxN4C2p",
+                            "IC-005__s4D566K",
+                            "IC-002__uwaiVq2"
+                        ],
+                        "1.0": [
+                            "IC-001__wh9DJuE",
+                            "IC-003__bbo9QPf",
+                            "IC-007__FSv2jpQ",
+                            "IC-NEG-001__CVYusbA",
+                            "IC-004__PsmBiaj",
+                            "IC-008__M35dCeK",
+                            "IC-HNEG-002__JjjeesA",
+                            "IC-009__ENriiE4",
+                            "IC-006__pu9jVJM",
+                            "IC-007__kyCcqjC",
+                            "IC-HNEG-002__kQHTCr7",
+                            "IC-009__injf5Jy",
+                            "IC-NEG-001__Xn7SL9d",
+                            "IC-008__5bRXH6Y",
+                            "IC-001__tzNXzvV",
+                            "IC-006__sD89Dax",
+                            "IC-003__jnp7275",
+                            "IC-004__HR3X7FQ"
+                        ]
+                    },
+                    "behavior_check": {
+                        "0.4": [
+                            "IC-005__Ngd2UDZ",
+                            "IC-005__s4D566K"
+                        ],
+                        "1.0": [
+                            "IC-001__wh9DJuE",
+                            "IC-003__bbo9QPf",
+                            "IC-007__FSv2jpQ",
+                            "IC-NEG-001__CVYusbA",
+                            "IC-004__PsmBiaj",
+                            "IC-008__M35dCeK",
+                            "IC-HNEG-002__JjjeesA",
+                            "IC-009__ENriiE4",
+                            "IC-006__pu9jVJM",
+                            "IC-007__kyCcqjC",
+                            "IC-HNEG-002__kQHTCr7",
+                            "IC-009__injf5Jy",
+                            "IC-NEG-001__Xn7SL9d",
+                            "IC-008__5bRXH6Y",
+                            "IC-001__tzNXzvV",
+                            "IC-006__sD89Dax",
+                            "IC-003__jnp7275",
+                            "IC-004__HR3X7FQ"
+                        ],
+                        "0.75": [
+                            "IC-002__qxN4C2p"
+                        ],
+                        "0.25": [
+                            "IC-002__uwaiVq2"
+                        ]
+                    },
+                    "overall": {
+                        "0.5": [
+                            "IC-005__Ngd2UDZ",
+                            "IC-005__s4D566K"
+                        ],
+                        "0.8333": [
+                            "IC-001__wh9DJuE",
+                            "IC-003__bbo9QPf",
+                            "IC-007__FSv2jpQ",
+                            "IC-004__PsmBiaj",
+                            "IC-008__M35dCeK",
+                            "IC-HNEG-002__JjjeesA",
+                            "IC-006__pu9jVJM",
+                            "IC-007__kyCcqjC",
+                            "IC-HNEG-002__kQHTCr7",
+                            "IC-009__injf5Jy",
+                            "IC-008__5bRXH6Y",
+                            "IC-001__tzNXzvV",
+                            "IC-006__sD89Dax",
+                            "IC-004__HR3X7FQ"
+                        ],
+                        "1.0": [
+                            "IC-NEG-001__CVYusbA",
+                            "IC-NEG-001__Xn7SL9d"
+                        ],
+                        "0.8292": [
+                            "IC-009__ENriiE4"
+                        ],
+                        "0.5639": [
+                            "IC-002__qxN4C2p"
+                        ],
+                        "0.7917": [
+                            "IC-003__jnp7275"
+                        ],
+                        "0.5083": [
+                            "IC-002__uwaiVq2"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 475122,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 6027,
+        "cost_usd": null
+    }
+}

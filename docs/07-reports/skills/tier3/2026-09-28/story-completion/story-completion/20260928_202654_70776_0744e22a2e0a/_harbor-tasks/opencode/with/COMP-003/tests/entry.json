@@ -1,0 +1,29 @@
+{
+  "id": "COMP-003",
+  "prompt": "读取 /workspace/input/cases.json 中 COMP-003.input，执行 story.completion。只返回规定 JSON。",
+  "expected_output": "重新评估 previous_gaps，删除已经回答的老师和分数问题，只保留仍有价值且未回答的方向。",
+  "assertions": [
+    "不得重复“是谁送你去医院的？”",
+    "不得重复“你最后考了多少分？”",
+    "如果保留 gaps，只能保留当前 Memory 尚未回答且对成文有价值的问题",
+    "不得把 previous_gaps 原样照抄"
+  ],
+  "expected_skill": "story-completion",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 COMP-003.input，执行 story.completion。只返回规定 JSON。",
+  "ground_truth": "重新评估 previous_gaps，删除已经回答的老师和分数问题，只保留仍有价值且未回答的方向。",
+  "expected_behavior": [
+    "不得重复“是谁送你去医院的？”",
+    "不得重复“你最后考了多少分？”",
+    "如果保留 gaps，只能保留当前 Memory 尚未回答且对成文有价值的问题",
+    "不得把 previous_gaps 原样照抄"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

@@ -1,0 +1,28 @@
+[dataset]
+name = "nvidia/skillevaluator"
+description = "SkillEvaluator skill evaluation dataset"
+
+[[tasks]]
+name = "nvidia/ONB-001"
+
+[[tasks]]
+name = "nvidia/ONB-002"
+
+[[tasks]]
+name = "nvidia/ONB-003"
+
+[[tasks]]
+name = "nvidia/ONB-004"
+
+[[tasks]]
+name = "nvidia/ONB-005"
+
+[[tasks]]
+name = "nvidia/ONB-006"
+
+[[tasks]]
+name = "nvidia/ONB-HNEG-002"
+
+[[tasks]]
+name = "nvidia/ONB-NEG-001"
+

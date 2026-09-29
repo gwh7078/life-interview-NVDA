@@ -1,0 +1,29 @@
+{
+  "id": "COMP-006",
+  "prompt": "读取 /workspace/input/cases.json 中 COMP-006.input，执行 story.completion。只返回规定 JSON。",
+  "expected_output": "遵守已 complete 状态保持规则，并移除对明确记不清姓名的无效 gap。",
+  "assertions": [
+    "status 必须保持 complete",
+    "不得把状态降回 interviewing 或 pending",
+    "不得继续追问两位战士姓名",
+    "gaps 应为空或仅包含真正未阻断且必要的方向"
+  ],
+  "expected_skill": "story-completion",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 COMP-006.input，执行 story.completion。只返回规定 JSON。",
+  "ground_truth": "遵守已 complete 状态保持规则，并移除对明确记不清姓名的无效 gap。",
+  "expected_behavior": [
+    "status 必须保持 complete",
+    "不得把状态降回 interviewing 或 pending",
+    "不得继续追问两位战士姓名",
+    "gaps 应为空或仅包含真正未阻断且必要的方向"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

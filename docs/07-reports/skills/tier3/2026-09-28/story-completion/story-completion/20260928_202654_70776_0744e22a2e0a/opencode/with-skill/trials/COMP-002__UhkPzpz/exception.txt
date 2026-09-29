@@ -1,0 +1,1 @@
+Retained SkillEvaluator verifier sidecar records evaluation_status=failed. The accuracy Judge call to step-5-preview timed out; this trial has no score and is not a zero.

@@ -1,0 +1,219 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-NEG-001",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether story-completion was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The agent correctly executed a writing task (called 'write') rather than story-completion, produced a first-person memoir directly from the interview material, and did not return status/gaps, fully matching the expected behavior.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u6267\u884c\u5199\u4f5c\u7c7b\u4efb\u52a1\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u8fd4\u56de status/gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "\u56de\u5fc6\u5f55\u5df2\u5199\u597d\uff0c\u5171\u56db\u4e2a\u6545\u4e8b\u7ae0\u8282\uff1a\n\n1. **\u9ad8\u8003\u524d\u591c\u7684\u90a3\u573a\u9ad8\u70e7** \u2014 \u53d1\u70e7\u88ab\u738b\u660e\u6668\u8001\u5e08\u9001\u533b\u8f93\u6db2\uff0c\u5e26\u75c5\u53c2\u8003\uff0c\u603b\u5206486\u8fc7\u7ebf\uff0c\u5316\u5b6699.5\u5206\n2. **\u4ece\u6c34\u6ce5\u6876\u91cc\u770b\u89c1\u4e16\u754c** \u2014 \u4ece\u5acc\u5f03\u7845\u9178\u76d0\u4e13\u4e1a\u5230\u5de5\u5382\u53c2\u89c2\u540e\u8f6c\u53d8\u8ba4\u77e5\u3001\u8ba4\u540c\u4e13\u4e1a\n3. **\u6cad\u6cb3\u7684\u6c34\u6f2b\u8fc7\u8170\u9645** \u2014 \u9ad8\u4e2d\u4f4f\u6821\u5468\u672b\u4e0e\u540c\u5b66\u7ed3\u4f34\u8d9f\u8fc7\u9f50\u8170\u6df1\u7684\u6cad\u6cb3\u56de\u5bb6\n4. **\u4e24\u4ef6\u7eff\u519b\u88c5** \u2014 \u5927\u4e8c\u4f4f\u9662\u7ed3\u8bc6\u4e24\u4f4d\u89e3\u653e\u519b\u6218\u58eb\u83b7\u8d60\u7eff\u519b\u88c5\u7684\u6545\u4e8b"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent\u6267\u884c\u4e86\u5199\u4f5c\u7c7b\u4efb\u52a1\uff0c\u57fa\u4e8e\u91c7\u8bbf\u8d44\u6599\u76f4\u63a5\u521b\u4f5c\u4e86\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587\uff0c\u672a\u8fdb\u5165story-completion\u6a21\u5f0f\uff0c\u4e5f\u672a\u8fd4\u56destatus\u6216gaps\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f outcome\u3002",
+      "user_goal": "\u8bf7\u6839\u636e\u8fd9\u6bb5\u91c7\u8bbf\u8d44\u6599\u76f4\u63a5\u5199\u4e00\u7bc7\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587\uff0c\u4e0d\u8981\u5224\u65ad\u5b8c\u6210\u5ea6\u3002",
+      "end_state": "Agent\u8c03\u7528write\u5de5\u5177\u5b8c\u6210\u4e86\u4e00\u7bc7\u56db\u7ae0\u8282\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u7684\u5199\u4f5c\u5e76\u6210\u529f\u5199\u5165\u6587\u4ef6\uff0c\u6700\u7ec8\u56de\u590d\u4e3a\u7ae0\u8282\u6458\u8981\uff0c\u672a\u8fd4\u56destatus/gaps\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u6267\u884c\u5199\u4f5c\u7c7b\u4efb\u52a1\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u8fd4\u56de status/gaps\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "glob: glob",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "{\"pattern\": \"**/*\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/3/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/output\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "write: write",
+          "json_pointer": "/steps/4/tool_calls/0",
+          "excerpt": "{\"content\": \"## \\u9ad8\\u8003\\u524d\\u591c\\u7684\\u90a3\\u573a\\u9ad8\\u70e7\\n\\n1983\\u5e74\\uff0c\\u6211\\u7684\\u547d\\u8fd0\\u88ab\\u538b\\u7f29\\u5728\\u4e86\\u4e00\\u4e2a\\u591c\\u665a\\u548c\\u51e0\\u5929\\\n...[truncated]...\nu7684\\u7a7a\\u95f4\\u5c31\\u80fd\\u4ea7\\u751f\\u3002\\n\", \"filePath\": \"/workspace/output/memoir.md\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_d1437f8da8f54a2e8c34962c",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace</path>\n<type>directory</type>\n<entries>\n.agents/\n.claude/\n.cline/\n.codex/\n.config/\n.cursor/\n.gemini/\n.opencode/\n.qwen/\ninput/\noutput/\nrepo/\nskills/\n\n(13 entries)\n</entries>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_7b8c2de5dee44cbf96c159ee",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "/workspace/.opencode/.gitignore\n/workspace/input/cases.json\n/workspace/skills/story-completion/SKILL.md"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_0b82bf6e7d3c439ba654b2f3",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_32b53f90689b4f99a36cd4b1",
+          "json_pointer": "/steps/3/observation/results/0",
+          "excerpt": "<path>/workspace/output</path>\n<type>directory</type>\n<entries>\n\n\n(0 entries)\n</entries>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_42b1622674044f269aea204e",
+          "json_pointer": "/steps/4/observation/results/0",
+          "excerpt": "Wrote file successfully."
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "\u56de\u5fc6\u5f55\u5df2\u5199\u597d\uff0c\u5171\u56db\u4e2a\u6545\u4e8b\u7ae0\u8282\uff1a\n\n1. **\u9ad8\u8003\u524d\u591c\u7684\u90a3\u573a\u9ad8\u70e7** \u2014 \u53d1\u70e7\u88ab\u738b\u660e\u6668\u8001\u5e08\u9001\u533b\u8f93\u6db2\uff0c\u5e26\u75c5\u53c2\u8003\uff0c\u603b\u5206486\u8fc7\u7ebf\uff0c\u5316\u5b6699.5\u5206\n2. **\u4ece\u6c34\u6ce5\u6876\u91cc\u770b\u89c1\u4e16\u754c** \u2014 \u4ece\u5acc\u5f03\u7845\u9178\u76d0\u4e13\u4e1a\u5230\u5de5\u5382\u53c2\u89c2\u540e\u8f6c\u53d8\u8ba4\u77e5\u3001\u8ba4\u540c\u4e13\u4e1a\n3. **\u6cad\u6cb3\u7684\u6c34\u6f2b\u8fc7\u8170\u9645** \u2014 \u9ad8\u4e2d\u4f4f\u6821\u5468\u672b\u4e0e\u540c\u5b66\u7ed3\u4f34\u8d9f\u8fc7\u9f50\u8170\u6df1\u7684\u6cad\u6cb3\u56de\u5bb6\n4. **\u4e24\u4ef6\u7eff\u519b\u88c5** \u2014 \u5927\u4e8c\u4f4f\u9662\u7ed3\u8bc6\u4e24\u4f4d\u89e3\u653e\u519b\u6218\u58eb\u83b7\u8d60\u7eff\u519b\u88c5\u7684\u6545\u4e8b"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "Both expected behaviors were observed: the agent avoided selecting story-completion and avoided outputting completion JSON.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did not select or invoke the story-completion skill; it only read input files and wrote the memoir directly."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent did not output any completion JSON; it produced a first-person memoir and a plain-text chapter summary."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 story-completion"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5e94\u8f93\u51fa completion JSON"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "file_change",
+          "label": "write: write",
+          "json_pointer": "/steps/4/tool_calls/0",
+          "excerpt": "{\"content\": \"## \\u9ad8\\u8003\\u524d\\u591c\\u7684\\u90a3\\u573a\\u9ad8\\u70e7\\n\\n1983\\u5e74\\uff0c\\u6211\\u7684\\u547d\\u8fd0\\u88ab\\u538b\\u7f29\\u5728\\u4e86\\u4e00\\u4e2a\\u591c\\u665a\\u548c\\u51e0\\u5929\\\n...[truncated]...\nu7684\\u7a7a\\u95f4\\u5c31\\u80fd\\u4ea7\\u751f\\u3002\\n\", \"filePath\": \"/workspace/output/memoir.md\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/5",
+          "excerpt": "\u56de\u5fc6\u5f55\u5df2\u5199\u597d\uff0c\u5171\u56db\u4e2a\u6545\u4e8b\u7ae0\u8282\uff1a\n\n1. **\u9ad8\u8003\u524d\u591c\u7684\u90a3\u573a\u9ad8\u70e7** \u2014 \u53d1\u70e7\u88ab\u738b\u660e\u6668\u8001\u5e08\u9001\u533b\u8f93\u6db2\uff0c\u5e26\u75c5\u53c2\u8003\uff0c\u603b\u5206486\u8fc7\u7ebf\uff0c\u5316\u5b6699.5\u5206\n2. **\u4ece\u6c34\u6ce5\u6876\u91cc\u770b\u89c1\u4e16\u754c** \u2014 \u4ece\u5acc\u5f03\u7845\u9178\u76d0\u4e13\u4e1a\u5230\u5de5\u5382\u53c2\u89c2\u540e\u8f6c\u53d8\u8ba4\u77e5\u3001\u8ba4\u540c\u4e13\u4e1a\n3. **\u6cad\u6cb3\u7684\u6c34\u6f2b\u8fc7\u8170\u9645** \u2014 \u9ad8\u4e2d\u4f4f\u6821\u5468\u672b\u4e0e\u540c\u5b66\u7ed3\u4f34\u8d9f\u8fc7\u9f50\u8170\u6df1\u7684\u6cad\u6cb3\u56de\u5bb6\n4. **\u4e24\u4ef6\u7eff\u519b\u88c5** \u2014 \u5927\u4e8c\u4f4f\u9662\u7ed3\u8bc6\u4e24\u4f4d\u89e3\u653e\u519b\u6218\u58eb\u83b7\u8d60\u7eff\u519b\u88c5\u7684\u6545\u4e8b"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "COMP-NEG-001__o6Eieor",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

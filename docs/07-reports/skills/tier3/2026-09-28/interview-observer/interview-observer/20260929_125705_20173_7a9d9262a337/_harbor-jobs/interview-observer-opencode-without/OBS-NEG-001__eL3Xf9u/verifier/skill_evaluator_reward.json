@@ -1,0 +1,137 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "OBS-NEG-001",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No tool calls"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response provides three colloquial rewrites of the original phrase without invoking any special skill or returning JSON, directly addressing the user's request.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5b8c\u6210\u666e\u901a\u6539\u5199\uff0c\u4e0d\u8c03\u7528 interview-observer\uff0c\u4e5f\u4e0d\u8fd4\u56de context-hint JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "- \u673a\u5668\u5435\u5f97\u5389\u5bb3\uff0c\u5230\u5904\u90fd\u662f\u5f88\u5148\u8fdb\u7684\u8bbe\u5907\n- \u673a\u5668\u8f70\u9686\u9686\u54cd\u4e2a\u4e0d\u505c\uff0c\u65b0\u5f0f\u8bbe\u5907\u4e00\u5927\u5806\n- \u673a\u5668\u566a\u97f3\u5f88\u5927\uff0c\u5148\u8fdb\u8bbe\u5907\u7279\u522b\u591a"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent\u6210\u529f\u5b8c\u6210\u4e86\u53e3\u8bed\u5316\u6539\u5199\uff0c\u63d0\u4f9b\u4e86\u4e09\u4e2a\u81ea\u7136\u7684\u53e3\u8bed\u8868\u8fbe\u7248\u672c\uff0c\u4e14\u672a\u8c03\u7528interview-observer\uff0c\u4e5f\u672a\u8fd4\u56decontext-hint JSON\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f\u7ed3\u679c\u3002",
+      "user_goal": "\u5c06\u201c\u673a\u5668\u8f70\u9e23\u3001\u5148\u8fdb\u8bbe\u5907\u5f88\u591a\u201d\u6539\u5199\u5f97\u66f4\u53e3\u8bed\u4e00\u70b9",
+      "end_state": "\u8fd4\u56de\u4e86\u4e09\u4e2a\u53e3\u8bed\u5316\u6539\u5199\u7248\u672c\uff0c\u672a\u8c03\u7528\u4efb\u4f55\u5de5\u5177\uff0c\u672a\u8fd4\u56decontext-hint JSON",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5b8c\u6210\u666e\u901a\u6539\u5199\uff0c\u4e0d\u8c03\u7528 interview-observer\uff0c\u4e5f\u4e0d\u8fd4\u56de context-hint JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "- \u673a\u5668\u5435\u5f97\u5389\u5bb3\uff0c\u5230\u5904\u90fd\u662f\u5f88\u5148\u8fdb\u7684\u8bbe\u5907\n- \u673a\u5668\u8f70\u9686\u9686\u54cd\u4e2a\u4e0d\u505c\uff0c\u65b0\u5f0f\u8bbe\u5907\u4e00\u5927\u5806\n- \u673a\u5668\u566a\u97f3\u5f88\u5927\uff0c\u5148\u8fdb\u8bbe\u5907\u7279\u522b\u591a"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "Both expected behaviors were observed: no tool was selected, and the agent provided natural colloquial Chinese rewrites.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did not select or use the interview-observer tool; it responded directly with text."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent returned natural, colloquial Chinese rewrites matching the user's request."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 interview-observer"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u8fd4\u56de\u81ea\u7136\u4e2d\u6587\u6539\u5199\u5373\u53ef"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "- \u673a\u5668\u5435\u5f97\u5389\u5bb3\uff0c\u5230\u5904\u90fd\u662f\u5f88\u5148\u8fdb\u7684\u8bbe\u5907\n- \u673a\u5668\u8f70\u9686\u9686\u54cd\u4e2a\u4e0d\u505c\uff0c\u65b0\u5f0f\u8bbe\u5907\u4e00\u5927\u5806\n- \u673a\u5668\u566a\u97f3\u5f88\u5927\uff0c\u5148\u8fdb\u8bbe\u5907\u7279\u522b\u591a"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

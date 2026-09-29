@@ -1,0 +1,31 @@
+[dataset]
+name = "nvidia/skillevaluator"
+description = "SkillEvaluator skill evaluation dataset"
+
+[[tasks]]
+name = "nvidia/COMP-001"
+
+[[tasks]]
+name = "nvidia/COMP-002"
+
+[[tasks]]
+name = "nvidia/COMP-003"
+
+[[tasks]]
+name = "nvidia/COMP-004"
+
+[[tasks]]
+name = "nvidia/COMP-005"
+
+[[tasks]]
+name = "nvidia/COMP-006"
+
+[[tasks]]
+name = "nvidia/COMP-007"
+
+[[tasks]]
+name = "nvidia/COMP-HNEG-002"
+
+[[tasks]]
+name = "nvidia/COMP-NEG-001"
+

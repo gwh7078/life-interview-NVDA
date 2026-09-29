@@ -1,0 +1,16 @@
+trial_id,condition,run_mode,parallel_batch,agent_elapsed_s,judge_elapsed_s,trial_total_elapsed_s,error,score_status
+COMP-002__UhkPzpz,with,serial,,42.88,934.80,994.18,StepFun Judge timed out; excluded from score,not_scored_judge_error
+COMP-003__PrhvVgt,with,serial,,30.37,221.72,269.53,,scored
+COMP-006__i4AuvF,without,serial,,284.80,89.05,400.43,,scored
+COMP-HNEG-002__NBTczDy,with,serial,,605.10,,611.22,AgentTimeoutError,not_scored
+COMP-007__ECyopiZ,without,serial,,601.06,,609.39,AgentTimeoutError,not_scored
+COMP-004__S5VfKP7,without,serial,,10.82,73.79,94.28,CancelledError,not_scored
+COMP-HNEG-002__PZ5ZeSo,with,parallel-router,validation-pair,69.58,53.70,191.78,,scored
+COMP-002__Fx3UNN5,without,parallel-router,validation-pair,124.25,35.95,258.36,,scored
+COMP-003__zBD4CTB,without,parallel-router,same-job-batch-1,73.49,120.30,256.70,,scored
+COMP-004__QX7TZRr,without,parallel-router,same-job-batch-1,75.71,97.81,235.58,,scored
+COMP-005__VHLRoxc,without,parallel-router,batch-2,18.11,26.09,61.17,,scored
+COMP-007__XA8wLdz,without,parallel-router,batch-2,18.06,80.76,115.83,,scored
+COMP-002__8HDKrLP,without,serial,,40.61,945.01,1016.38,StepFun Judge timed out; excluded from score,not_scored_judge_error
+COMP-002__D5EeX7A,with,parallel-router,judge-retry-pair,14.36,55.35,84.52,,scored
+COMP-002__jfu4Nig,without,parallel-router,judge-retry-pair,10.84,25.07,58.09,,scored

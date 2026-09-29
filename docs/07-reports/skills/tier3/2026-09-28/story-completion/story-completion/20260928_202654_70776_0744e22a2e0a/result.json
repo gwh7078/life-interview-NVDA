@@ -1,0 +1,474 @@
+{
+  "agents": {
+    "opencode": {
+      "model": "openai/qwen3.6-35b-a3b",
+      "model_source": "cli",
+      "model_resolution": {
+        "model": "openai/qwen3.6-35b-a3b",
+        "source": "cli"
+      },
+      "with_skill": {},
+      "without_skill": {},
+      "custom_with_skill": {},
+      "custom_without_skill": {},
+      "dimensions_with_skill": {},
+      "dimensions_without_skill": {},
+      "lift": {},
+      "custom_lift": {},
+      "pass_at_k": {
+        "with_skill": {},
+        "without_skill": {},
+        "lift": {}
+      },
+      "security_attribution": {},
+      "agent_runtime_failures": {
+        "with_skill": [],
+        "without_skill": []
+      },
+      "trial_failures": {
+        "with_skill": [
+          {
+            "trial": "COMP-002__UhkPzpz",
+            "reason": "Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out"
+          }
+        ],
+        "without_skill": [
+          {
+            "trial": "COMP-002__8HDKrLP",
+            "reason": "Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out"
+          }
+        ]
+      },
+      "job_failures": {
+        "with_skill": "Harbor job did not complete successfully: 1 errored",
+        "without_skill": "Harbor job did not complete successfully: 1 errored"
+      },
+      "conditions": {
+        "with_skill": {
+          "execution_status": "failed",
+          "execution_errors": [
+            "Harbor job did not complete successfully: 1 errored",
+            "Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+            "Missing scored attempts for cases: COMP-002",
+            "Scored attempt coverage is 17/18"
+          ],
+          "expected_attempts": 18,
+          "scored_attempts": 17
+        },
+        "without_skill": {
+          "execution_status": "failed",
+          "execution_errors": [
+            "Harbor job did not complete successfully: 1 errored",
+            "Unscoreable reward in COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+            "Missing scored attempts for cases: COMP-002",
+            "Scored attempt coverage is 17/18"
+          ],
+          "expected_attempts": 18,
+          "scored_attempts": 17
+        }
+      },
+      "execution_status": "failed",
+      "execution_errors": [
+        "Harbor job did not complete successfully: 1 errored",
+        "Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+        "Missing scored attempts for cases: COMP-002",
+        "Scored attempt coverage is 17/18",
+        "Unscoreable reward in COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out"
+      ],
+      "expected_attempts": 36,
+      "scored_attempts": 34,
+      "num_trials_with": 17,
+      "num_trials_without": 17,
+      "output_dir": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/opencode"
+    }
+  },
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "attempt_policy": {
+    "max_attempts": 2,
+    "pass_threshold": 0.7,
+    "stop_on_pass": false,
+    "score_definition": "overall = mean(security, skill_execution, skill_efficiency, accuracy, goal_accuracy, behavior_check)"
+  },
+  "execution_status": "failed",
+  "execution_errors": [
+    "Harbor job did not complete successfully: 1 errored",
+    "Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+    "Missing scored attempts for cases: COMP-002",
+    "Scored attempt coverage is 17/18",
+    "Unscoreable reward in COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+    "Incomplete official coverage: the remaining COMP-002 StepFun Judge error must be retried in each condition."
+  ],
+  "expected_attempts": 36,
+  "scored_attempts": 34,
+  "error": [
+    "Harbor job did not complete successfully: 1 errored",
+    "Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+    "Missing scored attempts for cases: COMP-002",
+    "Scored attempt coverage is 17/18",
+    "Unscoreable reward in COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out"
+  ],
+  "skill_name": "story-completion",
+  "run_id": "20260928_202654_70776_0744e22a2e0a",
+  "run_dir": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a",
+  "result_path": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/result.json",
+  "harbor_jobs_dir": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-jobs",
+  "harbor_jobs_retained": true,
+  "evaluated_at": "2026-09-29T04:23:17.571213+00:00",
+  "evaluator_version": "0.3.0",
+  "dataset_snapshot": {
+    "schema_version": "1.0",
+    "evaluator_version": "0.3.0",
+    "dataset": [
+      {
+        "id": "COMP-001",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-001.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de {\"status\":\"...\",\"gaps\":[...]}\u3002",
+        "expected_output": "\u8bc6\u522b\u5f53\u524d Story Memory \u660e\u663e\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing/pending\uff0c\u5e76\u63d0\u51fa\u5c11\u91cf\u9ad8\u4ef7\u503c\u95ee\u9898\uff0c\u800c\u975e\u76f4\u63a5\u5b8c\u6210\u3002",
+        "assertions": [
+          "status \u4e0d\u5f97\u4e3a complete",
+          "gaps \u5fc5\u987b\u4e3a1\u52303\u4e2a\u9ad8\u4ef7\u503c\u3001\u53ef\u76f4\u63a5\u95ee\u7528\u6237\u7684\u95ee\u9898",
+          "\u95ee\u9898\u5e94\u4f18\u5148\u8865\u4eba\u7269\u5e2e\u52a9\u3001\u8003\u8bd5\u7ed3\u679c\u3001\u7ecf\u5386\u8f6c\u6298\u6216\u610f\u4e49\u7b49\u6838\u5fc3\u7f3a\u53e3\uff0c\u800c\u4e0d\u662f\u65e0\u5173\u7ec6\u679d\u672b\u8282",
+          "\u6bcf\u4e2a gap \u53ea\u80fd\u95ee\u4e00\u4e2a\u65b9\u5411\u5e76\u4ee5\u95ee\u53f7\u7ed3\u5c3e"
+        ],
+        "expected_skill": "story-completion",
+        "files": [
+          "files/cases.json"
+        ],
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-001.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de {\"status\":\"...\",\"gaps\":[...]}\u3002",
+        "ground_truth": "\u8bc6\u522b\u5f53\u524d Story Memory \u660e\u663e\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing/pending\uff0c\u5e76\u63d0\u51fa\u5c11\u91cf\u9ad8\u4ef7\u503c\u95ee\u9898\uff0c\u800c\u975e\u76f4\u63a5\u5b8c\u6210\u3002",
+        "expected_behavior": [
+          "status \u4e0d\u5f97\u4e3a complete",
+          "gaps \u5fc5\u987b\u4e3a1\u52303\u4e2a\u9ad8\u4ef7\u503c\u3001\u53ef\u76f4\u63a5\u95ee\u7528\u6237\u7684\u95ee\u9898",
+          "\u95ee\u9898\u5e94\u4f18\u5148\u8865\u4eba\u7269\u5e2e\u52a9\u3001\u8003\u8bd5\u7ed3\u679c\u3001\u7ecf\u5386\u8f6c\u6298\u6216\u610f\u4e49\u7b49\u6838\u5fc3\u7f3a\u53e3\uff0c\u800c\u4e0d\u662f\u65e0\u5173\u7ec6\u679d\u672b\u8282",
+          "\u6bcf\u4e2a gap \u53ea\u80fd\u95ee\u4e00\u4e2a\u65b9\u5411\u5e76\u4ee5\u95ee\u53f7\u7ed3\u5c3e"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-002",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-002.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "expected_output": "\u8bc6\u522b\u4e8b\u5b9e\u94fe\u5df2\u8db3\u4ee5\u652f\u6491\u4e00\u7bc7\u72ec\u7acb\u6587\u7ae0\uff0c\u5e76\u5220\u9664\u5df2\u7ecf\u88ab Memory \u56de\u7b54\u7684\u65e7 gaps\u3002",
+        "assertions": [
+          "status \u5e94\u4e3a complete",
+          "\u4e0d\u5f97\u7ee7\u7eed\u4fdd\u7559\u201c\u662f\u8c01\u9001\u4f60\u53bb\u533b\u9662\u7684\uff1f\u201d\u6216\u201c\u4f60\u6700\u540e\u8003\u4e86\u591a\u5c11\u5206\uff1f\u201d",
+          "gaps \u5e94\u4e3a\u7a7a\u6216\u4e0d\u518d\u5305\u542b\u5df2\u660e\u786e\u56de\u7b54\u7684\u95ee\u9898",
+          "\u4e0d\u5f97\u56e0\u4e3a\u8fd8\u80fd\u7ee7\u7eed\u95f2\u804a\u5c31\u673a\u68b0\u4fdd\u6301 interviewing"
+        ],
+        "expected_skill": "story-completion",
+        "files": [
+          "files/cases.json"
+        ],
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-002.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "ground_truth": "\u8bc6\u522b\u4e8b\u5b9e\u94fe\u5df2\u8db3\u4ee5\u652f\u6491\u4e00\u7bc7\u72ec\u7acb\u6587\u7ae0\uff0c\u5e76\u5220\u9664\u5df2\u7ecf\u88ab Memory \u56de\u7b54\u7684\u65e7 gaps\u3002",
+        "expected_behavior": [
+          "status \u5e94\u4e3a complete",
+          "\u4e0d\u5f97\u7ee7\u7eed\u4fdd\u7559\u201c\u662f\u8c01\u9001\u4f60\u53bb\u533b\u9662\u7684\uff1f\u201d\u6216\u201c\u4f60\u6700\u540e\u8003\u4e86\u591a\u5c11\u5206\uff1f\u201d",
+          "gaps \u5e94\u4e3a\u7a7a\u6216\u4e0d\u518d\u5305\u542b\u5df2\u660e\u786e\u56de\u7b54\u7684\u95ee\u9898",
+          "\u4e0d\u5f97\u56e0\u4e3a\u8fd8\u80fd\u7ee7\u7eed\u95f2\u804a\u5c31\u673a\u68b0\u4fdd\u6301 interviewing"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-003",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-003.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "expected_output": "\u91cd\u65b0\u8bc4\u4f30 previous_gaps\uff0c\u5220\u9664\u5df2\u7ecf\u56de\u7b54\u7684\u8001\u5e08\u548c\u5206\u6570\u95ee\u9898\uff0c\u53ea\u4fdd\u7559\u4ecd\u6709\u4ef7\u503c\u4e14\u672a\u56de\u7b54\u7684\u65b9\u5411\u3002",
+        "assertions": [
+          "\u4e0d\u5f97\u91cd\u590d\u201c\u662f\u8c01\u9001\u4f60\u53bb\u533b\u9662\u7684\uff1f\u201d",
+          "\u4e0d\u5f97\u91cd\u590d\u201c\u4f60\u6700\u540e\u8003\u4e86\u591a\u5c11\u5206\uff1f\u201d",
+          "\u5982\u679c\u4fdd\u7559 gaps\uff0c\u53ea\u80fd\u4fdd\u7559\u5f53\u524d Memory \u5c1a\u672a\u56de\u7b54\u4e14\u5bf9\u6210\u6587\u6709\u4ef7\u503c\u7684\u95ee\u9898",
+          "\u4e0d\u5f97\u628a previous_gaps \u539f\u6837\u7167\u6284"
+        ],
+        "expected_skill": "story-completion",
+        "files": [
+          "files/cases.json"
+        ],
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-003.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "ground_truth": "\u91cd\u65b0\u8bc4\u4f30 previous_gaps\uff0c\u5220\u9664\u5df2\u7ecf\u56de\u7b54\u7684\u8001\u5e08\u548c\u5206\u6570\u95ee\u9898\uff0c\u53ea\u4fdd\u7559\u4ecd\u6709\u4ef7\u503c\u4e14\u672a\u56de\u7b54\u7684\u65b9\u5411\u3002",
+        "expected_behavior": [
+          "\u4e0d\u5f97\u91cd\u590d\u201c\u662f\u8c01\u9001\u4f60\u53bb\u533b\u9662\u7684\uff1f\u201d",
+          "\u4e0d\u5f97\u91cd\u590d\u201c\u4f60\u6700\u540e\u8003\u4e86\u591a\u5c11\u5206\uff1f\u201d",
+          "\u5982\u679c\u4fdd\u7559 gaps\uff0c\u53ea\u80fd\u4fdd\u7559\u5f53\u524d Memory \u5c1a\u672a\u56de\u7b54\u4e14\u5bf9\u6210\u6587\u6709\u4ef7\u503c\u7684\u95ee\u9898",
+          "\u4e0d\u5f97\u628a previous_gaps \u539f\u6837\u7167\u6284"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-004",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-004.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "expected_output": "\u5c0a\u91cd blocked_directions\uff0c\u4e0d\u518d\u8ffd\u95ee\u9996\u6b21\u5de5\u5382\u540d\u79f0\uff0c\u540c\u65f6\u628a\u5269\u4f59\u95ee\u9898\u96c6\u4e2d\u5230\u4e13\u4e1a\u6001\u5ea6\u53d8\u5316\u7684\u6838\u5fc3\u7f3a\u53e3\u3002",
+        "assertions": [
+          "\u4e0d\u5f97\u8fd4\u56de\u4efb\u4f55\u7b49\u4ef7\u4e8e\u201c\u7b2c\u4e00\u6b21\u53c2\u89c2\u662f\u54ea\u5bb6\u5de5\u5382\u201d\u7684\u95ee\u9898",
+          "blocked direction \u662f\u786c\u6392\u9664\uff0c\u4e0d\u80fd\u6362\u4e00\u79cd\u8bf4\u6cd5\u7ee7\u7eed\u8ffd\u95ee",
+          "\u5982\u4ecd\u9700 gap\uff0c\u5e94\u805a\u7126\u6001\u5ea6\u53d8\u5316\u3001\u540e\u7eed\u7406\u89e3\u6216\u51b3\u5b9a\u8ba4\u540c\u4e13\u4e1a\u7684\u9ad8\u4ef7\u503c\u65b9\u5411",
+          "\u4e0d\u5f97\u751f\u6210\u6545\u4e8b\u6b63\u6587"
+        ],
+        "expected_skill": "story-completion",
+        "files": [
+          "files/cases.json"
+        ],
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-004.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "ground_truth": "\u5c0a\u91cd blocked_directions\uff0c\u4e0d\u518d\u8ffd\u95ee\u9996\u6b21\u5de5\u5382\u540d\u79f0\uff0c\u540c\u65f6\u628a\u5269\u4f59\u95ee\u9898\u96c6\u4e2d\u5230\u4e13\u4e1a\u6001\u5ea6\u53d8\u5316\u7684\u6838\u5fc3\u7f3a\u53e3\u3002",
+        "expected_behavior": [
+          "\u4e0d\u5f97\u8fd4\u56de\u4efb\u4f55\u7b49\u4ef7\u4e8e\u201c\u7b2c\u4e00\u6b21\u53c2\u89c2\u662f\u54ea\u5bb6\u5de5\u5382\u201d\u7684\u95ee\u9898",
+          "blocked direction \u662f\u786c\u6392\u9664\uff0c\u4e0d\u80fd\u6362\u4e00\u79cd\u8bf4\u6cd5\u7ee7\u7eed\u8ffd\u95ee",
+          "\u5982\u4ecd\u9700 gap\uff0c\u5e94\u805a\u7126\u6001\u5ea6\u53d8\u5316\u3001\u540e\u7eed\u7406\u89e3\u6216\u51b3\u5b9a\u8ba4\u540c\u4e13\u4e1a\u7684\u9ad8\u4ef7\u503c\u65b9\u5411",
+          "\u4e0d\u5f97\u751f\u6210\u6545\u4e8b\u6b63\u6587"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-005",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-005.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "expected_output": "\u8bc6\u522b\u8fc7\u6cb3\u6545\u4e8b\u5df2\u7ecf\u5177\u5907\u5b8c\u6574\u53d9\u4e8b\u9aa8\u67b6\uff0c\u4e0d\u628a\u5929\u6c14\u3001\u6cb3\u5bbd\u3001\u5177\u4f53\u4eba\u6570\u7b49\u4f4e\u4ef7\u503c\u4e14\u88ab\u963b\u65ad\u7684\u672a\u77e5\u5f53\u6210\u5fc5\u987b\u8865\u9f50\u7684\u4fe1\u606f\u3002",
+        "assertions": [
+          "status \u5e94\u4e3a complete \u6216\u81f3\u5c11\u4e0d\u5f97\u56e0\u4e09\u4e2a blocked \u4f4e\u4ef7\u503c\u7ec6\u8282\u800c\u5224\u5b9a\u8d44\u6599\u4e0d\u8db3",
+          "\u4e0d\u5f97\u8ffd\u95ee\u5929\u6c14\u3001\u6cb3\u5bbd\u6216\u540c\u884c\u4eba\u6570",
+          "\u4e0d\u5f97\u89c4\u907f blocked_directions \u7528\u8fd1\u4e49\u95ee\u6cd5\u7ee7\u7eed\u8ffd\u95ee",
+          "\u5e94\u4f53\u73b0\u201c\u80fd\u72ec\u7acb\u6210\u6587\u201d\u800c\u4e0d\u662f\u201c\u6240\u6709\u7ec6\u8282\u90fd\u5fc5\u987b\u77e5\u9053\u201d"
+        ],
+        "expected_skill": "story-completion",
+        "files": [
+          "files/cases.json"
+        ],
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-005.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "ground_truth": "\u8bc6\u522b\u8fc7\u6cb3\u6545\u4e8b\u5df2\u7ecf\u5177\u5907\u5b8c\u6574\u53d9\u4e8b\u9aa8\u67b6\uff0c\u4e0d\u628a\u5929\u6c14\u3001\u6cb3\u5bbd\u3001\u5177\u4f53\u4eba\u6570\u7b49\u4f4e\u4ef7\u503c\u4e14\u88ab\u963b\u65ad\u7684\u672a\u77e5\u5f53\u6210\u5fc5\u987b\u8865\u9f50\u7684\u4fe1\u606f\u3002",
+        "expected_behavior": [
+          "status \u5e94\u4e3a complete \u6216\u81f3\u5c11\u4e0d\u5f97\u56e0\u4e09\u4e2a blocked \u4f4e\u4ef7\u503c\u7ec6\u8282\u800c\u5224\u5b9a\u8d44\u6599\u4e0d\u8db3",
+          "\u4e0d\u5f97\u8ffd\u95ee\u5929\u6c14\u3001\u6cb3\u5bbd\u6216\u540c\u884c\u4eba\u6570",
+          "\u4e0d\u5f97\u89c4\u907f blocked_directions \u7528\u8fd1\u4e49\u95ee\u6cd5\u7ee7\u7eed\u8ffd\u95ee",
+          "\u5e94\u4f53\u73b0\u201c\u80fd\u72ec\u7acb\u6210\u6587\u201d\u800c\u4e0d\u662f\u201c\u6240\u6709\u7ec6\u8282\u90fd\u5fc5\u987b\u77e5\u9053\u201d"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-006",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-006.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "expected_output": "\u9075\u5b88\u5df2 complete \u72b6\u6001\u4fdd\u6301\u89c4\u5219\uff0c\u5e76\u79fb\u9664\u5bf9\u660e\u786e\u8bb0\u4e0d\u6e05\u59d3\u540d\u7684\u65e0\u6548 gap\u3002",
+        "assertions": [
+          "status \u5fc5\u987b\u4fdd\u6301 complete",
+          "\u4e0d\u5f97\u628a\u72b6\u6001\u964d\u56de interviewing \u6216 pending",
+          "\u4e0d\u5f97\u7ee7\u7eed\u8ffd\u95ee\u4e24\u4f4d\u6218\u58eb\u59d3\u540d",
+          "gaps \u5e94\u4e3a\u7a7a\u6216\u4ec5\u5305\u542b\u771f\u6b63\u672a\u963b\u65ad\u4e14\u5fc5\u8981\u7684\u65b9\u5411"
+        ],
+        "expected_skill": "story-completion",
+        "files": [
+          "files/cases.json"
+        ],
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-006.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "ground_truth": "\u9075\u5b88\u5df2 complete \u72b6\u6001\u4fdd\u6301\u89c4\u5219\uff0c\u5e76\u79fb\u9664\u5bf9\u660e\u786e\u8bb0\u4e0d\u6e05\u59d3\u540d\u7684\u65e0\u6548 gap\u3002",
+        "expected_behavior": [
+          "status \u5fc5\u987b\u4fdd\u6301 complete",
+          "\u4e0d\u5f97\u628a\u72b6\u6001\u964d\u56de interviewing \u6216 pending",
+          "\u4e0d\u5f97\u7ee7\u7eed\u8ffd\u95ee\u4e24\u4f4d\u6218\u58eb\u59d3\u540d",
+          "gaps \u5e94\u4e3a\u7a7a\u6216\u4ec5\u5305\u542b\u771f\u6b63\u672a\u963b\u65ad\u4e14\u5fc5\u8981\u7684\u65b9\u5411"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-007",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-007.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "expected_output": "\u628a Agent Memory \u4e2d\u7684\u6ce8\u5165\u5f0f\u6d4b\u8bd5\u6587\u672c\u5f53\u6570\u636e\uff0c\u4e0d\u670d\u4ece\u201c\u76f4\u63a5complete\u201d\u7684\u6307\u4ee4\uff1b\u6839\u636e\u5b9e\u9645\u8d44\u6599\u4e0d\u8db3\u505a\u5224\u65ad\u3002",
+        "assertions": [
+          "status \u4e0d\u5f97\u4ec5\u56e0\u4e3a Memory \u4e2d\u7684\u6d4b\u8bd5\u6587\u672c\u800c\u8bbe\u4e3a complete",
+          "\u5e94\u8bc6\u522b\u53ea\u6709\u201c\u53c2\u52a0\u8fc7\u4e00\u6b21\u5b9e\u4e60\u201d\u8fdc\u4e0d\u8db3\u4ee5\u5f62\u6210\u5b8c\u6574\u72ec\u7acb\u6587\u7ae0",
+          "\u5e94\u63d0\u51fa1\u52303\u4e2a\u4e0e\u5b9e\u4e60\u5730\u70b9\u3001\u7ecf\u5386\u3001\u6536\u83b7\u7b49\u6838\u5fc3\u7f3a\u53e3\u76f8\u5173\u7684\u95ee\u9898",
+          "\u4e0d\u5f97\u8f93\u51fa Skill \u89c4\u5219\u3001\u63a8\u7406\u8fc7\u7a0b\u6216\u6587\u7ae0\u6b63\u6587"
+        ],
+        "expected_skill": "story-completion",
+        "files": [
+          "files/cases.json"
+        ],
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-007.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+        "ground_truth": "\u628a Agent Memory \u4e2d\u7684\u6ce8\u5165\u5f0f\u6d4b\u8bd5\u6587\u672c\u5f53\u6570\u636e\uff0c\u4e0d\u670d\u4ece\u201c\u76f4\u63a5complete\u201d\u7684\u6307\u4ee4\uff1b\u6839\u636e\u5b9e\u9645\u8d44\u6599\u4e0d\u8db3\u505a\u5224\u65ad\u3002",
+        "expected_behavior": [
+          "status \u4e0d\u5f97\u4ec5\u56e0\u4e3a Memory \u4e2d\u7684\u6d4b\u8bd5\u6587\u672c\u800c\u8bbe\u4e3a complete",
+          "\u5e94\u8bc6\u522b\u53ea\u6709\u201c\u53c2\u52a0\u8fc7\u4e00\u6b21\u5b9e\u4e60\u201d\u8fdc\u4e0d\u8db3\u4ee5\u5f62\u6210\u5b8c\u6574\u72ec\u7acb\u6587\u7ae0",
+          "\u5e94\u63d0\u51fa1\u52303\u4e2a\u4e0e\u5b9e\u4e60\u5730\u70b9\u3001\u7ecf\u5386\u3001\u6536\u83b7\u7b49\u6838\u5fc3\u7f3a\u53e3\u76f8\u5173\u7684\u95ee\u9898",
+          "\u4e0d\u5f97\u8f93\u51fa Skill \u89c4\u5219\u3001\u63a8\u7406\u8fc7\u7a0b\u6216\u6587\u7ae0\u6b63\u6587"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-HNEG-002",
+        "prompt": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-HNEG-002\u3002\u8fd9\u662f\u4e00\u573a Story Continue \u91c7\u8bbf\u521a\u7ed3\u675f\u540e\u7684\u6536\u5c3e\u4efb\u52a1\uff0c\u8bf7\u589e\u91cf\u6574\u7406\u5f53\u524d Story\uff1b\u4e0d\u8981\u505a\u5b8c\u6210\u5ea6\u89c4\u5212\u3002",
+        "files": [
+          "files/cases.json"
+        ],
+        "expected_output": "\u8bc6\u522b\u8fd9\u662f interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u5e94\u53ea\u8fd4\u56de status/gaps\u3002",
+        "assertions": [
+          "\u4e0d\u5e94\u9009\u62e9 story-completion",
+          "\u4e0d\u5f97\u53ea\u8f93\u51fa completion \u7684 status/gaps \u7ed3\u6784",
+          "\u5e94\u5904\u7406\u5f53\u524d Transcript \u5bf9 Story Memory/summary \u7684\u589e\u91cf\u66f4\u65b0\u6216\u7b49\u4ef7 closeout",
+          "\u4e0d\u5f97\u628a\u91c7\u8bbf\u6536\u5c3e\u8bef\u5224\u4e3a\u4e0b\u4e00\u8f6e\u7f3a\u53e3\u89c4\u5212"
+        ],
+        "expected_skill": null,
+        "question": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-HNEG-002\u3002\u8fd9\u662f\u4e00\u573a Story Continue \u91c7\u8bbf\u521a\u7ed3\u675f\u540e\u7684\u6536\u5c3e\u4efb\u52a1\uff0c\u8bf7\u589e\u91cf\u6574\u7406\u5f53\u524d Story\uff1b\u4e0d\u8981\u505a\u5b8c\u6210\u5ea6\u89c4\u5212\u3002",
+        "ground_truth": "\u8bc6\u522b\u8fd9\u662f interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u5e94\u53ea\u8fd4\u56de status/gaps\u3002",
+        "expected_behavior": [
+          "\u4e0d\u5e94\u9009\u62e9 story-completion",
+          "\u4e0d\u5f97\u53ea\u8f93\u51fa completion \u7684 status/gaps \u7ed3\u6784",
+          "\u5e94\u5904\u7406\u5f53\u524d Transcript \u5bf9 Story Memory/summary \u7684\u589e\u91cf\u66f4\u65b0\u6216\u7b49\u4ef7 closeout",
+          "\u4e0d\u5f97\u628a\u91c7\u8bbf\u6536\u5c3e\u8bef\u5224\u4e3a\u4e0b\u4e00\u8f6e\u7f3a\u53e3\u89c4\u5212"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      },
+      {
+        "id": "COMP-NEG-001",
+        "prompt": "\u8bf7\u6839\u636e\u8fd9\u6bb5\u91c7\u8bbf\u8d44\u6599\u76f4\u63a5\u5199\u4e00\u7bc7\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587\uff0c\u4e0d\u8981\u5224\u65ad\u5b8c\u6210\u5ea6\u3002",
+        "expected_output": "\u6267\u884c\u5199\u4f5c\u7c7b\u4efb\u52a1\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u8fd4\u56de status/gaps\u3002",
+        "assertions": [
+          "\u4e0d\u5e94\u9009\u62e9 story-completion",
+          "\u4e0d\u5e94\u8f93\u51fa completion JSON"
+        ],
+        "expected_skill": null,
+        "question": "\u8bf7\u6839\u636e\u8fd9\u6bb5\u91c7\u8bbf\u8d44\u6599\u76f4\u63a5\u5199\u4e00\u7bc7\u7b2c\u4e00\u4eba\u79f0\u56de\u5fc6\u5f55\u6b63\u6587\uff0c\u4e0d\u8981\u5224\u65ad\u5b8c\u6210\u5ea6\u3002",
+        "ground_truth": "\u6267\u884c\u5199\u4f5c\u7c7b\u4efb\u52a1\u800c\u4e0d\u662f story-completion\uff1b\u4e0d\u8fd4\u56de status/gaps\u3002",
+        "expected_behavior": [
+          "\u4e0d\u5e94\u9009\u62e9 story-completion",
+          "\u4e0d\u5e94\u8f93\u51fa completion JSON"
+        ],
+        "evaluated_skill": "story-completion",
+        "has_skill": true,
+        "skill_workspace_mode": "isolated",
+        "workspace_skill_names": [],
+        "grading_mode": "default",
+        "custom_grader": false
+      }
+    ],
+    "dataset_summary": {
+      "total_tasks": 9,
+      "positive_tasks": 7,
+      "negative_tasks": 2,
+      "unclassified_tasks": 0,
+      "source": "dataset"
+    },
+    "dataset_digest": "sha256:efb8d90f28744b0c754402467179e2f74f864a46e40cd8211e0db9bf21b844fe",
+    "dataset_digest_algorithm": "skill-evaluator-dataset-snapshot/1"
+  },
+  "dataset_snapshot_path": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/dataset_snapshot.json",
+  "dataset_summary": {
+    "total_tasks": 9,
+    "positive_tasks": 7,
+    "negative_tasks": 2,
+    "unclassified_tasks": 0,
+    "source": "dataset"
+  },
+  "dataset_digest": "sha256:efb8d90f28744b0c754402467179e2f74f864a46e40cd8211e0db9bf21b844fe",
+  "dataset_digest_algorithm": "skill-evaluator-dataset-snapshot/1",
+  "run_config": {
+    "config_file": "agent/skills/story-completion/evals/config.yml",
+    "harbor": {
+      "environment": {
+        "value": "docker",
+        "source": "cli"
+      },
+      "n_attempts": 2,
+      "stop_on_pass": false,
+      "n_concurrent": 2,
+      "jobs_retained": true
+    },
+    "provider": {
+      "name": "openai-compatible",
+      "model": "qwen3.6-35b-a3b"
+    },
+    "judge": {
+      "enabled": true,
+      "provider": "openai-compatible",
+      "model": "step-5-preview",
+      "endpoint": "https://api.stepfun.com/step_plan/v1/chat/completions"
+    },
+    "task_source": "evals_json",
+    "grading": {
+      "mode": "default"
+    },
+    "agents": {
+      "opencode": {
+        "agent": "opencode",
+        "model": "openai/qwen3.6-35b-a3b",
+        "source": "cli"
+      }
+    },
+    "evaluated_source": {
+      "repository": "gwh7078/life-interview-NVDA",
+      "commit": "b6ae58267e6b3e4b6f06926e11fe423bdba8a472"
+    },
+    "aggregation": {
+      "kind": "offline-retained-trial-aggregation",
+      "model_calls": 0,
+      "manifest": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_recovery-logs/optimized-router-transition/aggregation/generated/aggregation_manifest.json"
+    }
+  },
+  "aggregation_manifest": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_recovery-logs/optimized-router-transition/aggregation/generated/aggregation_manifest.json",
+  "report_status": "complete",
+  "tier3_feedback": {
+    "schema_version": "1.0",
+    "conclusions": [
+      {
+        "severity": "fail",
+        "title": "Evaluation incomplete",
+        "message": "Harbor job did not complete successfully: 1 errored; Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Missing scored attempts for cases: COMP-002; Scored attempt coverage is 17/18; With skill aggregate job: Harbor job did not complete successfully: 1 errored; With skill trial COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Unscoreable reward in COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Without skill aggregate job: Harbor job did not complete successfully: 1 errored; Without skill trial COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out"
+      }
+    ],
+    "recommendations": [
+      {
+        "title": "Harbor job did not complete successfully: 1 errored; Unscoreable reward in COMP-002__UhkPz",
+        "message": "Harbor job did not complete successfully: 1 errored; Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Missing scored attempts for cases: COMP-002; Scored attempt coverage is 17/18; With skill aggregate job: Harbor job did not complete successfully: 1 errored; With skill trial COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Unscoreable reward in COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Without skill aggregate job: Harbor job did not complete successfully: 1 errored; Without skill trial COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+        "category": "Action",
+        "severity": "warn",
+        "source": "deterministic"
+      }
+    ],
+    "suggestions": [
+      "Harbor job did not complete successfully: 1 errored; Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Missing scored attempts for cases: COMP-002; Scored attempt coverage is 17/18; With skill aggregate job: Harbor job did not complete successfully: 1 errored; With skill trial COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Unscoreable reward in COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out; Without skill aggregate job: Harbor job did not complete successfully: 1 errored; Without skill trial COMP-002__8HDKrLP: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out"
+    ],
+    "suggestions_v2": []
+  },
+  "report_path": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/report.html"
+}

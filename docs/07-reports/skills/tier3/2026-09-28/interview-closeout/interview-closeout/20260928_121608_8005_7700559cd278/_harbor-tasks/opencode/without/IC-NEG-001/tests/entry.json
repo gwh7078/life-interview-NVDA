@@ -1,0 +1,22 @@
+{
+  "id": "IC-NEG-001",
+  "prompt": "请根据以下一句话写一段100字左右的第一人称回忆录正文：“那次过河水已经没到腰了。”",
+  "expected_output": "完成普通回忆录写作请求，不调用 interview-closeout，也不返回 Story Proposal JSON。",
+  "assertions": [
+    "不应选择 interview-closeout",
+    "输出应是正文而不是 closeout Proposal"
+  ],
+  "expected_skill": null,
+  "question": "请根据以下一句话写一段100字左右的第一人称回忆录正文：“那次过河水已经没到腰了。”",
+  "ground_truth": "完成普通回忆录写作请求，不调用 interview-closeout，也不返回 Story Proposal JSON。",
+  "expected_behavior": [
+    "不应选择 interview-closeout",
+    "输出应是正文而不是 closeout Proposal"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

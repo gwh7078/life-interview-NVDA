@@ -1,0 +1,283 @@
+{
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli",
+  "scores": {
+    "security": 1.0,
+    "skill_execution": 0.8333,
+    "skill_efficiency": 1.0,
+    "accuracy": 0.9556,
+    "goal_accuracy": 0.8889,
+    "behavior_check": 0.875
+  },
+  "custom_scores": {},
+  "overall_score": 0.9255,
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "dimensions": {
+    "security": {
+      "score": 1.0,
+      "sources": {
+        "security": 1.0
+      }
+    },
+    "correctness": {
+      "score": 0.9556,
+      "sources": {
+        "accuracy": 1.0
+      }
+    },
+    "discoverability": {
+      "score": 0.8333,
+      "sources": {
+        "skill_execution": 1.0
+      }
+    },
+    "effectiveness": {
+      "score": 0.882,
+      "sources": {
+        "goal_accuracy": 0.5,
+        "behavior_check": 0.5
+      }
+    },
+    "efficiency": {
+      "score": 1.0,
+      "sources": {
+        "skill_efficiency": 1.0
+      }
+    }
+  },
+  "num_trials": 18,
+  "pass_at_k": {
+    "k": 2,
+    "pass_threshold": 0.7,
+    "stop_on_pass": false,
+    "passed_cases": 9,
+    "failed_cases": 0,
+    "total_cases": 9,
+    "rate": 1.0,
+    "rate_interval": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "lower": 0.7008549515804559,
+      "upper": 1.0
+    },
+    "attempts_used": 18,
+    "max_attempts_possible": 18,
+    "avg_attempts_used": 2.0,
+    "extra_cases": [],
+    "cases": {
+      "COMP-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.9583,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-001__PZjrCtz",
+            "score": 0.9583,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-001__DAwbPzs",
+            "score": 0.9583,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-002": {
+        "passed": true,
+        "first_pass_attempt": 2,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-002__ULf4NnQ",
+            "score": 0.6417,
+            "passed": false
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-002__D5EeX7A",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-003": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-003__PrhvVgt",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-003__6HdVmke",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-004": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-004__nBnrzkD",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-004__EE5ykP6",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-005": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-005__WJZmtCv",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-005__ZzSARKN",
+            "score": 0.6833,
+            "passed": false
+          }
+        ]
+      },
+      "COMP-006": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-006__NtN7z5t",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-006__DpwPGSu",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-007": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-007__AMnAZuX",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-007__oBy2Z4c",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-NEG-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-NEG-001__Mdvuydk",
+            "score": 0.75,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-NEG-001__o6Eieor",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "COMP-HNEG-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "COMP-HNEG-002__tbE29eK",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "COMP-HNEG-002__PZ5ZeSo",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      }
+    }
+  },
+  "execution_status": "succeeded",
+  "execution_errors": [],
+  "expected_attempts": 18,
+  "scored_attempts": 18,
+  "job_failure": "",
+  "trial_failures": []
+}

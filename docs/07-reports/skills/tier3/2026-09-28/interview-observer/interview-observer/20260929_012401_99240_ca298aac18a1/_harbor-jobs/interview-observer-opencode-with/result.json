@@ -1,0 +1,214 @@
+{
+    "id": "e8f7da56-bfd9-4a35-9ac8-a3a203d6ebf6",
+    "started_at": "2026-09-29T09:24:03.198523",
+    "updated_at": "2026-09-29T02:51:54.579815Z",
+    "finished_at": null,
+    "n_total_trials": 18,
+    "stats": {
+        "n_completed_trials": 17,
+        "n_errored_trials": 1,
+        "n_running_trials": 0,
+        "n_pending_trials": 1,
+        "n_cancelled_trials": 1,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__with": {
+                "n_trials": 16,
+                "n_errors": 1,
+                "metrics": [
+                    {
+                        "accuracy": 0.9058823529411765,
+                        "behavior_check": 0.9117647058823529,
+                        "goal_accuracy": 0.8529411764705882,
+                        "overall": 0.7857705882352941,
+                        "security": 0.9411764705882353,
+                        "skill_efficiency": 0.6029411764705882,
+                        "skill_execution": 0.5
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "OBS-007__epKFyYX",
+                            "OBS-006__FDcomMg",
+                            "OBS-HNEG-002__8aoxMHv",
+                            "OBS-001__J5Hgnjb",
+                            "OBS-NEG-001__5PHB2w6",
+                            "OBS-004__uPxsMak",
+                            "OBS-003__nUAq5Z5",
+                            "OBS-002__QjZpnZi",
+                            "OBS-005__amgVVzK",
+                            "OBS-007__9npTnvL",
+                            "OBS-006__AbnEaZx",
+                            "OBS-HNEG-002__iyZyh43",
+                            "OBS-001__ZWg7p7R",
+                            "OBS-NEG-001__5o7AVUf",
+                            "OBS-004__Kr5wHyx",
+                            "OBS-003__HrjVb8B"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.5": [
+                            "OBS-007__epKFyYX",
+                            "OBS-006__FDcomMg",
+                            "OBS-001__J5Hgnjb",
+                            "OBS-003__nUAq5Z5",
+                            "OBS-002__QjZpnZi",
+                            "OBS-005__amgVVzK",
+                            "OBS-007__9npTnvL",
+                            "OBS-006__AbnEaZx",
+                            "OBS-001__ZWg7p7R",
+                            "OBS-004__Kr5wHyx",
+                            "OBS-003__HrjVb8B"
+                        ],
+                        "0.0": [
+                            "OBS-HNEG-002__8aoxMHv",
+                            "OBS-HNEG-002__iyZyh43"
+                        ],
+                        "1.0": [
+                            "OBS-NEG-001__5PHB2w6",
+                            "OBS-004__uPxsMak",
+                            "OBS-NEG-001__5o7AVUf"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "0.5": [
+                            "OBS-007__epKFyYX",
+                            "OBS-006__FDcomMg",
+                            "OBS-001__J5Hgnjb",
+                            "OBS-003__nUAq5Z5",
+                            "OBS-002__QjZpnZi",
+                            "OBS-007__9npTnvL",
+                            "OBS-006__AbnEaZx",
+                            "OBS-001__ZWg7p7R",
+                            "OBS-004__Kr5wHyx",
+                            "OBS-003__HrjVb8B"
+                        ],
+                        "1.0": [
+                            "OBS-HNEG-002__8aoxMHv",
+                            "OBS-NEG-001__5PHB2w6",
+                            "OBS-004__uPxsMak",
+                            "OBS-HNEG-002__iyZyh43",
+                            "OBS-NEG-001__5o7AVUf"
+                        ],
+                        "0.25": [
+                            "OBS-005__amgVVzK"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "OBS-007__epKFyYX",
+                            "OBS-006__FDcomMg",
+                            "OBS-HNEG-002__8aoxMHv",
+                            "OBS-001__J5Hgnjb",
+                            "OBS-NEG-001__5PHB2w6",
+                            "OBS-004__uPxsMak",
+                            "OBS-003__nUAq5Z5",
+                            "OBS-005__amgVVzK",
+                            "OBS-006__AbnEaZx",
+                            "OBS-HNEG-002__iyZyh43",
+                            "OBS-001__ZWg7p7R",
+                            "OBS-NEG-001__5o7AVUf",
+                            "OBS-004__Kr5wHyx",
+                            "OBS-003__HrjVb8B"
+                        ],
+                        "0.6": [
+                            "OBS-002__QjZpnZi"
+                        ],
+                        "0.8": [
+                            "OBS-007__9npTnvL"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "0.0": [
+                            "OBS-007__epKFyYX"
+                        ],
+                        "1.0": [
+                            "OBS-006__FDcomMg",
+                            "OBS-HNEG-002__8aoxMHv",
+                            "OBS-001__J5Hgnjb",
+                            "OBS-NEG-001__5PHB2w6",
+                            "OBS-004__uPxsMak",
+                            "OBS-003__nUAq5Z5",
+                            "OBS-005__amgVVzK",
+                            "OBS-007__9npTnvL",
+                            "OBS-006__AbnEaZx",
+                            "OBS-HNEG-002__iyZyh43",
+                            "OBS-001__ZWg7p7R",
+                            "OBS-NEG-001__5o7AVUf",
+                            "OBS-004__Kr5wHyx",
+                            "OBS-003__HrjVb8B"
+                        ],
+                        "0.5": [
+                            "OBS-002__QjZpnZi"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "OBS-007__epKFyYX",
+                            "OBS-006__FDcomMg",
+                            "OBS-HNEG-002__8aoxMHv",
+                            "OBS-001__J5Hgnjb",
+                            "OBS-NEG-001__5PHB2w6",
+                            "OBS-003__nUAq5Z5",
+                            "OBS-005__amgVVzK",
+                            "OBS-007__9npTnvL",
+                            "OBS-006__AbnEaZx",
+                            "OBS-HNEG-002__iyZyh43",
+                            "OBS-001__ZWg7p7R",
+                            "OBS-NEG-001__5o7AVUf",
+                            "OBS-004__Kr5wHyx",
+                            "OBS-003__HrjVb8B"
+                        ],
+                        "0.75": [
+                            "OBS-004__uPxsMak",
+                            "OBS-002__QjZpnZi"
+                        ]
+                    },
+                    "overall": {
+                        "0.6667": [
+                            "OBS-007__epKFyYX"
+                        ],
+                        "0.8333": [
+                            "OBS-006__FDcomMg",
+                            "OBS-HNEG-002__8aoxMHv",
+                            "OBS-001__J5Hgnjb",
+                            "OBS-003__nUAq5Z5",
+                            "OBS-006__AbnEaZx",
+                            "OBS-HNEG-002__iyZyh43",
+                            "OBS-001__ZWg7p7R",
+                            "OBS-004__Kr5wHyx",
+                            "OBS-003__HrjVb8B"
+                        ],
+                        "1.0": [
+                            "OBS-NEG-001__5PHB2w6",
+                            "OBS-NEG-001__5o7AVUf"
+                        ],
+                        "0.9583": [
+                            "OBS-004__uPxsMak"
+                        ],
+                        "0.6417": [
+                            "OBS-002__QjZpnZi"
+                        ],
+                        "0.7917": [
+                            "OBS-005__amgVVzK"
+                        ],
+                        "0.8": [
+                            "OBS-007__9npTnvL"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "CancelledError": [
+                        "OBS-002__xZWtrLj"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": 290454,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 2530,
+        "cost_usd": null
+    }
+}

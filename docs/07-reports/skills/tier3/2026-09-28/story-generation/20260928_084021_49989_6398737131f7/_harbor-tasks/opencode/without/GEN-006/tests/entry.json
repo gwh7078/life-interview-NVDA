@@ -1,0 +1,29 @@
+{
+  "id": "GEN-006",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-006.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "expected_output": "以后续用户明确确认的7月15日覆盖早先“七月初”的模糊记忆，且不把 assistant 的话本身当事实来源。",
+  "assertions": [
+    "正文日期必须是7月15日",
+    "不得继续写成“七月初”或7月7日",
+    "应体现用户自己的后续确认优先",
+    "不得引用或虚构 assistant 的提示过程为人生事件"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-006.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "ground_truth": "以后续用户明确确认的7月15日覆盖早先“七月初”的模糊记忆，且不把 assistant 的话本身当事实来源。",
+  "expected_behavior": [
+    "正文日期必须是7月15日",
+    "不得继续写成“七月初”或7月7日",
+    "应体现用户自己的后续确认优先",
+    "不得引用或虚构 assistant 的提示过程为人生事件"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

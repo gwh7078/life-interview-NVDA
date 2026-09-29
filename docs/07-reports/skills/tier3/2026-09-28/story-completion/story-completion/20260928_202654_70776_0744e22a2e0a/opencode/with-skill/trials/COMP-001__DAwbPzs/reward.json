@@ -1,0 +1,258 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 0.75,
+  "overall": 0.9583,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-001",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Activated via Skill tool: story-completion",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "story-completion",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "story-completion"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Skill activated (no execution needed)"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Agent correctly routed to story-completion only",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": [],
+          "skills_read": [
+            "Skill(story-completion)"
+          ]
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "3/3 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Response correctly identifies insufficient Story Memory, maintains interviewing status, and proposes three high-value, single-direction questions consistent with the expected answer.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u5f53\u524d Story Memory \u660e\u663e\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing/pending\uff0c\u5e76\u63d0\u51fa\u5c11\u91cf\u9ad8\u4ef7\u503c\u95ee\u9898\uff0c\u800c\u975e\u76f4\u63a5\u5b8c\u6210\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u70e7\u65f6\u5177\u4f53\u4f53\u6e29\u662f\u591a\u5c11\uff1f\",\"\u8003\u8bd5\u5f53\u5929\u8eab\u4f53\u72b6\u6001\u5982\u4f55\u3001\u80fd\u5426\u6b63\u5e38\u7b54\u9898\uff1f\",\"\u8fd9\u6b21\u9ad8\u8003\u7684\u6700\u7ec8\u7ed3\u679c\u5982\u4f55\uff1f\"]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u8bc6\u522b\u5f53\u524d Story Memory \u4ec5\u6709\u4e24\u53e5\u8bdd\u3001\u660e\u663e\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing \u72b6\u6001\uff0c\u5e76\u63d0\u51fa\u4e86 3 \u4e2a\u9ad8\u4ef7\u503c\u3001\u5355\u65b9\u5411\u3001\u4ee5\u95ee\u53f7\u7ed3\u5c3e\u4e14\u4e0d\u8d85\u8fc7 80 \u5b57\u7684\u95ee\u9898\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f outcome\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-001.input\uff0c\u6267\u884c story.completion\uff0c\u53ea\u8fd4\u56de {\"status\":\"...\",\"gaps\":[...]}\u3002",
+      "end_state": "\u8fd4\u56de {\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u70e7\u65f6\u5177\u4f53\u4f53\u6e29\u662f\u591a\u5c11\uff1f\",\"\u8003\u8bd5\u5f53\u5929\u8eab\u4f53\u72b6\u6001\u5982\u4f55\u3001\u80fd\u5426\u6b63\u5e38\u7b54\u9898\uff1f\",\"\u8fd9\u6b21\u9ad8\u8003\u7684\u6700\u7ec8\u7ed3\u679c\u5982\u4f55\uff1f\"]}\uff0c\u672a\u76f4\u63a5\u6210\u6587\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u5f53\u524d Story Memory \u660e\u663e\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing/pending\uff0c\u5e76\u63d0\u51fa\u5c11\u91cf\u9ad8\u4ef7\u503c\u95ee\u9898\uff0c\u800c\u975e\u76f4\u63a5\u5b8c\u6210\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "skill: skill",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"name\": \"story-completion\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\", \"limit\": 10, \"offset\": 12}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_0d33e4b250044ecca1e0972a",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<skill_content name=\"story-completion\">\n# Skill: story-completion\n\n# Story Completion / Planner\n\n## Purpose\n\n\u53ea\u4f9d\u636e\u5f53\u524d Story Memory \u5224\u65ad\u5b8c\u6210\u72b6\u6001\u5e76\u7ef4\u62a4\u6709\u4ef7\u503c\u7684 gaps\u3002Use only for story.completion.\n\n## Input\n...[truncated]...\nis base directory.\nNote: file list is sampled.\n\n<skill_files>\n\n</skill_files>\n</skill_content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_b821619e81ba4e169e652d74",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_31957cb6b3584f089977968b",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n12:     \"COMP-001\": {\n13:       \"input\": {\n14:         \"title\": \"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\",\n15:         \"agent_memory\": \"1983\u5e74\u53c2\u52a0\u9ad8\n...[truncated]...\nion_count\": 1\n21:       }\n\n(Showing lines 12-21 of 150. Use offset=22 to continue.)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u70e7\u65f6\u5177\u4f53\u4f53\u6e29\u662f\u591a\u5c11\uff1f\",\"\u8003\u8bd5\u5f53\u5929\u8eab\u4f53\u72b6\u6001\u5982\u4f55\u3001\u80fd\u5426\u6b63\u5e38\u7b54\u9898\uff1f\",\"\u8fd9\u6b21\u9ad8\u8003\u7684\u6700\u7ec8\u7ed3\u679c\u5982\u4f55\uff1f\"]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 0.75,
+      "reason": "Agent \u57fa\u672c\u9075\u5faa\u4e86\u8f93\u51fa\u5951\u7ea6\uff0c\u4f46\u6709\u4e00\u4e2a gap \u5305\u542b\u53cc\u91cd\u95ee\u9898\u65b9\u5411\uff0c\u9700\u4fee\u6b63\u4e3a\u5355\u65b9\u5411\u63d0\u95ee\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "\u8fd4\u56de\u7684 status \u4e3a interviewing\uff0c\u672a\u6807\u8bb0\u4e3a complete\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "\u5171\u8fd4\u56de 3 \u4e2a gaps\uff0c\u5747\u4e3a\u53ef\u76f4\u63a5\u95ee\u7528\u6237\u7684\u95ee\u9898\uff0c\u6570\u91cf\u5728 1-3 \u8303\u56f4\u5185\u3002"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "\u95ee\u9898\u56f4\u7ed5\u8003\u8bd5\u5f53\u5929\u8eab\u4f53\u72b6\u6001\u3001\u6700\u7ec8\u7ed3\u679c\u7b49\u6838\u5fc3\u7f3a\u53e3\uff0c\u672a\u6d89\u53ca\u65e0\u5173\u7ec6\u679d\u672b\u8282\u3002"
+        },
+        {
+          "step": 4,
+          "passed": false,
+          "reason": "\u7b2c\u4e8c\u4e2a gap\u201c\u8003\u8bd5\u5f53\u5929\u8eab\u4f53\u72b6\u6001\u5982\u4f55\u3001\u80fd\u5426\u6b63\u5e38\u7b54\u9898\uff1f\u201d\u5305\u542b\u4e24\u4e2a\u95ee\u9898\u65b9\u5411\uff0c\u4e0d\u7b26\u5408\u5355\u65b9\u5411\u8981\u6c42\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "status \u4e0d\u5f97\u4e3a complete"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "gaps \u5fc5\u987b\u4e3a1\u52303\u4e2a\u9ad8\u4ef7\u503c\u3001\u53ef\u76f4\u63a5\u95ee\u7528\u6237\u7684\u95ee\u9898"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u95ee\u9898\u5e94\u4f18\u5148\u8865\u4eba\u7269\u5e2e\u52a9\u3001\u8003\u8bd5\u7ed3\u679c\u3001\u7ecf\u5386\u8f6c\u6298\u6216\u610f\u4e49\u7b49\u6838\u5fc3\u7f3a\u53e3\uff0c\u800c\u4e0d\u662f\u65e0\u5173\u7ec6\u679d\u672b\u8282"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u6bcf\u4e2a gap \u53ea\u80fd\u95ee\u4e00\u4e2a\u65b9\u5411\u5e76\u4ee5\u95ee\u53f7\u7ed3\u5c3e"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u70e7\u65f6\u5177\u4f53\u4f53\u6e29\u662f\u591a\u5c11\uff1f\",\"\u8003\u8bd5\u5f53\u5929\u8eab\u4f53\u72b6\u6001\u5982\u4f55\u3001\u80fd\u5426\u6b63\u5e38\u7b54\u9898\uff1f\",\"\u8fd9\u6b21\u9ad8\u8003\u7684\u6700\u7ec8\u7ed3\u679c\u5982\u4f55\uff1f\"]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "COMP-001__DAwbPzs",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

@@ -1,0 +1,245 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 0.8,
+  "goal_accuracy": 0.4,
+  "behavior_check": 1.0,
+  "overall": 0.7,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-001",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'onboarding-closeout'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'onboarding-closeout' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 0.8,
+      "reason": "Profile and life-stage facts are accurate and source-backed, but profile fields violate the output_contract's required {value, source_refs} object shape.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": false,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u4ece\u9ad8\u5bc6\u5ea6\u9996\u6b21\u5efa\u6863\u91c7\u8bbf\u4e2d\u63d0\u53d6\u6709\u76f4\u63a5\u7528\u6237\u8bc1\u636e\u652f\u6301\u7684 Profile\u3001Life Stage \u4e0e Story seeds\uff0c\u540c\u65f6\u62d2\u7edd assistant \u7684\u9519\u8bef\u524d\u63d0\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": 1963,\n    \"gender\": null,\n    \"birth_place\": \"\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\",\n    \"current_location\": null,\n    \"current_status\": null,\n    \"p\n...[truncated]...\n       \"source_6\"\n          ],\n          \"status\": \"pending\"\n        }\n      ]\n    }\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 0.4,
+      "reason": "\u8f93\u51fa\u672a\u9075\u5b88 output_contract\uff1aprofile_fields \u5e94\u6309 profile_field_shape \u4ee5 {value, source_refs} \u5f62\u5f0f\u8fd4\u56de\uff0c\u4f46 agent \u76f4\u63a5\u8fd4\u56de\u4e86\u88f8\u503c\u4e14\u7f3a\u5c11 source_refs\uff1blife_stages \u7ed3\u6784\u867d\u6b63\u786e\uff0c\u4f46\u6574\u4f53\u56e0\u5951\u7ea6\u8fdd\u80cc\u800c\u672a\u8fbe\u6210\u76ee\u6807\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-001 \u7684 Task Context\uff0c\u5b8c\u6210 onboarding.closeout\uff0c\u8fd4\u56de\u7b26\u5408\u6587\u4ef6\u4e2d output_contract \u7684 JSON\uff0c\u4e0d\u8981\u89e3\u91ca\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u5305\u542b profile \u4e0e life_stages \u7684 JSON\uff0c\u4f46 profile \u5404\u5b57\u6bb5\u672a\u6309 output_contract \u7684 profile_field_shape \u5305\u88c5\u4e3a {value, source_refs} \u5bf9\u8c61\uff0c\u800c\u662f\u76f4\u63a5\u8f93\u51fa\u539f\u59cb\u503c\uff1blife_stages \u90e8\u5206\u57fa\u672c\u7b26\u5408\u5f62\u72b6\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u4ece\u9ad8\u5bc6\u5ea6\u9996\u6b21\u5efa\u6863\u91c7\u8bbf\u4e2d\u63d0\u53d6\u6709\u76f4\u63a5\u7528\u6237\u8bc1\u636e\u652f\u6301\u7684 Profile\u3001Life Stage \u4e0e Story seeds\uff0c\u540c\u65f6\u62d2\u7edd assistant \u7684\u9519\u8bef\u524d\u63d0\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_d3e645af4feb430ba5929ad2",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": 1963,\n    \"gender\": null,\n    \"birth_place\": \"\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\",\n    \"current_location\": null,\n    \"current_status\": null,\n    \"p\n...[truncated]...\n       \"source_6\"\n          ],\n          \"status\": \"pending\"\n        }\n      ]\n    }\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "birth_year is set to 1963 and source_1 is included in the life_stages source_refs."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "birth_place retains the source-provided location and was not changed to an unsupported value."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "The story preserves the user's correction about failing the entrance exam after high school graduation, not the assistant's earlier incorrect claim."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "gender, current_location, and current_status are all null with no inferred values or source references."
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "The 1980\u20131983 period at \u8392\u53bf\u4e00\u4e2d is captured as a stage/story, and the pre-exam fever is an independently named story."
+        },
+        {
+          "step": 6,
+          "passed": true,
+          "reason": "Only source_1 through source_6 are referenced, all of which are provided in the input."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "birth_year \u5fc5\u987b\u4e3a 1963\uff0c\u5e76\u5f15\u7528 source_1"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "birth_place \u5fc5\u987b\u57fa\u4e8e source_1\uff0c\u4e0d\u80fd\u6539\u6210 assistant \u672a\u63d0\u4f9b\u7684\u5730\u70b9"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u5f97\u628a assistant \u7684\u201c\u7b2c\u4e00\u6b21\u6ca1\u8003\u4e0a\u9ad8\u4e2d\u201d\u5f53\u4f5c\u4e8b\u5b9e\uff1b\u5e94\u4fdd\u7559\u7528\u6237\u5bf9\u201c\u9ad8\u4e2d\u6bd5\u4e1a\u540e\u7684\u5347\u5b66\u8003\u8bd5\u843d\u699c\u201d\u7684\u7ea0\u6b63"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u63a8\u65ad gender\u3001current_location \u6216 current_status\uff1b\u65e0\u7528\u6237\u8bc1\u636e\u7684\u5b57\u6bb5\u4fdd\u6301 null \u4e14 source_refs \u4e3a\u7a7a"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u5e94\u80fd\u628a 1980\u20131983 \u8392\u53bf\u4e00\u4e2d\u8bc6\u522b\u4e3a\u9636\u6bb5\u6027\u7ecf\u5386\uff0c\u5e76\u628a\u201c\u9ad8\u8003\u524d\u591c\u53d1\u70e7\u4ecd\u53c2\u52a0\u8003\u8bd5\u201d\u4f5c\u4e3a\u53ef\u72ec\u7acb\u547d\u540d\u7684 Story seed"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 6",
+          "json_pointer": "/expected_behavior/5",
+          "excerpt": "\u6240\u6709 source_refs \u53ea\u80fd\u4f7f\u7528\u8f93\u5165\u4e2d\u63d0\u4f9b\u7684 source_N"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": 1963,\n    \"gender\": null,\n    \"birth_place\": \"\u5c71\u4e1c\u7701\u8392\u53bf\u5e97\u5b50\u96c6\u516c\u793e\u540e\u5cad\u6751\",\n    \"current_location\": null,\n    \"current_status\": null,\n    \"p\n...[truncated]...\n       \"source_6\"\n          ],\n          \"status\": \"pending\"\n        }\n      ]\n    }\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "ONB-001__xBoq7PW",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "CLI"
+}

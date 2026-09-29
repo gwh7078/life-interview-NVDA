@@ -1,0 +1,75 @@
+{
+    "id": "93886cf5-77a7-4fd8-aae3-061ce5950fff",
+    "started_at": "2026-09-29T12:35:04.958445",
+    "updated_at": "2026-09-29T12:36:07.806673",
+    "finished_at": "2026-09-29T12:36:07.806673",
+    "n_total_trials": 1,
+    "stats": {
+        "n_completed_trials": 1,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__without": {
+                "n_trials": 1,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 1.0,
+                        "behavior_check": 1.0,
+                        "goal_accuracy": 1.0,
+                        "overall": 0.8333,
+                        "security": 1.0,
+                        "skill_efficiency": 0.5,
+                        "skill_execution": 0.5
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "COMP-002__jfu4Nig"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.5": [
+                            "COMP-002__jfu4Nig"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "0.5": [
+                            "COMP-002__jfu4Nig"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "COMP-002__jfu4Nig"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "1.0": [
+                            "COMP-002__jfu4Nig"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "COMP-002__jfu4Nig"
+                        ]
+                    },
+                    "overall": {
+                        "0.8333": [
+                            "COMP-002__jfu4Nig"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 16430,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 55,
+        "cost_usd": null
+    }
+}

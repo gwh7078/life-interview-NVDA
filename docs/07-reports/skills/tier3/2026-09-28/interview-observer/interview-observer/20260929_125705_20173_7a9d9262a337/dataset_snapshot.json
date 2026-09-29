@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "evaluator_version": "0.3.0",
+  "dataset": [
+    {
+      "id": "OBS-001"
+    },
+    {
+      "id": "OBS-002"
+    },
+    {
+      "id": "OBS-003"
+    },
+    {
+      "id": "OBS-004"
+    },
+    {
+      "id": "OBS-005"
+    },
+    {
+      "id": "OBS-006"
+    },
+    {
+      "id": "OBS-007"
+    },
+    {
+      "id": "OBS-NEG-001"
+    },
+    {
+      "id": "OBS-HNEG-002"
+    }
+  ],
+  "dataset_summary": {
+    "total_tasks": 9,
+    "positive_tasks": 0,
+    "negative_tasks": 0,
+    "unclassified_tasks": 9,
+    "source": "dataset"
+  },
+  "dataset_digest": "sha256:f84453c2e631a24e1bb629e27ce2923b7c5fccdb41240fbdb0e5a9a1f06a4e76",
+  "dataset_digest_algorithm": "skill-evaluator-dataset-snapshot/1"
+}

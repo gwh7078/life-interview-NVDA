@@ -1,0 +1,29 @@
+{
+  "id": "OBS-002",
+  "prompt": "读取 /workspace/input/cases.json 中 OBS-002.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "expected_output": "纠正问题里的错误前提：用户不是没考上高中，而是高中毕业后的升学考试落榜，并可提示继续追问杨立苗的作用。",
+  "assertions": [
+    "selected_evidence_ids 必须包含 e1",
+    "possible_conflicts 应识别“没考上高中”这一错误前提",
+    "可选择 e2 作为下一步人物线索",
+    "不得把 assistant/query 中的错误前提当作用户事实"
+  ],
+  "expected_skill": "interview-observer",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 OBS-002.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "ground_truth": "纠正问题里的错误前提：用户不是没考上高中，而是高中毕业后的升学考试落榜，并可提示继续追问杨立苗的作用。",
+  "expected_behavior": [
+    "selected_evidence_ids 必须包含 e1",
+    "possible_conflicts 应识别“没考上高中”这一错误前提",
+    "可选择 e2 作为下一步人物线索",
+    "不得把 assistant/query 中的错误前提当作用户事实"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

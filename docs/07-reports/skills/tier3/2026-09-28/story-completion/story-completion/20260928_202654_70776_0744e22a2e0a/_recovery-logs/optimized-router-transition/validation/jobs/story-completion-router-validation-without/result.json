@@ -1,0 +1,75 @@
+{
+    "id": "77a367a2-6d35-4516-8928-b5290c50f0a1",
+    "started_at": "2026-09-29T08:54:45.732574",
+    "updated_at": "2026-09-29T08:59:09.337094",
+    "finished_at": "2026-09-29T08:59:09.337094",
+    "n_total_trials": 1,
+    "stats": {
+        "n_completed_trials": 1,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__without": {
+                "n_trials": 1,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 1.0,
+                        "behavior_check": 1.0,
+                        "goal_accuracy": 1.0,
+                        "overall": 0.8333,
+                        "security": 1.0,
+                        "skill_efficiency": 0.5,
+                        "skill_execution": 0.5
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "COMP-002__Fx3UNN5"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.5": [
+                            "COMP-002__Fx3UNN5"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "0.5": [
+                            "COMP-002__Fx3UNN5"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "COMP-002__Fx3UNN5"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "1.0": [
+                            "COMP-002__Fx3UNN5"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "COMP-002__Fx3UNN5"
+                        ]
+                    },
+                    "overall": {
+                        "0.8333": [
+                            "COMP-002__Fx3UNN5"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 26136,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 421,
+        "cost_usd": null
+    }
+}

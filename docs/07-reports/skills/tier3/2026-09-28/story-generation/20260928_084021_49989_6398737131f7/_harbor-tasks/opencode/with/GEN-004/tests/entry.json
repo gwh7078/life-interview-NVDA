@@ -1,0 +1,31 @@
+{
+  "id": "GEN-004",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-004.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "expected_output": "自然写出住院、同学探望、两位战士和绿军装，但严格保留未知信息。",
+  "assertions": [
+    "必须保留十二指肠球部溃疡、当地部队医院、住院不到两周",
+    "必须保留两位年轻解放军战士以及临走获赠一套绿军装",
+    "不得虚构战士姓名、部队番号、籍贯、疾病或后来是否联系",
+    "不得虚构具体对白或病房场景",
+    "warm 文风不能突破事实边界"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-004.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "ground_truth": "自然写出住院、同学探望、两位战士和绿军装，但严格保留未知信息。",
+  "expected_behavior": [
+    "必须保留十二指肠球部溃疡、当地部队医院、住院不到两周",
+    "必须保留两位年轻解放军战士以及临走获赠一套绿军装",
+    "不得虚构战士姓名、部队番号、籍贯、疾病或后来是否联系",
+    "不得虚构具体对白或病房场景",
+    "warm 文风不能突破事实边界"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

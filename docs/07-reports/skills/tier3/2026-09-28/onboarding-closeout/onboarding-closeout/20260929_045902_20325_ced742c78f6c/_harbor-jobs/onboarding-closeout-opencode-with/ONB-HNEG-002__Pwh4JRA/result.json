@@ -1,0 +1,122 @@
+{
+    "id": "ed63b530-4d4c-4914-8edc-7b84602a6d5b",
+    "task_name": "nvidia/skillevaluator-ONB-HNEG-002",
+    "trial_name": "ONB-HNEG-002__Pwh4JRA",
+    "trial_uri": "file:///Users/gwh/.codex/worktrees/5f60/%E8%8B%B1%E4%BC%9F%E8%BE%BEDGX%E9%BB%91%E5%AE%A2%E6%9D%BE/docs/07-reports/skills/tier3/2026-09-28/onboarding-closeout/onboarding-closeout/20260929_045902_20325_ced742c78f6c/_harbor-jobs/onboarding-closeout-opencode-with/ONB-HNEG-002__Pwh4JRA",
+    "task_id": {
+        "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/onboarding-closeout/onboarding-closeout/20260929_045902_20325_ced742c78f6c/_harbor-tasks/opencode/with/ONB-HNEG-002"
+    },
+    "source": "with",
+    "task_checksum": "82b85c1ec7a6cd30a6acbe1f4324c49fd3df4b49117093ecb180262d5cfcc700",
+    "config": {
+        "task": {
+            "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/onboarding-closeout/onboarding-closeout/20260929_045902_20325_ced742c78f6c/_harbor-tasks/opencode/with/ONB-HNEG-002",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": "with"
+        },
+        "trial_name": "ONB-HNEG-002__Pwh4JRA",
+        "trials_dir": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/onboarding-closeout/onboarding-closeout/20260929_045902_20325_ced742c78f6c/_harbor-jobs/onboarding-closeout-opencode-with",
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": 1.0,
+        "verifier_timeout_multiplier": 0.6,
+        "agent_setup_timeout_multiplier": 1.0,
+        "environment_build_timeout_multiplier": 1.0,
+        "agent": {
+            "name": "opencode",
+            "import_path": null,
+            "model_name": "openai/qwen3.6-35b-a3b",
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "env": {},
+            "mcp_servers": []
+        },
+        "environment": {
+            "type": null,
+            "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+            "force_build": false,
+            "delete": true,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [
+                "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+            ],
+            "env": {},
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "env": {
+                "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+            },
+            "disable": false
+        },
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "job_id": "45b70d44-3fc9-4e9f-9ad3-897c0ad45165"
+    },
+    "agent_info": {
+        "name": "opencode",
+        "version": "1.18.33",
+        "model_info": {
+            "name": "qwen3.6-35b-a3b",
+            "provider": "openai"
+        }
+    },
+    "agent_result": {
+        "n_input_tokens": 58239,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 986,
+        "cost_usd": null,
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "security": 1.0,
+            "skill_execution": 0.0,
+            "skill_efficiency": 1.0,
+            "accuracy": 0.2,
+            "goal_accuracy": 1.0,
+            "behavior_check": 0.25,
+            "overall": 0.575
+        }
+    },
+    "exception_info": null,
+    "started_at": "2026-09-29T05:06:29.654805Z",
+    "finished_at": "2026-09-29T05:09:52.029565Z",
+    "environment_setup": {
+        "started_at": "2026-09-29T05:06:29.657688Z",
+        "finished_at": "2026-09-29T05:06:33.109152Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-09-29T05:06:33.109272Z",
+        "finished_at": "2026-09-29T05:06:34.857122Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-09-29T05:06:34.857464Z",
+        "finished_at": "2026-09-29T05:06:58.444216Z"
+    },
+    "verifier": {
+        "started_at": "2026-09-29T05:06:58.671315Z",
+        "finished_at": "2026-09-29T05:09:40.942364Z"
+    },
+    "step_results": null
+}

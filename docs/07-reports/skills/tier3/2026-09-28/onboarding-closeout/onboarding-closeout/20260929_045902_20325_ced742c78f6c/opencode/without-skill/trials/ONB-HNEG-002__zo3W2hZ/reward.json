@@ -1,0 +1,194 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-HNEG-002",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether onboarding-closeout was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Response correctly identifies the task as an existing-story follow-up closeout (interview.closeout/story_continue), avoids first-time profile creation, and provides accurate incremental updates to the story title, summary, agent memory, and status.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f\u5df2\u6709 Story \u7684 interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f onboarding.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "\u6839\u636e case `ONB-HNEG-002` \u7684\u5185\u5bb9\u6574\u7406\uff1a\n\n---\n\n**\u6545\u4e8b\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff1a**\n\n**Title\uff08\u6807\u9898\uff09\uff1a** \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\n\n**Summary\uff08\u6458\u8981\u66f4\u65b0\u4e3a\u5b8c\u6574\u7248\u672c\uff09\uff1a** 1983\u5e74\u9ad8\u8003\u524d\u591c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u5176\u5230\u533b\u9662\u8f93\u6db2\uff0c\u968f\u540e\u51c6\u65f6\u53c2\u52a0\u4e86\u8003\u8bd5\u3002\n\n**Agent Memory\uff08\u65b0\u589e\u5173\u952e\u7ec6\u8282\uff09\uff1a**\n- 1983\u5e747\u6708\n...[truncated]...\n\u8bbf\u6536\u5c3e\uff0c\u4e0d\u505a\u9996\u6b21\u5efa\u6863\n- Transcript \u65b0\u589e\u4fe1\u606f\uff1a\"\u6211\u53c8\u60f3\u8d77\u6765\u4e86\uff0c\u662f\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u6211\u53bb\u533b\u9662\u8f93\u6db2\"\u8865\u5168\u4e86\u6b64\u524d\u6458\u8981\u4e2d\u7f3a\u5931\u7684\u4eba\u7269\u8eab\u4efd\u4e0e\u884c\u52a8\u7ec6\u8282\n- \u5176\u4ed6\u6545\u4e8b\u3001\u4eba\u751f\u9636\u6bb5\u65e0\u53d8\u5316"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u8bc6\u522b\u4efb\u52a1\u7c7b\u578b\u4e3a interview.closeout/story_continue\uff0c\u4ec5\u5bf9\u73b0\u6709 Story \u8fdb\u884c\u589e\u91cf\u66f4\u65b0\uff0c\u672a\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863\u5185\u5bb9\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-HNEG-002\uff0c\u5b8c\u6210\u5df2\u6709 Story \u7684\u7eed\u8bbf\u6536\u5c3e\u4efb\u52a1\uff0c\u8fdb\u884c\u589e\u91cf\u6574\u7406\uff0c\u4e0d\u505a\u9996\u6b21\u5efa\u6863\u3002",
+      "end_state": "Agent \u8f93\u51fa\u4e86\u6545\u4e8b\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff0c\u5305\u542b\u6807\u9898\u3001\u66f4\u65b0\u540e\u7684\u6458\u8981\u3001\u65b0\u589e\u5173\u952e\u7ec6\u8282\u3001\u72b6\u6001\u63a8\u8fdb\u81f3 interviewed\uff0c\u5e76\u660e\u786e\u8bf4\u660e\u6b64\u4e3a\u7eed\u8bbf\u6536\u5c3e\u4e0d\u505a\u9996\u6b21\u5efa\u6863\uff1b\u672a\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f\u5df2\u6709 Story \u7684 interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f onboarding.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\", \"limit\": 40, \"offset\": 289}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_03ddeb0a5aa24901bb5cb925",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_d1c27f19320e448288c9031b",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n289:     \"ONB-HNEG-002\": {\n290:       \"task_type\": \"interview.closeout\",\n291:       \"mode\": \"story_continue\",\n292:    \n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "\u6839\u636e case `ONB-HNEG-002` \u7684\u5185\u5bb9\u6574\u7406\uff1a\n\n---\n\n**\u6545\u4e8b\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff1a**\n\n**Title\uff08\u6807\u9898\uff09\uff1a** \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\n\n**Summary\uff08\u6458\u8981\u66f4\u65b0\u4e3a\u5b8c\u6574\u7248\u672c\uff09\uff1a** 1983\u5e74\u9ad8\u8003\u524d\u591c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u5176\u5230\u533b\u9662\u8f93\u6db2\uff0c\u968f\u540e\u51c6\u65f6\u53c2\u52a0\u4e86\u8003\u8bd5\u3002\n\n**Agent Memory\uff08\u65b0\u589e\u5173\u952e\u7ec6\u8282\uff09\uff1a**\n- 1983\u5e747\u6708\n...[truncated]...\n\u8bbf\u6536\u5c3e\uff0c\u4e0d\u505a\u9996\u6b21\u5efa\u6863\n- Transcript \u65b0\u589e\u4fe1\u606f\uff1a\"\u6211\u53c8\u60f3\u8d77\u6765\u4e86\uff0c\u662f\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u6211\u53bb\u533b\u9662\u8f93\u6db2\"\u8865\u5168\u4e86\u6b64\u524d\u6458\u8981\u4e2d\u7f3a\u5931\u7684\u4eba\u7269\u8eab\u4efd\u4e0e\u884c\u52a8\u7ec6\u8282\n- \u5176\u4ed6\u6545\u4e8b\u3001\u4eba\u751f\u9636\u6bb5\u65e0\u53d8\u5316"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed; the agent correctly handled the existing Story continuation closeout without resetting to onboarding or first-time archiving.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent treated the task as interview.closeout/story_continue and did not select onboarding-closeout."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Output contains only story-level fields (Title, Summary, Agent Memory, Status, change notes); no onboarding profile/life_stages top-level structure was emitted."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Agent performed incremental closeout around the existing Story, adding new transcript facts (teacher Wang Mingchen taking the respondent to hospital) and updating summary/memory/status."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Agent explicitly stated this is a continuation closeout and not first-time archiving, and noted other stories/life stages remain unchanged."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 onboarding-closeout"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u8f93\u51fa onboarding \u7684 profile/life_stages \u9876\u5c42\u7ed3\u6784"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u56f4\u7ed5\u5df2\u6709 Story \u7684\u65b0\u589e\u4e8b\u5b9e\u8fdb\u884c\u7eed\u8bbf\u6536\u5c3e\u6216\u7b49\u4ef7\u589e\u91cf\u6574\u7406"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a\u5df2\u6709 Story \u7eed\u8bbf\u9519\u8bef\u91cd\u7f6e\u6210\u9996\u6b21\u5efa\u6863\u6d41\u7a0b"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "\u6839\u636e case `ONB-HNEG-002` \u7684\u5185\u5bb9\u6574\u7406\uff1a\n\n---\n\n**\u6545\u4e8b\u589e\u91cf\u6574\u7406\u7ed3\u679c\uff1a**\n\n**Title\uff08\u6807\u9898\uff09\uff1a** \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\n\n**Summary\uff08\u6458\u8981\u66f4\u65b0\u4e3a\u5b8c\u6574\u7248\u672c\uff09\uff1a** 1983\u5e74\u9ad8\u8003\u524d\u591c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u5176\u5230\u533b\u9662\u8f93\u6db2\uff0c\u968f\u540e\u51c6\u65f6\u53c2\u52a0\u4e86\u8003\u8bd5\u3002\n\n**Agent Memory\uff08\u65b0\u589e\u5173\u952e\u7ec6\u8282\uff09\uff1a**\n- 1983\u5e747\u6708\n...[truncated]...\n\u8bbf\u6536\u5c3e\uff0c\u4e0d\u505a\u9996\u6b21\u5efa\u6863\n- Transcript \u65b0\u589e\u4fe1\u606f\uff1a\"\u6211\u53c8\u60f3\u8d77\u6765\u4e86\uff0c\u662f\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u6211\u53bb\u533b\u9662\u8f93\u6db2\"\u8865\u5168\u4e86\u6b64\u524d\u6458\u8981\u4e2d\u7f3a\u5931\u7684\u4eba\u7269\u8eab\u4efd\u4e0e\u884c\u52a8\u7ec6\u8282\n- \u5176\u4ed6\u6545\u4e8b\u3001\u4eba\u751f\u9636\u6bb5\u65e0\u53d8\u5316"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "ONB-HNEG-002__zo3W2hZ",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "CLI"
+}

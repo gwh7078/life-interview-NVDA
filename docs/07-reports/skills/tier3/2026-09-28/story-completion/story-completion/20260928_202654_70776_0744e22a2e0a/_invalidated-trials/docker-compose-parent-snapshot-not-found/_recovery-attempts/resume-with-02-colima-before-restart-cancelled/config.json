@@ -1,0 +1,64 @@
+{
+    "task": {
+        "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/with/COMP-NEG-001",
+        "git_url": null,
+        "git_commit_id": null,
+        "name": null,
+        "ref": null,
+        "overwrite": false,
+        "download_dir": null,
+        "source": "with"
+    },
+    "trial_name": "COMP-NEG-001__HZHUVkU",
+    "trials_dir": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-jobs/story-completion-opencode-with",
+    "timeout_multiplier": 2.0,
+    "agent_timeout_multiplier": null,
+    "verifier_timeout_multiplier": null,
+    "agent_setup_timeout_multiplier": null,
+    "environment_build_timeout_multiplier": null,
+    "agent": {
+        "name": "opencode",
+        "import_path": null,
+        "model_name": "openai/qwen3.6-35b-a3b",
+        "skills": [],
+        "override_timeout_sec": null,
+        "override_setup_timeout_sec": null,
+        "max_timeout_sec": null,
+        "extra_allowed_hosts": [],
+        "kwargs": {},
+        "env": {},
+        "mcp_servers": []
+    },
+    "environment": {
+        "type": null,
+        "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "force_build": false,
+        "delete": true,
+        "cpu_enforcement_policy": "auto",
+        "memory_enforcement_policy": "auto",
+        "override_cpus": null,
+        "override_memory_mb": null,
+        "override_storage_mb": null,
+        "override_gpus": null,
+        "override_tpu": null,
+        "mounts": null,
+        "extra_docker_compose": [
+            "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+        ],
+        "env": {},
+        "kwargs": {},
+        "extra_allowed_hosts": []
+    },
+    "verifier": {
+        "override_timeout_sec": null,
+        "max_timeout_sec": null,
+        "env": {
+            "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+            "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+        },
+        "disable": false
+    },
+    "artifacts": [],
+    "extra_instruction_paths": [],
+    "job_id": "49bed38f-0caf-46d6-8d62-b9d7a034c424"
+}

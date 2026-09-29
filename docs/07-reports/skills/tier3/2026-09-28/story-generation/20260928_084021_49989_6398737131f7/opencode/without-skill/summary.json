@@ -1,0 +1,349 @@
+{
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli",
+  "scores": {
+    "security": 1.0,
+    "skill_execution": 0.5094,
+    "skill_efficiency": 0.4513,
+    "accuracy": 0.9333,
+    "goal_accuracy": 0.8958,
+    "behavior_check": 0.9313
+  },
+  "custom_scores": {},
+  "overall_score": 0.7869,
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "dimensions": {
+    "security": {
+      "score": 1.0,
+      "sources": {
+        "security": 1.0
+      }
+    },
+    "correctness": {
+      "score": 0.9333,
+      "sources": {
+        "accuracy": 1.0
+      }
+    },
+    "discoverability": {
+      "score": 0.5094,
+      "sources": {
+        "skill_execution": 1.0
+      }
+    },
+    "effectiveness": {
+      "score": 0.9136,
+      "sources": {
+        "goal_accuracy": 0.5,
+        "behavior_check": 0.5
+      }
+    },
+    "efficiency": {
+      "score": 0.4513,
+      "sources": {
+        "skill_efficiency": 1.0
+      }
+    }
+  },
+  "num_trials": 24,
+  "pass_at_k": {
+    "k": 2,
+    "pass_threshold": 0.7,
+    "stop_on_pass": false,
+    "passed_cases": 12,
+    "failed_cases": 0,
+    "total_cases": 12,
+    "rate": 1.0,
+    "rate_interval": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "lower": 0.7575059933447592,
+      "upper": 1.0
+    },
+    "attempts_used": 24,
+    "max_attempts_possible": 24,
+    "avg_attempts_used": 2.0,
+    "extra_cases": [],
+    "cases": {
+      "GEN-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-001__epucLB5",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-001__tbayBR4",
+            "score": 0.6611,
+            "passed": false
+          }
+        ]
+      },
+      "GEN-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.7917,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-002__ZH55Q6K",
+            "score": 0.7917,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-002__NiKjr7Z",
+            "score": 0.7222,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-003": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8056,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-003__9k9aTN4",
+            "score": 0.8056,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-003__fKhkzDr",
+            "score": 0.7934,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-004": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.7917,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-004__K3Wgqjs",
+            "score": 0.7917,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-004__KgY8mf7",
+            "score": 0.7191,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-005": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8083,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-005__VgJwSGo",
+            "score": 0.8083,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-005__rZXYfMp",
+            "score": 0.7778,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-006": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-006__v5EcNnr",
+            "score": 0.8,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-006__xsLQcqv",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-007": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.7917,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-007__twVTQAb",
+            "score": 0.7917,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-007__9ZHD5z4",
+            "score": 0.7583,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-008": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-008__3dLBiDJ",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-008__qyfrjfW",
+            "score": 0.5167,
+            "passed": false
+          }
+        ]
+      },
+      "GEN-009": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8095,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-009__ZJyQCjQ",
+            "score": 0.8095,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-009__uvtULME",
+            "score": 0.5583,
+            "passed": false
+          }
+        ]
+      },
+      "GEN-010": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8208,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-010__zQgq2mq",
+            "score": 0.7917,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-010__YG62VV4",
+            "score": 0.8208,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-HNEG-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-HNEG-002__ZWfT6Jx",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-HNEG-002__KW5jKPm",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "GEN-NEG-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "GEN-NEG-001__nHJbw3U",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "GEN-NEG-001__ni9VVPi",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      }
+    }
+  },
+  "execution_status": "succeeded",
+  "execution_errors": [],
+  "expected_attempts": 24,
+  "scored_attempts": 24,
+  "job_failure": "",
+  "trial_failures": []
+}

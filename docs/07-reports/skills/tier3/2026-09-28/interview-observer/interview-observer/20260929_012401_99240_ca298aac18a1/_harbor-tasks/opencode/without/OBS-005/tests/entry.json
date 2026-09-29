@@ -1,0 +1,29 @@
+{
+  "id": "OBS-005",
+  "prompt": "读取 /workspace/input/cases.json 中 OBS-005.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "expected_output": "遵守“Question只提供语境，Answer才是事实”的边界，不把 evidence question 中的盖房子前提当作已知事实。",
+  "assertions": [
+    "不得输出“父亲已经盖好房子”作为事实",
+    "若选择 e1，只能用于表达该事实目前不能确定",
+    "不能因为 evidence.question 出现具体断言就把它升级为用户事实",
+    "输出必须保持短且只读"
+  ],
+  "expected_skill": "interview-observer",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 OBS-005.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "ground_truth": "遵守“Question只提供语境，Answer才是事实”的边界，不把 evidence question 中的盖房子前提当作已知事实。",
+  "expected_behavior": [
+    "不得输出“父亲已经盖好房子”作为事实",
+    "若选择 e1，只能用于表达该事实目前不能确定",
+    "不能因为 evidence.question 出现具体断言就把它升级为用户事实",
+    "输出必须保持短且只读"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

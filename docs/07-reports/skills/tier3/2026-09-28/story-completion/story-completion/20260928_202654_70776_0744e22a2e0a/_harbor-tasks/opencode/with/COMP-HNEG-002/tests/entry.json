@@ -1,0 +1,29 @@
+{
+  "id": "COMP-HNEG-002",
+  "prompt": "读取 /workspace/input/cases.json 中 COMP-HNEG-002。这是一场 Story Continue 采访刚结束后的收尾任务，请增量整理当前 Story；不要做完成度规划。",
+  "files": [
+    "files/cases.json"
+  ],
+  "expected_output": "识别这是 interview.closeout/story_continue 类任务，而不是 story-completion；不应只返回 status/gaps。",
+  "assertions": [
+    "不应选择 story-completion",
+    "不得只输出 completion 的 status/gaps 结构",
+    "应处理当前 Transcript 对 Story Memory/summary 的增量更新或等价 closeout",
+    "不得把采访收尾误判为下一轮缺口规划"
+  ],
+  "expected_skill": null,
+  "question": "读取 /workspace/input/cases.json 中 COMP-HNEG-002。这是一场 Story Continue 采访刚结束后的收尾任务，请增量整理当前 Story；不要做完成度规划。",
+  "ground_truth": "识别这是 interview.closeout/story_continue 类任务，而不是 story-completion；不应只返回 status/gaps。",
+  "expected_behavior": [
+    "不应选择 story-completion",
+    "不得只输出 completion 的 status/gaps 结构",
+    "应处理当前 Transcript 对 Story Memory/summary 的增量更新或等价 closeout",
+    "不得把采访收尾误判为下一轮缺口规划"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

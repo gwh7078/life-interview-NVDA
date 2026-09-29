@@ -1,0 +1,37 @@
+[dataset]
+name = "nvidia/skillevaluator"
+description = "SkillEvaluator skill evaluation dataset"
+
+[[tasks]]
+name = "nvidia/IC-001"
+
+[[tasks]]
+name = "nvidia/IC-002"
+
+[[tasks]]
+name = "nvidia/IC-003"
+
+[[tasks]]
+name = "nvidia/IC-004"
+
+[[tasks]]
+name = "nvidia/IC-005"
+
+[[tasks]]
+name = "nvidia/IC-006"
+
+[[tasks]]
+name = "nvidia/IC-007"
+
+[[tasks]]
+name = "nvidia/IC-008"
+
+[[tasks]]
+name = "nvidia/IC-009"
+
+[[tasks]]
+name = "nvidia/IC-HNEG-002"
+
+[[tasks]]
+name = "nvidia/IC-NEG-001"
+

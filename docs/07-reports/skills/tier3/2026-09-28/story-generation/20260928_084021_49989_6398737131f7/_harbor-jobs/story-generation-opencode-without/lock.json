@@ -1,0 +1,963 @@
+{
+    "schema_version": 1,
+    "created_at": "2026-09-28T08:40:22.572772Z",
+    "harbor": {
+        "version": "0.13.2",
+        "is_editable": false
+    },
+    "invocation": [
+        "/Users/gwh/.local/share/uv/tools/skillevaluator/bin/harbor",
+        "run",
+        "--job-name",
+        "story-generation-opencode-without",
+        "--n-attempts",
+        "2",
+        "--n-concurrent",
+        "1",
+        "-p",
+        "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without",
+        "--agent-import-path",
+        "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+        "--environment-import-path",
+        "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "--jobs-dir",
+        "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-jobs",
+        "--model",
+        "openai/qwen3.6-35b-a3b",
+        "--timeout-multiplier",
+        "2.0",
+        "--verifier-env",
+        "LLM_JUDGE_MODEL=${LLM_JUDGE_MODEL}",
+        "--verifier-env",
+        "SKILL_EVAL_JUDGE_MODEL=${LLM_JUDGE_MODEL}",
+        "--yes"
+    ],
+    "n_concurrent_trials": 1,
+    "retry": {
+        "max_retries": 0,
+        "exclude_exceptions": [
+            "VerifierOutputParseError",
+            "AgentTimeoutError",
+            "RewardFileEmptyError",
+            "VerifierTimeoutError",
+            "RewardFileNotFoundError"
+        ],
+        "wait_multiplier": 1.0,
+        "min_wait_sec": 1.0,
+        "max_wait_sec": 60.0
+    },
+    "trials": [
+        {
+            "task": {
+                "name": "GEN-006",
+                "type": "local",
+                "digest": "sha256:fd9a2d6dbd8e7f7e56f49287cc1f9ed0dfd6f7069d6e7adab90d306fff14a752",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-006"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-001",
+                "type": "local",
+                "digest": "sha256:939124a416a78bb311a381949d1ec11926a192db92ea4050b5de01de4511ab19",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-008",
+                "type": "local",
+                "digest": "sha256:ad051c391c821af3743bb84f2cf8e953c19bfa2da3ea3ba1b01f11818b42eaf7",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-008"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-NEG-001",
+                "type": "local",
+                "digest": "sha256:75129898a7e83b10b4fd08ee237ca5e7713d5fff13f2870ce25dda719ad3dcff",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-NEG-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-009",
+                "type": "local",
+                "digest": "sha256:9294a4446a7e0df823735f18039fd260e562b41c87af2eeccf5db1e23bc89802",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-009"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-007",
+                "type": "local",
+                "digest": "sha256:3d6f13f8083c65b5fde139a9973dce4cc0ab980548b93889e11b1355d65f81b8",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-007"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-002",
+                "type": "local",
+                "digest": "sha256:480762fcf344cfcd178743b4f12bf168b783ea85c31e221a562a58e3ece0e600",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-005",
+                "type": "local",
+                "digest": "sha256:8514817b07bb3e84b6d46c0540c11f0bcc7cbd35dfec9486ff8ddc38e418f19b",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-005"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-004",
+                "type": "local",
+                "digest": "sha256:67bb191adf551f66068305e4880a0698457a5b5c7dc2a42f82147c87f16f698a",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-004"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-003",
+                "type": "local",
+                "digest": "sha256:90604dee8152681c994f1714f1cd443ad33c2416ecc33f243d23eb88e8b57c2a",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-003"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-HNEG-002",
+                "type": "local",
+                "digest": "sha256:c4634907100bcaced5307008cf8dc8960e7cdf584f8af1b406277622117b30aa",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-HNEG-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-010",
+                "type": "local",
+                "digest": "sha256:3285537561aa7ed01f18a3d023a056d2899997991662e7792419b60b5f3e0b0c",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-010"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-006",
+                "type": "local",
+                "digest": "sha256:fd9a2d6dbd8e7f7e56f49287cc1f9ed0dfd6f7069d6e7adab90d306fff14a752",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-006"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-001",
+                "type": "local",
+                "digest": "sha256:939124a416a78bb311a381949d1ec11926a192db92ea4050b5de01de4511ab19",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-008",
+                "type": "local",
+                "digest": "sha256:ad051c391c821af3743bb84f2cf8e953c19bfa2da3ea3ba1b01f11818b42eaf7",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-008"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-NEG-001",
+                "type": "local",
+                "digest": "sha256:75129898a7e83b10b4fd08ee237ca5e7713d5fff13f2870ce25dda719ad3dcff",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-NEG-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-009",
+                "type": "local",
+                "digest": "sha256:9294a4446a7e0df823735f18039fd260e562b41c87af2eeccf5db1e23bc89802",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-009"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-007",
+                "type": "local",
+                "digest": "sha256:3d6f13f8083c65b5fde139a9973dce4cc0ab980548b93889e11b1355d65f81b8",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-007"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-002",
+                "type": "local",
+                "digest": "sha256:480762fcf344cfcd178743b4f12bf168b783ea85c31e221a562a58e3ece0e600",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-005",
+                "type": "local",
+                "digest": "sha256:8514817b07bb3e84b6d46c0540c11f0bcc7cbd35dfec9486ff8ddc38e418f19b",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-005"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-004",
+                "type": "local",
+                "digest": "sha256:67bb191adf551f66068305e4880a0698457a5b5c7dc2a42f82147c87f16f698a",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-004"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-003",
+                "type": "local",
+                "digest": "sha256:90604dee8152681c994f1714f1cd443ad33c2416ecc33f243d23eb88e8b57c2a",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-003"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-HNEG-002",
+                "type": "local",
+                "digest": "sha256:c4634907100bcaced5307008cf8dc8960e7cdf584f8af1b406277622117b30aa",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-HNEG-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "GEN-010",
+                "type": "local",
+                "digest": "sha256:3285537561aa7ed01f18a3d023a056d2899997991662e7792419b60b5f3e0b0c",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-generation/20260928_084021_49989_6398737131f7/_harbor-tasks/opencode/without/GEN-010"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "import_path": "skillevaluator.tier3.harbor.local_agents:SkillEvaluatorGatewayOpenCode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        }
+    ]
+}

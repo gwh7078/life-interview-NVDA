@@ -1,0 +1,216 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 0.75,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-001",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'story-completion'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'story-completion' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly recognizes insufficient story memory, maintains the interviewing status, and returns three relevant, high-value follow-up questions in the exact requested JSON format.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u5f53\u524d Story Memory \u660e\u663e\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing/pending\uff0c\u5e76\u63d0\u51fa\u5c11\u91cf\u9ad8\u4ef7\u503c\u95ee\u9898\uff0c\u800c\u975e\u76f4\u63a5\u5b8c\u6210\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u9ad8\u70e7\u65f6\u4f53\u6e29\u5927\u6982\u662f\u591a\u5c11\uff1f\",\"\u5e26\u75c5\u8003\u8bd5\u65f6\u8eab\u4f53\u96be\u53d7\u5417\uff1f\",\"\u5bb6\u91cc\u77e5\u9053\u4f60\u53d1\u70e7\u540e\u600e\u4e48\u505a\u7684\uff1f\"]}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u8bc6\u522b\u5f53\u524d\u8bb0\u5fc6\u4ec5\u5305\u542b\u6781\u7b80\u4e8b\u5b9e\u3001\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing \u72b6\u6001\uff0c\u63d0\u51fa 3 \u4e2a\u7b26\u5408\u7ea6\u675f\uff08\u5355\u53e5\u3001\u4ee5\u95ee\u53f7\u7ed3\u5c3e\u3001\u957f\u5ea6\u5408\u89c4\uff09\u7684\u9ad8\u4ef7\u503c\u8ffd\u95ee\uff0c\u4e14\u4e25\u683c\u53ea\u8fd4\u56de\u4e86\u8981\u6c42\u7684 JSON \u5bf9\u8c61\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-001.input\uff0c\u6267\u884c story.completion\uff0c\u53ea\u8fd4\u56de {\"status\":\"...\",\"gaps\":[...]}\uff1b\u9884\u671f\u8bc6\u522b Story Memory \u4e0d\u8db3\uff0c\u4fdd\u6301 interviewing/pending\uff0c\u5e76\u63d0\u51fa\u5c11\u91cf\u9ad8\u4ef7\u503c\u95ee\u9898\u800c\u975e\u76f4\u63a5\u5b8c\u6210\u3002",
+      "end_state": "Agent \u8fd4\u56de {\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u9ad8\u70e7\u65f6\u4f53\u6e29\u5927\u6982\u662f\u591a\u5c11\uff1f\",\"\u5e26\u75c5\u8003\u8bd5\u65f6\u8eab\u4f53\u96be\u53d7\u5417\uff1f\",\"\u5bb6\u91cc\u77e5\u9053\u4f60\u53d1\u70e7\u540e\u600e\u4e48\u505a\u7684\uff1f\"]}",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u5f53\u524d Story Memory \u660e\u663e\u4e0d\u8db3\u4ee5\u72ec\u7acb\u6210\u6587\uff0c\u4fdd\u6301 interviewing/pending\uff0c\u5e76\u63d0\u51fa\u5c11\u91cf\u9ad8\u4ef7\u503c\u95ee\u9898\uff0c\u800c\u975e\u76f4\u63a5\u5b8c\u6210\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_185ad878e5a149f2b3c88e23",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u9ad8\u70e7\u65f6\u4f53\u6e29\u5927\u6982\u662f\u591a\u5c11\uff1f\",\"\u5e26\u75c5\u8003\u8bd5\u65f6\u8eab\u4f53\u96be\u53d7\u5417\uff1f\",\"\u5bb6\u91cc\u77e5\u9053\u4f60\u53d1\u70e7\u540e\u600e\u4e48\u505a\u7684\uff1f\"]}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 0.75,
+      "reason": "Agent followed format and status constraints but failed to prioritize core narrative gaps over minor details.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Status is 'interviewing', not 'complete'."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "There are 3 gaps, all direct questions to the user."
+        },
+        {
+          "step": 3,
+          "passed": false,
+          "reason": "Questions focus on temperature detail and physical sensation rather than prioritizing core gaps like exam results, turning points, or meaning; only one touches on help."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Each gap asks a single direction and ends with a question mark."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "status \u4e0d\u5f97\u4e3a complete"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "gaps \u5fc5\u987b\u4e3a1\u52303\u4e2a\u9ad8\u4ef7\u503c\u3001\u53ef\u76f4\u63a5\u95ee\u7528\u6237\u7684\u95ee\u9898"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u95ee\u9898\u5e94\u4f18\u5148\u8865\u4eba\u7269\u5e2e\u52a9\u3001\u8003\u8bd5\u7ed3\u679c\u3001\u7ecf\u5386\u8f6c\u6298\u6216\u610f\u4e49\u7b49\u6838\u5fc3\u7f3a\u53e3\uff0c\u800c\u4e0d\u662f\u65e0\u5173\u7ec6\u679d\u672b\u8282"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u6bcf\u4e2a gap \u53ea\u80fd\u95ee\u4e00\u4e2a\u65b9\u5411\u5e76\u4ee5\u95ee\u53f7\u7ed3\u5c3e"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\"status\":\"interviewing\",\"gaps\":[\"\u53d1\u9ad8\u70e7\u65f6\u4f53\u6e29\u5927\u6982\u662f\u591a\u5c11\uff1f\",\"\u5e26\u75c5\u8003\u8bd5\u65f6\u8eab\u4f53\u96be\u53d7\u5417\uff1f\",\"\u5bb6\u91cc\u77e5\u9053\u4f60\u53d1\u70e7\u540e\u600e\u4e48\u505a\u7684\uff1f\"]}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

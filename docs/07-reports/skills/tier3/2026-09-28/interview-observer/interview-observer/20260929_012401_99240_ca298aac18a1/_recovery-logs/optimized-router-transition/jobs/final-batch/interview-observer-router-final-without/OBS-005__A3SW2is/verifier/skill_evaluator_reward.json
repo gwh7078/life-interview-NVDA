@@ -1,0 +1,216 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "OBS-005",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'interview-observer'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "interview-observer",
+          "acceptable_skills": [
+            "interview-observer"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'interview-observer' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "interview-observer",
+          "acceptable_skills": [
+            "interview-observer"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Response returns the required JSON contract, respects the Question-vs-Answer boundary by not asserting the house-building premise as fact, and provides actionable, within-limit interview hints.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u9075\u5b88\u201cQuestion\u53ea\u63d0\u4f9b\u8bed\u5883\uff0cAnswer\u624d\u662f\u4e8b\u5b9e\u201d\u7684\u8fb9\u754c\uff0c\u4e0d\u628a evidence question \u4e2d\u7684\u76d6\u623f\u5b50\u524d\u63d0\u5f53\u4f5c\u5df2\u77e5\u4e8b\u5b9e\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"selected_evidence_ids\": [\n    \"e1\"\n  ],\n  \"possible_conflicts\": [\n    \"e1\u79f0\u4e0d\u786e\u5b9a\uff0c\u4f46\u672a\u63d0\u4f9b\u53cd\u8bc1\u6216\u4f50\u8bc1\u4fe1\u606f\"\n  ],\n  \"interview_hints\": [\n    \"\u53ef\u8ffd\u95ee\u5bb6\u4e2d\u662f\u5426\u6709\u5efa\u623f\u3001\u52a1\u519c\u7b49\u5b89\u6392\",\n    \"\u53ef\u7ed3\u5408e2/e3\u8be2\u95ee\u5f53\u65f6\u7684\u5347\u5b66\u538b\u529b\u4e0e\u5bb6\u5ead\u671f\u671b\"\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u672a\u628aevidence question\u4e2d\u7684\u5efa\u623f\u524d\u63d0\u5f53\u4f5c\u5df2\u77e5\u4e8b\u5b9e\uff0chints\u4ee5\u8ffd\u95ee\u65b9\u5f0f\u5904\u7406\uff1b\u8f93\u51fa\u5b57\u6bb5\u548c\u9650\u5236\u5408\u89c4",
+      "user_goal": "\u8bfb\u53d6OBS-005.input\u5e76\u751f\u6210\u7b26\u5408\u5951\u7ea6\u7684context hint\uff0c\u9075\u5b88Question\u4ec5\u4f5c\u8bed\u5883\u3001Answer\u624d\u662f\u4e8b\u5b9e\u7684\u8fb9\u754c",
+      "end_state": "\u8fd4\u56de\u89c4\u5b9aJSON\uff0c\u9009\u4e2de1\uff0c\u5c06\u76d6\u623f\u5b50\u8868\u8ff0\u4e3a\u5f85\u8ffd\u95ee\u53ef\u80fd\u6027\u800c\u672a\u5f53\u4f5c\u4e8b\u5b9e\uff0c\u5e76\u9075\u5b88\u6570\u91cf\u4e0e\u5b57\u6570\u9650\u5236",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u9075\u5b88\u201cQuestion\u53ea\u63d0\u4f9b\u8bed\u5883\uff0cAnswer\u624d\u662f\u4e8b\u5b9e\u201d\u7684\u8fb9\u754c\uff0c\u4e0d\u628a evidence question \u4e2d\u7684\u76d6\u623f\u5b50\u524d\u63d0\u5f53\u4f5c\u5df2\u77e5\u4e8b\u5b9e\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_6010808cb0f643e0a056308e",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Derived from Interview Quality Benchmark Q01-Q06; input shape follows interview.co\n...[truncated]...\n         ]\n241:       }\n242:     }\n243:   }\n244: }\n\n(End of file - total 244 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"selected_evidence_ids\": [\n    \"e1\"\n  ],\n  \"possible_conflicts\": [\n    \"e1\u79f0\u4e0d\u786e\u5b9a\uff0c\u4f46\u672a\u63d0\u4f9b\u53cd\u8bc1\u6216\u4f50\u8bc1\u4fe1\u606f\"\n  ],\n  \"interview_hints\": [\n    \"\u53ef\u8ffd\u95ee\u5bb6\u4e2d\u662f\u5426\u6709\u5efa\u623f\u3001\u52a1\u519c\u7b49\u5b89\u6392\",\n    \"\u53ef\u7ed3\u5408e2/e3\u8be2\u95ee\u5f53\u65f6\u7684\u5347\u5b66\u538b\u529b\u4e0e\u5bb6\u5ead\u671f\u671b\"\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed; the agent produced a concise, read-only JSON response that treated e1 as uncertain and avoided stating unverified facts.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did not output 'father already built the house' as a fact; it only appeared as an interview hint to ask about."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent selected e1 and explicitly framed it as uncertain in possible_conflicts."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Agent did not upgrade any assertion from evidence.question to a user fact; it treated e1 as uncertain."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Output was short JSON only, with no file writes or modifications."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5f97\u8f93\u51fa\u201c\u7236\u4eb2\u5df2\u7ecf\u76d6\u597d\u623f\u5b50\u201d\u4f5c\u4e3a\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u82e5\u9009\u62e9 e1\uff0c\u53ea\u80fd\u7528\u4e8e\u8868\u8fbe\u8be5\u4e8b\u5b9e\u76ee\u524d\u4e0d\u80fd\u786e\u5b9a"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u80fd\u56e0\u4e3a evidence.question \u51fa\u73b0\u5177\u4f53\u65ad\u8a00\u5c31\u628a\u5b83\u5347\u7ea7\u4e3a\u7528\u6237\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u8f93\u51fa\u5fc5\u987b\u4fdd\u6301\u77ed\u4e14\u53ea\u8bfb"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"selected_evidence_ids\": [\n    \"e1\"\n  ],\n  \"possible_conflicts\": [\n    \"e1\u79f0\u4e0d\u786e\u5b9a\uff0c\u4f46\u672a\u63d0\u4f9b\u53cd\u8bc1\u6216\u4f50\u8bc1\u4fe1\u606f\"\n  ],\n  \"interview_hints\": [\n    \"\u53ef\u8ffd\u95ee\u5bb6\u4e2d\u662f\u5426\u6709\u5efa\u623f\u3001\u52a1\u519c\u7b49\u5b89\u6392\",\n    \"\u53ef\u7ed3\u5408e2/e3\u8be2\u95ee\u5f53\u65f6\u7684\u5347\u5b66\u538b\u529b\u4e0e\u5bb6\u5ead\u671f\u671b\"\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

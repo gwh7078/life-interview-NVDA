@@ -1,0 +1,29 @@
+{
+  "id": "GEN-HNEG-002",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-HNEG-002。这是一个 Story 完成度判断任务：判断资料是否足够独立成文并给出最多三个高价值后续问题；不要生成故事正文。",
+  "files": [
+    "files/cases.json"
+  ],
+  "expected_output": "识别这是 story.completion 类任务，而不是 story-generation；不应生成回忆录正文。",
+  "assertions": [
+    "不应选择 story-generation",
+    "不得输出 content 正文结构",
+    "应围绕 complete/interviewing 和 gaps 做判断",
+    "不得因为输入包含完整故事事实就误触发写作 Skill"
+  ],
+  "expected_skill": null,
+  "question": "读取 /workspace/input/cases.json 中 GEN-HNEG-002。这是一个 Story 完成度判断任务：判断资料是否足够独立成文并给出最多三个高价值后续问题；不要生成故事正文。",
+  "ground_truth": "识别这是 story.completion 类任务，而不是 story-generation；不应生成回忆录正文。",
+  "expected_behavior": [
+    "不应选择 story-generation",
+    "不得输出 content 正文结构",
+    "应围绕 complete/interviewing 和 gaps 做判断",
+    "不得因为输入包含完整故事事实就误触发写作 Skill"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

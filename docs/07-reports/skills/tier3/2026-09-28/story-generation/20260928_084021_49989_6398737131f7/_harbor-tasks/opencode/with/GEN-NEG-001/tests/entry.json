@@ -1,0 +1,22 @@
+{
+  "id": "GEN-NEG-001",
+  "prompt": "请判断下面这个故事资料是否已经足够成文，并给出最多三个下一步采访问题：只知道我大二住过一次院。",
+  "expected_output": "这是完成度规划任务，不应调用 story-generation；应返回完成度判断/下一问而不是回忆录正文。",
+  "assertions": [
+    "不应选择 story-generation",
+    "不应生成回忆录正文"
+  ],
+  "expected_skill": null,
+  "question": "请判断下面这个故事资料是否已经足够成文，并给出最多三个下一步采访问题：只知道我大二住过一次院。",
+  "ground_truth": "这是完成度规划任务，不应调用 story-generation；应返回完成度判断/下一问而不是回忆录正文。",
+  "expected_behavior": [
+    "不应选择 story-generation",
+    "不应生成回忆录正文"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

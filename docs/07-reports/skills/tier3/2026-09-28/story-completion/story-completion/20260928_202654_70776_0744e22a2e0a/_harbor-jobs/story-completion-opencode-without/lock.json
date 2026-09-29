@@ -1,0 +1,881 @@
+{
+    "schema_version": 1,
+    "created_at": "2026-09-28T20:26:58.747987Z",
+    "harbor": {
+        "version": "0.13.2",
+        "is_editable": false
+    },
+    "invocation": [
+        "/Users/gwh/.local/share/uv/tools/skillevaluator/bin/harbor",
+        "run",
+        "--job-name",
+        "story-completion-opencode-without",
+        "--n-attempts",
+        "2",
+        "--n-concurrent",
+        "1",
+        "-p",
+        "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without",
+        "--extra-docker-compose",
+        "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+        "-a",
+        "opencode",
+        "--environment-import-path",
+        "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "--jobs-dir",
+        "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-jobs",
+        "--model",
+        "openai/qwen3.6-35b-a3b",
+        "--timeout-multiplier",
+        "2.0",
+        "--verifier-env",
+        "LLM_JUDGE_MODEL=${LLM_JUDGE_MODEL}",
+        "--verifier-env",
+        "SKILL_EVAL_JUDGE_MODEL=${LLM_JUDGE_MODEL}",
+        "--yes"
+    ],
+    "n_concurrent_trials": 1,
+    "retry": {
+        "max_retries": 0,
+        "exclude_exceptions": [
+            "RewardFileNotFoundError",
+            "RewardFileEmptyError",
+            "VerifierOutputParseError",
+            "AgentTimeoutError",
+            "VerifierTimeoutError"
+        ],
+        "wait_multiplier": 1.0,
+        "min_wait_sec": 1.0,
+        "max_wait_sec": 60.0
+    },
+    "trials": [
+        {
+            "task": {
+                "name": "COMP-NEG-001",
+                "type": "local",
+                "digest": "sha256:3724eef51fe3c63d54b8d358347bfc50ded8df5c9eabbaf77e07fdd5e9bbe523",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-NEG-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-007",
+                "type": "local",
+                "digest": "sha256:57d879aed9ccec04ac4307e1470caf8d3d8b1df6baedba6df62e036a84ea0434",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-007"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-006",
+                "type": "local",
+                "digest": "sha256:fa0864c9a19c9e358f3debd7173b7a3cb2300f17edd13618fc207ab6d99f5406",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-006"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-001",
+                "type": "local",
+                "digest": "sha256:83f6400a26476a70334bce7c922bb17f53d88f825dfe43f3b4998f0473f3ec96",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-HNEG-002",
+                "type": "local",
+                "digest": "sha256:daba391df99de85585300990ee7b5670068c20a0935eadb151e5cb6631ca1562",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-HNEG-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-004",
+                "type": "local",
+                "digest": "sha256:043632a11d52c674eea9fddf04b743df9a1a763962473460cfadaa85adb42244",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-004"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-003",
+                "type": "local",
+                "digest": "sha256:91de989371973576ac1efcfd81f37ff87a172b400d67df46aca59d694a3ea12a",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-003"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-002",
+                "type": "local",
+                "digest": "sha256:0f057e5a3a7bb251f6004b1a7c8d9dfeb27ddbf1cec0bcff5d5de9ff43f3f383",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-005",
+                "type": "local",
+                "digest": "sha256:c4936fe3da0cbc93df9e28fc0dc009696bb3455d96add799dc5f508882d326ac",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-005"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-NEG-001",
+                "type": "local",
+                "digest": "sha256:3724eef51fe3c63d54b8d358347bfc50ded8df5c9eabbaf77e07fdd5e9bbe523",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-NEG-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-007",
+                "type": "local",
+                "digest": "sha256:57d879aed9ccec04ac4307e1470caf8d3d8b1df6baedba6df62e036a84ea0434",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-007"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-006",
+                "type": "local",
+                "digest": "sha256:fa0864c9a19c9e358f3debd7173b7a3cb2300f17edd13618fc207ab6d99f5406",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-006"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-001",
+                "type": "local",
+                "digest": "sha256:83f6400a26476a70334bce7c922bb17f53d88f825dfe43f3b4998f0473f3ec96",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-001"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-HNEG-002",
+                "type": "local",
+                "digest": "sha256:daba391df99de85585300990ee7b5670068c20a0935eadb151e5cb6631ca1562",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-HNEG-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-004",
+                "type": "local",
+                "digest": "sha256:043632a11d52c674eea9fddf04b743df9a1a763962473460cfadaa85adb42244",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-004"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-003",
+                "type": "local",
+                "digest": "sha256:91de989371973576ac1efcfd81f37ff87a172b400d67df46aca59d694a3ea12a",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-003"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-002",
+                "type": "local",
+                "digest": "sha256:0f057e5a3a7bb251f6004b1a7c8d9dfeb27ddbf1cec0bcff5d5de9ff43f3f383",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-002"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        },
+        {
+            "task": {
+                "name": "COMP-005",
+                "type": "local",
+                "digest": "sha256:c4936fe3da0cbc93df9e28fc0dc009696bb3455d96add799dc5f508882d326ac",
+                "source": "without",
+                "path": "/Users/gwh/.codex/worktrees/5f60/英伟达DGX黑客松/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without/COMP-005"
+            },
+            "timeout_multiplier": 2.0,
+            "agent": {
+                "name": "opencode",
+                "model_name": "openai/qwen3.6-35b-a3b",
+                "skills": [],
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {},
+                "mcp_servers": []
+            },
+            "skills": [],
+            "environment": {
+                "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+                "force_build": false,
+                "delete": true,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [
+                    "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+                ],
+                "env": {},
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "extra_docker_compose": [
+                {
+                    "path": "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml",
+                    "digest": "sha256:68d476594a60e10f2c8f942dfc1c47fa00d4fbfbeb59e66c13ead71a4b46cf47"
+                }
+            ],
+            "verifier": {
+                "env": {
+                    "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+                    "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+                },
+                "disable": false
+            }
+        }
+    ]
+}

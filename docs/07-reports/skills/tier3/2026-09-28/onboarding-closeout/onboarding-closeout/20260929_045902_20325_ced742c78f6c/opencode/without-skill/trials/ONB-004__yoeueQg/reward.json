@@ -1,0 +1,233 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-004",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'onboarding-closeout'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'onboarding-closeout' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response returns JSON without explanation and correctly treats the boarding-school period as a life stage and the river-crossing event as a pending story seed.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u533a\u5206\u7a33\u5b9a\u7684\u4eba\u751f\u9636\u6bb5\u4e0e\u53ef\u72ec\u7acb\u6210\u7bc7\u7684\u4e8b\u4ef6\uff0c\u628a\u4f4f\u6821\u5b66\u4e60\u4f5c\u4e3a\u9636\u6bb5\u3001\u8d9f\u6cad\u6cb3\u4f5c\u4e3a Story seed\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": null,\n    \"gender\": null,\n    \"birth_place\": null,\n    \"current_location\": null,\n    \"current_status\": null,\n    \"profile_summ\n...[truncated]...\nfs\": [\"source_2\", \"source_3\"],\n          \"status\": \"pending\"\n        }\n      ]\n    }\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u533a\u5206\u4e86\u7a33\u5b9a\u7684\u4eba\u751f\u9636\u6bb5\u4e0e\u53ef\u72ec\u7acb\u6210\u7bc7\u7684\u4e8b\u4ef6\uff1a\u5c06\u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\u6c42\u5b66\uff081980-1983\uff09\u4f5c\u4e3a life stage\uff0c\u5c06\u8d9f\u6cad\u6cb3\u7ecf\u5386\u4f5c\u4e3a status=pending \u7684 Story seed \u653e\u5165\u8be5\u9636\u6bb5\uff0c\u7b26\u5408\u9884\u671f outcome \u5bf9\u9636\u6bb5\u4e0e\u6545\u4e8b\u79cd\u5b50\u7684\u5212\u5206\u8981\u6c42\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-004 \u7684 Task Context\uff0c\u5b8c\u6210 onboarding.closeout\uff0c\u8fd4\u56de\u7b26\u5408 output_contract \u7684 JSON \u4e14\u4e0d\u9644\u52a0\u89e3\u91ca\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86 JSON\uff0c\u5305\u542b\u4e00\u4e2a 1980-1983 \u5e74\u7684\u4eba\u751f\u9636\u6bb5\u300c\u8392\u53bf\u4e00\u4e2d\u300d\uff0c\u5e76\u5728\u5176\u4e2d\u5d4c\u5165\u4e86\u4e00\u7bc7\u72b6\u6001\u4e3a pending \u7684\u6545\u4e8b\u300c\u6d89\u6c34\u8fc7\u6cad\u6cb3\u300d\uff0c\u63cf\u8ff0\u4e86\u4f4f\u6821\u671f\u95f4\u5468\u672b\u7ed3\u4f34\u6b65\u884c\u56de\u5bb6\u3001\u624b\u62c9\u624b\u4e3e\u884c\u674e\u6e21\u6cad\u6cb3\u7684\u7ecf\u5386\uff1bprofile \u5b57\u6bb5\u5747\u4e3a null\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u533a\u5206\u7a33\u5b9a\u7684\u4eba\u751f\u9636\u6bb5\u4e0e\u53ef\u72ec\u7acb\u6210\u7bc7\u7684\u4e8b\u4ef6\uff0c\u628a\u4f4f\u6821\u5b66\u4e60\u4f5c\u4e3a\u9636\u6bb5\u3001\u8d9f\u6cad\u6cb3\u4f5c\u4e3a Story seed\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_d33077ee158f41faba771dd8",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": null,\n    \"gender\": null,\n    \"birth_place\": null,\n    \"current_location\": null,\n    \"current_status\": null,\n    \"profile_summ\n...[truncated]...\nfs\": [\"source_2\", \"source_3\"],\n          \"status\": \"pending\"\n        }\n      ]\n    }\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent created a life_stage titled '\u8392\u53bf\u4e00\u4e2d' with start_year 1980 and end_year 1983."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent generated a specific story '\u6d89\u6c34\u8fc7\u6cad\u6cb3' about crossing the river on a weekend."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Story summary retains facts: water waist-deep (\u6c34\u6df1\u6ca1\u8170), hand in hand (\u624b\u62c9\u624b), luggage held overhead (\u884c\u674e\u4e3e\u8fc7\u5934\u9876)."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "The story is a specific incident (crossing the river), not a general summary of the entire three-year high school life."
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "No fabricated details about number of people, weather, river width, or falling are present."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u5e94\u8bc6\u522b 1980\u20131983 \u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\u4e3a Life Stage \u6216\u7b49\u4ef7\u9636\u6bb5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u5e94\u751f\u6210\u4e0e\u201c\u5468\u672b\u8d9f\u8fc7\u9f50\u8170\u6df1\u6cad\u6cb3\u56de\u5bb6\u201d\u5bf9\u5e94\u7684\u5177\u4f53 Story seed"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "Story seed \u5e94\u4fdd\u7559\u6c34\u6ca1\u8fc7\u8170\u3001\u624b\u62c9\u624b\u3001\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u7b49\u5df2\u660e\u786e\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a\u6574\u4e2a\u4e09\u5e74\u9ad8\u4e2d\u751f\u6d3b\u53ea\u538b\u6210\u4e00\u4e2a\u7b3c\u7edf Story"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u4e0d\u5f97\u8865\u4eba\u6570\u3001\u5929\u6c14\u3001\u6cb3\u5bbd\u6216\u662f\u5426\u6709\u4eba\u6454\u5012"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": null,\n    \"birth_year\": null,\n    \"gender\": null,\n    \"birth_place\": null,\n    \"current_location\": null,\n    \"current_status\": null,\n    \"profile_summ\n...[truncated]...\nfs\": [\"source_2\", \"source_3\"],\n          \"status\": \"pending\"\n        }\n      ]\n    }\n  ]\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "ONB-004__yoeueQg",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "CLI"
+}

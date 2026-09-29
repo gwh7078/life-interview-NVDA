@@ -1,0 +1,283 @@
+{
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli",
+  "scores": {
+    "security": 1.0,
+    "skill_execution": 0.5,
+    "skill_efficiency": 0.6111,
+    "accuracy": 0.9222,
+    "goal_accuracy": 0.9444,
+    "behavior_check": 0.9167
+  },
+  "custom_scores": {},
+  "overall_score": 0.8157,
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "dimensions": {
+    "security": {
+      "score": 1.0,
+      "sources": {
+        "security": 1.0
+      }
+    },
+    "correctness": {
+      "score": 0.9222,
+      "sources": {
+        "accuracy": 1.0
+      }
+    },
+    "discoverability": {
+      "score": 0.5,
+      "sources": {
+        "skill_execution": 1.0
+      }
+    },
+    "effectiveness": {
+      "score": 0.9305,
+      "sources": {
+        "goal_accuracy": 0.5,
+        "behavior_check": 0.5
+      }
+    },
+    "efficiency": {
+      "score": 0.6111,
+      "sources": {
+        "skill_efficiency": 1.0
+      }
+    }
+  },
+  "num_trials": 18,
+  "pass_at_k": {
+    "k": 2,
+    "pass_threshold": 0.7,
+    "stop_on_pass": false,
+    "passed_cases": 9,
+    "failed_cases": 0,
+    "total_cases": 9,
+    "rate": 1.0,
+    "rate_interval": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "lower": 0.7008549515804559,
+      "upper": 1.0
+    },
+    "attempts_used": 18,
+    "max_attempts_possible": 18,
+    "avg_attempts_used": 2.0,
+    "extra_cases": [],
+    "cases": {
+      "OBS-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-001__MpsgPRS",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-001__WvB9s26",
+            "score": 0.6667,
+            "passed": false
+          }
+        ]
+      },
+      "OBS-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-002__TxJoLrm",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-002__fc6KifL",
+            "score": 0.75,
+            "passed": true
+          }
+        ]
+      },
+      "OBS-003": {
+        "passed": true,
+        "first_pass_attempt": 2,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-003__wi6YiVQ",
+            "score": 0.6417,
+            "passed": false
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-003__5qWGyS6",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "OBS-004": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.7917,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-004__gu2U8Rc",
+            "score": 0.7917,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-004__cPhGc89",
+            "score": 0.7917,
+            "passed": true
+          }
+        ]
+      },
+      "OBS-005": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-005__d9qYNbD",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-005__A3SW2is",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "OBS-006": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-006__oYNsj9s",
+            "score": 0.7917,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-006__zHupFfc",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "OBS-007": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-007__MYh9Nnc",
+            "score": 0.75,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-007__MxdXZCj",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      },
+      "OBS-NEG-001": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 1.0,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-NEG-001__eL3Xf9u",
+            "score": 1.0,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-NEG-001__eavr6Mx",
+            "score": 1.0,
+            "passed": true
+          }
+        ]
+      },
+      "OBS-HNEG-002": {
+        "passed": true,
+        "first_pass_attempt": 1,
+        "attempts_used": 2,
+        "attempts_skipped": 0,
+        "attempts_missing": 0,
+        "best_score": 0.8333,
+        "attempts": [
+          {
+            "attempt": 1,
+            "trial": "OBS-HNEG-002__bxfLhJs",
+            "score": 0.8333,
+            "passed": true
+          },
+          {
+            "attempt": 2,
+            "trial": "OBS-HNEG-002__s3DqWF3",
+            "score": 0.8333,
+            "passed": true
+          }
+        ]
+      }
+    }
+  },
+  "execution_status": "succeeded",
+  "execution_errors": [],
+  "expected_attempts": 18,
+  "scored_attempts": 18,
+  "job_failure": "",
+  "trial_failures": []
+}

@@ -1,0 +1,31 @@
+{
+  "id": "ONB-004",
+  "prompt": "读取 /workspace/input/cases.json 中 ONB-004 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "expected_output": "区分稳定的人生阶段与可独立成篇的事件，把住校学习作为阶段、趟沭河作为 Story seed。",
+  "assertions": [
+    "应识别 1980–1983 莒县一中住校为 Life Stage 或等价阶段",
+    "应生成与“周末趟过齐腰深沭河回家”对应的具体 Story seed",
+    "Story seed 应保留水没过腰、手拉手、行李举过头顶等已明确事实",
+    "不得把整个三年高中生活只压成一个笼统 Story",
+    "不得补人数、天气、河宽或是否有人摔倒"
+  ],
+  "expected_skill": "onboarding-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 ONB-004 的 Task Context，完成 onboarding.closeout。返回符合 output_contract 的 JSON；不要解释。",
+  "ground_truth": "区分稳定的人生阶段与可独立成篇的事件，把住校学习作为阶段、趟沭河作为 Story seed。",
+  "expected_behavior": [
+    "应识别 1980–1983 莒县一中住校为 Life Stage 或等价阶段",
+    "应生成与“周末趟过齐腰深沭河回家”对应的具体 Story seed",
+    "Story seed 应保留水没过腰、手拉手、行李举过头顶等已明确事实",
+    "不得把整个三年高中生活只压成一个笼统 Story",
+    "不得补人数、天气、河宽或是否有人摔倒"
+  ],
+  "evaluated_skill": "onboarding-closeout",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

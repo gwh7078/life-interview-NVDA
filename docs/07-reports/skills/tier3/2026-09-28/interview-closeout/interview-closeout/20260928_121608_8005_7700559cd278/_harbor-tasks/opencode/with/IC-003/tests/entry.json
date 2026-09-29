@@ -1,0 +1,31 @@
+{
+  "id": "IC-003",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-003。按 mode=story_continue 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "expected_output": "对旧 Agent Memory 中“七月初”的日期进行有证据的增量纠正，而不是整份重写或静默覆盖。",
+  "assertions": [
+    "memory_changes 必须包含对旧日期表述的 correct 或 refine",
+    "previous_text 必须直接对应旧 agent_memory 中被修改的原文片段",
+    "new_text 必须反映7月15日这一当前用户明确确认事实",
+    "source_message_ids 必须包含支持纠正的 m2",
+    "未被当前 Transcript 触及的“高考前一晚发烧”必须保留"
+  ],
+  "expected_skill": "interview-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 IC-003。按 mode=story_continue 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "ground_truth": "对旧 Agent Memory 中“七月初”的日期进行有证据的增量纠正，而不是整份重写或静默覆盖。",
+  "expected_behavior": [
+    "memory_changes 必须包含对旧日期表述的 correct 或 refine",
+    "previous_text 必须直接对应旧 agent_memory 中被修改的原文片段",
+    "new_text 必须反映7月15日这一当前用户明确确认事实",
+    "source_message_ids 必须包含支持纠正的 m2",
+    "未被当前 Transcript 触及的“高考前一晚发烧”必须保留"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

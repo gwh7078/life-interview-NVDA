@@ -1,0 +1,12 @@
+{
+  "metric_set": "skill-evaluator-default-v2",
+  "evaluation_status": "failed",
+  "entry_id": "COMP-002",
+  "evaluation_errors": {
+    "accuracy": "LLM judge error: Public provider call failed for step-5-preview: timed out"
+  },
+  "agent": "opencode",
+  "variant": "without_skill",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

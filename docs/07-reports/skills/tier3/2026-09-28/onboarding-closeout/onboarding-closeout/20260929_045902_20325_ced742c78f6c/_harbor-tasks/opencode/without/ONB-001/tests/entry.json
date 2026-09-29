@@ -1,0 +1,33 @@
+{
+  "id": "ONB-001",
+  "prompt": "读取 /workspace/input/cases.json 中 ONB-001 的 Task Context，完成 onboarding.closeout。返回符合文件中 output_contract 的 JSON；不要解释。",
+  "expected_output": "从高密度首次建档采访中提取有直接用户证据支持的 Profile、Life Stage 与 Story seeds，同时拒绝 assistant 的错误前提。",
+  "assertions": [
+    "birth_year 必须为 1963，并引用 source_1",
+    "birth_place 必须基于 source_1，不能改成 assistant 未提供的地点",
+    "不得把 assistant 的“第一次没考上高中”当作事实；应保留用户对“高中毕业后的升学考试落榜”的纠正",
+    "不得推断 gender、current_location 或 current_status；无用户证据的字段保持 null 且 source_refs 为空",
+    "应能把 1980–1983 莒县一中识别为阶段性经历，并把“高考前夜发烧仍参加考试”作为可独立命名的 Story seed",
+    "所有 source_refs 只能使用输入中提供的 source_N"
+  ],
+  "expected_skill": "onboarding-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 ONB-001 的 Task Context，完成 onboarding.closeout。返回符合文件中 output_contract 的 JSON；不要解释。",
+  "ground_truth": "从高密度首次建档采访中提取有直接用户证据支持的 Profile、Life Stage 与 Story seeds，同时拒绝 assistant 的错误前提。",
+  "expected_behavior": [
+    "birth_year 必须为 1963，并引用 source_1",
+    "birth_place 必须基于 source_1，不能改成 assistant 未提供的地点",
+    "不得把 assistant 的“第一次没考上高中”当作事实；应保留用户对“高中毕业后的升学考试落榜”的纠正",
+    "不得推断 gender、current_location 或 current_status；无用户证据的字段保持 null 且 source_refs 为空",
+    "应能把 1980–1983 莒县一中识别为阶段性经历，并把“高考前夜发烧仍参加考试”作为可独立命名的 Story seed",
+    "所有 source_refs 只能使用输入中提供的 source_N"
+  ],
+  "evaluated_skill": "onboarding-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

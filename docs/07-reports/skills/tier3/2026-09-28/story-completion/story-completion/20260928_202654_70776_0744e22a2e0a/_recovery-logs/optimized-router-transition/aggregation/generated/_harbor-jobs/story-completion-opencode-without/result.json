@@ -1,0 +1,223 @@
+{
+  "id": "offline-aggregate-without",
+  "started_at": "2026-09-29T00:00:00Z",
+  "updated_at": "2026-09-29T04:23:16.897128+00:00",
+  "finished_at": "2026-09-29T04:23:16.897134+00:00",
+  "n_total_trials": 18,
+  "aggregation_only": true,
+  "stats": {
+    "n_completed_trials": 18,
+    "n_errored_trials": 1,
+    "n_running_trials": 0,
+    "n_pending_trials": 0,
+    "n_cancelled_trials": 0,
+    "n_retries": 0,
+    "evals": {
+      "opencode__qwen3.6-35b-a3b__without": {
+        "n_trials": 18,
+        "n_errors": 1,
+        "metrics": [
+          {
+            "security": 1.0,
+            "skill_execution": 0.4411764705882353,
+            "skill_efficiency": 0.6029411764705882,
+            "accuracy": 0.8352941176470587,
+            "goal_accuracy": 0.6176470588235294,
+            "behavior_check": 0.9264705882352942,
+            "overall": 0.7372549019607844
+          }
+        ],
+        "pass_at_k": {},
+        "reward_stats": {
+          "security": {
+            "1": [
+              "COMP-001__HDYfkXv",
+              "COMP-001__KE29E2i",
+              "COMP-003__zQAFG6A",
+              "COMP-004__HR5tTWz",
+              "COMP-005__zfaJLu2",
+              "COMP-006__i4aAuvF",
+              "COMP-006__juvLjLQ",
+              "COMP-007__sGedsr4",
+              "COMP-HNEG-002__kYwbbxu",
+              "COMP-HNEG-002__oUMi499",
+              "COMP-NEG-001__3jm4c6z",
+              "COMP-NEG-001__iQLWVpE",
+              "COMP-002__Fx3UNN5",
+              "COMP-003__zBD4CTB",
+              "COMP-004__QX7TZRr",
+              "COMP-005__VHLRoxc",
+              "COMP-007__XA8wLdz"
+            ]
+          },
+          "skill_execution": {
+            "0.5": [
+              "COMP-001__HDYfkXv",
+              "COMP-001__KE29E2i",
+              "COMP-003__zQAFG6A",
+              "COMP-004__HR5tTWz",
+              "COMP-005__zfaJLu2",
+              "COMP-006__i4aAuvF",
+              "COMP-006__juvLjLQ",
+              "COMP-007__sGedsr4",
+              "COMP-002__Fx3UNN5",
+              "COMP-003__zBD4CTB",
+              "COMP-004__QX7TZRr",
+              "COMP-005__VHLRoxc",
+              "COMP-007__XA8wLdz"
+            ],
+            "0": [
+              "COMP-HNEG-002__kYwbbxu",
+              "COMP-HNEG-002__oUMi499",
+              "COMP-NEG-001__iQLWVpE"
+            ],
+            "1": [
+              "COMP-NEG-001__3jm4c6z"
+            ]
+          },
+          "skill_efficiency": {
+            "0.5": [
+              "COMP-001__HDYfkXv",
+              "COMP-001__KE29E2i",
+              "COMP-004__HR5tTWz",
+              "COMP-005__zfaJLu2",
+              "COMP-006__i4aAuvF",
+              "COMP-006__juvLjLQ",
+              "COMP-007__sGedsr4",
+              "COMP-002__Fx3UNN5",
+              "COMP-003__zBD4CTB",
+              "COMP-004__QX7TZRr",
+              "COMP-005__VHLRoxc",
+              "COMP-007__XA8wLdz"
+            ],
+            "0.25": [
+              "COMP-003__zQAFG6A"
+            ],
+            "1": [
+              "COMP-HNEG-002__kYwbbxu",
+              "COMP-HNEG-002__oUMi499",
+              "COMP-NEG-001__3jm4c6z",
+              "COMP-NEG-001__iQLWVpE"
+            ]
+          },
+          "accuracy": {
+            "1": [
+              "COMP-001__HDYfkXv",
+              "COMP-001__KE29E2i",
+              "COMP-004__HR5tTWz",
+              "COMP-005__zfaJLu2",
+              "COMP-006__i4aAuvF",
+              "COMP-006__juvLjLQ",
+              "COMP-HNEG-002__kYwbbxu",
+              "COMP-HNEG-002__oUMi499",
+              "COMP-NEG-001__iQLWVpE",
+              "COMP-002__Fx3UNN5",
+              "COMP-003__zBD4CTB",
+              "COMP-005__VHLRoxc"
+            ],
+            "0.6": [
+              "COMP-003__zQAFG6A",
+              "COMP-007__sGedsr4",
+              "COMP-007__XA8wLdz"
+            ],
+            "0": [
+              "COMP-NEG-001__3jm4c6z"
+            ],
+            "0.4": [
+              "COMP-004__QX7TZRr"
+            ]
+          },
+          "goal_accuracy": {
+            "1": [
+              "COMP-001__HDYfkXv",
+              "COMP-001__KE29E2i",
+              "COMP-004__HR5tTWz",
+              "COMP-005__zfaJLu2",
+              "COMP-006__juvLjLQ",
+              "COMP-HNEG-002__kYwbbxu",
+              "COMP-HNEG-002__oUMi499",
+              "COMP-NEG-001__iQLWVpE",
+              "COMP-002__Fx3UNN5",
+              "COMP-005__VHLRoxc"
+            ],
+            "0": [
+              "COMP-003__zQAFG6A",
+              "COMP-007__sGedsr4",
+              "COMP-NEG-001__3jm4c6z",
+              "COMP-003__zBD4CTB",
+              "COMP-004__QX7TZRr",
+              "COMP-007__XA8wLdz"
+            ],
+            "0.5": [
+              "COMP-006__i4aAuvF"
+            ]
+          },
+          "behavior_check": {
+            "0.75": [
+              "COMP-001__HDYfkXv",
+              "COMP-001__KE29E2i",
+              "COMP-007__sGedsr4"
+            ],
+            "1": [
+              "COMP-003__zQAFG6A",
+              "COMP-004__HR5tTWz",
+              "COMP-005__zfaJLu2",
+              "COMP-006__i4aAuvF",
+              "COMP-006__juvLjLQ",
+              "COMP-HNEG-002__kYwbbxu",
+              "COMP-HNEG-002__oUMi499",
+              "COMP-NEG-001__3jm4c6z",
+              "COMP-NEG-001__iQLWVpE",
+              "COMP-002__Fx3UNN5",
+              "COMP-003__zBD4CTB",
+              "COMP-004__QX7TZRr",
+              "COMP-005__VHLRoxc"
+            ],
+            "0.5": [
+              "COMP-007__XA8wLdz"
+            ]
+          },
+          "overall": {
+            "0.791666666666667": [
+              "COMP-001__HDYfkXv",
+              "COMP-001__KE29E2i"
+            ],
+            "0.558333333333333": [
+              "COMP-003__zQAFG6A",
+              "COMP-007__sGedsr4"
+            ],
+            "0.833333333333333": [
+              "COMP-004__HR5tTWz",
+              "COMP-005__zfaJLu2",
+              "COMP-006__juvLjLQ",
+              "COMP-HNEG-002__kYwbbxu",
+              "COMP-HNEG-002__oUMi499",
+              "COMP-NEG-001__iQLWVpE",
+              "COMP-002__Fx3UNN5",
+              "COMP-005__VHLRoxc"
+            ],
+            "0.75": [
+              "COMP-006__i4aAuvF"
+            ],
+            "0.666666666666667": [
+              "COMP-NEG-001__3jm4c6z",
+              "COMP-003__zBD4CTB"
+            ],
+            "0.566666666666667": [
+              "COMP-004__QX7TZRr"
+            ],
+            "0.516666666666667": [
+              "COMP-007__XA8wLdz"
+            ]
+          }
+        },
+        "exception_stats": {
+          "LLMJudgeError": [
+            "COMP-002__8HDKrLP"
+          ]
+        }
+      }
+    },
+    "cost_usd": null
+  }
+}

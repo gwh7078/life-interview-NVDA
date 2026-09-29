@@ -1,0 +1,115 @@
+{
+    "id": "6e656ad2-b8a9-49b4-9bfd-ddd0c1e0af7f",
+    "started_at": "2026-09-29T12:44:30.787896",
+    "updated_at": "2026-09-29T12:53:03.615280",
+    "finished_at": "2026-09-29T12:53:03.615280",
+    "n_total_trials": 5,
+    "stats": {
+        "n_completed_trials": 5,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__without": {
+                "n_trials": 5,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 1.0,
+                        "behavior_check": 0.95,
+                        "goal_accuracy": 0.9,
+                        "overall": 0.8083199999999999,
+                        "security": 1.0,
+                        "skill_efficiency": 0.6,
+                        "skill_execution": 0.4
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "OBS-HNEG-002__s3DqWF3",
+                            "OBS-004__cPhGc89",
+                            "OBS-003__5qWGyS6",
+                            "OBS-002__fc6KifL",
+                            "OBS-005__A3SW2is"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.0": [
+                            "OBS-HNEG-002__s3DqWF3"
+                        ],
+                        "0.5": [
+                            "OBS-004__cPhGc89",
+                            "OBS-003__5qWGyS6",
+                            "OBS-002__fc6KifL",
+                            "OBS-005__A3SW2is"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "1.0": [
+                            "OBS-HNEG-002__s3DqWF3"
+                        ],
+                        "0.5": [
+                            "OBS-004__cPhGc89",
+                            "OBS-003__5qWGyS6",
+                            "OBS-002__fc6KifL",
+                            "OBS-005__A3SW2is"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "OBS-HNEG-002__s3DqWF3",
+                            "OBS-004__cPhGc89",
+                            "OBS-003__5qWGyS6",
+                            "OBS-002__fc6KifL",
+                            "OBS-005__A3SW2is"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "1.0": [
+                            "OBS-HNEG-002__s3DqWF3",
+                            "OBS-004__cPhGc89",
+                            "OBS-003__5qWGyS6",
+                            "OBS-005__A3SW2is"
+                        ],
+                        "0.5": [
+                            "OBS-002__fc6KifL"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "OBS-HNEG-002__s3DqWF3",
+                            "OBS-003__5qWGyS6",
+                            "OBS-002__fc6KifL",
+                            "OBS-005__A3SW2is"
+                        ],
+                        "0.75": [
+                            "OBS-004__cPhGc89"
+                        ]
+                    },
+                    "overall": {
+                        "0.8333": [
+                            "OBS-HNEG-002__s3DqWF3",
+                            "OBS-003__5qWGyS6",
+                            "OBS-005__A3SW2is"
+                        ],
+                        "0.7917": [
+                            "OBS-004__cPhGc89"
+                        ],
+                        "0.75": [
+                            "OBS-002__fc6KifL"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 86380,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 710,
+        "cost_usd": null
+    }
+}

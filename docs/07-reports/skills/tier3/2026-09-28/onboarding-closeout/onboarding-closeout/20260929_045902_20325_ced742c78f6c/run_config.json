@@ -1,0 +1,65 @@
+{
+  "config_file": "evals/config.yml",
+  "harbor": {
+    "environment": {
+      "value": "docker",
+      "source": "CLI"
+    },
+    "n_attempts": 2,
+    "stop_on_pass": false,
+    "n_concurrent": 2,
+    "timeout_multiplier": 1.0,
+    "base_image_mode": "disabled",
+    "jobs_retained": true
+  },
+  "provider": {
+    "name": "openai",
+    "model": "step-5-preview"
+  },
+  "judge": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "step-5-preview",
+    "source": "LLM_JUDGE_MODEL",
+    "override_applied": true,
+    "catalog_verification": "degraded"
+  },
+  "credential_validation": {
+    "status": "degraded",
+    "targets": [
+      {
+        "labels": [
+          "opencode"
+        ],
+        "provider": "openai",
+        "model": "qwen3.6-35b-a3b",
+        "status": "degraded",
+        "detail": "model catalog request failed: RemoteDisconnected"
+      },
+      {
+        "labels": [
+          "standard grader"
+        ],
+        "provider": "openai",
+        "model": "step-5-preview",
+        "status": "degraded",
+        "detail": "model catalog request failed: RemoteDisconnected"
+      }
+    ]
+  },
+  "task_source": "evals_json",
+  "grading": {
+    "mode": "default"
+  },
+  "agents": {
+    "opencode": {
+      "agent": "opencode",
+      "model": "openai/qwen3.6-35b-a3b",
+      "source": "CLI"
+    }
+  },
+  "evaluated_source": {
+    "repository": "gwh7078/life-interview-NVDA",
+    "commit": "b6ae58267e6b3e4b6f06926e11fe423bdba8a472"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli",
+  "scores": {},
+  "custom_scores": {},
+  "overall_score": null,
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "dimensions": {},
+  "num_trials": 17,
+  "pass_at_k": {},
+  "execution_status": "failed",
+  "execution_errors": [
+    "Harbor job did not complete successfully: 1 errored",
+    "Unscoreable reward in COMP-002__UhkPzpz: Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out",
+    "Missing scored attempts for cases: COMP-002",
+    "Scored attempt coverage is 17/18"
+  ],
+  "expected_attempts": 18,
+  "scored_attempts": 17,
+  "job_failure": "Harbor job did not complete successfully: 1 errored",
+  "trial_failures": [
+    {
+      "trial": "COMP-002__UhkPzpz",
+      "reason": "Required judge evaluation failed: accuracy: LLM judge error: Public provider call failed for step-5-preview: timed out"
+    }
+  ]
+}

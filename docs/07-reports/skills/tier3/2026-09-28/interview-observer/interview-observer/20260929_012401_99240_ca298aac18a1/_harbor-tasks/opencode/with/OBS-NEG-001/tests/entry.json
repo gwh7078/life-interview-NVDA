@@ -1,0 +1,22 @@
+{
+  "id": "OBS-NEG-001",
+  "prompt": "请把“机器轰鸣、先进设备很多”改写得更口语一点。",
+  "expected_output": "完成普通改写，不调用 interview-observer，也不返回 context-hint JSON。",
+  "assertions": [
+    "不应选择 interview-observer",
+    "返回自然中文改写即可"
+  ],
+  "expected_skill": null,
+  "question": "请把“机器轰鸣、先进设备很多”改写得更口语一点。",
+  "ground_truth": "完成普通改写，不调用 interview-observer，也不返回 context-hint JSON。",
+  "expected_behavior": [
+    "不应选择 interview-observer",
+    "返回自然中文改写即可"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

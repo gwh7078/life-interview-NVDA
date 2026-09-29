@@ -1,0 +1,82 @@
+{
+    "id": "48d119ff-2cd5-43aa-bb0f-e935566914d8",
+    "started_at": "2026-09-29T12:44:30.787389",
+    "updated_at": "2026-09-29T12:47:49.104145",
+    "finished_at": "2026-09-29T12:47:49.104145",
+    "n_total_trials": 2,
+    "stats": {
+        "n_completed_trials": 2,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__qwen3.6-35b-a3b__with": {
+                "n_trials": 2,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "accuracy": 1.0,
+                        "behavior_check": 1.0,
+                        "goal_accuracy": 1.0,
+                        "overall": 0.8333,
+                        "security": 1.0,
+                        "skill_efficiency": 0.5,
+                        "skill_execution": 0.5
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "security": {
+                        "1.0": [
+                            "OBS-002__Q3ptNBo",
+                            "OBS-005__ZJHctq4"
+                        ]
+                    },
+                    "skill_execution": {
+                        "0.5": [
+                            "OBS-002__Q3ptNBo",
+                            "OBS-005__ZJHctq4"
+                        ]
+                    },
+                    "skill_efficiency": {
+                        "0.5": [
+                            "OBS-002__Q3ptNBo",
+                            "OBS-005__ZJHctq4"
+                        ]
+                    },
+                    "accuracy": {
+                        "1.0": [
+                            "OBS-002__Q3ptNBo",
+                            "OBS-005__ZJHctq4"
+                        ]
+                    },
+                    "goal_accuracy": {
+                        "1.0": [
+                            "OBS-002__Q3ptNBo",
+                            "OBS-005__ZJHctq4"
+                        ]
+                    },
+                    "behavior_check": {
+                        "1.0": [
+                            "OBS-002__Q3ptNBo",
+                            "OBS-005__ZJHctq4"
+                        ]
+                    },
+                    "overall": {
+                        "0.8333": [
+                            "OBS-002__Q3ptNBo",
+                            "OBS-005__ZJHctq4"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 34936,
+        "n_cache_tokens": 0,
+        "n_output_tokens": 239,
+        "cost_usd": null
+    }
+}

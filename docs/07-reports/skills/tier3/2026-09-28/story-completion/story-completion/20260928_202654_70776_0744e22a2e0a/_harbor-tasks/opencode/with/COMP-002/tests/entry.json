@@ -1,0 +1,29 @@
+{
+  "id": "COMP-002",
+  "prompt": "读取 /workspace/input/cases.json 中 COMP-002.input，执行 story.completion。只返回规定 JSON。",
+  "expected_output": "识别事实链已足以支撑一篇独立文章，并删除已经被 Memory 回答的旧 gaps。",
+  "assertions": [
+    "status 应为 complete",
+    "不得继续保留“是谁送你去医院的？”或“你最后考了多少分？”",
+    "gaps 应为空或不再包含已明确回答的问题",
+    "不得因为还能继续闲聊就机械保持 interviewing"
+  ],
+  "expected_skill": "story-completion",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 COMP-002.input，执行 story.completion。只返回规定 JSON。",
+  "ground_truth": "识别事实链已足以支撑一篇独立文章，并删除已经被 Memory 回答的旧 gaps。",
+  "expected_behavior": [
+    "status 应为 complete",
+    "不得继续保留“是谁送你去医院的？”或“你最后考了多少分？”",
+    "gaps 应为空或不再包含已明确回答的问题",
+    "不得因为还能继续闲聊就机械保持 interviewing"
+  ],
+  "evaluated_skill": "story-completion",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

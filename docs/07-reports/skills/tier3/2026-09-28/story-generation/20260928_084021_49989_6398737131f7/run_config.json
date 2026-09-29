@@ -1,0 +1,65 @@
+{
+  "config_file": "evals/config.yml",
+  "harbor": {
+    "environment": {
+      "value": "docker",
+      "source": "cli"
+    },
+    "n_attempts": 2,
+    "stop_on_pass": false,
+    "n_concurrent": 2,
+    "timeout_multiplier": 2.0,
+    "base_image_mode": "disabled",
+    "jobs_retained": true
+  },
+  "provider": {
+    "name": "openai-compatible",
+    "model": "qwen3.6-35b-a3b"
+  },
+  "judge": {
+    "enabled": true,
+    "provider": "openai-compatible",
+    "model": "step-5-preview",
+    "source": "LLM_JUDGE_MODEL",
+    "override_applied": true,
+    "catalog_verification": "degraded"
+  },
+  "credential_validation": {
+    "status": "degraded",
+    "targets": [
+      {
+        "labels": [
+          "opencode"
+        ],
+        "provider": "openai-compatible",
+        "model": "qwen3.6-35b-a3b",
+        "status": "degraded",
+        "detail": "Model catalog probe did not verify runtime credentials; actual trial requests succeeded."
+      },
+      {
+        "labels": [
+          "standard grader"
+        ],
+        "provider": "openai-compatible",
+        "model": "step-5-preview",
+        "status": "degraded",
+        "detail": "Model catalog probe did not verify runtime credentials; actual trial judge requests succeeded after one timeout retry."
+      }
+    ]
+  },
+  "task_source": "evals_json",
+  "grading": {
+    "mode": "default"
+  },
+  "agents": {
+    "opencode": {
+      "agent": "opencode",
+      "model": "openai/qwen3.6-35b-a3b",
+      "source": "cli"
+    }
+  },
+  "evaluated_source": {
+    "repository": "gwh7078/life-interview-NVDA",
+    "commit": "0ac1e591f5db68bfdfad759bfb98ef43cd283579"
+  }
+}

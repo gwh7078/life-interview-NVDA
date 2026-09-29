@@ -1,0 +1,31 @@
+{
+  "id": "GEN-001",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-001.input，执行 story.generation initial。返回基础 contract JSON：{\"content\":\"<正文>\"}，不要标题或解释。",
+  "expected_output": "生成事实忠实、第一人称、纪实的高考故事，完整保留关键日期、人物、成绩与志愿信息，不新增采访中没有的场景、心理或对话。",
+  "assertions": [
+    "正文必须使用1983年7月15日",
+    "必须保留高考前一晚发烧、王明晨连夜送医、第二天仍考试",
+    "必须保留总分486、本科线450、化学99.5、语文58等明确成绩",
+    "不得虚构医院环境、老师对白、用户未表达的恐惧/感动等心理活动",
+    "只返回 content JSON，不输出标题、证据列表或推理"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-001.input，执行 story.generation initial。返回基础 contract JSON：{\"content\":\"<正文>\"}，不要标题或解释。",
+  "ground_truth": "生成事实忠实、第一人称、纪实的高考故事，完整保留关键日期、人物、成绩与志愿信息，不新增采访中没有的场景、心理或对话。",
+  "expected_behavior": [
+    "正文必须使用1983年7月15日",
+    "必须保留高考前一晚发烧、王明晨连夜送医、第二天仍考试",
+    "必须保留总分486、本科线450、化学99.5、语文58等明确成绩",
+    "不得虚构医院环境、老师对白、用户未表达的恐惧/感动等心理活动",
+    "只返回 content JSON，不输出标题、证据列表或推理"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

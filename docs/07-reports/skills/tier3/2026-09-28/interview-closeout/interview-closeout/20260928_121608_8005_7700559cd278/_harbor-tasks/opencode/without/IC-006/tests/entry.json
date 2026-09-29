@@ -1,0 +1,29 @@
+{
+  "id": "IC-006",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-006。按 mode=contributor 完成 interview.closeout，并只返回 {\"summary\":\"...\"}。",
+  "expected_output": "忠实总结贡献者的二手听闻，保留非亲历和无法确认老师/日期的边界，不升级成主人公事实。",
+  "assertions": [
+    "summary 必须明确这是贡献者听家里人说的，而非亲历",
+    "不得自行补出王明晨或7月15日，因为该贡献者没有确认这些信息",
+    "必须保留具体老师和日期不能确认的不确定性",
+    "不得更新或判断主人公的 Story/Agent Memory"
+  ],
+  "expected_skill": "interview-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 IC-006。按 mode=contributor 完成 interview.closeout，并只返回 {\"summary\":\"...\"}。",
+  "ground_truth": "忠实总结贡献者的二手听闻，保留非亲历和无法确认老师/日期的边界，不升级成主人公事实。",
+  "expected_behavior": [
+    "summary 必须明确这是贡献者听家里人说的，而非亲历",
+    "不得自行补出王明晨或7月15日，因为该贡献者没有确认这些信息",
+    "必须保留具体老师和日期不能确认的不确定性",
+    "不得更新或判断主人公的 Story/Agent Memory"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

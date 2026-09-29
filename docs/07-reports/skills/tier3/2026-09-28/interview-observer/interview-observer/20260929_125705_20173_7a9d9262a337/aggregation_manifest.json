@@ -1,0 +1,134 @@
+{
+  "kind": "offline-retained-trial-aggregation",
+  "generated_at": "2026-09-29T04:57:05.765943+00:00",
+  "skill": "interview-observer",
+  "evaluator_version": "0.3.0",
+  "agent_model": "openai/qwen3.6-35b-a3b",
+  "judge_model": "step-5-preview",
+  "judge_endpoint": "https://api.stepfun.com/step_plan/v1/chat/completions",
+  "cases": [
+    "OBS-001",
+    "OBS-002",
+    "OBS-003",
+    "OBS-004",
+    "OBS-005",
+    "OBS-006",
+    "OBS-007",
+    "OBS-NEG-001",
+    "OBS-HNEG-002"
+  ],
+  "attempts_per_case": 2,
+  "pass_threshold": 0.7,
+  "aggregation_model_calls": 0,
+  "original_harbor_job_stats": {
+    "with": {
+      "n_total_trials": null,
+      "n_completed_trials": 17,
+      "n_errored_trials": 1,
+      "n_pending_trials": 1,
+      "n_cancelled_trials": 1
+    },
+    "without": {
+      "n_total_trials": null,
+      "n_completed_trials": 16,
+      "n_errored_trials": 2,
+      "n_pending_trials": 2,
+      "n_cancelled_trials": 1
+    }
+  },
+  "conditions": {
+    "with": {
+      "aggregation_job": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/interview-observer/interview-observer/20260929_125705_20173_7a9d9262a337/_harbor-jobs/interview-observer-opencode-with",
+      "scored_trial_ids": [
+        "OBS-001__J5Hgnjb",
+        "OBS-001__ZWg7p7R",
+        "OBS-002__Q3ptNBo",
+        "OBS-002__QjZpnZi",
+        "OBS-003__HrjVb8B",
+        "OBS-003__nUAq5Z5",
+        "OBS-004__Kr5wHyx",
+        "OBS-004__uPxsMak",
+        "OBS-005__ZJHctq4",
+        "OBS-005__amgVVzK",
+        "OBS-006__AbnEaZx",
+        "OBS-006__FDcomMg",
+        "OBS-007__9npTnvL",
+        "OBS-007__epKFyYX",
+        "OBS-HNEG-002__8aoxMHv",
+        "OBS-HNEG-002__iyZyh43",
+        "OBS-NEG-001__5PHB2w6",
+        "OBS-NEG-001__5o7AVUf"
+      ],
+      "scored_count": 18,
+      "expected_count": 18,
+      "per_case_scored_attempts": {
+        "OBS-001": 2,
+        "OBS-002": 2,
+        "OBS-003": 2,
+        "OBS-004": 2,
+        "OBS-005": 2,
+        "OBS-006": 2,
+        "OBS-007": 2,
+        "OBS-HNEG-002": 2,
+        "OBS-NEG-001": 2
+      },
+      "excluded_unscoreable_trials": [],
+      "status": "complete"
+    },
+    "without": {
+      "aggregation_job": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/interview-observer/interview-observer/20260929_125705_20173_7a9d9262a337/_harbor-jobs/interview-observer-opencode-without",
+      "scored_trial_ids": [
+        "OBS-001__MpsgPRS",
+        "OBS-001__WvB9s26",
+        "OBS-002__TxJoLrm",
+        "OBS-002__fc6KifL",
+        "OBS-003__5qWGyS6",
+        "OBS-003__wi6YiVQ",
+        "OBS-004__cPhGc89",
+        "OBS-004__gu2U8Rc",
+        "OBS-005__A3SW2is",
+        "OBS-005__d9qYNbD",
+        "OBS-006__oYNsj9s",
+        "OBS-006__zHupFfc",
+        "OBS-007__MYh9Nnc",
+        "OBS-007__MxdXZCj",
+        "OBS-HNEG-002__bxfLhJs",
+        "OBS-HNEG-002__s3DqWF3",
+        "OBS-NEG-001__eL3Xf9u",
+        "OBS-NEG-001__eavr6Mx"
+      ],
+      "scored_count": 18,
+      "expected_count": 18,
+      "per_case_scored_attempts": {
+        "OBS-001": 2,
+        "OBS-002": 2,
+        "OBS-003": 2,
+        "OBS-004": 2,
+        "OBS-005": 2,
+        "OBS-006": 2,
+        "OBS-007": 2,
+        "OBS-HNEG-002": 2,
+        "OBS-NEG-001": 2
+      },
+      "excluded_unscoreable_trials": [
+        {
+          "source_job": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/interview-observer/interview-observer/20260929_012401_99240_ca298aac18a1/_harbor-jobs/interview-observer-opencode-without",
+          "trial": "OBS-004__A9piD2f",
+          "reason": "Required judge evaluation failed: behavior_check: LLM judge error: Public provider call failed for step-5-preview: <urlopen error [Errno -3] Temporary failure in name resolution>",
+          "score": null
+        }
+      ],
+      "status": "complete"
+    }
+  },
+  "prior_incomplete_recovery_job": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/interview-observer/interview-observer/20260929_012401_99240_ca298aac18a1/_recovery-logs/optimized-router-transition/jobs/interview-observer-recovery-router-OBS-004",
+  "extra_successful_trial_excluded_by_attempt_cap": {
+    "condition": "without",
+    "trial_id": "OBS-005__aXp5QTB",
+    "source_job": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/interview-observer/interview-observer/20260929_012401_99240_ca298aac18a1/_recovery-logs/optimized-router-transition/jobs/final-batch-parallel/interview-observer-router-final-without-OBS-005-parallel",
+    "case_id": "OBS-005",
+    "overall_score": 0.7666666666666666,
+    "reason": "The planned final batch already produced the second OBS-005 score; preserve this extra run without changing the official two-attempt protocol."
+  },
+  "status": "COMPLETE: 18 scored attempts in each condition; excluded execution/Judge errors were not scored as zero"
+}

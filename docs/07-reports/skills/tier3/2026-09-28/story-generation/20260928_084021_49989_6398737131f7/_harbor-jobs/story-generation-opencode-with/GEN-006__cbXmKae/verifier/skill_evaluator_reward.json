@@ -1,0 +1,347 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 0.8334,
+  "accuracy": 0.8,
+  "goal_accuracy": 0.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "GEN-006",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Activated via Skill tool: story-generation",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "story-generation",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "story-generation"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Correct workflow order"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Agent correctly routed to story-generation only",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": [],
+          "skills_read": [
+            "Skill(story-generation)"
+          ]
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 0.6667,
+        "reason": "6/9 productive calls (67%)"
+      }
+    },
+    "accuracy": {
+      "score": 0.8,
+      "reason": "Uses story-generation and returns the requested JSON content, but the content misattributes the July 15 confirmation to a record rather than the user's explicit confirmation and omits the required source caveat.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": false,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u4ee5\u540e\u7eed\u7528\u6237\u660e\u786e\u786e\u8ba4\u76847\u670815\u65e5\u8986\u76d6\u65e9\u5148\u201c\u4e03\u6708\u521d\u201d\u7684\u6a21\u7cca\u8bb0\u5fc6\uff0c\u4e14\u4e0d\u628a assistant \u7684\u8bdd\u672c\u8eab\u5f53\u4e8b\u5b9e\u6765\u6e90\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/9",
+          "excerpt": "```json\n{\"content\":\"1983\u5e74\u9ad8\u8003\u90a3\u5929\u662f7\u670815\u65e5\u3002\u8fd9\u4e2a\u65e5\u671f\u6211\u4e4b\u524d\u4e00\u76f4\u8bb0\u4e0d\u786e\u5207\uff0c\u9690\u7ea6\u89c9\u5f97\u662f\u4e03\u6708\u521d\uff0c\u4f46\u5177\u4f53\u54ea\u4e00\u5929\u8bf4\u4e0d\u51c6\u3002\u540e\u6765\u770b\u5230\u8bb0\u5f55\u91cc\u5199\u7684\u662f7\u670815\u65e5\uff0c\u6211\u624d\u786e\u5b9a\u4e0b\u6765\u3002\"}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 0.0,
+      "reason": "\u6b63\u6587\u867d\u91c7\u7528\u4e867\u670815\u65e5\u5e76\u63d0\u53ca\u65e9\u524d\u201c\u4e03\u6708\u521d\u201d\u4e0d\u786e\u5b9a\uff0c\u4f46\u628a\u786e\u5b9a\u4f9d\u636e\u5199\u6210\u201c\u770b\u5230\u8bb0\u5f55\u91cc\u5199\u7684\u662f7\u670815\u65e5\u201d\uff0c\u5e76\u975e\u540e\u7eed\u7528\u6237\u660e\u786e\u786e\u8ba4\uff0c\u5b58\u5728\u628a assistant \u63d0\u4f9b\u7684\u8bb0\u5f55\u4fe1\u606f\u5f53\u4f5c\u4e8b\u5b9e\u6765\u6e90\u7684\u98ce\u9669\uff0c\u8fdd\u53cd\u8bc1\u636e\u8fb9\u754c\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d GEN-006.input\uff0c\u6267\u884c story.generation initial\uff0c\u8fd4\u56de {\"content\":\"<\u6b63\u6587>\"}\uff1b\u4e8b\u5b9e\u4e0a\u5e94\u4ee5\u540e\u7eed\u7528\u6237\u660e\u786e\u786e\u8ba4\u76847\u670815\u65e5\u8986\u76d6\u65e9\u5148\u201c\u4e03\u6708\u521d\u201d\u7684\u6a21\u7cca\u8bb0\u5fc6\uff0c\u4e14\u4e0d\u628a assistant \u7684\u8bdd\u672c\u8eab\u5f53\u4e8b\u5b9e\u6765\u6e90\u3002",
+      "end_state": "Agent \u8fd4\u56de\u5e76\u5199\u5165\u4e86 content\uff1a\u201c1983\u5e74\u9ad8\u8003\u90a3\u5929\u662f7\u670815\u65e5\u3002\u8fd9\u4e2a\u65e5\u671f\u6211\u4e4b\u524d\u4e00\u76f4\u8bb0\u4e0d\u786e\u5207\uff0c\u9690\u7ea6\u89c9\u5f97\u662f\u4e03\u6708\u521d\uff0c\u4f46\u5177\u4f53\u54ea\u4e00\u5929\u8bf4\u4e0d\u51c6\u3002\u540e\u6765\u770b\u5230\u8bb0\u5f55\u91cc\u5199\u7684\u662f7\u670815\u65e5\uff0c\u6211\u624d\u786e\u5b9a\u4e0b\u6765\u3002\u201d",
+      "method": "custom",
+      "provider": "openai-compatible",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u4ee5\u540e\u7eed\u7528\u6237\u660e\u786e\u786e\u8ba4\u76847\u670815\u65e5\u8986\u76d6\u65e9\u5148\u201c\u4e03\u6708\u521d\u201d\u7684\u6a21\u7cca\u8bb0\u5fc6\uff0c\u4e14\u4e0d\u628a assistant \u7684\u8bdd\u672c\u8eab\u5f53\u4e8b\u5b9e\u6765\u6e90\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "skill: skill",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"name\": \"story-generation\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/3/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/root/.config/opencode/skills/story-generation/references/chinese-memoir-style.md\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "glob: /workspace",
+          "json_pointer": "/steps/4/tool_calls/0",
+          "path": "/workspace",
+          "excerpt": "/workspace"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "glob: /workspace",
+          "json_pointer": "/steps/4/tool_calls/1",
+          "path": "/workspace",
+          "excerpt": "/workspace"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: ls /workspace/",
+          "json_pointer": "/steps/5/tool_calls/0",
+          "excerpt": "ls /workspace/"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: ls /workspace/repo/ 2>/dev/null || echo \"empty or doesn't exist\"",
+          "json_pointer": "/steps/6/tool_calls/0",
+          "excerpt": "ls /workspace/repo/ 2>/dev/null || echo \"empty or doesn't exist\""
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "bash: ls /workspace/output/ 2>/dev/null && ls /workspace/skills/ 2>/dev/null",
+          "json_pointer": "/steps/7/tool_calls/0",
+          "path": "/workspace/output/",
+          "excerpt": "ls /workspace/output/ 2>/dev/null && ls /workspace/skills/ 2>/dev/null"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "write: write",
+          "json_pointer": "/steps/8/tool_calls/0",
+          "excerpt": "{\"content\": \"{\\\"content\\\":\\\"1983\\u5e74\\u9ad8\\u8003\\u90a3\\u5929\\u662f7\\u670815\\u65e5\\u3002\\u8fd9\\u4e2a\\u65e5\\u671f\\u6211\\u4e4b\\u524d\\u4e00\\u76f4\\u8bb0\\u4e0d\\u786e\\u5207\\uff0c\\u9690\\u7ea6\\u\n...[truncated]...\nc\\u6211\\u624d\\u786e\\u5b9a\\u4e0b\\u6765\\u3002\\\"}\", \"filePath\": \"/workspace/output/GEN-006.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_592fbf5757094160b075aacf",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary facts: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06 and \u8d44\n...[truncated]...\n_count\": 3\n379:       }\n380:     }\n381:   }\n382: }\n\n(End of file - total 382 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_bae5b867145043f0b24e4e94",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "<skill_content name=\"story-generation\">\n# Skill: story-generation\n\n# \u6545\u4e8b\u6210\u7a3f / Writer\n\n## Purpose\n\n\u4ec5\u7528\u4e8e story.generation\u3002\u6839\u636e\u540e\u7aef\u63d0\u4f9b\u7684\u8bc1\u636e\u751f\u6210\u6216\u4fee\u6539\u4e2d\u6587\u56de\u5fc6\u5f55\u6b63\u6587\uff1b\u4e0d\u8d1f\u8d23\u6807\u9898\u3001\u7248\u672c\u6216\u6765\u6e90\u5143\u6570\u636e\u3002\n\n\u6309\u89e6\u53d1\u4f7f\u7528\u53c2\u8003\uff1a\u751f\u6210\u6216\u4fee\u6539\u4e2d\u6587\u6b63\u6587\u65f6\u9075\u5faa [`referenc\n...[truncated]...\nlls/story-generation/references/chinese-memoir-style.md</file>\n</skill_files>\n</skill_content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_e25eb7fb8007415da5b40250",
+          "json_pointer": "/steps/3/observation/results/0",
+          "excerpt": "<path>/root/.config/opencode/skills/story-generation/references/chinese-memoir-style.md</path>\n<type>file</type>\n<content>\n1: # \u4e2d\u6587\u56de\u5fc6\u5f55\u6587\u98ce\u6307\u5357\n2: \n3: \u672c\u6587\u4ef6\u7528\u4e8e\u7ea6\u675f\u4e2d\u6587\u56de\u5fc6\u5f55\u6210\u7a3f\u7684\u8bed\u8a00\u8d28\u91cf\u3002\n4: \n5: \u5b83\u662f `story-gene\n...[truncated]...\n\u7ea7\u3001\u4e0d\u786e\u5b9a\u6027\u3001revision \u7ed3\u6784\u3001\u7528\u6237\u58f0\u7ebf\u548c\u975e\u865a\u6784\u8fb9\u754c\u7684\u5177\u4f53\u8bbe\u8ba1\uff0c\u6309\u4eba\u751f\u91c7\u8bbf\u5c40\u81ea\u8eab\u4ea7\u54c1\u89c4\u5219\u6267\u884c\u3002\n\n(End of file - total 545 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_63e9184776bb40c987dba45c",
+          "json_pointer": "/steps/4/observation/results/0",
+          "excerpt": "No files found"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_31acae6841b64866a43bce28",
+          "json_pointer": "/steps/4/observation/results/1",
+          "excerpt": "No files found"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_6e1593988fe1480ea0c16b10",
+          "json_pointer": "/steps/5/observation/results/0",
+          "excerpt": "input\noutput\nrepo\nskills"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_d6757b720d494080952d4bac",
+          "json_pointer": "/steps/6/observation/results/0",
+          "excerpt": "(no output)"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_06c599daa7f94f8eb4e54e41",
+          "json_pointer": "/steps/7/observation/results/0",
+          "excerpt": "story-generation"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_8cd27c71ecf9472282b1a3f0",
+          "json_pointer": "/steps/8/observation/results/0",
+          "excerpt": "Wrote file successfully."
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/9",
+          "excerpt": "```json\n{\"content\":\"1983\u5e74\u9ad8\u8003\u90a3\u5929\u662f7\u670815\u65e5\u3002\u8fd9\u4e2a\u65e5\u671f\u6211\u4e4b\u524d\u4e00\u76f4\u8bb0\u4e0d\u786e\u5207\uff0c\u9690\u7ea6\u89c9\u5f97\u662f\u4e03\u6708\u521d\uff0c\u4f46\u5177\u4f53\u54ea\u4e00\u5929\u8bf4\u4e0d\u51c6\u3002\u540e\u6765\u770b\u5230\u8bb0\u5f55\u91cc\u5199\u7684\u662f7\u670815\u65e5\uff0c\u6211\u624d\u786e\u5b9a\u4e0b\u6765\u3002\"}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "\u6240\u6709\u9884\u671f\u884c\u4e3a\u5747\u5df2\u8fbe\u6210\uff1a\u65e5\u671f\u6b63\u786e\u4f7f\u75287\u670815\u65e5\uff0c\u672a\u56fa\u5b88\u9519\u8bef\u65e5\u671f\uff0c\u4f53\u73b0\u4e86\u540e\u7eed\u786e\u8ba4\u4f18\u5148\uff0c\u4e14\u672a\u6df7\u5165 assistant \u63d0\u793a\u8fc7\u7a0b\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "\u6b63\u6587\u660e\u786e\u5199\u51fa\u9ad8\u8003\u65e5\u671f\u662f7\u670815\u65e5\uff0c\u5e76\u5728\u540e\u6587\u518d\u6b21\u786e\u8ba4\u8bb0\u5f55\u91cc\u5199\u7684\u662f7\u670815\u65e5\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "\u867d\u7136\u63d0\u5230\u8fc7\u53bb\u2018\u9690\u7ea6\u89c9\u5f97\u662f\u4e03\u6708\u521d\u2019\uff0c\u4f46\u8fd9\u662f\u4f5c\u4e3a\u6b64\u524d\u4e0d\u786e\u5b9a\u7684\u8bb0\u5fc6\u6765\u5199\uff0c\u6700\u7ec8\u786e\u8ba4\u5e76\u91c7\u7528\u7684\u65e5\u671f\u662f7\u670815\u65e5\uff0c\u5e76\u672a\u7ee7\u7eed\u5199\u6210\u4e03\u6708\u521d\u62167\u67087\u65e5\u3002"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "\u901a\u8fc7\u2018\u540e\u6765\u770b\u5230\u8bb0\u5f55\u91cc\u5199\u7684\u662f7\u670815\u65e5\uff0c\u6211\u624d\u786e\u5b9a\u4e0b\u6765\u2019\u4f53\u73b0\u4e86\u7528\u6237\u540e\u7eed\u786e\u8ba4\u4f18\u5148\u4e8e\u65e9\u671f\u6a21\u7cca\u8bb0\u5fc6\u3002"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "\u6b63\u6587\u4ec5\u63cf\u8ff0\u7528\u6237\u672c\u4eba\u5bf9\u9ad8\u8003\u65e5\u671f\u7684\u8bb0\u5fc6\u4e0e\u786e\u8ba4\u8fc7\u7a0b\uff0c\u672a\u5f15\u7528\u6216\u865a\u6784 assistant \u7684\u63d0\u793a\u8fc7\u7a0b\u4e3a\u4eba\u751f\u4e8b\u4ef6\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u6b63\u6587\u65e5\u671f\u5fc5\u987b\u662f7\u670815\u65e5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u7ee7\u7eed\u5199\u6210\u201c\u4e03\u6708\u521d\u201d\u62167\u67087\u65e5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u4f53\u73b0\u7528\u6237\u81ea\u5df1\u7684\u540e\u7eed\u786e\u8ba4\u4f18\u5148"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u5f15\u7528\u6216\u865a\u6784 assistant \u7684\u63d0\u793a\u8fc7\u7a0b\u4e3a\u4eba\u751f\u4e8b\u4ef6"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "file_change",
+          "label": "write: write",
+          "json_pointer": "/steps/8/tool_calls/0",
+          "excerpt": "{\"content\": \"{\\\"content\\\":\\\"1983\\u5e74\\u9ad8\\u8003\\u90a3\\u5929\\u662f7\\u670815\\u65e5\\u3002\\u8fd9\\u4e2a\\u65e5\\u671f\\u6211\\u4e4b\\u524d\\u4e00\\u76f4\\u8bb0\\u4e0d\\u786e\\u5207\\uff0c\\u9690\\u7ea6\\u\n...[truncated]...\nc\\u6211\\u624d\\u786e\\u5b9a\\u4e0b\\u6765\\u3002\\\"}\", \"filePath\": \"/workspace/output/GEN-006.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/9",
+          "excerpt": "```json\n{\"content\":\"1983\u5e74\u9ad8\u8003\u90a3\u5929\u662f7\u670815\u65e5\u3002\u8fd9\u4e2a\u65e5\u671f\u6211\u4e4b\u524d\u4e00\u76f4\u8bb0\u4e0d\u786e\u5207\uff0c\u9690\u7ea6\u89c9\u5f97\u662f\u4e03\u6708\u521d\uff0c\u4f46\u5177\u4f53\u54ea\u4e00\u5929\u8bf4\u4e0d\u51c6\u3002\u540e\u6765\u770b\u5230\u8bb0\u5f55\u91cc\u5199\u7684\u662f7\u670815\u65e5\uff0c\u6211\u624d\u786e\u5b9a\u4e0b\u6765\u3002\"}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

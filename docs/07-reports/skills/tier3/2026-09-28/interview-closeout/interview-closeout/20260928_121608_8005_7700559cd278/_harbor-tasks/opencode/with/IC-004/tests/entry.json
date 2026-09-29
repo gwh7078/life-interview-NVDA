@@ -1,0 +1,29 @@
+{
+  "id": "IC-004",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-004。按 mode=story_continue 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "expected_output": "在保留全部旧有效记忆的基础上增量加入志愿选择和专业信息，不因新信息而丢失既有事实。",
+  "assertions": [
+    "旧 agent_memory 中日期、发烧、王明晨、考试和分数信息必须继续保留",
+    "应新增“填志愿主要听老师建议、报硅酸盐专业、收到通知书后才知道主要和水泥制造有关”等新事实",
+    "memory_changes 应体现 add/refine 等实际变化，不能把整份旧 Memory 当作被替换内容",
+    "不得把未触及的旧事实静默删除"
+  ],
+  "expected_skill": "interview-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 IC-004。按 mode=story_continue 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "ground_truth": "在保留全部旧有效记忆的基础上增量加入志愿选择和专业信息，不因新信息而丢失既有事实。",
+  "expected_behavior": [
+    "旧 agent_memory 中日期、发烧、王明晨、考试和分数信息必须继续保留",
+    "应新增“填志愿主要听老师建议、报硅酸盐专业、收到通知书后才知道主要和水泥制造有关”等新事实",
+    "memory_changes 应体现 add/refine 等实际变化，不能把整份旧 Memory 当作被替换内容",
+    "不得把未触及的旧事实静默删除"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

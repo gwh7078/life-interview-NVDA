@@ -1,0 +1,244 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-005",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Activated via Skill tool: story-completion",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "story-completion",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "story-completion"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Skill activated (no execution needed)"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Agent correctly routed to story-completion only",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": [],
+          "skills_read": [
+            "Skill(story-completion)"
+          ]
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "2/2 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly executes story.completion for COMP-005, recognizing the river-crossing story is complete and returning status=complete with no gaps, consistent with the expected answer.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fc7\u6cb3\u6545\u4e8b\u5df2\u7ecf\u5177\u5907\u5b8c\u6574\u53d9\u4e8b\u9aa8\u67b6\uff0c\u4e0d\u628a\u5929\u6c14\u3001\u6cb3\u5bbd\u3001\u5177\u4f53\u4eba\u6570\u7b49\u4f4e\u4ef7\u503c\u4e14\u88ab\u963b\u65ad\u7684\u672a\u77e5\u5f53\u6210\u5fc5\u987b\u8865\u9f50\u7684\u4fe1\u606f\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\":\"complete\",\"gaps\":[]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent correctly recognized the river-crossing story as having a complete narrative skeleton and returned status=complete with no gaps, exactly matching the expected outcome of not treating blocked low-value unknowns as necessary information.",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-005.input\uff0c\u6267\u884c story.completion\uff0c\u53ea\u8fd4\u56de\u89c4\u5b9a JSON",
+      "end_state": "\u8fd4\u56de LIFE_INTERVIEW_RESULT {\"status\":\"complete\",\"gaps\":[]}",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fc7\u6cb3\u6545\u4e8b\u5df2\u7ecf\u5177\u5907\u5b8c\u6574\u53d9\u4e8b\u9aa8\u67b6\uff0c\u4e0d\u628a\u5929\u6c14\u3001\u6cb3\u5bbd\u3001\u5177\u4f53\u4eba\u6570\u7b49\u4f4e\u4ef7\u503c\u4e14\u88ab\u963b\u65ad\u7684\u672a\u77e5\u5f53\u6210\u5fc5\u987b\u8865\u9f50\u7684\u4fe1\u606f\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "skill: skill",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "{\"name\": \"story-completion\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_ce497bbcbc6048b18b14c2b2",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_19602859a0c24ba19ad79e66",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "<skill_content name=\"story-completion\">\n# Skill: story-completion\n\n# Story Completion / Planner\n\n## Purpose\n\n\u53ea\u4f9d\u636e\u5f53\u524d Story Memory \u5224\u65ad\u5b8c\u6210\u72b6\u6001\u5e76\u7ef4\u62a4\u6709\u4ef7\u503c\u7684 gaps\u3002Use only for story.completion.\n\n## Input\n...[truncated]...\nis base directory.\nNote: file list is sampled.\n\n<skill_files>\n\n</skill_files>\n</skill_content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\":\"complete\",\"gaps\":[]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors observed: agent correctly returned complete status with no gaps and asked no blocked or low-value questions.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent returned status 'complete' with empty gaps, not judging insufficiency due to blocked low-value details."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "No questions were asked; gaps array is empty, so weather/river width/companions were not pursued."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "No follow-up questions of any kind were issued, so no synonymous evasion of blocked directions occurred."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Marking complete with no gaps reflects that the story can stand alone rather than requiring every detail."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "status \u5e94\u4e3a complete \u6216\u81f3\u5c11\u4e0d\u5f97\u56e0\u4e09\u4e2a blocked \u4f4e\u4ef7\u503c\u7ec6\u8282\u800c\u5224\u5b9a\u8d44\u6599\u4e0d\u8db3"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u8ffd\u95ee\u5929\u6c14\u3001\u6cb3\u5bbd\u6216\u540c\u884c\u4eba\u6570"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u5f97\u89c4\u907f blocked_directions \u7528\u8fd1\u4e49\u95ee\u6cd5\u7ee7\u7eed\u8ffd\u95ee"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u5e94\u4f53\u73b0\u201c\u80fd\u72ec\u7acb\u6210\u6587\u201d\u800c\u4e0d\u662f\u201c\u6240\u6709\u7ec6\u8282\u90fd\u5fc5\u987b\u77e5\u9053\u201d"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "LIFE_INTERVIEW_RESULT {\"status\":\"complete\",\"gaps\":[]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "COMP-005__WJZmtCv",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

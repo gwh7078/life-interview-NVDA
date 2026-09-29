@@ -1,0 +1,29 @@
+{
+  "id": "OBS-004",
+  "prompt": "读取 /workspace/input/cases.json 中 OBS-004.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "expected_output": "识别“第一次是否博山水泥厂”无法从证据确认；不得用后来去过博山/淄博反推第一次参观地点。",
+  "assertions": [
+    "selected_evidence_ids 必须包含 e1",
+    "不得根据 e2 推断第一次参观就是博山水泥厂或淄博水泥厂",
+    "possible_conflicts 或 interview_hints 应提示首次工厂名称未确认",
+    "可使用 e3 引导追问已确认的参观体验"
+  ],
+  "expected_skill": "interview-observer",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 OBS-004.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "ground_truth": "识别“第一次是否博山水泥厂”无法从证据确认；不得用后来去过博山/淄博反推第一次参观地点。",
+  "expected_behavior": [
+    "selected_evidence_ids 必须包含 e1",
+    "不得根据 e2 推断第一次参观就是博山水泥厂或淄博水泥厂",
+    "possible_conflicts 或 interview_hints 应提示首次工厂名称未确认",
+    "可使用 e3 引导追问已确认的参观体验"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

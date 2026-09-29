@@ -1,0 +1,249 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.25,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "GEN-007",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'story-generation'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'story-generation' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 0.5,
+        "reason": "1/2 productive calls (50%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The agent correctly performed the story.generation revision, removed unsupported details while preserving structure, and returned the required JSON content.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5220\u9664 selected_document \u4e2d\u65e0\u8bc1\u636e\u7684\u5927\u96e8\u3001\u6e4d\u6025\u3001\u5dee\u70b9\u51b2\u5012\u3001\u540c\u5b66\u6454\u5012\u7b49\u7ec6\u8282\uff0c\u540c\u65f6\u5c3d\u91cf\u4fdd\u7559\u539f\u6709\u4e24\u6bb5\u7ed3\u6784\u548c\u6545\u4e8b\u91cd\u70b9\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "{\"content\":\"\u4f4f\u6821\u90a3\u51e0\u5e74\uff0c\u6211\u5468\u672b\u5e38\u548c\u540c\u5b66\u8d70\u8def\u56de\u5bb6\uff0c\u8981\u8fc7\u6cad\u6cb3\u3002\u6709\u4e00\u6b21\u590f\u5b63\u6c5b\u671f\uff0c\u6c34\u6df1\u5df2\u7ecf\u6ca1\u8fc7\u8170\u3002\\n\\n\u5927\u5bb6\u4e92\u76f8\u6400\u6276\u3001\u624b\u62c9\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u3002\u73b0\u5728\u60f3\u8d77\u6765\u4ecd\u89c9\u5f97\u60ca\u9669\u3002\u5177\u4f53\u5929\u6c14\u3001\u6cb3\u6c34\u901f\u5ea6\u3001\u5230\u5e95\u51e0\u4e2a\u4eba\u3001\u6709\u6ca1\u6709\u4eba\u6454\u5012\uff0c\u6211\u90fd\u8bb0\u4e0d\u6e05\uff0c\u53ea\u80fd\u5199\u5230\u786e\u8ba4\u7684\u8fd9\u90e8\u5206\u3002\"}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u4fee\u8ba2\u7a3f\u5df2\u5220\u9664\u65e0\u8bc1\u636e\u7ec6\u8282\uff0c\u5e76\u4fdd\u6301\u4e24\u6bb5\u7ed3\u6784\u548c\u6838\u5fc3\u6545\u4e8b\u91cd\u70b9\uff0c\u7b26\u5408\u9884\u671f\u76ee\u6807\u3002",
+      "user_goal": "\u8bfb\u53d6 GEN-007.input \u5e76\u6267\u884c story.generation revision\uff0c\u8fd4\u56de\u4fee\u8ba2\u540e\u7684 {\"content\":\"...\"}",
+      "end_state": "\u8fd4\u56de\u4e86\u4e24\u6bb5\u5f0f\u4fee\u8ba2\u6b63\u6587\uff0c\u5220\u9664\u4e86\u5927\u96e8\u3001\u6e4d\u6025\u3001\u5dee\u70b9\u51b2\u5012\u3001\u540c\u5b66\u6454\u5012\u7b49\u65e0\u8bc1\u636e\u7ec6\u8282\uff0c\u4fdd\u7559\u4e86\u8fc7\u6cb3\u6545\u4e8b\u91cd\u70b9\u548c\u539f\u6709\u7ed3\u6784\u3002",
+      "method": "custom",
+      "provider": "openai-compatible",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5220\u9664 selected_document \u4e2d\u65e0\u8bc1\u636e\u7684\u5927\u96e8\u3001\u6e4d\u6025\u3001\u5dee\u70b9\u51b2\u5012\u3001\u540c\u5b66\u6454\u5012\u7b49\u7ec6\u8282\uff0c\u540c\u65f6\u5c3d\u91cf\u4fdd\u7559\u539f\u6709\u4e24\u6bb5\u7ed3\u6784\u548c\u6545\u4e8b\u91cd\u70b9\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "write: write",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"content\": \"{\\\"content\\\":\\\"\\u4f4f\\u6821\\u90a3\\u51e0\\u5e74\\uff0c\\u6211\\u5468\\u672b\\u5e38\\u548c\\u540c\\u5b66\\u8d70\\u8def\\u56de\\u5bb6\\uff0c\\u8981\\u8fc7\\u6cad\\u6cb3\\u3002\\u6709\\u4e00\\u6b21\\u5\n...[truncated]...\nu5199\\u5230\\u786e\\u8ba4\\u7684\\u8fd9\\u90e8\\u5206\\u3002\\\"}\", \"filePath\": \"/tmp/rev-gen007.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_011eab3aa3314916a00e6601",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary facts: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06 and \u8d44\n...[truncated]...\n_count\": 3\n379:       }\n380:     }\n381:   }\n382: }\n\n(End of file - total 382 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_3edd001ce90847579b5dd3e7",
+          "json_pointer": "/steps/2/observation/results/0",
+          "excerpt": "Wrote file successfully."
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "{\"content\":\"\u4f4f\u6821\u90a3\u51e0\u5e74\uff0c\u6211\u5468\u672b\u5e38\u548c\u540c\u5b66\u8d70\u8def\u56de\u5bb6\uff0c\u8981\u8fc7\u6cad\u6cb3\u3002\u6709\u4e00\u6b21\u590f\u5b63\u6c5b\u671f\uff0c\u6c34\u6df1\u5df2\u7ecf\u6ca1\u8fc7\u8170\u3002\\n\\n\u5927\u5bb6\u4e92\u76f8\u6400\u6276\u3001\u624b\u62c9\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u3002\u73b0\u5728\u60f3\u8d77\u6765\u4ecd\u89c9\u5f97\u60ca\u9669\u3002\u5177\u4f53\u5929\u6c14\u3001\u6cb3\u6c34\u901f\u5ea6\u3001\u5230\u5e95\u51e0\u4e2a\u4eba\u3001\u6709\u6ca1\u6709\u4eba\u6454\u5012\uff0c\u6211\u90fd\u8bb0\u4e0d\u6e05\uff0c\u53ea\u80fd\u5199\u5230\u786e\u8ba4\u7684\u8fd9\u90e8\u5206\u3002\"}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "\u6240\u6709\u9884\u671f\u884c\u4e3a\u5747\u5f97\u5230\u9075\u5b88\uff0c\u4fee\u8ba2\u6709\u6548\u6e05\u7406\u4e86\u65e0\u4f9d\u636e\u5185\u5bb9\u5e76\u4fdd\u7559\u4e86\u6838\u5fc3\u4e8b\u5b9e\u4e0e\u7ed3\u6784\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "\u8f93\u51fa\u4e2d\u672a\u51fa\u73b0\u201c\u5927\u96e8\u201d\u201c\u6cb3\u6c34\u6e4d\u6025\u201d\u201c\u5dee\u70b9\u88ab\u51b2\u5012\u201d\u201c\u540c\u5b66\u6454\u4e86\u4e00\u8de4\u201d\u7b49\u65e0\u4f9d\u636e\u8868\u8ff0\uff0c\u4e14\u660e\u786e\u6807\u6ce8\u5929\u6c14\u3001\u6c34\u901f\u3001\u4eba\u6570\u3001\u662f\u5426\u6454\u5012\u7b49\u7ec6\u8282\u8bb0\u4e0d\u6e05\uff0c\u5c5e\u4e8e\u5220\u9664\u6216\u6539\u5199\u65e0\u4f9d\u636e\u5185\u5bb9\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "\u4fdd\u7559\u4e86\u201c\u6c34\u6df1\u5df2\u7ecf\u6ca1\u8fc7\u8170\u201d\u201c\u4e92\u76f8\u6400\u6276\u3001\u624b\u62c9\u624b\u201d\u201c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u201d\u201c\u73b0\u5728\u60f3\u8d77\u6765\u4ecd\u89c9\u5f97\u60ca\u9669\u201d\u7b49\u5173\u952e\u4fe1\u606f\u3002"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "\u5bf9\u672a\u77e5\u5929\u6c14\u548c\u662f\u5426\u6454\u5012\u4f7f\u7528\u201c\u8bb0\u4e0d\u6e05\u201d\u8868\u8ff0\uff0c\u672a\u5c06\u5176\u5199\u6210\u786e\u5b9a\u4e8b\u5b9e\u3002"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "\u8f93\u51fa\u4fdd\u6301\u4e24\u6bb5\u7ed3\u6784\uff0c\u7b2c\u4e00\u6bb5\u4ea4\u4ee3\u80cc\u666f\u4e0e\u8fc7\u6cb3\u573a\u666f\uff0c\u7b2c\u4e8c\u6bb5\u63cf\u5199\u4e92\u52a9\u4e0e\u611f\u6168\uff0c\u53d9\u4e8b\u987a\u5e8f\u6e05\u6670\uff0c\u5c3d\u91cf\u7ef4\u6301\u539f\u6709\u7ed3\u6784\u3002"
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "\u6587\u7ae0\u4ecd\u4e3a\u539f\u6545\u4e8b\u7684\u4e2a\u4eba\u5316\u4fee\u8ba2\uff0c\u672a\u7528 Story Summary \u91cd\u5199\u6210\u622a\u7136\u4e0d\u540c\u7684\u5185\u5bb9\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u5fc5\u987b\u5220\u9664\u6216\u6539\u5199\u201c\u5927\u96e8\u201d\u201c\u6cb3\u6c34\u6e4d\u6025\u201d\u201c\u5dee\u70b9\u88ab\u51b2\u5012\u201d\u201c\u540c\u5b66\u6454\u4e86\u4e00\u8de4\u201d\u7b49\u5f53\u524d\u8bc1\u636e\u4e0d\u652f\u6301\u5185\u5bb9"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u5fc5\u987b\u4fdd\u7559\u6c34\u6ca1\u8fc7\u8170\u3001\u624b\u62c9\u624b/\u4e92\u76f8\u6400\u6276\u3001\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u3001\u73b0\u5728\u4ecd\u89c9\u60ca\u9669"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u5f97\u628a\u672a\u77e5\u5929\u6c14\u6216\u662f\u5426\u6454\u5012\u5199\u6210\u786e\u5b9a\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u9664\u6e05\u7406\u65e0\u4f9d\u636e\u5185\u5bb9\u5916\uff0c\u5e94\u5c3d\u91cf\u4fdd\u6301 selected_document \u7684\u4e24\u6bb5\u7ed3\u6784\u548c\u53d9\u4e8b\u987a\u5e8f"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u4e0d\u5f97\u7528 Story Summary \u91cd\u65b0\u642d\u4e00\u5957\u5b8c\u5168\u4e0d\u540c\u6587\u7ae0"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "file_change",
+          "label": "write: write",
+          "json_pointer": "/steps/2/tool_calls/0",
+          "excerpt": "{\"content\": \"{\\\"content\\\":\\\"\\u4f4f\\u6821\\u90a3\\u51e0\\u5e74\\uff0c\\u6211\\u5468\\u672b\\u5e38\\u548c\\u540c\\u5b66\\u8d70\\u8def\\u56de\\u5bb6\\uff0c\\u8981\\u8fc7\\u6cad\\u6cb3\\u3002\\u6709\\u4e00\\u6b21\\u5\n...[truncated]...\nu5199\\u5230\\u786e\\u8ba4\\u7684\\u8fd9\\u90e8\\u5206\\u3002\\\"}\", \"filePath\": \"/tmp/rev-gen007.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/3",
+          "excerpt": "{\"content\":\"\u4f4f\u6821\u90a3\u51e0\u5e74\uff0c\u6211\u5468\u672b\u5e38\u548c\u540c\u5b66\u8d70\u8def\u56de\u5bb6\uff0c\u8981\u8fc7\u6cad\u6cb3\u3002\u6709\u4e00\u6b21\u590f\u5b63\u6c5b\u671f\uff0c\u6c34\u6df1\u5df2\u7ecf\u6ca1\u8fc7\u8170\u3002\\n\\n\u5927\u5bb6\u4e92\u76f8\u6400\u6276\u3001\u624b\u62c9\u624b\uff0c\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u3002\u73b0\u5728\u60f3\u8d77\u6765\u4ecd\u89c9\u5f97\u60ca\u9669\u3002\u5177\u4f53\u5929\u6c14\u3001\u6cb3\u6c34\u901f\u5ea6\u3001\u5230\u5e95\u51e0\u4e2a\u4eba\u3001\u6709\u6ca1\u6709\u4eba\u6454\u5012\uff0c\u6211\u90fd\u8bb0\u4e0d\u6e05\uff0c\u53ea\u80fd\u5199\u5230\u786e\u8ba4\u7684\u8fd9\u90e8\u5206\u3002\"}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

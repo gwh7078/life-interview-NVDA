@@ -1,0 +1,35 @@
+{
+  "schema_version": "ATIF-v1.6",
+  "session_id": "ses_f1503c447ffeyRxLags0FuTO6d",
+  "agent": {
+    "name": "opencode",
+    "version": "1.18.33",
+    "model_name": "openai/qwen3.6-35b-a3b"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "user",
+      "message": "\u8bf7\u628a\u201c\u673a\u5668\u8f70\u9e23\u3001\u5148\u8fdb\u8bbe\u5907\u5f88\u591a\u201d\u6539\u5199\u5f97\u66f4\u53e3\u8bed\u4e00\u70b9\u3002\n"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-09-29T02:27:17.828000+00:00",
+      "source": "agent",
+      "model_name": "openai/qwen3.6-35b-a3b",
+      "message": "\u6539\u5199\u6210\uff1a\n\n- \u673a\u5668\u8f70\u9686\u9686\u54cd\u4e2a\u4e0d\u505c\uff0c\u5148\u8fdb\u8bbe\u5907\u7279\u522b\u7279\u522b\u591a",
+      "metrics": {
+        "prompt_tokens": 7105,
+        "completion_tokens": 21,
+        "extra": {
+          "reasoning_tokens": 53
+        }
+      }
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 7105,
+    "total_completion_tokens": 21,
+    "total_steps": 2
+  }
+}

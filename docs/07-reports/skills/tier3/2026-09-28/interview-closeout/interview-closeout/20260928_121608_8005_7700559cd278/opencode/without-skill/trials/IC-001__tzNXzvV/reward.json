@@ -1,0 +1,233 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "IC-001",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'interview-closeout'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'interview-closeout' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "interview-closeout",
+          "acceptable_skills": [
+            "interview-closeout"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly returns the story_create output contract JSON with a single Story Proposal containing the required details (July 15, fever, Wang Mingchen, exam scores) and cites user message IDs as evidence, directly matching the expected answer.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u628a\u9ad8\u8003\u91c7\u8bbf\u6574\u7406\u6210\u5355\u4e2a Story Proposal\uff0c\u4fdd\u7559\u7528\u6237\u540e\u7eed\u786e\u8ba4\u76847\u670815\u65e5\u3001\u53d1\u70e7\u3001\u738b\u660e\u6668\u3001\u8003\u8bd5\u4e0e\u5206\u6570\uff0c\u5e76\u4e25\u683c\u4f7f\u7528\u7528\u6237\u6d88\u606f\u4f5c\u4e3a\u8bc1\u636e\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"story\": {\n    \"title\": \"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\",\n    \"summary\": \"1983\u5e747\u670815\u65e5\u53c2\u52a0\u9ad8\u8003\u524d\u4e00\u665a\uff0c\u4e3b\u4eba\u516c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u4ed6\u53bb\u533b\u9662\u8f93\u6db2\uff0c\u4e00\u591c\u672a\u7720\u4ecd\u51c6\u65f6\u53c2\u52a0\u8003\u8bd5\u3002\u6700\u7ec8\u4ee5\u603b\u5206486\u5206\uff08\u672c\u79d1\u7ebf450\uff09\u88ab\u5f55\u53d6\uff0c\u5176\u4e2d\u5316\u5b6699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\",\n    \"agent_memory\":\n...[truncated]...\n\u5b6699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\",\n    \"source_message_ids\": [\n      \"m4\",\n      \"m5\",\n      \"m6\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u8f93\u51fa\u4e25\u683c\u5339\u914d story_create \u5951\u7ea6\u7ed3\u6784\uff0c\u4fdd\u7559\u4e86\u6240\u6709\u8981\u6c42\u7684\u5173\u952e\u4e8b\u5b9e\uff087\u670815\u65e5\u3001\u53d1\u70e7\u3001\u738b\u660e\u6668\u3001\u8003\u8bd5\u4e0e\u5206\u6570\uff09\uff0c\u5e76\u63d0\u4f9b\u4e86 source_message_ids \u4f5c\u4e3a\u8bc1\u636e\uff0c\u4e14\u4ec5\u8fd4\u56de\u8be5 mode \u7684\u57fa\u7840\u8f93\u51fa JSON\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d IC-001\uff0c\u6309 mode=story_create \u5b8c\u6210 interview.closeout\uff0c\u5e76\u53ea\u8fd4\u56de\u8be5 mode \u7684\u57fa\u7840\u8f93\u51fa contract JSON\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408 story_create \u5951\u7ea6\u7684 JSON\uff0c\u5305\u542b title\u3001summary\u3001agent_memory\u3001source_message_ids\uff0c\u5185\u5bb9\u6db5\u76d67\u670815\u65e5\u3001\u53d1\u70e7\u3001\u738b\u660e\u6668\u3001\u8003\u8bd5\u4e0e\u5206\u6570\u7b49\u5173\u952e\u4fe1\u606f\uff0c\u4e14\u672a\u8fd4\u56de\u5176\u4ed6 mode \u7684\u989d\u5916\u5185\u5bb9\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u628a\u9ad8\u8003\u91c7\u8bbf\u6574\u7406\u6210\u5355\u4e2a Story Proposal\uff0c\u4fdd\u7559\u7528\u6237\u540e\u7eed\u786e\u8ba4\u76847\u670815\u65e5\u3001\u53d1\u70e7\u3001\u738b\u660e\u6668\u3001\u8003\u8bd5\u4e0e\u5206\u6570\uff0c\u5e76\u4e25\u683c\u4f7f\u7528\u7528\u6237\u6d88\u606f\u4f5c\u4e3a\u8bc1\u636e\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_377f9aec593f43308084ab00",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06\",\n4:\n...[truncated]...\n_count\": 3\n399:       }\n400:     }\n401:   }\n402: }\n\n(End of file - total 402 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"story\": {\n    \"title\": \"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\",\n    \"summary\": \"1983\u5e747\u670815\u65e5\u53c2\u52a0\u9ad8\u8003\u524d\u4e00\u665a\uff0c\u4e3b\u4eba\u516c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u4ed6\u53bb\u533b\u9662\u8f93\u6db2\uff0c\u4e00\u591c\u672a\u7720\u4ecd\u51c6\u65f6\u53c2\u52a0\u8003\u8bd5\u3002\u6700\u7ec8\u4ee5\u603b\u5206486\u5206\uff08\u672c\u79d1\u7ebf450\uff09\u88ab\u5f55\u53d6\uff0c\u5176\u4e2d\u5316\u5b6699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\",\n    \"agent_memory\":\n...[truncated]...\n\u5b6699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\",\n    \"source_message_ids\": [\n      \"m4\",\n      \"m5\",\n      \"m6\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed; the agent correctly preserved the title, used the confirmed date, retained all key facts, cited only allowed user messages, and stayed within the output contract.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent preserved the story title '\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a' as the target_story_title from the input contract."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Both summary and agent_memory use the user-confirmed date 1983\u5e747\u670815\u65e5, not the guessed 7\u67087\u65e5 or vague '\u4e03\u6708\u521d'."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "All required key facts are retained: fever, Wang Mingchen sending to hospital, next-day exam, total score 486, chemistry 99.5, and Chinese 58."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "source_message_ids only references m4, m5, m6, which are within the allowed user-message set; assistant messages m1/m3 are not cited."
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "Output contains only the base contract fields with no extra Story seeds or out-of-contract fields."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u5fc5\u987b\u539f\u6837\u4fdd\u7559 target_story_title"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u65e5\u671f\u5e94\u91c7\u7528\u7528\u6237\u540e\u7eed\u660e\u786e\u786e\u8ba4\u76841983\u5e747\u670815\u65e5\uff0c\u800c\u4e0d\u662f assistant \u731c\u6d4b\u76847\u67087\u65e5\u6216\u7528\u6237\u65e9\u5148\u7684\u6a21\u7cca\u201c\u4e03\u6708\u521d\u201d"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "summary/agent_memory \u5e94\u4fdd\u7559\u53d1\u70e7\u3001\u738b\u660e\u6668\u9001\u533b\u3001\u7b2c\u4e8c\u5929\u8003\u8bd5\u3001486\u5206\u3001\u5316\u5b6699.5\u548c\u8bed\u658758\u7b49\u5173\u952e\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "source_message_ids \u53ea\u80fd\u5f15\u7528 role=user \u7684 m2/m4/m5/m6\uff1b\u4e0d\u5f97\u628a assistant \u7684 m1/m3 \u5f53\u8bc1\u636e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u4e0d\u5f97\u751f\u6210\u989d\u5916 Story seeds \u6216\u8f93\u51fa contract \u4e4b\u5916\u5b57\u6bb5"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"story\": {\n    \"title\": \"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\",\n    \"summary\": \"1983\u5e747\u670815\u65e5\u53c2\u52a0\u9ad8\u8003\u524d\u4e00\u665a\uff0c\u4e3b\u4eba\u516c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\u4ed6\u53bb\u533b\u9662\u8f93\u6db2\uff0c\u4e00\u591c\u672a\u7720\u4ecd\u51c6\u65f6\u53c2\u52a0\u8003\u8bd5\u3002\u6700\u7ec8\u4ee5\u603b\u5206486\u5206\uff08\u672c\u79d1\u7ebf450\uff09\u88ab\u5f55\u53d6\uff0c\u5176\u4e2d\u5316\u5b6699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\",\n    \"agent_memory\":\n...[truncated]...\n\u5b6699.5\u5206\uff0c\u8bed\u658758\u5206\u3002\",\n    \"source_message_ids\": [\n      \"m4\",\n      \"m5\",\n      \"m6\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "IC-001__tzNXzvV",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

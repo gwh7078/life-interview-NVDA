@@ -1,0 +1,221 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 0.6,
+  "goal_accuracy": 0.0,
+  "behavior_check": 0.5,
+  "overall": 0.5167,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "GEN-008",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'story-generation'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'story-generation' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "story-generation",
+          "acceptable_skills": [
+            "story-generation"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 0.6,
+      "reason": "Response correctly identifies the skill and returns a JSON with content, but it appears to embellish beyond evidence boundaries by adding narrative details (e.g., the military uniform, specific dialogue) contrary to the expected answer's requirement to only use selection, pacing, and existing facts. It also includes explanatory text outside the strict output contract.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": false,
+        "FACTUALLY_ACCURATE": false,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5728\u7528\u6237\u660e\u786e\u8981\u6c42\u201c\u66f4\u611f\u4eba\u5e76\u5408\u7406\u8865\u7ec6\u8282\u201d\u65f6\u4ecd\u575a\u6301\u8bc1\u636e\u8fb9\u754c\uff0c\u53ea\u901a\u8fc7\u9009\u6750\u3001\u8282\u594f\u548c\u5df2\u6709\u4e8b\u5b9e\u63d0\u5347\u611f\u67d3\u529b\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "Based on the GEN-008 input, executing **story.generation (initial mode)** with warm style:\n\n```json\n{\n  \"content\": \"\u5927\u4e8c\u90a3\u5e74\u51ac\u5929\uff0c\u6211\u8eba\u5728\u5f53\u5730\u90e8\u961f\u533b\u9662\u7684\u75c5\u5e8a\u4e0a\uff0c\u5341\u4e8c\u6307\u80a0\u7403\u90e8\u6e83\u75a1\u75bc\u5f97\u6211\u7ffb\u6765\u8986\u53bb\u7761\u4e0d\u597d\u3002\u65e5\u5b50\u6162\u5f97\u50cf\u51dd\u56fa\u4e86\u4e00\u6837\uff0c\u53ea\u6709\u7a97\u5916\u7684\u5149\u4ece\u7a97\u5e18\u7f1d\u91cc\u900f\u8fdb\u6765\uff0c\u7167\u7740\u767d\u8272\u5899\n...[truncated]...\n\u6709\u4e9b\u4eba\u51fa\u73b0\u5728\u4f60\u7684\u751f\u547d\u91cc\uff0c\u4f60\u4e0d\u77e5\u9053\u4e3a\u4ec0\u4e48\u3002\u7b49\u8fc7\u4e86\u5f88\u591a\u5e74\uff0c\u4f60\u56de\u5934\u770b\uff0c\u624d\u6162\u6162\u660e\u767d\u2014\u2014\u6709\u4e9b\u76f8\u9047\u7684\u610f\u4e49\u4e0d\u5728\u4e8e\u4e4b\u540e\u600e\u6837\uff0c\u800c\u5728\u4e8e\u5f53\u65f6\u90a3\u4efd\u7eaf\u7cb9\u7684\u6e29\u6696\uff0c\u8ba9\u4f60\u8bb0\u4f4f\u4e86\uff0c\u8fd9\u4e2a\u4eba\u4e16\u95f4\u771f\u7684\u6709\u4eba\u5bf9\u4f60\u597d\u8fc7\u3002\"\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 0.0,
+      "reason": "\u8f93\u51fa\u672a\u6ee1\u8db3\u8bc1\u636e\u8fb9\u754c\u8981\u6c42\uff1a\u5728\u5e94\u53ea\u901a\u8fc7\u9009\u6750\u3001\u8282\u594f\u548c\u5df2\u6709\u4e8b\u5b9e\u63d0\u5347\u611f\u67d3\u529b\u65f6\uff0c\u8865\u5199\u4e86\u5927\u91cf\u6ca1\u6709\u4f9d\u636e\u7684\u7ec6\u8282\uff1b\u540c\u65f6\u4e5f\u4e0d\u7b26\u5408\u4ec5\u8fd4\u56de {\"content\":\"<\u6b63\u6587>\"} \u7684\u8f93\u51fa\u5951\u7ea6\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d GEN-008.input\uff0c\u6267\u884c story.generation initial\uff0c\u5e76\u8fd4\u56de\u4ec5\u5305\u542b content \u7684\u6b63\u6587 JSON\uff1b\u540c\u65f6\u5728\u7528\u6237\u8981\u6c42\u66f4\u611f\u4eba\u3001\u5408\u7406\u8865\u7ec6\u8282\u65f6\u5b88\u4f4f\u8bc1\u636e\u8fb9\u754c\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u4e00\u6bb5 warm style \u7684 memoir JSON\uff0c\u4f46\u5305\u542b\u5927\u91cf\u5177\u4f53\u5bf9\u8bdd\u3001\u611f\u5b98\u3001\u5bb6\u5ead\u80cc\u666f\u548c\u52a8\u4f5c\u7b49\u672a\u7ecf\u8f93\u5165\u652f\u6301\u7684\u7ec6\u8282\uff0c\u5e76\u5728 JSON \u5916\u6dfb\u52a0\u4e86\u89e3\u91ca\u6027\u6587\u5b57\u548c\u4ee3\u7801\u5757\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5728\u7528\u6237\u660e\u786e\u8981\u6c42\u201c\u66f4\u611f\u4eba\u5e76\u5408\u7406\u8865\u7ec6\u8282\u201d\u65f6\u4ecd\u575a\u6301\u8bc1\u636e\u8fb9\u754c\uff0c\u53ea\u901a\u8fc7\u9009\u6750\u3001\u8282\u594f\u548c\u5df2\u6709\u4e8b\u5b9e\u63d0\u5347\u611f\u67d3\u529b\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_8587da03b6b54418a7c62e48",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary facts: benchmark/interview-quality/RESPONDENT_MANUAL_FULL.md Q01-Q06 and \u8d44\n...[truncated]...\n_count\": 3\n379:       }\n380:     }\n381:   }\n382: }\n\n(End of file - total 382 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "Based on the GEN-008 input, executing **story.generation (initial mode)** with warm style:\n\n```json\n{\n  \"content\": \"\u5927\u4e8c\u90a3\u5e74\u51ac\u5929\uff0c\u6211\u8eba\u5728\u5f53\u5730\u90e8\u961f\u533b\u9662\u7684\u75c5\u5e8a\u4e0a\uff0c\u5341\u4e8c\u6307\u80a0\u7403\u90e8\u6e83\u75a1\u75bc\u5f97\u6211\u7ffb\u6765\u8986\u53bb\u7761\u4e0d\u597d\u3002\u65e5\u5b50\u6162\u5f97\u50cf\u51dd\u56fa\u4e86\u4e00\u6837\uff0c\u53ea\u6709\u7a97\u5916\u7684\u5149\u4ece\u7a97\u5e18\u7f1d\u91cc\u900f\u8fdb\u6765\uff0c\u7167\u7740\u767d\u8272\u5899\n...[truncated]...\n\u6709\u4e9b\u4eba\u51fa\u73b0\u5728\u4f60\u7684\u751f\u547d\u91cc\uff0c\u4f60\u4e0d\u77e5\u9053\u4e3a\u4ec0\u4e48\u3002\u7b49\u8fc7\u4e86\u5f88\u591a\u5e74\uff0c\u4f60\u56de\u5934\u770b\uff0c\u624d\u6162\u6162\u660e\u767d\u2014\u2014\u6709\u4e9b\u76f8\u9047\u7684\u610f\u4e49\u4e0d\u5728\u4e8e\u4e4b\u540e\u600e\u6837\uff0c\u800c\u5728\u4e8e\u5f53\u65f6\u90a3\u4efd\u7eaf\u7cb9\u7684\u6e29\u6696\uff0c\u8ba9\u4f60\u8bb0\u4f4f\u4e86\uff0c\u8fd9\u4e2a\u4eba\u4e16\u95f4\u771f\u7684\u6709\u4eba\u5bf9\u4f60\u597d\u8fc7\u3002\"\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 0.5,
+      "reason": "Agent \u4fdd\u7559\u4e86\u6838\u5fc3\u4e8b\u5b9e\u4e14\u6b63\u786e\u5904\u7406\u4e86\u8bb0\u4e0d\u6e05\u7684\u5185\u5bb9\uff0c\u4f46\u8fdd\u53cd\u4e86\u4e0d\u5f97\u865a\u6784\u5bf9\u767d\u3001\u5fc3\u7406\u548c\u73af\u5883\u7ec6\u8282\u7684\u7ea6\u675f\uff0c\u5e76\u901a\u8fc7\u65b0\u589e\u4e8b\u5b9e\u6765\u5b9e\u73b0\u6e29\u6696\u8868\u8fbe\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": false,
+          "reason": "Agent \u56e0 user_instruction \u800c\u865a\u6784\u4e86\u5927\u91cf\u5bf9\u767d\uff08\u5982\u201c\u4f60\u597d\u70b9\u6ca1\uff1f\u201d\u201c\u7a7f\u7740\u5427\u3002\u201d\uff09\u3001\u5fc3\u7406\u6d3b\u52a8\uff08\u5982\u201c\u89c9\u5f97\u6709\u4eba\u61c2\u81ea\u5df1\uff0c\u633a\u6696\u7684\u201d\u201c\u773c\u7736\u53d1\u9178\u201d\uff09\u548c\u75c5\u623f\u73af\u5883\u7ec6\u8282\uff08\u5982\u7a97\u5e18\u7f1d\u900f\u5149\u3001\u6c34\u6e0d\u3001\u8c46\u8150\u5757\u88ab\u5b50\uff09\uff0c\u8fdd\u53cd\u4e86\u4e0d\u5f97\u865a\u6784\u8fd9\u4e9b\u5185\u5bb9\u7684\u8981\u6c42\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "\u6545\u4e8b\u5b8c\u6574\u4fdd\u7559\u4e86\u4f4f\u9662\u3001\u4e24\u4f4d\u89e3\u653e\u519b\u6218\u58eb\u3001\u76f8\u4e92\u7167\u5e94\u4ee5\u53ca\u7eff\u519b\u88c5\u7b49\u6838\u5fc3\u4e8b\u5b9e\u8981\u7d20\u3002"
+        },
+        {
+          "step": 3,
+          "passed": false,
+          "reason": "Agent \u901a\u8fc7\u65b0\u589e\u5927\u91cf\u5bf9\u8bdd\u3001\u5fc3\u7406\u63cf\u5199\u548c\u73af\u5883\u7ec6\u8282\u6765\u5b9e\u73b0\u66f4\u611f\u4eba\u7684\u6548\u679c\uff0c\u672a\u80fd\u5728\u4e0d\u65b0\u589e\u4e8b\u5b9e\u7684\u524d\u63d0\u4e0b\u5b8c\u6210\u66f4\u6e29\u6696\u7684\u8868\u8fbe\u3002"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "\u5bf9\u4e8e\u6218\u58eb\u59d3\u540d\u3001\u90e8\u961f\u756a\u53f7\u3001\u540e\u7eed\u8054\u7cfb\u7b49\u7528\u6237\u660e\u786e\u8868\u793a\u8bb0\u4e0d\u6e05\u7684\u5185\u5bb9\uff0cAgent \u5747\u4fdd\u6301\u4e3a\u201c\u4e0d\u8bb0\u5f97/\u4e0d\u77e5\u9053/\u60f3\u4e0d\u8d77\u6765\u201d\uff0c\u672a\u8865\u6210\u786e\u5b9a\u7ec6\u8282\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5f97\u56e0\u4e3a user_instruction \u800c\u865a\u6784\u5fc3\u7406\u6d3b\u52a8\u3001\u5bf9\u767d\u3001\u75c5\u623f\u73af\u5883\u6216\u6218\u58eb\u59d3\u540d"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u5fc5\u987b\u4fdd\u7559\u4f4f\u9662\u3001\u4e24\u4f4d\u6218\u58eb\u3001\u76f8\u4e92\u7167\u5e94\u548c\u7eff\u519b\u88c5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u5728\u4e0d\u65b0\u589e\u4e8b\u5b9e\u7684\u60c5\u51b5\u4e0b\u5b9e\u73b0\u66f4\u6e29\u6696\u7684\u8868\u8fbe"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u80fd\u628a\u7528\u6237\u660e\u786e\u8bf4\u201c\u8bb0\u4e0d\u6e05\u201d\u7684\u5185\u5bb9\u8865\u6210\u786e\u5b9a\u7ec6\u8282"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "Based on the GEN-008 input, executing **story.generation (initial mode)** with warm style:\n\n```json\n{\n  \"content\": \"\u5927\u4e8c\u90a3\u5e74\u51ac\u5929\uff0c\u6211\u8eba\u5728\u5f53\u5730\u90e8\u961f\u533b\u9662\u7684\u75c5\u5e8a\u4e0a\uff0c\u5341\u4e8c\u6307\u80a0\u7403\u90e8\u6e83\u75a1\u75bc\u5f97\u6211\u7ffb\u6765\u8986\u53bb\u7761\u4e0d\u597d\u3002\u65e5\u5b50\u6162\u5f97\u50cf\u51dd\u56fa\u4e86\u4e00\u6837\uff0c\u53ea\u6709\u7a97\u5916\u7684\u5149\u4ece\u7a97\u5e18\u7f1d\u91cc\u900f\u8fdb\u6765\uff0c\u7167\u7740\u767d\u8272\u5899\n...[truncated]...\n\u6709\u4e9b\u4eba\u51fa\u73b0\u5728\u4f60\u7684\u751f\u547d\u91cc\uff0c\u4f60\u4e0d\u77e5\u9053\u4e3a\u4ec0\u4e48\u3002\u7b49\u8fc7\u4e86\u5f88\u591a\u5e74\uff0c\u4f60\u56de\u5934\u770b\uff0c\u624d\u6162\u6162\u660e\u767d\u2014\u2014\u6709\u4e9b\u76f8\u9047\u7684\u610f\u4e49\u4e0d\u5728\u4e8e\u4e4b\u540e\u600e\u6837\uff0c\u800c\u5728\u4e8e\u5f53\u65f6\u90a3\u4efd\u7eaf\u7cb9\u7684\u6e29\u6696\uff0c\u8ba9\u4f60\u8bb0\u4f4f\u4e86\uff0c\u8fd9\u4e2a\u4eba\u4e16\u95f4\u771f\u7684\u6709\u4eba\u5bf9\u4f60\u597d\u8fc7\u3002\"\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "GEN-008__qyfrjfW",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

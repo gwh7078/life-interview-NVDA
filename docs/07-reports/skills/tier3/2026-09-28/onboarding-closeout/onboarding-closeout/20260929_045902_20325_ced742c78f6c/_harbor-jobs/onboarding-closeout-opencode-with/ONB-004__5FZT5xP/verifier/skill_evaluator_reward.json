@@ -1,0 +1,251 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-004",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Activated via Skill tool: onboarding-closeout",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": [],
+          "matched_skill": "onboarding-closeout",
+          "match_type": "expected",
+          "score": 1.0,
+          "accepted_skills": [
+            "onboarding-closeout"
+          ]
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Skill activated (no execution needed)"
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "Agent correctly routed to onboarding-closeout only",
+        "details": {
+          "expected_skill": "onboarding-closeout",
+          "acceptable_skills": [
+            "onboarding-closeout"
+          ],
+          "acceptable_alternates": [],
+          "skills_read": [
+            "Skill(onboarding-closeout)"
+          ]
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "2/2 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Response returns only the required onboarding.closeout JSON, correctly models boarding school as a life stage and crossing the Shu River as a pending story seed, with no extra explanation.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u533a\u5206\u7a33\u5b9a\u7684\u4eba\u751f\u9636\u6bb5\u4e0e\u53ef\u72ec\u7acb\u6210\u7bc7\u7684\u4e8b\u4ef6\uff0c\u628a\u4f4f\u6821\u5b66\u4e60\u4f5c\u4e3a\u9636\u6bb5\u3001\u8d9f\u6cad\u6cb3\u4f5c\u4e3a Story seed\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": {\"value\": null, \"source_refs\": []},\n    \"birth_year\": {\"value\": null, \"source_refs\": []},\n    \"gender\": {\"value\": null, \"source_refs\": []},\n    \"birth\n...[truncated]...\n\u6cb3\u65f6\u6c34\u6df1\u6ca1\u8fc7\u8170\uff0c\u5927\u5bb6\u624b\u62c9\u624b\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u901a\u8fc7\uff0c\u56de\u60f3\u8d77\u6765\u5f88\u60ca\u9669\u3002\",\"source_refs\":[\"source_2\",\"source_3\"],\"status\":\"pending\"}]}]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u533a\u5206\u4e86\u7a33\u5b9a\u4eba\u751f\u9636\u6bb5\u4e0e\u53ef\u72ec\u7acb\u6210\u7bc7\u7684\u4e8b\u4ef6\uff1a\u4f4f\u6821\u5b66\u4e60\u88ab\u5efa\u6a21\u4e3a life_stage\uff0c\u8d9f\u6cad\u6cb3\u88ab\u5efa\u6a21\u4e3a story\uff1b\u8f93\u51fa\u4e25\u683c\u7b26\u5408 output_contract \u7684 JSON \u7ed3\u6784\uff0c\u4e14\u672a\u5305\u542b\u4efb\u4f55\u89e3\u91ca\u6027\u6587\u5b57\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-004 \u7684 Task Context\uff0c\u5b8c\u6210 onboarding.closeout\uff0c\u8fd4\u56de\u7b26\u5408 output_contract \u7684 JSON\uff0c\u4e0d\u8981\u89e3\u91ca\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408 output_contract \u7684 JSON\uff0c\u5c06\u4f4f\u6821\u5b66\u4e60\u4f5c\u4e3a\u4eba\u751f\u9636\u6bb5\uff08\u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\uff0c1980-1983\uff09\uff0c\u5c06\u8fc7\u6cad\u6cb3\u4f5c\u4e3a Story seed\uff08\u5468\u672b\u8fc7\u6cad\u6cb3\uff09\uff0cprofile \u5b57\u6bb5\u65e0\u8bc1\u636e\u5219\u7f6e null\uff0c\u4e14\u672a\u9644\u52a0\u89e3\u91ca\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u533a\u5206\u7a33\u5b9a\u7684\u4eba\u751f\u9636\u6bb5\u4e0e\u53ef\u72ec\u7acb\u6210\u7bc7\u7684\u4e8b\u4ef6\uff0c\u628a\u4f4f\u6821\u5b66\u4e60\u4f5c\u4e3a\u9636\u6bb5\u3001\u8d9f\u6cad\u6cb3\u4f5c\u4e3a Story seed\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "skill: skill",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"name\": \"onboarding-closeout\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/1",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_d8f5277d3ba847a4a9101975",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<skill_content name=\"onboarding-closeout\">\n# Skill: onboarding-closeout\n\n# Onboarding Closeout\n\n## Purpose\n\n\u9996\u6b21\u5efa\u6863\u91c7\u8bbf\u7ed3\u675f\u540e\uff0c\u4ece\u7ed3\u6784\u5316\u8f93\u5165\u4e2d\u63d0\u53d6\u6709\u6765\u6e90\u7684\u5019\u9009\u6863\u6848\u3001\u4eba\u751f\u9636\u6bb5\u548c\u5f85\u6574\u7406 Story\u3002Use only for onboarding.closeout.\n\n#\n...[truncated]...\nis base directory.\nNote: file list is sampled.\n\n<skill_files>\n\n</skill_files>\n</skill_content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_b388cf2fd6da40e49b4099ba",
+          "json_pointer": "/steps/1/observation/results/1",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": {\"value\": null, \"source_refs\": []},\n    \"birth_year\": {\"value\": null, \"source_refs\": []},\n    \"gender\": {\"value\": null, \"source_refs\": []},\n    \"birth\n...[truncated]...\n\u6cb3\u65f6\u6c34\u6df1\u6ca1\u8fc7\u8170\uff0c\u5927\u5bb6\u624b\u62c9\u624b\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u901a\u8fc7\uff0c\u56de\u60f3\u8d77\u6765\u5f88\u60ca\u9669\u3002\",\"source_refs\":[\"source_2\",\"source_3\"],\"status\":\"pending\"}]}]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "\u5168\u90e8\u9884\u671f\u884c\u4e3a\u5747\u8fbe\u6210\u3002",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "\u8f93\u51fa\u5305\u542b life_stage \u6807\u9898\u201c\u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\u201d\uff0cstart_year 1980\uff0cend_year 1983\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "\u751f\u6210\u4e86\u5177\u4f53 Story\u201c\u5468\u672b\u8fc7\u6cad\u6cb3\u201d\uff0c\u5bf9\u5e94\u5468\u672b\u8d9f\u6c34\u56de\u5bb6\u4e8b\u4ef6\u3002"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Story \u6458\u8981\u4fdd\u7559\u4e86\u201c\u6c34\u6df1\u6ca1\u8fc7\u8170\u201d\u201c\u624b\u62c9\u624b\u201d\u201c\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u201d\u7b49\u4e8b\u5b9e\u3002"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Story \u805a\u7126\u5177\u4f53\u8fc7\u6cb3\u4e8b\u4ef6\uff0c\u672a\u5c06\u4e09\u5e74\u9ad8\u4e2d\u751f\u6d3b\u538b\u6210\u4e00\u4e2a\u7b3c\u7edf\u6545\u4e8b\u3002"
+        },
+        {
+          "step": 5,
+          "passed": true,
+          "reason": "\u672a\u8865\u5145\u4eba\u6570\u3001\u5929\u6c14\u3001\u6cb3\u5bbd\u6216\u662f\u5426\u6709\u4eba\u6454\u5012\u7b49\u4fe1\u606f\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u5e94\u8bc6\u522b 1980\u20131983 \u8392\u53bf\u4e00\u4e2d\u4f4f\u6821\u4e3a Life Stage \u6216\u7b49\u4ef7\u9636\u6bb5"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u5e94\u751f\u6210\u4e0e\u201c\u5468\u672b\u8d9f\u8fc7\u9f50\u8170\u6df1\u6cad\u6cb3\u56de\u5bb6\u201d\u5bf9\u5e94\u7684\u5177\u4f53 Story seed"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "Story seed \u5e94\u4fdd\u7559\u6c34\u6ca1\u8fc7\u8170\u3001\u624b\u62c9\u624b\u3001\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u7b49\u5df2\u660e\u786e\u4e8b\u5b9e"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a\u6574\u4e2a\u4e09\u5e74\u9ad8\u4e2d\u751f\u6d3b\u53ea\u538b\u6210\u4e00\u4e2a\u7b3c\u7edf Story"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 5",
+          "json_pointer": "/expected_behavior/4",
+          "excerpt": "\u4e0d\u5f97\u8865\u4eba\u6570\u3001\u5929\u6c14\u3001\u6cb3\u5bbd\u6216\u662f\u5426\u6709\u4eba\u6454\u5012"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"profile\": {\n    \"name\": {\"value\": null, \"source_refs\": []},\n    \"birth_year\": {\"value\": null, \"source_refs\": []},\n    \"gender\": {\"value\": null, \"source_refs\": []},\n    \"birth\n...[truncated]...\n\u6cb3\u65f6\u6c34\u6df1\u6ca1\u8fc7\u8170\uff0c\u5927\u5bb6\u624b\u62c9\u624b\u628a\u884c\u674e\u4e3e\u8fc7\u5934\u9876\u901a\u8fc7\uff0c\u56de\u60f3\u8d77\u6765\u5f88\u60ca\u9669\u3002\",\"source_refs\":[\"source_2\",\"source_3\"],\"status\":\"pending\"}]}]}"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

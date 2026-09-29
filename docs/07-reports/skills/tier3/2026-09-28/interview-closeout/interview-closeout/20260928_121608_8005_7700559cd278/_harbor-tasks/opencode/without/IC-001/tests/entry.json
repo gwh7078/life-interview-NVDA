@@ -1,0 +1,31 @@
+{
+  "id": "IC-001",
+  "prompt": "读取 /workspace/input/cases.json 中 IC-001。按 mode=story_create 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "expected_output": "把高考采访整理成单个 Story Proposal，保留用户后续确认的7月15日、发烧、王明晨、考试与分数，并严格使用用户消息作为证据。",
+  "assertions": [
+    "必须原样保留 target_story_title",
+    "日期应采用用户后续明确确认的1983年7月15日，而不是 assistant 猜测的7月7日或用户早先的模糊“七月初”",
+    "summary/agent_memory 应保留发烧、王明晨送医、第二天考试、486分、化学99.5和语文58等关键事实",
+    "source_message_ids 只能引用 role=user 的 m2/m4/m5/m6；不得把 assistant 的 m1/m3 当证据",
+    "不得生成额外 Story seeds 或输出 contract 之外字段"
+  ],
+  "expected_skill": "interview-closeout",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 IC-001。按 mode=story_create 完成 interview.closeout，并只返回该 mode 的基础输出 contract JSON。",
+  "ground_truth": "把高考采访整理成单个 Story Proposal，保留用户后续确认的7月15日、发烧、王明晨、考试与分数，并严格使用用户消息作为证据。",
+  "expected_behavior": [
+    "必须原样保留 target_story_title",
+    "日期应采用用户后续明确确认的1983年7月15日，而不是 assistant 猜测的7月7日或用户早先的模糊“七月初”",
+    "summary/agent_memory 应保留发烧、王明晨送医、第二天考试、486分、化学99.5和语文58等关键事实",
+    "source_message_ids 只能引用 role=user 的 m2/m4/m5/m6；不得把 assistant 的 m1/m3 当证据",
+    "不得生成额外 Story seeds 或输出 contract 之外字段"
+  ],
+  "evaluated_skill": "interview-closeout",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

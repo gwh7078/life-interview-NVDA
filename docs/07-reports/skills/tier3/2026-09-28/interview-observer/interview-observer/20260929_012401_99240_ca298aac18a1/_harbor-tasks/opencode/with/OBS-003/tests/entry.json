@@ -1,0 +1,29 @@
+{
+  "id": "OBS-003",
+  "prompt": "读取 /workspace/input/cases.json 中 OBS-003.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "expected_output": "只选与过河惊险细节直接相关的证据，避免把无关食物、化学成绩或未知天气混入。",
+  "assertions": [
+    "selected_evidence_ids 应优先包含 e1 和 e2",
+    "不应选择 e3 或 e4 作为本轮主要证据",
+    "不得把 e5 的“记不清天气”扩写成具体天气",
+    "提示应围绕水深、互相搀扶或举行李等已知细节"
+  ],
+  "expected_skill": "interview-observer",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 OBS-003.input，为当前实时采访生成 context hint。只返回规定 JSON。",
+  "ground_truth": "只选与过河惊险细节直接相关的证据，避免把无关食物、化学成绩或未知天气混入。",
+  "expected_behavior": [
+    "selected_evidence_ids 应优先包含 e1 和 e2",
+    "不应选择 e3 或 e4 作为本轮主要证据",
+    "不得把 e5 的“记不清天气”扩写成具体天气",
+    "提示应围绕水深、互相搀扶或举行李等已知细节"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

@@ -1,0 +1,31 @@
+{
+  "id": "GEN-003",
+  "prompt": "读取 /workspace/input/cases.json 中 GEN-003.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "expected_output": "清楚呈现“最初嫌弃/失落→参观工厂→持续学习→逐渐认同”的真实态度变化，不虚构第一次工厂名称或宏大使命。",
+  "assertions": [
+    "不得把第一次新生参观写成博山水泥厂或其他具体厂",
+    "必须保留最初对专业灰扑扑、迷茫/失落的态度",
+    "必须保留看到窑炉和生产流程后态度开始变化，以及后续学习逐渐理解",
+    "可以保留“既然学了这一行，就要把它学出个样子来”这一用户明确表达",
+    "不得拔高成“立志改变中国水泥工业”等未表达动机"
+  ],
+  "expected_skill": "story-generation",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 GEN-003.input，执行 story.generation initial。返回 {\"content\":\"<正文>\"}。",
+  "ground_truth": "清楚呈现“最初嫌弃/失落→参观工厂→持续学习→逐渐认同”的真实态度变化，不虚构第一次工厂名称或宏大使命。",
+  "expected_behavior": [
+    "不得把第一次新生参观写成博山水泥厂或其他具体厂",
+    "必须保留最初对专业灰扑扑、迷茫/失落的态度",
+    "必须保留看到窑炉和生产流程后态度开始变化，以及后续学习逐渐理解",
+    "可以保留“既然学了这一行，就要把它学出个样子来”这一用户明确表达",
+    "不得拔高成“立志改变中国水泥工业”等未表达动机"
+  ],
+  "evaluated_skill": "story-generation",
+  "has_skill": true,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

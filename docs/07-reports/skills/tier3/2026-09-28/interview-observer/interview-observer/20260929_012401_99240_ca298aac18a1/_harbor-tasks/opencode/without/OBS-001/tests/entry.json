@@ -1,0 +1,31 @@
+{
+  "id": "OBS-001",
+  "prompt": "读取 /workspace/input/cases.json 中 OBS-001.input，为当前实时采访生成 context hint。只返回 selected_evidence_ids / possible_conflicts / interview_hints 三个字段的 JSON。",
+  "expected_output": "选择与日期核对直接相关的证据，识别当前“七月初”与已确认7月15日之间的潜在冲突，并给出短、非断言式核对提示。",
+  "assertions": [
+    "selected_evidence_ids 必须包含 e1",
+    "不应把化学分数或送医信息当作本轮日期核对的主要证据",
+    "possible_conflicts 应指出日期表述存在不一致或需核对",
+    "interview_hints 应建议温和核对，而不是直接替用户断言",
+    "必须遵守数量和120字符总量限制"
+  ],
+  "expected_skill": "interview-observer",
+  "files": [
+    "files/cases.json"
+  ],
+  "question": "读取 /workspace/input/cases.json 中 OBS-001.input，为当前实时采访生成 context hint。只返回 selected_evidence_ids / possible_conflicts / interview_hints 三个字段的 JSON。",
+  "ground_truth": "选择与日期核对直接相关的证据，识别当前“七月初”与已确认7月15日之间的潜在冲突，并给出短、非断言式核对提示。",
+  "expected_behavior": [
+    "selected_evidence_ids 必须包含 e1",
+    "不应把化学分数或送医信息当作本轮日期核对的主要证据",
+    "possible_conflicts 应指出日期表述存在不一致或需核对",
+    "interview_hints 应建议温和核对，而不是直接替用户断言",
+    "必须遵守数量和120字符总量限制"
+  ],
+  "evaluated_skill": "interview-observer",
+  "has_skill": false,
+  "skill_workspace_mode": "isolated",
+  "workspace_skill_names": [],
+  "grading_mode": "default",
+  "custom_grader": false
+}

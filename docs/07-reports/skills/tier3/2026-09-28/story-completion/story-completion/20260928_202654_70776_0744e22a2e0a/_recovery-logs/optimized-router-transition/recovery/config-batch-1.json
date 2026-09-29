@@ -1,0 +1,94 @@
+{
+  "job_name": "story-completion-router-recovery-without-batch-1",
+  "jobs_dir": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_recovery-logs/optimized-router-transition/recovery/jobs",
+  "n_attempts": 1,
+  "timeout_multiplier": 1.0,
+  "agent_timeout_multiplier": 1.0,
+  "verifier_timeout_multiplier": 0.6,
+  "agent_setup_timeout_multiplier": 1.0,
+  "environment_build_timeout_multiplier": 1.0,
+  "debug": false,
+  "n_concurrent_trials": 2,
+  "quiet": false,
+  "retry": {
+    "max_retries": 0,
+    "include_exceptions": null,
+    "exclude_exceptions": [
+      "RewardFileNotFoundError",
+      "RewardFileEmptyError",
+      "VerifierOutputParseError",
+      "AgentTimeoutError",
+      "VerifierTimeoutError"
+    ],
+    "wait_multiplier": 1.0,
+    "min_wait_sec": 1.0,
+    "max_wait_sec": 60.0
+  },
+  "environment": {
+    "type": null,
+    "import_path": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+    "force_build": false,
+    "delete": true,
+    "cpu_enforcement_policy": "auto",
+    "memory_enforcement_policy": "auto",
+    "override_cpus": null,
+    "override_memory_mb": null,
+    "override_storage_mb": null,
+    "override_gpus": null,
+    "override_tpu": null,
+    "mounts": null,
+    "extra_docker_compose": [
+      "/Users/gwh/.cache/skillevaluator-nvda/opencode-1.18.33/runtime.compose.yaml"
+    ],
+    "env": {},
+    "kwargs": {},
+    "extra_allowed_hosts": []
+  },
+  "verifier": {
+    "override_timeout_sec": null,
+    "max_timeout_sec": null,
+    "env": {
+      "LLM_JUDGE_MODEL": "${LLM_JUDGE_MODEL}",
+      "SKILL_EVAL_JUDGE_MODEL": "${LLM_JUDGE_MODEL}"
+    },
+    "disable": false
+  },
+  "metrics": [],
+  "agents": [
+    {
+      "name": "opencode",
+      "import_path": null,
+      "model_name": "openai/qwen3.6-35b-a3b",
+      "skills": [],
+      "override_timeout_sec": null,
+      "override_setup_timeout_sec": null,
+      "max_timeout_sec": null,
+      "extra_allowed_hosts": [],
+      "kwargs": {},
+      "env": {},
+      "mcp_servers": []
+    }
+  ],
+  "datasets": [
+    {
+      "path": "/Users/gwh/.codex/worktrees/5f60/\u82f1\u4f1f\u8fbeDGX\u9ed1\u5ba2\u677e/docs/07-reports/skills/tier3/2026-09-28/story-completion/story-completion/20260928_202654_70776_0744e22a2e0a/_harbor-tasks/opencode/without",
+      "name": null,
+      "version": null,
+      "ref": null,
+      "registry_url": null,
+      "registry_path": null,
+      "overwrite": false,
+      "download_dir": null,
+      "task_names": [
+        "COMP-003",
+        "COMP-004"
+      ],
+      "exclude_task_names": null,
+      "n_tasks": 2
+    }
+  ],
+  "tasks": [],
+  "artifacts": [],
+  "extra_instruction_paths": [],
+  "plugins": []
+}

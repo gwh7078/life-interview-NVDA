@@ -1,0 +1,216 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.5,
+  "skill_efficiency": 0.5,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "COMP-006",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "activation": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill use in trajectory for 'story-completion'. Checked Skill tool calls, SKILL.md reads, bash cat commands, and tool observations.",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "script_execution": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No specific script expected"
+      },
+      "workflow_order": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "No evidence of target skill workflow for 'story-completion' in trajectory. Checked Skill tool calls, SKILL.md reads, bash cat commands, and execution tool calls."
+      },
+      "error_recovery": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "All commands succeeded on first attempt",
+        "first_attempt_clean": true,
+        "corrections": [],
+        "skill_faults": 0,
+        "agent_faults": 0
+      }
+    },
+    "skill_efficiency": {
+      "routing": {
+        "passed": false,
+        "score": 0.0,
+        "reason": "Agent did not read any SKILL.md",
+        "details": {
+          "expected_skill": "story-completion",
+          "acceptable_skills": [
+            "story-completion"
+          ],
+          "acceptable_alternates": []
+        }
+      },
+      "tool_efficiency": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "1/1 productive calls (100%)"
+      }
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Response returns the required JSON with status complete and empty gaps, matching the rule to preserve complete status and drop the invalid name gap.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u9075\u5b88\u5df2 complete \u72b6\u6001\u4fdd\u6301\u89c4\u5219\uff0c\u5e76\u79fb\u9664\u5bf9\u660e\u786e\u8bb0\u4e0d\u6e05\u59d3\u540d\u7684\u65e0\u6548 gap\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"status\": \"complete\",\n  \"gaps\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u8bbf\u95ee\u4e86\u8f93\u5165\u6587\u4ef6\u5e76\u5b9a\u4f4d\u5230 COMP-006\uff0c\u9075\u5b88\u4e86\u5df2 complete \u72b6\u6001\u4fdd\u6301\u89c4\u5219\uff0c\u540c\u65f6\u79fb\u9664\u4e86\u5bf9\u660e\u786e\u8bb0\u4e0d\u6e05\u59d3\u540d\u7684\u65e0\u6548 gap\uff0c\u6700\u7ec8\u4e25\u683c\u8fd4\u56de\u4e86\u89c4\u5b9a\u7684 JSON \u5bf9\u8c61\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f outcome\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d COMP-006.input\uff0c\u6267\u884c story.completion\u3002\u53ea\u8fd4\u56de\u89c4\u5b9a JSON\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u7b26\u5408 output_contract \u7684 JSON\uff1a{\"status\": \"complete\", \"gaps\": []}\uff0c\u4e14\u54cd\u5e94\u4e2d\u4ec5\u5305\u542b\u89c4\u5b9a JSON\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u9075\u5b88\u5df2 complete \u72b6\u6001\u4fdd\u6301\u89c4\u5219\uff0c\u5e76\u79fb\u9664\u5bf9\u660e\u786e\u8bb0\u4e0d\u6e05\u59d3\u540d\u7684\u65e0\u6548 gap\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_20f5f53e5d4345a7982f8d1d",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Q01-Q04 facts derived from shared Interview Quality Benchmark; boundary variants a\n...[truncated]...\n         ]\n147:       }\n148:     }\n149:   }\n150: }\n\n(End of file - total 150 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"status\": \"complete\",\n  \"gaps\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed; the agent correctly returned the final JSON with status 'complete' and empty gaps.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent returned status as 'complete' in the final JSON."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent did not downgrade status to 'interviewing' or 'pending'."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Agent did not ask any follow-up questions about warrior names; it returned final JSON only."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Agent returned an empty gaps array, which satisfies the requirement."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "status \u5fc5\u987b\u4fdd\u6301 complete"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u628a\u72b6\u6001\u964d\u56de interviewing \u6216 pending"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u4e0d\u5f97\u7ee7\u7eed\u8ffd\u95ee\u4e24\u4f4d\u6218\u58eb\u59d3\u540d"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "gaps \u5e94\u4e3a\u7a7a\u6216\u4ec5\u5305\u542b\u771f\u6b63\u672a\u963b\u65ad\u4e14\u5fc5\u8981\u7684\u65b9\u5411"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "```json\n{\n  \"status\": \"complete\",\n  \"gaps\": []\n}\n```"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

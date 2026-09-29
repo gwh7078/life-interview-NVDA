@@ -1,0 +1,142 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "OBS-NEG-001",
+  "has_skill": true,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No tool calls"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "\u76f4\u63a5\u7ed9\u51fa\u4e86\u66f4\u53e3\u8bed\u5316\u7684\u6539\u5199\uff0c\u672a\u8c03\u7528\u65e0\u5173\u6280\u80fd\uff0c\u7b26\u5408\u9884\u671f\u3002",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5b8c\u6210\u666e\u901a\u6539\u5199\uff0c\u4e0d\u8c03\u7528 interview-observer\uff0c\u4e5f\u4e0d\u8fd4\u56de context-hint JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u6539\u6210\uff1a\"\u5230\u5904\u90fd\u662f\u8f70\u9686\u9686\u7684\u673a\u5668\u58f0\uff0c\u597d\u5bb6\u4f19\uff0c\u5148\u8fdb\u8bbe\u5907\u771f\u4e0d\u5c11\u3002\""
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u7528\u6237\u8981\u6c42\u5c06\u539f\u53e5\u6539\u5199\u5f97\u66f4\u53e3\u8bed\u5316\uff0cAgent\u7ed9\u51fa\u7684\u8bd1\u6587\u81ea\u7136\u3001\u53e3\u8bed\u5316\uff0c\u7b26\u5408\u8981\u6c42\uff1b\u540c\u65f6\u672a\u8c03\u7528interview-observer\uff0c\u4e5f\u672a\u8fd4\u56decontext-hint JSON\uff0c\u5b8c\u5168\u7b26\u5408\u9884\u671f\u3002",
+      "user_goal": "\u628a\u201c\u673a\u5668\u8f70\u9e23\u3001\u5148\u8fdb\u8bbe\u5907\u5f88\u591a\u201d\u6539\u5199\u5f97\u66f4\u53e3\u8bed\u4e00\u70b9\u3002",
+      "end_state": "Agent\u8fd4\u56de\u4e86\u53e3\u8bed\u5316\u6539\u5199\uff1a\u201c\u5230\u5904\u90fd\u662f\u8f70\u9686\u9686\u7684\u673a\u5668\u58f0\uff0c\u597d\u5bb6\u4f19\uff0c\u5148\u8fdb\u8bbe\u5907\u771f\u4e0d\u5c11\u3002\u201d\uff0c\u672a\u8c03\u7528\u4efb\u4f55\u5de5\u5177\uff0c\u4e5f\u672a\u8fd4\u56decontext-hint JSON\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u5b8c\u6210\u666e\u901a\u6539\u5199\uff0c\u4e0d\u8c03\u7528 interview-observer\uff0c\u4e5f\u4e0d\u8fd4\u56de context-hint JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u6539\u6210\uff1a\"\u5230\u5904\u90fd\u662f\u8f70\u9686\u9686\u7684\u673a\u5668\u58f0\uff0c\u597d\u5bb6\u4f19\uff0c\u5148\u8fdb\u8bbe\u5907\u771f\u4e0d\u5c11\u3002\""
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "Both expected behaviors were observed. The agent avoided interview-observer and provided a natural colloquial Chinese rewrite.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did not select or use interview-observer; it directly provided a rewrite."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent returned a natural, colloquial Chinese rewrite as requested."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 interview-observer"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u8fd4\u56de\u81ea\u7136\u4e2d\u6587\u6539\u5199\u5373\u53ef"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "\u6539\u6210\uff1a\"\u5230\u5904\u90fd\u662f\u8f70\u9686\u9686\u7684\u673a\u5668\u58f0\uff0c\u597d\u5bb6\u4f19\uff0c\u5148\u8fdb\u8bbe\u5907\u771f\u4e0d\u5c11\u3002\""
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "OBS-NEG-001__5o7AVUf",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}

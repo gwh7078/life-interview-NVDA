@@ -1,0 +1,175 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 0.8,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-HNEG-002",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether onboarding-closeout was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 0.8,
+      "reason": "Correctly performs incremental story update but incorrectly outputs Life Stage status, violating the expected constraint against Life Stage output for this task type.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": false,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f\u5df2\u6709 Story \u7684 interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f onboarding.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "\u6839\u636e `ONB-HNEG-002` \u7684\u6570\u636e\u5b8c\u6210\u5f53\u524d Story \u7684\u589e\u91cf\u6574\u7406\uff1a\n\n**Story \u589e\u91cf\u66f4\u65b0 \u2014 \"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\"**\n\n| \u5b57\u6bb5 | \u503c | \u6765\u6e90 |\n|---|---|---|\n| **title** | \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a | \u4fdd\u7559\u539f\u6709\u6807\u9898 |\n| **summary** | 1983\u5e74\u9ad8\u8003\u524d\u591c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\n...[truncated]...\n`\uff08\u8392\u53bf\u4e00\u4e2d\uff0c1980\u20131983\uff09\uff1a\u672c Story \u4e3a\u5f53\u524d stage \u4e0b\u552f\u4e00 story\uff0cstatus \u53d8\u4e3a `done` \u540e\uff0c\u8be5 stage \u5373\u6574\u4f53\u5b8c\u6210\uff0c\u53ef\u8fdb\u5165\u4e0b\u4e00 stage \u91c7\u96c6\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "Agent \u6b63\u786e\u5c06\u4efb\u52a1\u8bc6\u522b\u4e3a\u5df2\u6709 Story \u7684 interview.closeout/story_continue \u7c7b\u578b\uff0c\u805a\u7126\u4e8e\u589e\u91cf\u66f4\u65b0\u800c\u975e onboarding.closeout\uff1b\u672a\u8f93\u51fa Profile \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002\u867d\u5728\u672b\u5c3e\u63d0\u53ca Life Stage \u72b6\u6001\uff0c\u4f46\u4ec5\u4e3a\u8bf4\u660e Story status \u53d8\u4e3a done \u540e\u8be5 stage \u91c7\u96c6\u5b8c\u6210\uff0c\u5e76\u975e\u6309 output_contract \u8f93\u51fa Life Stage \u5bf9\u8c61\uff0c\u6574\u4f53\u7b26\u5408\u9884\u671f\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d ONB-HNEG-002\uff0c\u5b8c\u6210\u5df2\u6709 Story \u7684\u589e\u91cf\u6574\u7406\uff0c\u4e0d\u505a\u9996\u6b21\u5efa\u6863",
+      "end_state": "Agent \u8f93\u51fa\u4e86\u9488\u5bf9\u5df2\u6709 Story\u300c\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\u300d\u7684\u589e\u91cf\u66f4\u65b0\uff0c\u5305\u62ec summary\u3001agent_memory\u3001status \u7684\u53d8\u66f4\u8bf4\u660e\uff0c\u5e76\u9644\u5e26\u8be5 Story \u5b8c\u6210\u540e\u5bf9\u6240\u5c5e stage \u7684\u5f71\u54cd\u8bf4\u660e\uff1b\u672a\u8f93\u51fa Profile \u5b57\u6bb5\u3001\u672a\u751f\u6210\u9996\u6b21\u5efa\u6863 Story seeds",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f\u5df2\u6709 Story \u7684 interview.closeout/story_continue \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f onboarding.closeout\uff1b\u4e0d\u5e94\u8f93\u51fa Profile\u3001Life Stage \u6216\u9996\u6b21\u5efa\u6863 Story seeds\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_4f065c47f5d04c889961ea89",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Primary source: \u8d44\u6599\u5e93/\u7b2c\u4e00\u5377_\u5e74\u5c11\u6c42\u5b66_2026-09-01.md\",\n4:     \"Shared benchmark source: benc\n...[truncated]...\n         ]\n323:       }\n324:     }\n325:   }\n326: }\n\n(End of file - total 326 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "\u6839\u636e `ONB-HNEG-002` \u7684\u6570\u636e\u5b8c\u6210\u5f53\u524d Story \u7684\u589e\u91cf\u6574\u7406\uff1a\n\n**Story \u589e\u91cf\u66f4\u65b0 \u2014 \"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\"**\n\n| \u5b57\u6bb5 | \u503c | \u6765\u6e90 |\n|---|---|---|\n| **title** | \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a | \u4fdd\u7559\u539f\u6709\u6807\u9898 |\n| **summary** | 1983\u5e74\u9ad8\u8003\u524d\u591c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\n...[truncated]...\n`\uff08\u8392\u53bf\u4e00\u4e2d\uff0c1980\u20131983\uff09\uff1a\u672c Story \u4e3a\u5f53\u524d stage \u4e0b\u552f\u4e00 story\uff0cstatus \u53d8\u4e3a `done` \u540e\uff0c\u8be5 stage \u5373\u6574\u4f53\u5b8c\u6210\uff0c\u53ef\u8fdb\u5165\u4e0b\u4e00 stage \u91c7\u96c6\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed. The agent correctly performed an incremental update on the existing story without triggering onboarding-closeout or first-time\u5efa\u6863.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent \u672a\u9009\u62e9 onboarding-closeout\uff0c\u800c\u662f\u5bf9\u5df2\u6709 Story \u6267\u884c\u4e86\u589e\u91cf\u66f4\u65b0\u3002"
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent \u672a\u8f93\u51fa onboarding \u7684 profile/life_stages \u9876\u5c42\u7ed3\u6784\uff0c\u4ec5\u66f4\u65b0\u4e86 Story \u7ea7\u5b57\u6bb5\u3002"
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Agent \u56f4\u7ed5\u5df2\u6709 Story \u7684\u65b0\u589e\u4e8b\u5b9e\uff08\u738b\u660e\u6668\u8fde\u591c\u9001\u533b\uff09\u8fdb\u884c\u4e86\u7eed\u8bbf\u6536\u5c3e\u4e0e\u589e\u91cf\u6574\u7406\uff0cstatus \u7f6e\u4e3a done\u3002"
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Agent \u4fdd\u7559\u539f\u6709\u6807\u9898\u5e76\u660e\u786e\u6807\u6ce8\u4e3a\u589e\u91cf\u53d8\u66f4\uff0c\u672a\u5c06\u7eed\u8bbf\u91cd\u7f6e\u4e3a\u9996\u6b21\u5efa\u6863\u6d41\u7a0b\u3002"
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 onboarding-closeout"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u8f93\u51fa onboarding \u7684 profile/life_stages \u9876\u5c42\u7ed3\u6784"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u56f4\u7ed5\u5df2\u6709 Story \u7684\u65b0\u589e\u4e8b\u5b9e\u8fdb\u884c\u7eed\u8bbf\u6536\u5c3e\u6216\u7b49\u4ef7\u589e\u91cf\u6574\u7406"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a\u5df2\u6709 Story \u7eed\u8bbf\u9519\u8bef\u91cd\u7f6e\u6210\u9996\u6b21\u5efa\u6863\u6d41\u7a0b"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "\u6839\u636e `ONB-HNEG-002` \u7684\u6570\u636e\u5b8c\u6210\u5f53\u524d Story \u7684\u589e\u91cf\u6574\u7406\uff1a\n\n**Story \u589e\u91cf\u66f4\u65b0 \u2014 \"\u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a\"**\n\n| \u5b57\u6bb5 | \u503c | \u6765\u6e90 |\n|---|---|---|\n| **title** | \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a | \u4fdd\u7559\u539f\u6709\u6807\u9898 |\n| **summary** | 1983\u5e74\u9ad8\u8003\u524d\u591c\u7a81\u7136\u53d1\u70e7\uff0c\u73ed\u4e3b\u4efb\u517c\u5316\u5b66\u8001\u5e08\u738b\u660e\u6668\u8fde\u591c\u9001\n...[truncated]...\n`\uff08\u8392\u53bf\u4e00\u4e2d\uff0c1980\u20131983\uff09\uff1a\u672c Story \u4e3a\u5f53\u524d stage \u4e0b\u552f\u4e00 story\uff0cstatus \u53d8\u4e3a `done` \u540e\uff0c\u8be5 stage \u5373\u6574\u4f53\u5b8c\u6210\uff0c\u53ef\u8fdb\u5165\u4e0b\u4e00 stage \u91c7\u96c6\u3002"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "security": 1.0,
+  "skill_execution": 1.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 1.0,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "ONB-NEG-001",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": true,
+        "score": 1.0,
+        "reason": "No tool calls"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "The response correctly provides only the English translation without invoking onboarding-closeout or outputting Profile/Life Stage JSON, matching the expected behavior for a simple translation task.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u6b63\u786e\u5b8c\u6210\u666e\u901a\u7ffb\u8bd1\u4efb\u52a1\uff0c\u4e0d\u8c03\u7528 onboarding-closeout\uff0c\u4e5f\u4e0d\u8f93\u51fa Profile/Life Stage JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "I suddenly ran a fever the night before the gaokao."
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u8bd1\u6587\u51c6\u786e\u4f20\u8fbe\u4e86\u539f\u53e5\u542b\u4e49\uff0c\u4e14\u53ea\u8fd4\u56de\u4e86\u7ffb\u8bd1\u5185\u5bb9\uff0c\u672a\u8c03\u7528 onboarding-closeout \u6216\u8f93\u51fa\u989d\u5916 JSON\u3002",
+      "user_goal": "\u5c06\u201c\u9ad8\u8003\u524d\u4e00\u665a\u7a81\u7136\u53d1\u70e7\u201d\u7ffb\u8bd1\u6210\u82f1\u6587\uff0c\u5e76\u53ea\u8fd4\u56de\u8bd1\u6587\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86\u82f1\u6587\u8bd1\u6587\uff1aI suddenly ran a fever the night before the gaokao.",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u6b63\u786e\u5b8c\u6210\u666e\u901a\u7ffb\u8bd1\u4efb\u52a1\uff0c\u4e0d\u8c03\u7528 onboarding-closeout\uff0c\u4e5f\u4e0d\u8f93\u51fa Profile/Life Stage JSON\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "I suddenly ran a fever the night before the gaokao."
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "Both expected behaviors were observed. The agent provided a direct, natural English translation without selecting onboarding-closeout or generating any documentation structure.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent did not select onboarding-closeout; it directly provided the requested translation."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Agent returned only the natural English translation without any documentation structure."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 onboarding-closeout"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u53ea\u8fd4\u56de\u81ea\u7136\u82f1\u6587\u7ffb\u8bd1\uff0c\u4e0d\u751f\u6210\u5efa\u6863\u7ed3\u6784"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/1",
+          "excerpt": "I suddenly ran a fever the night before the gaokao."
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "ONB-NEG-001__StWjUKX",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "CLI"
+}

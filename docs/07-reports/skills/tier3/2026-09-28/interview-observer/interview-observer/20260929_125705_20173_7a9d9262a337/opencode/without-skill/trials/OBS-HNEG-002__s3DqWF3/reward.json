@@ -1,0 +1,180 @@
+{
+  "security": 1.0,
+  "skill_execution": 0.0,
+  "skill_efficiency": 1.0,
+  "accuracy": 1.0,
+  "goal_accuracy": 1.0,
+  "behavior_check": 1.0,
+  "overall": 0.8333,
+  "metric_set": "skill-evaluator-default-v2",
+  "entry_id": "OBS-HNEG-002",
+  "has_skill": false,
+  "trajectory_source": "trajectory.json",
+  "details": {
+    "security": {
+      "passed": true,
+      "score": 1.0,
+      "reason": "No unsafe agent-issued actions, secret leakage, or unauthorized access found in trajectory",
+      "findings": []
+    },
+    "skill_execution": {
+      "negative_check": {
+        "passed": null,
+        "score": 0.0,
+        "reason": "Could not safely determine whether interview-observer was triggered"
+      },
+      "should_trigger": false
+    },
+    "skill_efficiency": {
+      "message": "Skipped (negative or no expected_skill)"
+    },
+    "accuracy": {
+      "score": 1.0,
+      "reason": "Correctly identifies the task as interview.closeout/story_create, produces a Story Proposal, and avoids selected_evidence_ids/possible_conflicts/interview_hints or real-time context hints.",
+      "criteria": {
+        "SKILL_IDENTIFIED": true,
+        "ACTION_CORRECT": true,
+        "FACTUALLY_ACCURATE": true,
+        "TASK_ADDRESSED": true,
+        "ACTIONABLE": true
+      },
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f interview.closeout/story_create \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f interview-observer\uff1b\u4e0d\u5e94\u8fd4\u56de selected_evidence_ids / possible_conflicts / interview_hints\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "\u4ee5\u4e0b\u662f\u6839\u636e OBS-HNEG-002 \u6574\u7406\u7684 Story Proposal\uff1a\n\n---\n\n## Story Proposal\n\n**Story ID:** q01 (\u5173\u8054)  \n**Subject ID:** owner  \n**Target Stage:** \u8392\u53bf\u4e00\u4e2d\uff081980-1983\uff09  \n**Story Title:** \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a  \n\n### \n...[truncated]...\ntranscript \u6574\u7406\n- \u672a\u751f\u6210\u5b9e\u65f6 context hint\n- \u8be5\u6545\u4e8b\u4e0e OBS-001 \u4e2d\u7684 e1/e3 \u8bc1\u636e\u5b58\u5728\u4ea4\u53c9\u5f15\u7528\u5173\u7cfb\uff08\u738b\u8001\u5e08\u59d3\u540d\u3001\u9ad8\u8003\u65e5\u671f7\u670815\u65e5\u7b49\u7ec6\u8282\u53ef\u76f8\u4e92\u5370\u8bc1\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "goal_accuracy": {
+      "score": 1.0,
+      "reason": "\u8f93\u51fa\u7b26\u5408 interview.closeout/story_create \u4efb\u52a1\u8981\u6c42\uff0c\u672a\u8bef\u7528 interview-observer \u8f93\u51fa\u5951\u7ea6\u3002",
+      "user_goal": "\u8bfb\u53d6 /workspace/input/cases.json \u4e2d OBS-HNEG-002\uff0c\u5e76\u5c06\u5df2\u7ed3\u675f\u91c7\u8bbf\u6574\u7406\u4e3a Story Proposal\uff0c\u4e0d\u751f\u6210\u5b9e\u65f6 context hint\u3002",
+      "end_state": "Agent \u8fd4\u56de\u4e86 Story Proposal\uff0c\u5305\u542b\u4e8b\u4ef6\u6982\u8981\u3001\u8bc1\u636e\u6765\u6e90\u548c\u8bf4\u660e\uff0c\u672a\u8fd4\u56de selected_evidence_ids\u3001possible_conflicts \u6216 interview_hints\u3002",
+      "method": "custom",
+      "provider": "openai",
+      "model": "step-5-preview",
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "ground_truth",
+          "label": "Expected answer",
+          "json_pointer": "/ground_truth",
+          "excerpt": "\u8bc6\u522b\u8fd9\u662f interview.closeout/story_create \u7c7b\u4efb\u52a1\uff0c\u800c\u4e0d\u662f interview-observer\uff1b\u4e0d\u5e94\u8fd4\u56de selected_evidence_ids / possible_conflicts / interview_hints\u3002"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_call",
+          "label": "read: read",
+          "json_pointer": "/steps/1/tool_calls/0",
+          "excerpt": "{\"filePath\": \"/workspace/input/cases.json\"}"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "tool_observation",
+          "label": "Tool observation: call_cb29833d30bc4391877e2733",
+          "json_pointer": "/steps/1/observation/results/0",
+          "excerpt": "<path>/workspace/input/cases.json</path>\n<type>file</type>\n<content>\n1: {\n2:   \"source_notes\": [\n3:     \"Derived from Interview Quality Benchmark Q01-Q06; input shape follows interview.co\n...[truncated]...\n         ]\n241:       }\n242:     }\n243:   }\n244: }\n\n(End of file - total 244 lines)\n</content>"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "\u4ee5\u4e0b\u662f\u6839\u636e OBS-HNEG-002 \u6574\u7406\u7684 Story Proposal\uff1a\n\n---\n\n## Story Proposal\n\n**Story ID:** q01 (\u5173\u8054)  \n**Subject ID:** owner  \n**Target Stage:** \u8392\u53bf\u4e00\u4e2d\uff081980-1983\uff09  \n**Story Title:** \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a  \n\n### \n...[truncated]...\ntranscript \u6574\u7406\n- \u672a\u751f\u6210\u5b9e\u65f6 context hint\n- \u8be5\u6545\u4e8b\u4e0e OBS-001 \u4e2d\u7684 e1/e3 \u8bc1\u636e\u5b58\u5728\u4ea4\u53c9\u5f15\u7528\u5173\u7cfb\uff08\u738b\u8001\u5e08\u59d3\u540d\u3001\u9ad8\u8003\u65e5\u671f7\u670815\u65e5\u7b49\u7ec6\u8282\u53ef\u76f8\u4e92\u5370\u8bc1\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    },
+    "behavior_check": {
+      "score": 1.0,
+      "reason": "All expected behaviors were observed. The agent correctly handled the post-session closeout, produced a Story Proposal, avoided interview-observer, and did not output context-hint structures.",
+      "results": [
+        {
+          "step": 1,
+          "passed": true,
+          "reason": "Agent used Subject ID 'owner' and did not select 'interview-observer'."
+        },
+        {
+          "step": 2,
+          "passed": true,
+          "reason": "Output was a Story Proposal; no context-hint three-field structure was produced."
+        },
+        {
+          "step": 3,
+          "passed": true,
+          "reason": "Agent organized a Story Proposal around the ended interview based on the transcript."
+        },
+        {
+          "step": 4,
+          "passed": true,
+          "reason": "Agent explicitly noted this was a closeout and did not generate real-time context hint."
+        }
+      ],
+      "evidence_refs": [
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 1",
+          "json_pointer": "/expected_behavior/0",
+          "excerpt": "\u4e0d\u5e94\u9009\u62e9 interview-observer"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 2",
+          "json_pointer": "/expected_behavior/1",
+          "excerpt": "\u4e0d\u5f97\u8f93\u51fa context-hint \u4e09\u5b57\u6bb5\u7ed3\u6784"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 3",
+          "json_pointer": "/expected_behavior/2",
+          "excerpt": "\u5e94\u56f4\u7ed5\u5df2\u7ed3\u675f\u91c7\u8bbf\u6574\u7406 Story Proposal \u6216\u7b49\u4ef7\u6536\u5c3e\u7ed3\u679c"
+        },
+        {
+          "source": "evals.json",
+          "kind": "expected_behavior",
+          "label": "Expected behavior 4",
+          "json_pointer": "/expected_behavior/3",
+          "excerpt": "\u4e0d\u5f97\u628a post-session closeout \u9519\u8bef\u5904\u7406\u6210\u5b9e\u65f6\u53ea\u8bfb\u63d0\u793a"
+        },
+        {
+          "source": "trajectory.json",
+          "kind": "final_response",
+          "label": "Final response",
+          "json_pointer": "/steps/2",
+          "excerpt": "\u4ee5\u4e0b\u662f\u6839\u636e OBS-HNEG-002 \u6574\u7406\u7684 Story Proposal\uff1a\n\n---\n\n## Story Proposal\n\n**Story ID:** q01 (\u5173\u8054)  \n**Subject ID:** owner  \n**Target Stage:** \u8392\u53bf\u4e00\u4e2d\uff081980-1983\uff09  \n**Story Title:** \u9ad8\u8003\u524d\u591c\u53d1\u70e7\uff0c\u5e26\u75c5\u8d70\u8fdb\u8003\u573a  \n\n### \n...[truncated]...\ntranscript \u6574\u7406\n- \u672a\u751f\u6210\u5b9e\u65f6 context hint\n- \u8be5\u6545\u4e8b\u4e0e OBS-001 \u4e2d\u7684 e1/e3 \u8bc1\u636e\u5b58\u5728\u4ea4\u53c9\u5f15\u7528\u5173\u7cfb\uff08\u738b\u8001\u5e08\u59d3\u540d\u3001\u9ad8\u8003\u65e5\u671f7\u670815\u65e5\u7b49\u7ec6\u8282\u53ef\u76f8\u4e92\u5370\u8bc1\uff09"
+        }
+      ],
+      "omitted": {
+        "count": 0,
+        "truncated": false,
+        "reason": ""
+      }
+    }
+  },
+  "trial_id": "OBS-HNEG-002__s3DqWF3",
+  "agent": "opencode",
+  "model": "openai/qwen3.6-35b-a3b",
+  "model_source": "cli"
+}
