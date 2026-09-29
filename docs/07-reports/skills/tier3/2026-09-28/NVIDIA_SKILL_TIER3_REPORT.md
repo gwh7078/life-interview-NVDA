@@ -12,7 +12,7 @@
 - **Tier 2 · Deduplication**：Skill 内部重复与 Skill 间语义重叠检查；
 - **Tier 3 · Live Evaluation**：真实 Agent 在 With Skill / Without Skill 条件下完成同一批任务，比较 Skill Lift。
 
-Tier 1 / Tier 2 的既有结果、静态审计和未完成项见 `docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md`。本报告只汇总已经完成的 Tier 3 正式实跑。
+Tier 1 / Tier 2 的设计与审查摘要见 `docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md`。本报告汇总已经完成的 Tier 3 正式实跑。
 
 ## 2. 实验设计
 
