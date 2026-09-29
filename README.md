@@ -1,168 +1,396 @@
-# life-interview-NVDA
+# 人生采访局 · Life Interview
 
-人生采访局 NVIDIA / DGX Spark 比赛版。产品定位是 **AI 回忆录记者**：通过持续语音采访、事实整理、Story Memory、完整度判断、第三者补充与成稿，把分散的人生经历逐步整理为可阅读、可继续补充、可最终成书的内容。
+> **AI 回忆录记者：通过持续语音采访、证据整理、专业追问与成稿，把分散的人生经历逐步变成可验证、可继续补充、可最终成书的个人回忆录。**
 
-> **当前文档真相优先级：代码与环境配置 > `docs/CURRENT_STATE.md` > Current 专项文档 > Reports / Archive。**
->
-> 历史方案、阶段计划和旧测试报告不再作为当前开发依据。
+这是人生采访局的 NVIDIA / DGX Spark Hackathon 版本。项目不是“一次输入后自动写一本书”，也不是一个普通聊天机器人；它把专业回忆录记者的工作拆成可执行的 **Realtime Interview + Agent Skills + Evidence Pipeline**：实时语音模型负责自然地“听与问”，低延迟 Coach 负责必要时纠偏，Memory / Era Retrieval 提供受限证据，采访结束后再由一组 Skills 完成事实整理、完整度判断与故事成稿。
 
-## 当前状态
+项目当前已经具备完整 Web 产品链路、四类采访场景、第三者补充、Transcript 证据链、Story Memory、Completion / Gaps、Story Generation、Book / PDF 路径，以及 NemoClaw / OpenClaw、NeMo Retriever、NeMo Agent Toolkit（NAT）与 Technical Observer 的集成路径。
 
-- Mac 默认 Realtime：**Step-Audio-2-mini / StepFun Cloud**；可选 Realtime：**StepAudio 3 Quality / StepFun Cloud**。
-- Mini 默认使用 `supervisor_auto`：Qwen3-8B Realtime Coach 负责 Gate / 指导；Story Continue 可按需并行检索 Current Story Memory 与 Era Context。Mini Coach 由产品低延迟 Realtime Runtime 执行，不经过 OpenClaw。
-- Gate 最长 2 秒；Coach 全链路从用户 final transcript 起共用 6 秒 Deadline，失败或超时不得阻塞 Voice。
-- SQLite 仍是业务 Source of Truth；NeMo Retriever 是可重建的派生检索层。
-- Web 会后任务支持 Direct Model 与 NemoClaw / OpenClaw Agent Runtime；Mac `.env.example` 当前默认 `AI_TASK_RUNTIME=direct`。
-- DGX Spark 部署边界是：用户准备并运行标准模型 / 检索 Runtime，本仓库配置并运行应用、接通这些 endpoint。
-- **DGX Spark 兼容性、完整端到端和性能仍 NOT TESTED ON DGX SPARK。** 代码、官方 recipe、Mac 验证都不能替代 Spark 真机证据。
-- NAT、正式 Skills、Technical Observer 与 Benchmark 是比赛和应用证据的组成部分；只有保存了实际运行结果的报告才是对应场景的验证证据。
+> **真实性说明：**截至当前 main，DGX Spark 真机兼容性、完整 E2E、StepAudio ARM64 路径以及 Spark 性能指标仍在验证中。未产生真机证据前，不把配置、官方 recipe 或 Mac 测试写成 Spark PASS。
 
-## 当前架构
+---
+
+## 1. 为什么做：把“聊天”变成真正的回忆录采访
+
+很多人有大量人生经历，却很难长期坐下来写作。一次性让大模型“帮我写自传”通常会遇到三个问题：
+
+1. **资料不完整**：用户自己不知道还缺哪些关键细节。
+2. **事实容易漂移**：长访谈里重复提问、忘记旧回答、把背景知识误当成用户经历。
+3. **写作与采访混在一起**：模型为了让故事好看，容易补全未经证实的细节。
+
+人生采访局把这个问题拆成一条长期工作流：
 
 ```text
-Web / Mobile Web
-       |
-       v
-Life Interview Backend
-- Auth / Session / Story / Life Stage / Share / Book
-- Validator / Transaction / Idempotency
-- SQLite (Source of Truth)
-       |
-       +-------------------------+
-       |                         |
-       v                         v
-Realtime Voice             Post-session Tasks
-       |                         |
-Step-Audio-2-mini          onboarding.closeout
-(default: StepFun Cloud)   interview.closeout
-       |                   interview.context_hint
-supervisor_auto            story.completion
-       |                   story.generation
-Qwen3-8B Coach                  |
-       |                         +--> Direct Model (Mac default)
-Gate                            |
-  +--> Current Story Memory     +--> NemoClaw/OpenClaw Agent Runtime
-  +--> Era Context
-       |
-Coach Packet
-       |
-response.create
+认识用户
+→ 建立人生地图
+→ 创建 / 选择 Story
+→ 持续语音采访
+→ Transcript / Evidence
+→ Closeout / Story Memory
+→ Completion / Gaps
+→ Story Generation
+→ Book
 ```
 
-StepAudio 3 保留 `voice_tool` 路线，并继续使用现有 Context Hint / Tool Result / Resume 能力；Mini Coach 与该 Agent 路径是两套不同机制，不应混写。
+产品目标是让用户主要通过“说话”完成回忆录，而系统始终保留事实来源、不确定性与后续纠错空间。
 
-## DGX Spark deployment
+---
 
-Spark 的 Runtime 由操作者准备和维护；本仓库负责应用配置、数据库、Agent Contract / Skills、后端接线和观测。先阅读 [Spark Deployment Reference](docs/04-nvidia/spark/README.md)。
+## 2. 核心创新：快系统负责自然，慢系统负责专业
 
-### Prerequisites
+实时采访最难的不是“模型会不会回答”，而是同时满足 **自然、低延迟、记得住、不过度打断、还能专业追问**。
 
-- 可登录的 DGX Spark（ARM64 / aarch64），NVIDIA driver 可通过 nvidia-smi 检查，Docker daemon 与 NVIDIA Container Runtime 可用；Runtime 由操作者按官方说明准备。
-- Git、Python 3.9+、Node.js 24.16+（24.x）或 26.1+、npm。Node/npm 命令统一经 `bash scripts/codex-node.sh` 执行。
-- 下表所列服务已在 Spark 上启动，并可从应用进程访问。
-- NemoClaw/OpenClaw Agent Runtime 已由操作者按 NVIDIA 官方方式安装、onboard，且指定 sandbox 为 ready/running；模型与服务凭据由操作者安全管理。
+因此项目没有把全部任务塞进一个大模型，而是拆成快慢两层：
 
-| Runtime | 默认 endpoint | 模型 / 边界 |
+```text
+User Speech
+    |
+    v
+Realtime Voice Model
+负责：听、说、保持自然节奏
+    |
+    +------------------------------+
+    |                              |
+    |                      Interview Coach
+    |                      Qwen3-8B / low-latency
+    |                              |
+    |                    Gate：是否需要介入？
+    |                        /            \
+    |                    Memory          Era
+    |                  Retrieval       Retrieval
+    |                        \            /
+    |                         Coach Resolve
+    |                              |
+    +<---------------------- Coach Packet
+    |
+    v
+下一次自然追问
+```
+
+### 快系统
+
+当前 Mac 默认使用 **Step-Audio-2-mini / StepFun Cloud**。它负责用户真正听到的实时语音交互，不承担所有历史检索与复杂判断。
+
+### 慢系统
+
+`interview-coach` Skill 使用独立低延迟 Runtime：
+
+- Gate 硬上限：**2 秒**；
+- Coach 总 Deadline：**6 秒**；
+- Story Continue 可按需检索 **Current Story Personal Memory**；
+- 可独立按需检索 **Era Context**；
+- Memory 与 Era 可以并行；
+- 超时、失败、stale 结果全部 **fail-open**，不能阻塞语音采访；
+- Personal Evidence 与 Public Era Evidence 永久隔离。
+
+这套设计的目标不是“让 Coach 每轮都说话”，而是 **只在小模型需要帮助时介入**。
+
+---
+
+## 3. Agent Skills：把专业采访能力拆成可验证任务
+
+项目当前正式定义 6 个产品 Skills。它们不是一个大 Prompt 的别名，而是分别拥有明确触发条件、输入、证据边界、输出协议和 Runtime。
+
+| Skill | 职责 | 核心边界 |
 |---|---|---|
-| Text / Agent | `http://127.0.0.1:8000/v1` | `nvidia/Qwen3.6-35B-A3B-NVFP4`；以 `/v1/models` 返回的 served ID 为准 |
-| Mini Coach | `http://127.0.0.1:8001/v1` | `Qwen3-8B`；产品低延迟 Realtime Runtime |
-| StepAudio contract | `ws://127.0.0.1:8092/realtime` | 外部 Realtime Runtime / bridge 应实现的应用协议 |
-| NeMo Retriever | REST / MCP `:7670` | Retriever 内部存储由其 Runtime 管理；应用只访问 Service |
+| [interview-coach](agent/skills/interview-coach/SKILL.md) | 实时判断是否需要纠偏、Memory / Era Retrieval 与下一问指导 | 不直接回答用户；失败不阻塞 Voice |
+| [interview-observer](agent/skills/interview-observer/SKILL.md) | 对当前轮给出只读证据选择、冲突与追问提示 | 不检索、不写库、不补事实 |
+| [onboarding-closeout](agent/skills/onboarding-closeout/SKILL.md) | 首次建档后提取 Profile、Life Stage、Story Seeds | 只有用户 Transcript 可作为新事实证据 |
+| [interview-closeout](agent/skills/interview-closeout/SKILL.md) | Story / Contributor 采访结束后的证据化整理 | Proposal only；不直接修改业务数据 |
+| [story-completion](agent/skills/story-completion/SKILL.md) | 判断 Story 是否足以成文，并维护 0–3 个高价值 gaps | 不重新读完整 Transcript，不负责写文章 |
+| [story-generation](agent/skills/story-generation/SKILL.md) | 根据可验证证据生成 / 修订中文回忆录正文 | 不虚构对白、情绪、因果或历史参与情况 |
 
-官方资料：[DGX Spark vLLM agent-ready models](https://build.nvidia.com/spark/vllm/agent-ready-models)、[Qwen3.6-35B-A3B Spark recipe](https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B?features=tool_calling%2Creasoning&hardware=dgx_spark_gb10)、[Step-Audio 2](https://github.com/stepfun-ai/Step-Audio2)、[NeMo Retriever](https://docs.nvidia.com/nemo/retriever/latest/extraction/getting-started-about/)。官方 recipe 是 Runtime 准备资料，不是本项目 Spark 验收结果。
+典型工作流：
 
-### 1. Clone
+```text
+实时采访
+  ↓
+Interview Coach / Observer
+  ↓
+Interview Closeout
+  ↓
+Story Memory / Summary
+  ↓
+Story Completion
+  ↓
+下一轮高价值 gaps
+  ↓
+Story Generation
+  ↓
+Story Document / Book
+```
+
+固定业务流程由 Backend 决定；Agent 输出先形成 Proposal，再经过 Schema / Evidence / Domain Validation 后才 Apply。**Agent 不直接写业务 SQLite。**
+
+Skill 设计审查与比赛证据见：
+
+- [NVIDIA Skill Audit](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)
+- [Agent Runtime](docs/AGENT_RUNTIME.md)
+
+---
+
+## 4. 证据链：不让“会写”覆盖“真实”
+
+系统把不同信息层明确分开：
+
+```text
+Transcript
+  = 原始采访证据
+
+Story Summary
+  = 面向用户 / 成稿的事实骨架
+
+Story Agent Memory
+  = 面向下一次采访与 Completion 的工作记忆
+
+Story Document
+  = 基于可验证证据生成的正式文章
+```
+
+关键原则：
+
+- SQLite 是业务 **Source of Truth**；
+- NeMo Retriever 是可重建的派生检索层；
+-主人公 Transcript 与第三者 Contributor 证据链隔离；
+- 第三者说法不能自动变成主人公事实；
+- Era Context 只能帮助提出更好的问题，不能变成“用户经历过某历史事件”的证据；
+- 不确定内容保持不确定，后续明确纠正优先于旧摘要与旧稿。
+
+---
+
+## 5. Benchmark：证明复杂架构确实有收益
+
+比赛 Benchmark 分成两类，避免把“跑得快”与“采访得更好”混为一谈。
+
+### 5.1 Skill / Interview Quality Benchmark
+
+当前正在运行的评测重点比较：
+
+```text
+Realtime model only
+→ + Coach Gate
+→ + Personal Memory
+→ + Era Context
+→ Full Interview Coach
+```
+
+关注指标包括：
+
+- repeated-question rate；
+- off-topic rate；
+- unsupported-fact rate；
+- contradiction-handling quality；
+- useful follow-up rate；
+- unnecessary intervention rate；
+- retrieval precision；
+- timeout / fail-open behavior。
+
+**当前状态：进行中。最终结果生成后将在本节补充正式报告与关键数字。**
+
+### 5.2 Spark / Runtime Performance Benchmark
+
+Spark 真机完成后记录：
+
+- Text first-token latency；
+- Coach Gate / Resolve latency；
+- Retriever latency；
+- First Audio latency；
+- P50 / P95；
+- timeout / error rate；
+- 并发与资源占用；
+- 完整 E2E 结果。
+
+**当前状态：等待 DGX Spark 真机运行结果。未实测指标不在 README 中预填。**
+
+测试与证据规范见 [Testing & Acceptance](docs/TESTING.md) 和 [Scoring Alignment](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)。
+
+---
+
+## 6. NVIDIA / DGX Spark 技术栈
+
+项目使用 NVIDIA 技术栈的重点不是“为了比赛堆组件”，而是让一台本地设备同时承担 **文本推理、Agent Runtime、检索、评测与可观测性**。
+
+| 技术 | 在项目中的作用 |
+|---|---|
+| **DGX Spark** | 目标本地推理与 Agent 运行平台 |
+| **NemoClaw / OpenClaw** | 正式 Agent Task Runtime 与 Skills 执行环境 |
+| **NeMo Retriever** | Current Story Personal Memory 与 Era Context 检索服务 |
+| **NeMo Agent Toolkit (NAT)** | Agent Evaluation、Regression、Profiler、Trace / Trajectory |
+| **NVIDIA Qwen3.6-35B-A3B-NVFP4** | Spark 目标 Text / Agent Model |
+| **Step-Audio-2-mini / StepFun** | Realtime Voice 路线 |
+| **Qwen3-8B** | Mini Realtime Interview Coach |
+
+### 为什么需要本地算力
+
+回忆录采访天然包含大量个人长期数据，同时又需要多个模型 / Runtime 协同。目标 Spark Profile 将 Text、Coach、Voice、Retriever 与 Agent Runtime 放在用户可控的本地环境中，通过标准 endpoint 与产品连接。
+
+Spark 目标接口：
+
+| Runtime | 目标 endpoint |
+|---|---|
+| Text / Agent | `http://127.0.0.1:8000/v1` |
+| Mini Coach | `http://127.0.0.1:8001/v1` |
+| StepAudio contract | `ws://127.0.0.1:8092/realtime` |
+| NeMo Retriever | REST / MCP `:7670` |
+
+> 当前这些接口已经完成应用侧接线设计，但 **DGX Spark / GB10 Runtime compatibility、完整 E2E、StepAudio ARM64 与性能仍需真机证据**。
+
+---
+
+## 7. 部署说明
+
+比赛部署重点是说明 **本地算力如何承载智能体、模型如何分工、Skills 如何执行**；完整工程细节见 [Spark Deployment Reference](docs/04-nvidia/spark/README.md)。
+
+### 7.1 Runtime 准备
+
+操作者先按 NVIDIA / StepFun 官方方式准备并启动：
+
+- Text / Agent Model Service；
+- Mini Coach Model Service；
+- StepAudio Realtime Runtime / contract；
+- NeMo Retriever；
+- NemoClaw / OpenClaw Agent Runtime。
+
+NemoClaw / OpenClaw 作为 operator-managed prerequisite，在仓库之外完成官方安装、onboarding 与 sandbox readiness。
+
+### 7.2 应用接线
 
 ```bash
 git clone https://github.com/gwh7078/life-interview-NVDA.git
 cd life-interview-NVDA
-```
 
-### 2. Prepare runtimes
-
-在仓库之外按官方说明准备并启动 Text、Coach、StepAudio contract 和 Retriever。先确认 Text Runtime 已加载目标模型：
-
-```bash
-curl -fsS http://127.0.0.1:8000/v1/models
-```
-
-NemoClaw 可复用已经运行的 vLLM：onboard 读取 `localhost:8000/v1/models` 中的模型。选择现有 Local vLLM 路径；不要因为 OpenClaw 再下载或启动一份 Text 模型。
-
-### 3. Configure
-
-```bash
 cp deploy/spark/env.example deploy/spark/.env
-chmod 600 deploy/spark/.env
-```
+# 按实际 served model ID / endpoint 修改配置
 
-编辑 `deploy/spark/.env`：将 Text / Coach 模型名设为各自 `/v1/models` 实际返回的 ID，并核对 Text、Coach、StepAudio、Retriever endpoint、`NEMOCLAW_SANDBOX=my-assistant` 与数据库路径。无需配置 Retriever 内部 VectorDB 地址。`SPARK_SEED_DEMO_DATA=false` 默认跳过示例数据；仅需比赛 Demo 数据时显式设为 `true`。Mac 根目录 `.env.example` 的 StepFun Cloud 默认值保持不变。
-
-### 4. Setup
-
-在四个外部 Runtime 已启动、`deploy/spark/.env` 已配置后运行应用 setup：
-
-```bash
 bash deploy/spark/setup.sh
-```
-
-NemoClaw/OpenClaw Agent Runtime 是一项整体的 operator-managed prerequisite：操作者在仓库外使用 [NVIDIA 官方 installer](https://www.nvidia.com/nemoclaw.sh) 与 [`nemoclaw onboard`](https://docs.nvidia.com/nemoclaw/latest/user-guide/openclaw/get-started/quickstart)，准备好含 OpenClaw 的指定 sandbox 并确保其 ready/running。仓库只检查 `nemoclaw` CLI、`nemoclaw <sandbox> status --json` 和 sandbox 内 `openclaw --version`；不安装、onboard、启动或停止该 Runtime。缺失时输出 `AGENT RUNTIME NOT READY`。
-
-`setup.sh` 检查主机与外部 Runtime、安装应用依赖、迁移独立 Spark SQLite、初始化 Retriever collections / Era index，再检查 Agent Runtime 并配置既有 Text route、realtime-context Agent、Formal Skills 与 retrieval policy。它复用已经运行的 Text vLLM，不启动第二份模型。Spark 的 `TEXT_MODEL_API_KEY` 必须留空；非空时 setup 失败。Coach API key 仍可选。示例数据只在 `SPARK_SEED_DEMO_DATA=true` 时写入。
-
-`interview-coach` 是正式产品 Skill。其定义可随正式 Skills 同步，但 Mini Coach 的实际 Gate / Retrieval / Resolve 仍由产品低延迟 Realtime Runtime 调用 Qwen3-8B；不经过 OpenClaw。
-
-### 5. Start
-
-```bash
 bash deploy/spark/start.sh
 ```
 
-`setup.sh` requires the operator-prepared NemoClaw/OpenClaw Agent Runtime to be
-ready before it applies application configuration. `start.sh` starts only the
-Product Backend, Agent retrieval proxy, and Technical Observer. Text, Coach,
-StepAudio, and Retriever continue to be provided by user-managed runtimes.
+仓库负责：
 
-### 6. Verify
+- Backend / Web；
+- 独立 Spark SQLite；
+- Agent Task Contract；
+- Formal Skills 同步；
+- Retriever collections / Era index 初始化；
+- NemoClaw/OpenClaw route / policy 接线；
+- Agent retrieval proxy；
+- Technical Observer；
+- 应用验收。
 
-verify 运行产品 acceptance smoke，不运行 CI 全量 `npm test` 或 NAT。NAT、Profiler 与 Benchmark 是单独的可选比赛评测：
+仓库不会为了 OpenClaw 再启动第二份 Text 模型；已运行的 vLLM 可以被 NemoClaw 复用。
 
-```bash
-bash scripts/codex-node.sh npm run test:agent:nat:smoke
-bash scripts/codex-node.sh npm run test:agent:nat:profile
-bash scripts/codex-node.sh npm run spark:benchmark
+### 7.3 模型与 Runtime 优化思路
+
+当前优化重点是 **按任务拆模型、限制慢系统介入、减少不必要上下文与 Tool Round Trip**：
+
+- Realtime Voice 与 Coach 分离；
+- Gate 先判断是否值得进入慢路径；
+- Memory / Era 只有需要时才检索；
+- 两路 Retrieval 可并行；
+- 后端预取固定 Context，避免 Agent 为搬数据增加 Tool Round Trip；
+- Coach 有硬 Deadline，迟到结果直接丢弃；
+- Text / Agent 与 Coach 使用不同模型与 endpoint；
+- NAT / Benchmark 单独评测，不进入产品关键路径。
+
+Spark 真机优化参数与真实性能数据只在验证后更新，不把计划写成结果。
+
+---
+
+## 8. Demo：评委应该看到什么
+
+最终 Demo 重点不是展示后台页面数量，而是展示一条完整的“专业采访 → 证据整理 → 成稿”链路：
+
+```text
+Story Continue 实时采访
+  ↓
+Realtime Voice 自然追问
+  ↓
+Coach Gate 判断
+  ↓
+必要时调用 Memory / Era
+  ↓
+得到更好的下一问
+  ↓
+结束采访
+  ↓
+Interview Closeout
+  ↓
+Story Completion / Gaps
+  ↓
+Story Generation
+  ↓
+回忆录正文
 ```
 
-在 DGX Spark 上、所有 Runtime 与应用启动后执行基础产品验证：
+同时通过 Technical Observer 展示 Coach、Retriever、Agent Task 与运行状态，让评委可以看到“为什么这一问发生了”。
 
-```bash
-set -a
-. deploy/spark/.env
-set +a
-bash deploy/spark/verify.sh
-```
+**B 站演示视频：待最终录制后补充 URL。**
 
-报告写入 `runtime/diagnostics/spark/`。verify 分开记录 G0 host prerequisite、G0R external endpoints、G0A Agent Runtime readiness、G4a bridge smoke、G4b Product Realtime E2E、G7a OpenClaw configuration 与 G7b 实际 Agent Task。缺少语音 fixture 时 G4a/G4b 为 `NOT TESTED`，不会记为 PASS。G8 是产品确定性 acceptance；NAT / Profiler / Benchmark 独立运行。只有真机命令实际运行并保存证据后，才可把相应 gate 更新为 PASS。当前 DGX Spark compatibility（包括 StepAudio ARM64）、完整 E2E 与性能均为 **NOT TESTED ON DGX SPARK**。
+---
 
-> `deploy/spark/setup.sh` / `start.sh` 是外部 Runtime 已准备后的应用 setup / start 入口；它们不会代替操作者部署或启动 Text、Coach、StepAudio 与 Retriever 服务。
+## 9. 项目完整性
 
-## 文档入口
+当前 Web 产品已经实现：
+
+- Demo Phone Auth；
+- Onboarding / 人生地图；
+- Life Stage CRUD；
+- Story Create / Story Continue；
+- External Contributor 分享采访；
+- Transcript 持久化；
+- Closeout；
+- Story Summary / Story Agent Memory；
+- Completion / Gaps；
+- Story Generation / Document Version；
+- Book 组织与 PDF 路径；
+- Retriever / Era Context；
+- Agent Task Runtime；
+- Formal Skills；
+- NAT / Technical Observer / Benchmark 工具。
+
+当前仍持续进行真人语音人工验收，尤其关注开场、连续追问、重复、打断、历史事实误用与结束协议。自动化 PASS 不等同于真人体验 PASS。
+
+---
+
+## 10. 比赛提交材料
+
+| 材料 | 仓库入口 / 状态 |
+|---|---|
+| 开源项目仓库 URL | 当前仓库 |
+| 500 字以上项目说明 | 本 README 第 1–6、9 节 |
+| 部署说明 | 本 README 第 7 节 + [Spark Deployment Reference](docs/04-nvidia/spark/README.md) |
+| 技术栈说明 | 本 README 第 6 节 |
+| Skill Markdown 文件 | 本 README 第 3 节 |
+| B 站作品演示视频 URL | **待补充** |
+| 黑客松“一日谈”征文 URL | **待补充** |
+| 团队合影 | **待提交** |
+
+Benchmark 与 Spark 真机结果完成后，只补充实际证据，不更改上述事实边界。
+
+---
+
+## 11. 进一步阅读
+
+如果需要核对实现，而不是只看比赛摘要：
 
 1. [当前实现状态](docs/CURRENT_STATE.md)
 2. [产品定义](docs/PRODUCT.md)
-3. [当前架构](docs/ARCHITECTURE.md)
+3. [整体架构](docs/ARCHITECTURE.md)
 4. [Realtime / Coach / Retrieval](docs/REALTIME.md)
-5. [Agent Runtime](docs/AGENT_RUNTIME.md)
+5. [Agent Runtime / Skills](docs/AGENT_RUNTIME.md)
 6. [NVIDIA / DGX Spark](docs/NVIDIA.md)
 7. [测试与验收](docs/TESTING.md)
-8. [完整文档目录](docs/README.md)
+8. [比赛评分映射](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)
+9. [完整文档目录](docs/README.md)
 
-比赛评分映射见 [SCORING_ALIGNMENT_v1.0.md](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)。
+### 文档真相优先级
 
-## 文档治理
+```text
+代码与环境配置
+> docs/CURRENT_STATE.md
+> Current 专项文档
+> Reports / Archive
+```
 
-旧方案可以保留，但必须满足两条规则：
-
-1. **Current 文档只能描述当前代码真实状态。**
-2. 被取代的设计、阶段计划和历史快照进入 `docs/archive/` 或 `docs/07-reports/`，不得继续出现在 Current 推荐阅读路径中。
-
-需要判断“现在系统到底是什么”时，不从版本号最大的旧文档推断，先读 `docs/CURRENT_STATE.md`，再核对代码。
+历史方案、阶段计划和旧测试报告不作为当前能力依据。
