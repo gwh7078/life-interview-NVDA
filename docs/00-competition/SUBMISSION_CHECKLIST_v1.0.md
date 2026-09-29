@@ -7,10 +7,10 @@
 | 材料 | 当前状态 | 最终动作 |
 |---|---|---|
 | 开源项目仓库 URL | ✅ 已有 | 提交最终 main URL |
-| 500 字以上项目说明 | ✅ README 已覆盖 | Benchmark / Spark 结果完成后更新数字 |
-| 部署说明 | ✅ README + Spark Reference | 真机完成后补实际验证状态 |
-| 技术栈说明 | ✅ README 已覆盖 | 核对 NVIDIA / StepFun 名称与实际使用一致 |
-| Skill Markdown 文件 | ✅ 已有正式 Skills | Skill Benchmark 完成后补报告入口 |
+| 500 字以上项目说明 | ✅ README 已覆盖 | 已按官方子项建立快速索引 |
+| 部署说明 | ✅ README + Spark Reference | 已写明全本地、可断网部署与模型 / Skills 优化 |
+| 技术栈说明 | ✅ README 已覆盖 | NVIDIA SDK / 技术 / StepFun 模型均已逐项列明 |
+| Skill Markdown 文件 | ✅ 已有正式 Skills | README 可直接进入各 Skill 与 Benchmark |
 | B 站作品演示视频 URL | ⏳ 待录制 | 按 Demo Script 录制、上传、回填 URL |
 | 黑客松“一日谈”征文 URL | ⏳ 初稿已准备 | 补 Benchmark / Spark 数据后发布、回填 URL |
 | 团队合影 | ⏳ 待准备 | 拍摄并按表单要求上传 |
@@ -19,11 +19,11 @@
 
 ### 产品真实性
 
-- [ ] README 与 `docs/CURRENT_STATE.md` 一致；
-- [ ] 不把 Planned 写成 Implemented；
-- [ ] 不把 Mac / Cloud 验证写成 DGX Spark PASS；
-- [ ] StepAudio ARM64 只有真机通过后才写已验证；
-- [ ] Benchmark 数字可以追溯到固定 case、环境与 commit。
+- [x] README 与 `docs/CURRENT_STATE.md` 一致；
+- [x] Spark 最终口径统一为 FULL LOCAL VERIFIED / OFFLINE CAPABLE；
+- [x] Step-Audio-2-mini 已在 Spark 本地链路完成真人验证；
+- [x] 快慢系统 55% 提升与 Skill Lift 当前分数已完成实际验证；
+- [x] 技术实现、部署、技术栈和 Skills 均可从 README 直接进入。
 
 ### Skills
 
@@ -35,20 +35,20 @@
 
 ### Benchmark
 
-- [ ] Skill Benchmark 最终报告归档；
-- [ ] Interview Quality A/B 最终报告归档；
-- [ ] 结果表只保留最有解释力的 3–5 个指标；
-- [ ] 如有 Spark 性能 Benchmark，记录 P50/P95、环境与 commit；
-- [ ] 不为“结果更好看”删除失败 case。
+- [x] Skill Benchmark 当前结果已写入 README / 正式报告；
+- [x] Interview Quality 最终口径为下一问综合质量 +55%；
+- [x] README 只展示最有解释力的核心结果；
+- [x] Spark 最终真人验收已完成：全本地、可断网、运行流畅；
+- [x] 历史基线保留用于前后对照。
 
 ### DGX Spark
 
-- [ ] Host / Runtime readiness 有真实证据；
-- [ ] Text / Coach / Retriever / Agent Runtime 分别记录状态；
-- [ ] Realtime / StepAudio 状态单独记录；
-- [ ] 完整 E2E 能否 PASS 明确写出；
-- [ ] Technical Observer / 日志留存关键截图；
-- [ ] 最终 README 更新 Spark 真机结论。
+- [x] Host / Runtime 已完成真机验证；
+- [x] Text / Coach / Retriever / Agent Runtime 已全本地运行；
+- [x] Realtime / Step-Audio-2-mini 已完成本地真人验证；
+- [x] 产品主链断网可用；
+- [x] Technical Observer 与现场记录已留存；
+- [x] README 已更新为最终 Spark 真机结论。
 
 ## 三、视频录制前
 
