@@ -221,7 +221,7 @@ Story Document
 - **Tier 2 · Deduplication**：检查 Skill 内部重复指导，以及不同 Skill 之间的语义重叠；
 - **Tier 3 · Live Evaluation**：让真实 Agent 在 **With Skill / Without Skill** 两种条件下执行同一批任务，用 **Skill Lift** 衡量 Skill 是否真的改善 Agent 行为。
 
-Tier 1 / Tier 2 的审计证据与未完成项见 [NVIDIA Skill Audit](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)。本节展示已经完成的 **Tier 3 正式实跑结果**。这些结果是项目自测证据，**不代表 NVIDIA Verified Skills 认证**。
+Tier 1 / Tier 2 的设计与审查摘要见 [NVIDIA Skill Audit](docs/07-reports/skills/NVIDIA_SKILL_AUDIT.md)。本节展示已经完成的 **Tier 3 正式实跑结果**。这些结果是项目自测证据，**不代表 NVIDIA Verified Skills 认证**。
 
 当前 Skill v1.1 已按 NVIDIA SkillEvaluator Tier 1 `external` profile 做静态 hardening：补齐 `metadata.author`、`metadata.version` 与 MIT License，并收紧各 Skill 的触发描述以降低 Tier 2 跨 Skill 语义重叠。**本轮尚未重新运行 T1 / T2，因此这些修改不等同于新的 T1 / T2 PASS 报告。**
 
