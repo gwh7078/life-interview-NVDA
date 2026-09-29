@@ -1,13 +1,13 @@
 # DGX Spark Hackathon · 5 分钟 Demo 视频脚本
 
-> 目标：让评委在 5 分钟内看懂 **产品价值 → 快慢系统 → Agent Skills → NVIDIA / DGX Spark → 结果证据**。  
-> 原则：只展示真实可运行能力；Benchmark 与 Spark 数据只使用实际运行结果。
+> 目标：让评委在 5 分钟内看懂 **7 天只靠说话完成约 10 万字回忆录 → 快慢系统 → 5 个核心 Agent Skills → NVIDIA / DGX Spark → Skill 评测证据**。  
+> 原则：产品操作是主线，技术图只解释“为什么”；Benchmark 与 Spark 数据只使用实际结果。
 
 ## 一、视频核心叙事
 
 一句话：
 
-> **人生采访局不是“帮你写一篇文章”的聊天机器人，而是一名会持续采访、核对证据、判断缺口并最终成稿的 AI 回忆录记者。**
+> **人生采访局是一名 AI 回忆录记者：用户只需要说，不需要写；系统用“听、问、辩、写”完成从采访到成稿的全过程，产品目标是 7 天形成约 10 万字回忆录。**
 
 整条视频只讲一个故事：
 
@@ -42,8 +42,11 @@
 **屏幕文字**
 
 ```text
-Interview → Evidence → Gaps → Writing
+7 天 · 只说话不写字 · 约 10 万字回忆录
+听 → 问 → 辩 → 写
 ```
+
+右侧技术总览只列核心：5 个业务 Skill、快慢双系统、DGX Spark、NemoClaw / OpenClaw、NeMo Retriever、NAT、SkillEvaluator、Qwen3.6-35B-A3B-NVFP4、Step-Audio-2-mini。不要在这一页展开实现细节。
 
 ---
 
@@ -120,49 +123,7 @@ Gate → Memory → Era → Coach Resolve
 
 ---
 
-### 2:05–3:10｜采访结束后：Agent Skills 工作流
-
-**画面**
-
-结束当前采访。
-
-随后依次展示：
-
-```text
-Interview Closeout
-→ Story Memory / Summary
-→ Story Completion
-→ Gaps
-→ Story Generation
-```
-
-同时显示 Skill 文件或简化 Skill 卡片。
-
-**旁白**
-
-> 采访结束以后，不是再用一个大 Prompt 把所有事情做完。  
-> 我们把专业工作拆成独立 Agent Skills：Closeout 只负责整理有来源的事实；Completion 只判断资料是否足以成文以及下一轮还缺什么；Generation 最后才根据证据写正文。
-
-展示三个关键边界：
-
-- Agent 只返回 Proposal；
-- Backend 做 Schema / Evidence / Domain Validation；
-- Agent 不直接写业务数据库。
-
-**Skill 快速扫过**
-
-- interview-coach
-- interview-observer
-- onboarding-closeout
-- interview-closeout
-- story-completion
-- story-generation
-
-不要逐个读文档，重点展示“分工 + 协作”。
-
----
-
-### 3:10–3:40｜第三者补充与证据隔离
+### 2:05–2:30｜第三者补充：为什么需要“辩”
 
 **画面**
 
@@ -170,13 +131,36 @@ Interview Closeout
 
 **旁白**
 
-> 回忆录也不只来自主人公本人。用户可以邀请亲友补充同一个 Story，但第三者证词与主人公事实链严格隔离，不能自动写成主人公亲历。只有主人公后来明确确认，才可以进入主人公事实。
-
-这一段控制在 30 秒以内，用来证明产品完整性和证据设计深度。
+> 回忆录不只来自主人公本人。亲友可以补充同一个 Story，但第三者证词与主人公事实链保持独立；系统可以发现一致、差异和冲突，却不能自动把第三者说法写成主人公亲历。这就是“听、问、辩、写”里的“辩”。
 
 ---
 
-### 3:40–4:20｜为什么是 DGX Spark
+### 2:30–3:25｜采访结束后：三个会后 Skills
+
+**画面**
+
+结束当前采访，依次展示：
+
+```text
+interview-closeout
+→ Story Memory / Summary
+→ story-completion
+→ 0–3 个高价值 Gaps
+→ story-generation
+→ Story / Book
+```
+
+**旁白**
+
+> 采访结束以后，不是用一个大 Prompt 把所有事情做完。`interview-closeout` 只整理有来源的事实；`story-completion` 只判断资料是否足够、还缺什么；`story-generation` 最后才根据证据成稿，并区分 initial / revision。
+
+视频里的 **5 个核心业务 Skills** 是 `interview-coach`、`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`。`interview-observer` 是实时观察和诊断辅助，不必与五个核心 Skill 并列讲解。
+
+共同边界：Agent 输出 Proposal，Backend 做 Schema / Evidence / Domain Validation，Agent 不直接写业务数据库。
+
+---
+
+### 3:25–4:05｜为什么是 DGX Spark
 
 **画面**
 
@@ -197,58 +181,35 @@ DGX Spark
 > 这类应用天然需要处理长期个人资料，同时又要并行运行 Voice、Coach、Retriever 和 Agent Runtime。  
 > DGX Spark 的价值不是把一个模型搬到本地，而是让这套多 Runtime 工作流可以在一台本地设备上协同运行。
 
-必须只展示已经真机验证成功的组件。
-
-如果 StepAudio ARM64 或完整 E2E 尚未通过，视频中明确区分：
-
-- 已完成真机验证；
-- 当前仍使用外部 Runtime / Cloud 的部分。
-
-不做模糊表述。
+当前真机口径统一为 **PARTIAL LOCAL VERIFIED**：GB10 上 Text、Coach、StepAudio Runtime、Retriever、Backend/Web、Observer、SQLite 已取得现场 PASS；OpenClaw Agent Task、最新 `main` full verify、完整业务 E2E 和最终性能尚未完成。视频可以说“关键组件已在 Spark 本地运行”，不要说“全链已经稳定离线通过”。
 
 ---
 
-### 4:20–4:45｜Benchmark：复杂架构到底值不值
+### 4:05–4:40｜Skill Benchmark + NAT：这些 Skills 是否真的有效
 
 **画面**
 
-只放 1 张最有力的结果图 / 表，不堆日志。
+只放一张结果图：左侧是 NVIDIA SkillEvaluator 的 With Skill / Without Skill 对照，右侧是 NAT 的 Evaluation / Profiler / Regression 角色。
 
-优先展示 **Interview Quality A/B**：
+可展示当前 v1.1 Overall：
 
 ```text
-Realtime Only
-vs
-+ Coach
-vs
-+ Memory
-vs
-+ Era
-vs
-Full
+story-completion    0.7426 → 0.9500
+story-generation    0.7868 → 0.9600
+interview-closeout  0.7891 → 0.9500
+onboarding-closeout 0.8163 → 0.9300
+interview-observer  0.8157 → 0.9400
 ```
 
-推荐指标：
-
-- 重复提问；
-- 跑题；
-- unsupported fact；
-- useful follow-up；
-- contradiction handling。
-
-如 Spark 性能数据足够稳定，再在角落补：
-
-- First Token / First Audio；
-- Coach P50/P95；
-- Retriever P50/P95。
+Judge 使用 StepFun `step-5-preview`。说明这些是项目自测，不代表 NVIDIA Verified Skills；新版 Overall 已复测，但新的 raw run_id / pass@2 / HTML / JSON 未完整留存，因此视频不要把旧基线原始报告说成新版原始证据。
 
 **旁白**
 
-> 我们不是用组件数量证明技术深度，而是用固定案例对照，验证这些组件有没有真的让采访更好。
+> 我们不靠组件数量证明技术深度，而是用 With Skill / Without Skill 的同题对照，验证每个 Skill 是否真的让 Agent 做得更好；NAT 再负责评测、性能分析和回归测试。
 
 ---
 
-### 4:45–5:00｜最终结果
+### 4:40–5:00｜最终结果
 
 **画面**
 
@@ -308,7 +269,7 @@ Voice × Evidence × Agent Skills × DGX Spark
 
 ## 四、剪辑原则
 
-- 产品真实画面至少占 **60%**；
+- 左侧产品实景约 **30–35%**，右侧技术图约 **65–70%**；技术图跟随当前操作切换，不做一张总图从头放到尾；
 - PPT / 架构图只解释“为什么”，不要代替产品 Demo；
 - 每个技术名词出现时，都要能回答“它解决了什么问题”；
 - 不展示长终端日志；
@@ -322,6 +283,7 @@ Voice × Evidence × Agent Skills × DGX Spark
 
 - B 站视频 URL：**待录制后补充**
 - Demo 使用 commit：**待最终冻结**
-- DGX Spark 真机环境：**待真机验证后补充**
-- Interview Quality Benchmark：**待正式结果**
-- Spark Performance Benchmark：**待正式结果**
+- DGX Spark 真机环境：**PARTIAL LOCAL VERIFIED，详见现场证据**
+- SkillEvaluator Tier 3：**基线原始结果已归档；v1.1 Overall 已复测，证据边界见正式报告**
+- Interview Quality Benchmark：作为快慢系统补充证据，不作为视频最后一页主结果
+- Spark Performance Benchmark：历史测量保留，但最新 `main` 最终结果仍待重跑
