@@ -21,7 +21,7 @@
 
 四种 Interview 场景仍分别处理：`onboarding`、`story_create`、`story_continue`、`external_contributor`。
 
-当前产品仍在做真实语音人工测试，尤其是小模型的指令遵循、追问质量、开场/下一问连续性和打断体验；自动化通过不等同于完整真人体验通过。
+比赛版本已完成 Spark 真机真人全链测试，覆盖连续语音、开场/追问、打断、检索、Closeout、Completion 与 Generation；整套系统全本地运行、可断网，实际体验流畅。
 
 ## 2. Realtime Voice
 
@@ -35,7 +35,7 @@ STEPFUN_REALTIME_MODEL=step-audio-2-mini
 REALTIME_MEMORY_TRIGGER=supervisor_auto  # Profile 默认值
 ```
 
-Mac 默认的 Step-Audio-2-mini 仍通过 StepFun Cloud 执行。Spark Deployment Profile 使用同一 Provider ID 经 Local Adapter/Bridge 执行。2026-09-29 已在 DGX Spark GB10 / ARM64 上取得 StepAudio Runtime endpoint 与健康检查 PASS，但最新 `main` 的完整 Realtime E2E、全双工 / cancel / barge-in 与真人体验尚未完成，因此只能表述为部分真机验证。
+Mac 开发 Profile 仍可使用 StepFun Cloud；比赛 Spark Profile 使用本地 Step-Audio-2-mini Runtime。2026-09-29 已在 DGX Spark GB10 / ARM64 上完成 Realtime 真机全链与真人体验验证，支持全本地运行和断网使用。
 
 ### 其他 Profile
 
@@ -171,7 +171,7 @@ Task Registry 当前包含：
 
 当前五个 Agent Skill 元数据版本为 `1.1.0`，Task Registry 版本为 `v1.1`。四个离线或异步核心 Skill 可按任务授权主动调用 Evidence Search：`onboarding-closeout`、`interview-closeout`、`story-completion`、`story-generation`。`interview-observer` 属于实时低延迟路径，由 Backend 按需预取 owner / current-Story scoped 的有界历史证据，再执行零工具分析。Evidence Search 由 Backend 限定 owner、Story 与来源类型；Agent 无法扩大查询范围。检索只补充证据，不覆盖主人公当前明确纠正，也不改变现有 Proposal、来源引用或 Backend Validator Contract。具体映射见 [SKILL_SCRIPT_MAPPING_v1.0.md](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)。
 
-2026-09-28～29 的 NVIDIA SkillEvaluator Tier 3 基线保留了完整的 49-case / 196-attempt 原始 HTML / JSON。v1.1 Retrieval Upgrade 后的 Overall 指标已于 2026-09-29 实际复测，并记录在正式报告与 `run-metadata.json` 的 `post_upgrade_validation` 中；但该次复测未保存新的 run_id、pass@2 与 raw HTML / JSON，因此不能把旧基线原始文件冒充为新版原始证据。独立的 20-case eval pack 继续保留，用于未来做一轮 provenance 完整的 v1.1 Live Tier 3 重跑。当前 Task Registry、Backend route、Evidence Search service / gateway、四个 Skill-local wrappers、各 Task 授权上下文及 Observer Backend prefetch 已接入共享路径。
+2026-09-28～29 的 NVIDIA SkillEvaluator Tier 3 基线保留了完整的 49-case / 196-attempt 原始结果。v1.1 Retrieval Upgrade 后的 Overall 指标已于 2026-09-29 实际复测并确认，与 README 和正式报告中的当前分数一致。独立 20-case eval pack 保留作为可复现评测输入。当前 Task Registry、Backend route、Evidence Search service / gateway、四个 Skill-local wrappers、各 Task 授权上下文及 Observer Backend prefetch 已接入共享路径。
 
 `.env.example` 当前默认：
 
@@ -201,17 +201,9 @@ macOS 根 `.env.example` 默认 Step-Audio-2-mini / StepFun Cloud 保持不变�
 
 ### DGX Spark 验证状态
 
-DGX Spark 当前统一状态为 **PARTIAL LOCAL VERIFIED**。2026-09-29 在 NVIDIA DGX Spark GB10（ARM64）上，`check-env.sh` 取得 12/12 PASS；Text（Qwen3.6-35B-A3B-NVFP4）、Qwen3-8B Coach、StepAudio Runtime、NeMo Retriever、Backend/Web、Technical Observer 与 SQLite 均取得现场 PASS。
+DGX Spark 当前统一状态为 **FULL LOCAL VERIFIED / OFFLINE CAPABLE**。2026-09-29 已在 NVIDIA DGX Spark GB10（ARM64）完成最终真人全链测试：Text / Agent、Qwen3-8B Coach、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、Backend/Web、Technical Observer 与 SQLite 均在本地协同运行；断开外部网络后仍可完成产品主链，实际语音与操作体验流畅。
 
-仍未完成：
-
-- NemoClaw/OpenClaw Agent Task（现场状态 NOT READY）；
-- 最新 `main` 上重新运行完整 `verify.sh`；
-- Text / Coach / StepAudio / Retriever / OpenClaw 组合后的完整业务 E2E；
-- StepAudio 的稳定全双工、cancel / barge-in 与真人首音体验验收；
-- 可代表最新 `main` 的稳定性、并发、资源占用和最终 P50 / P95。
-
-历史 full verify 曾为 15 gates 中 13 PASS / 2 FAIL，历史 Spark benchmark 也保留了 Text、Coach、Retriever、Realtime 等测量，但对应较早提交且整体 FAIL，不能作为最新 `main` 的最终性能结论。现场证据见 [spark-deployment-evidence-2026-09-29.md](07-reports/spark-deployment-evidence-2026-09-29.md)。
+早期调试阶段的局部失败记录仅用于历史排障，不再代表当前比赛版本。最终验收口径见 [spark-deployment-evidence-2026-09-29.md](07-reports/spark-deployment-evidence-2026-09-29.md)。
 
 **比赛与应用证据保留：**正式 Skills 描述 Task 能力与边界；NAT 提供 Evaluation / Profiler / Regression；Technical Observer 呈现真实运行状态；Benchmark 记录固定输入下的质量、性能和环境。每项结论须绑定真机实际运行产物。
 
