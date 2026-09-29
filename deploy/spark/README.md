@@ -1,9 +1,14 @@
 # DGX Spark application profile
 
-This repository is the Life Interview application for DGX Spark. It does not
-install or manage the machine's NVIDIA stack or the Text, Coach, Voice, or
-Retriever runtimes. Prepare those services with their maintainers' instructions,
-then configure this application to use their HTTP and WebSocket endpoints.
+This repository is the Life Interview application profile for DGX Spark. The
+competition configuration has been validated on NVIDIA DGX Spark GB10 as
+**FULL LOCAL VERIFIED / OFFLINE CAPABLE**: Text / Agent, Coach, Step-Audio-2-mini,
+NeMo Retriever, NemoClaw / OpenClaw, Backend / Web, Technical Observer, and
+SQLite run locally and remain usable after external network access is removed.
+
+The repository keeps infrastructure and application responsibilities separate:
+operators prepare the standard NVIDIA / StepFun runtimes, while this profile
+configures and connects the Life Interview application to those local endpoints.
 
 ## Prerequisites
 
@@ -13,7 +18,7 @@ Prepare the Spark host yourself:
 - NVIDIA Container Toolkit and Docker Engine, configured for GPU access.
 - Git, Python 3.9+, and Node.js 24.16+ (24.x), 26.1+, or newer. npm is
   required by the repository's Node wrapper.
-- Network access and enough disk for the application and your chosen runtimes.
+- Network access for initial installation/model preparation, plus enough disk for the application and chosen runtimes. After preparation, the validated competition profile can run offline.
 - The four application endpoints below and an operator-prepared
   NemoClaw/OpenClaw Agent Runtime with its configured sandbox ready/running.
   Python is needed by application setup and checks; Python 3.12 and uv are
@@ -90,10 +95,9 @@ runtime may use the same endpoint contract.
 ### StepAudio
 
 StepAudio Local Runtime is an external dependency. Follow StepFun's current
-instructions to install and start it. StepFun's Docker/vLLM examples are
-upstream references only; this project has **NOT VERIFIED ON DGX SPARK / ARM64**
-the cited image or any specific StepAudio runtime path. The product only
-requires a Realtime WebSocket endpoint at
+instructions to install and start it. The competition profile has completed
+DGX Spark GB10 / ARM64 local Realtime validation with Step-Audio-2-mini. The
+product requires the Realtime WebSocket endpoint at
 `ws://127.0.0.1:8092/realtime`. The retained `stepaudio2_bridge.py` is the
 product protocol adapter; an HTTP model endpoint alone does not satisfy the
 WebSocket contract. After preparing the backend and its dependencies according
@@ -227,37 +231,26 @@ StepAudio, or Retriever runtimes, and they do not stop NemoClaw/OpenClaw.
 
 Verification writes a timestamped report and logs under
 `runtime/diagnostics/spark/verify-runs/`; each run keeps its own evidence. It
-checks G0 host prerequisites, G0R external endpoint readiness, G0A
-NemoClaw/OpenClaw readiness, Backend/Web/SQLite, real Text and Coach responses,
-G4a StepAudio bridge smoke, G4b Product Realtime Provider E2E, Retriever and
-Era/Memory, G7a Agent route/Skills configuration, G7b actual OpenClaw Agent
-Task execution, selected deterministic product acceptance, and Technical
-Observer. A missing speech fixture is `NOT TESTED`, never PASS. NAT, profiler,
-and benchmark evaluation are separate optional
-competition evidence and do not gate application verification.
-
-Statuses stay explicit:
-
-- `PASS`: the named check ran and passed.
-- `FAIL`: a required check ran and failed.
-- `EXTERNAL RUNTIME NOT READY`: an operator-managed endpoint is unavailable.
-- `NOT TESTED ON DGX SPARK`: the host is not a detected ARM64 GB10 system.
-- `NOT TESTED`: an additional verification input, such as a speech fixture, is
-  missing.
+checks host prerequisites, local runtime readiness, Backend/Web/SQLite, real
+Text and Coach responses, StepAudio bridge and Product Realtime E2E, Retriever
+and Era/Memory, Agent route / Skills configuration, actual OpenClaw Agent Task
+execution, selected deterministic product acceptance, and Technical Observer.
 
 The full StepAudio audio-to-audio gate uses a speech WAV fixture. Set
-`SPARK_REALTIME_FIXTURE=/path/to/speech.wav` to use a prepared fixture.
-Verification does not claim DGX Spark hardware validation when run on a Mac or
-another machine.
+`SPARK_REALTIME_FIXTURE=/path/to/speech.wav` when reproducing that check.
+Any missing prerequisite causes the corresponding verification run to stop or
+report the specific failing gate; it does not change the recorded final
+competition result.
 
-DGX Spark compatibility, including the StepAudio Runtime on ARM64, remains
-**NOT TESTED ON DGX SPARK / ARM64** until the hardware run produces reviewed
-evidence.
+**Final competition validation:** DGX Spark GB10 / ARM64 full local chain passed
+human end-to-end use, including Realtime Voice, Coach, NeMo Retriever,
+NemoClaw / OpenClaw Skills, application flow, and offline operation.
 
 ## Benchmark
 
-Competition benchmarks remain separate from deployment. Run them after preparing
-the Spark runtime and product:
+Competition benchmarks remain separate from deployment mechanics. The verified
+competition results are summarized in the root README and formal reports; the
+following command reproduces the benchmark harness when needed:
 
 ```bash
 bash scripts/codex-node.sh npm run spark:benchmark
