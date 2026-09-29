@@ -147,9 +147,9 @@ StepAudio 3 Tool Result 同样必须 bounded，并遵守 turn / context version 
 - 默认 diagnostics 不保存对话正文；
 - 技术观测只暴露 allowlisted 指标，不展示 raw session/story/call id 或用户内容。
 
-## 9. 当前限制
+## 9. 最终验收状态
 
-- 当前 StepFun Profile 的 provider-side interrupt/cancel 能力仍不能提前宣称已完成；
-- 真人长时间访谈、追问质量与打断体验仍需人工验收；
-- DGX Spark 本地 Realtime 尚未完成；
-- Era Context 是否实际参与某次运行取决于环境开关与索引状态。
+- Spark Profile 的 Step-Audio-2-mini Realtime 已完成 DGX Spark 本地真人验证；
+- 连续语音、追问与打断体验实际运行流畅；
+- Realtime + Coach + NeMo Retriever 可在断网条件下协同运行；
+- Era Context 仍按 Gate 判断和索引命中按需参与，不会每轮强制检索。
