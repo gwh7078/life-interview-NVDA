@@ -27,12 +27,12 @@ test('retrieval upgrade case pack covers all five Skills with paired case catego
     'story-completion',
     'story-generation',
   ];
-  assert.equal(cases.length, 19);
+  assert.equal(cases.length, 20);
   assert.equal(new Set(cases.map((item) => item.case_id)).size, cases.length);
   assert.deepEqual(Object.fromEntries(['ordinary', 'retrieval_required', 'hard_negative'].map((type) => [
     type,
     cases.filter((item) => item.case_type === type).length,
-  ])), { ordinary: 5, retrieval_required: 9, hard_negative: 5 });
+  ])), { ordinary: 5, retrieval_required: 9, hard_negative: 6 });
   for (const item of cases) {
     assert.ok(item.allowed_source_types.every((source) => [
       'owner_transcript', 'contributor_transcript', 'profile', 'life_stage',
