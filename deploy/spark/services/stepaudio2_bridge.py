@@ -7,6 +7,7 @@ full-duplex, interrupt, playback ACK, or tool calling.
 """
 import asyncio
 import base64
+from io import BytesIO
 import json
 import os
 import re
@@ -23,7 +24,11 @@ import sys
 SOURCE = Path(os.environ.get("STEP_AUDIO_SOURCE_DIR", "/Step-Audio2"))
 sys.path.insert(0, str(SOURCE))
 from stepaudio2vllm import StepAudio2  # type: ignore
-from token2wav import Token2wav  # type: ignore
+try:
+    from token2wav import Token2wav  # type: ignore
+except Exception as exc:
+    Token2wav = None  # type: ignore[misc, assignment]
+    print(f"StepAudio token streaming unavailable ({type(exc).__name__}); using speech endpoint fallback.", file=sys.stderr, flush=True)
 
 try:
     from websockets.asyncio.server import serve
@@ -31,14 +36,19 @@ except ImportError:
     from websockets import serve  # type: ignore
 
 BACKEND = os.environ.get("STEP_AUDIO_BACKEND_URL", "http://127.0.0.1:8010/v1/chat/completions")
+SPEECH_BACKEND = os.environ.get(
+    "STEP_AUDIO_SPEECH_URL",
+    BACKEND.rsplit("/v1/chat/completions", 1)[0] + "/v1/audio/speech",
+)
 MODEL = os.environ.get("STEP_AUDIO_MODEL", "step-audio-2-mini")
-TOKEN2WAV = os.environ.get("STEP_AUDIO_TOKEN2WAV_DIR", "/Step-Audio-2-mini/token2wav")
-PROMPT_WAV = os.environ.get("STEP_AUDIO_PROMPT_WAV", "/Step-Audio2/assets/default_male.wav")
+TOKEN2WAV_DIR = Path(os.environ.get("STEP_AUDIO_TOKEN2WAV_DIR", "/Step-Audio-2-mini/token2wav"))
+PROMPT_WAV = Path(os.environ.get("STEP_AUDIO_PROMPT_WAV", "/Step-Audio2/assets/default_male.wav"))
 WS_HOST = os.environ.get("STEP_AUDIO_BRIDGE_HOST", "127.0.0.1")
 WS_PORT = int(os.environ.get("STEP_AUDIO_BRIDGE_PORT", "8092"))
 HEALTH_PORT = int(os.environ.get("STEP_AUDIO_HEALTH_PORT", "8093"))
 MAX_TURN_BYTES = int(os.environ.get("STEP_AUDIO_MAX_TURN_BYTES", str(24_000 * 2 * 180)))
-CHUNK_SIZE = int(os.environ.get("STEP_AUDIO_TOKEN_CHUNK", "25"))
+TOKEN_CHUNK_SIZE = int(os.environ.get("STEP_AUDIO_TOKEN_CHUNK", "25"))
+OUTPUT_CHUNK_BYTES = int(os.environ.get("STEP_AUDIO_OUTPUT_CHUNK_BYTES", "48000"))
 
 CAPABILITIES = {
     "fullDuplex": False,
@@ -52,7 +62,15 @@ CAPABILITIES = {
 }
 
 model = StepAudio2(BACKEND, MODEL)
-token2wav = Token2wav(TOKEN2WAV)
+token2wav = None
+if Token2wav is not None and TOKEN2WAV_DIR.is_dir() and PROMPT_WAV.is_file():
+    try:
+        token2wav = Token2wav(str(TOKEN2WAV_DIR))
+    except Exception as exc:
+        token2wav = None
+        print(f"StepAudio token streaming unavailable ({type(exc).__name__}); using speech endpoint fallback.", file=sys.stderr, flush=True)
+elif Token2wav is not None:
+    print("StepAudio token streaming assets are missing; using speech endpoint fallback.", file=sys.stderr, flush=True)
 inference_lock = threading.Lock()
 
 def backend_healthy():
@@ -85,6 +103,10 @@ def write_pcm_wav(path, pcm):
     with wave.open(str(path), "wb") as wf:
         wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(24000); wf.writeframes(pcm)
 
+def audio_url_message(audio_path):
+    audio = base64.b64encode(Path(audio_path).read_bytes()).decode("ascii")
+    return {"type": "audio_url", "audio_url": {"url": f"data:audio/wav;base64,{audio}"}}
+
 def run_asr(audio_path):
     messages = [
         {
@@ -96,9 +118,9 @@ def run_asr(audio_path):
             ),
         },
         {
-            "role": "human",
+            "role": "user",
             "content": [
-                {"type": "audio", "audio": str(audio_path)},
+                audio_url_message(audio_path),
                 {"type": "text", "text": "只输出这段音频的逐字转写文本，不要添加任何前后缀。"},
             ],
         },
@@ -120,22 +142,48 @@ def run_asr_serialized(audio_path):
     with inference_lock:
         return run_asr(audio_path)
 
-def run_speech(history, system, instructions, audio_path, queue, loop, response_id):
+def run_tts(text):
+    request = urllib.request.Request(
+        SPEECH_BACKEND,
+        data=json.dumps({"model": MODEL, "input": text, "voice": "default", "response_format": "wav"}).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=900) as response:
+        audio_file = BytesIO(response.read())
+    with wave.open(audio_file, "rb") as wav:
+        if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
+            raise ValueError("unexpected_tts_audio_format")
+        return wav.readframes(wav.getnframes())
+
+def run_speech(history, system, instructions, user_text, queue, loop, response_id):
     def emit(item):
         asyncio.run_coroutine_threadsafe(queue.put(item), loop).result()
+
+    audio_emitted = False
+
+    def emit_audio(pcm):
+        nonlocal audio_emitted
+        if not pcm:
+            return
+        audio_emitted = True
+        for offset in range(0, len(pcm), OUTPUT_CHUNK_BYTES):
+            chunk = pcm[offset:offset + OUTPUT_CHUNK_BYTES]
+            emit({"type": "response.audio.delta", "response_id": response_id, "delta": base64.b64encode(chunk).decode()})
+
     with inference_lock:
         turn_history = [{"role": "system", "content": "\n".join(x for x in [system, instructions] if x).strip()}]
         turn_history.extend(history)
-        if audio_path is not None:
-            turn_history.append({"role": "human", "content": [{"type": "audio", "audio": str(audio_path)}]})
+        if user_text:
+            turn_history.append({"role": "human", "content": user_text})
         elif not any(m.get("role") == "human" for m in turn_history):
             turn_history.append({"role": "human", "content": "请开始访谈。"})
         turn_history.append({"role": "assistant", "content": "<tts_start>", "eot": False})
-        token2wav.set_stream_cache(PROMPT_WAV)
-        buffer = []
+        if token2wav:
+            token2wav.set_stream_cache(str(PROMPT_WAV))
+        token_buffer = []
+        token_lookahead = int(getattr(token2wav.flow, "pre_lookahead_len", 0)) if token2wav else 0
         final_text = []
-        raw_audio_tokens = []
-        pre = int(getattr(token2wav.flow, "pre_lookahead_len", 0))
         emit({"type": "response.created", "response": {"id": response_id, "status": "in_progress"}})
         for line, text, audio in model.stream(
             turn_history, max_tokens=1024, repetition_penalty=1.05, top_p=0.9,
@@ -144,20 +192,19 @@ def run_speech(history, system, instructions, audio_path, queue, loop, response_
             if text:
                 final_text.append(text)
                 emit({"type": "response.audio_transcript.delta", "response_id": response_id, "delta": text})
-            if audio:
-                raw_audio_tokens.extend(audio)
-                buffer.extend(audio)
-                needed = CHUNK_SIZE + pre
-                if len(buffer) >= needed:
-                    pcm = token2wav.stream(buffer[:needed], prompt_wav=PROMPT_WAV)
-                    buffer = buffer[CHUNK_SIZE:]
-                    if pcm:
-                        emit({"type": "response.audio.delta", "response_id": response_id, "delta": base64.b64encode(pcm).decode()})
-        if buffer:
-            pcm = token2wav.stream(buffer, prompt_wav=PROMPT_WAV, last_chunk=True)
-            if pcm:
-                emit({"type": "response.audio.delta", "response_id": response_id, "delta": base64.b64encode(pcm).decode()})
+            if audio and token2wav:
+                token_buffer.extend(audio)
+                needed = TOKEN_CHUNK_SIZE + token_lookahead
+                if len(token_buffer) >= needed:
+                    pcm = token2wav.stream(token_buffer[:needed], prompt_wav=str(PROMPT_WAV))
+                    token_buffer = token_buffer[TOKEN_CHUNK_SIZE:]
+                    emit_audio(pcm)
+        if token_buffer and token2wav:
+            emit_audio(token2wav.stream(token_buffer, prompt_wav=str(PROMPT_WAV), last_chunk=True))
         text_value = "".join(final_text).strip()
+        if text_value and not audio_emitted:
+            pcm = run_tts(text_value)
+            emit_audio(pcm)
         emit({"type": "response.audio_transcript.done", "response_id": response_id, "transcript": text_value})
         emit({"type": "response.audio.done", "response_id": response_id})
         emit({"type": "response.done", "response": {"id": response_id, "status": "completed"}})
@@ -220,7 +267,7 @@ async def handler(ws):
                     q = asyncio.Queue()
                     loop = asyncio.get_running_loop()
                     worker = asyncio.create_task(asyncio.to_thread(
-                        run_speech, list(history), system, instructions, pending_audio_path, q, loop, response_id
+                        run_speech, list(history), system, instructions, pending_user_text, q, loop, response_id
                     ))
                     async def watch_worker():
                         try:
