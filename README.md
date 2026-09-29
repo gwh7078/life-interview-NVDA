@@ -189,6 +189,8 @@ With Skill
 
 共覆盖 **5 个正式 Skill、49 个评测 Case、196 次正式 Attempt**；196/196 的正式 Attempt 均成功完成，执行错误为 0。
 
+#### 当前正式实测结果（2026-09-28 / 29）
+
 | Skill | Without Skill | With Skill | Skill Lift | pass@2：Without → With |
 |---|---:|---:|---:|---:|
 | `story-completion` | 0.7426 | **0.9255** | **+0.1829** | 7/9 → **9/9** |
@@ -196,6 +198,22 @@ With Skill
 | `interview-closeout` | 0.7891 | **0.9262** | **+0.1371** | 9/11 → **10/11** |
 | `onboarding-closeout` | 0.8163 | **0.9057** | **+0.0894** | 7/8 → **8/8** |
 | `interview-observer` | 0.8157 | **0.8347** | **+0.0190** | 9/9 → **9/9** |
+
+#### Evidence Retrieval Upgrade 后的预期修正值（待复测）
+
+在保持 `interview-coach` 不变的前提下，其他 5 个 Skill 正在升级为可按权限主动调用 Evidence Retrieval 的 Agent Skill：按任务需要查询主人公历史 Transcript、Story Memory、Related Story、Contributor Evidence 与 Era Context，再完成证据辨析和结构化输出。
+
+下面的 **With Skill 修正值是基于当前各维度丢分位置和本轮功能改造推导出的工程预期，不是新的实测成绩**；正式 Tier 3 结果仍以上表和原始 `result.json` 为准，后续有算力和时间时重新跑完整实验验证。
+
+| Skill | 当前 Without 实测 | 当前 With 实测 | 改造后 With 预期 | 预期 Skill Lift | 预期 With 合理区间 |
+|---|---:|---:|---:|---:|---:|
+| `story-completion` | 0.7426 | 0.9255 | **0.9500** | **+0.2074** | 0.94–0.96 |
+| `story-generation` | 0.7868 | 0.9563 | **0.9600** | **+0.1732** | 0.95–0.97 |
+| `interview-closeout` | 0.7891 | 0.9262 | **0.9500** | **+0.1609** | 0.94–0.96 |
+| `onboarding-closeout` | 0.8163 | 0.9057 | **0.9300** | **+0.1137** | 0.92–0.94 |
+| `interview-observer` | 0.8157 | 0.8347 | **0.9400** | **+0.1243** | 0.92–0.95 |
+
+预期提升最大的 `interview-observer` 并不是因为原内容质量差：当前 With Skill 的 Correctness 已为 **0.9667**、Effectiveness 为 **0.9445**，主要丢分在 Discoverability **0.5278** 和 Efficiency **0.6250**。升级后的主动检索能力、明确触发条件与 Tool Use 预计主要修复这一部分。
 
 评测集重点覆盖：
 
@@ -210,7 +228,7 @@ With Skill
 - Transcript 内的 Prompt Injection 只能作为数据，不能接管 Agent；
 - Hard Negative 用例检查 Skill 是否会在相邻任务中误触发。
 
-结果并非所有维度都单向提升：例如 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Overall 为正，但 Correctness 维度从 0.9875 降到 0.9250。项目保留这些结果，不为了“更漂亮的分数”删除失败样本或重写评测结论。
+当前正式实测并非所有维度都单向提升：例如 `interview-observer` 的 Overall Skill Lift 只有 **+1.90 个百分点**；`onboarding-closeout` 的 Overall 为正，但 Correctness 维度从 0.9875 降到 0.9250。项目保留这些实测结果，不为了“更漂亮的分数”删除失败样本或重写历史评测结论。上面的“改造后预期修正值”单独标记为待复测工程预测，不覆盖历史正式成绩。
 
 完整中文总结与 NVIDIA SkillEvaluator 原始 HTML / JSON 结果见：
 
