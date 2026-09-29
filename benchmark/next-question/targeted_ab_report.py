@@ -2,6 +2,7 @@
 """Assemble and summarize the frozen-A / new-B targeted regression evidence."""
 import argparse
 import json
+import math
 import pathlib
 import random
 import statistics
@@ -16,7 +17,7 @@ SCORE_KEYS = ['information_gain', 'context_use', 'story_value', 'depth', 'non_le
 RESULT_KEYS = set(SCORE_KEYS + ['total_score', 'repeated_question', 'fact_misuse', 'leading_question', 'missed_high_value_clue', 'brief_reason'])
 RESULT_META_KEYS = {
     'status', 'candidate_id', 'case_id', 'judge_model', 'temperature', 'max_output_tokens',
-    'response_id', 'finish_reason', 'judge_attempt', 'attempt_count', 'retry_reason', 'schema_validation_error',
+    'response_id', 'finish_reason', 'judge_attempt', 'attempt_count', 'retry_reason', 'schema_validation_error', 'error_code',
 }
 LIMITS = {'information_gain': 30, 'context_use': 25, 'story_value': 20, 'depth': 15, 'non_leading': 10}
 
@@ -79,7 +80,7 @@ def valid_score(row):
         return False
     if any(type(row.get(key)) is not bool for key in ['repeated_question', 'fact_misuse', 'leading_question', 'missed_high_value_clue']):
         return False
-    return isinstance(row.get('brief_reason'), str) and 0 < len(row['brief_reason']) <= 80
+    return isinstance(row.get('brief_reason'), str) and 0 < len(row['brief_reason']) <= 160
 
 
 def baseline_data():
@@ -140,6 +141,8 @@ def prepare_probe(result_dir):
         'benchmark_type': 'targeted_ab_regression_judge_probe',
         'judge_model': 'step-5-preview',
         'judge_endpoint': 'https://api.stepfun.com/step_plan/v1/chat/completions',
+        'judge_response_format': 'json_schema',
+        'judge_schema_strict': True,
         'temperature': 0,
         'source_frozen_run_id': FROZEN_RUN_ID,
         'source_frozen_judge_id': FROZEN_JUDGE_ID,
@@ -187,6 +190,8 @@ def assemble(result_dir, gate_run_id, prompt_before, prompt_after, resolve_promp
         probe_latest[row.get('candidate_id')] = row
     if len(probe_map) != 3 or any(not valid_score(probe_latest.get(entry['candidate_id'])) for entry in probe_map):
         raise SystemExit('Step 5 probe must have three final schema-valid, stop-finished scores before assembly.')
+    schema_probe_path = result_dir / 'judge-schema-probe.json'
+    schema_probe = load_json(schema_probe_path) if schema_probe_path.exists() else {}
     reuse_ids = {(entry['case_id'], int(entry['run'])): entry['candidate_id'] for entry in probe_map}
 
     new_by_key = {(row['case_id'], int(row['run']), row['variant']): row for row in new_samples}
@@ -284,18 +289,22 @@ def assemble(result_dir, gate_run_id, prompt_before, prompt_after, resolve_promp
         'frozen_a_commit_sha': old_run.get('commit_sha'),
         'judge_model': 'step-5-preview',
         'judge_endpoint': 'https://api.stepfun.com/step_plan/v1/chat/completions',
+        'judge_response_format': 'json_schema',
+        'judge_schema_strict': True,
+        'judge_schema_probe_status': schema_probe.get('status'),
         'judge_temperature': 0,
         'judge_concurrency': 2,
-        'judge_prompt_version': 'targeted-ab-json-schema-v1',
+        'judge_prompt_version': 'targeted-ab-strict-json-schema-v2',
         'gate_prompt_chars_before': prompt_before,
         'gate_prompt_chars_after': prompt_after,
         'resolve_prompt_chars_after': resolve_prompt_after,
         'step5_probe_passed': True,
         'repeat_commands': [
             'bash scripts/codex-node.sh npm run benchmark:next-question:gate-probe',
+            'python3 benchmark/next-question/targeted_ab_report.py prepare-probe --result-dir <PREFLIGHT_DIR>',
+            'bash scripts/codex-node.sh npm run benchmark:next-question:judge -- --result-dir <PREFLIGHT_DIR>/step5-probe',
             'NEXT_QUESTION_BENCHMARK_TYPE=targeted_ab_regression bash scripts/codex-node.sh npm run benchmark:next-question -- --cases C03,C05,C06,C10 --variants B --runs 3',
-            f'python3 benchmark/next-question/targeted_ab_report.py prepare-probe --result-dir {result_dir}',
-            f'bash scripts/codex-node.sh npm run benchmark:next-question:judge -- --result-dir {result_dir}/step5-probe',
+            f'copy <PREFLIGHT_DIR>/step5-probe into {result_dir}/step5-probe before assembly',
             f'python3 benchmark/next-question/targeted_ab_report.py assemble --result-dir {result_dir} --gate-run-id {gate_run_id} --prompt-before {prompt_before} --prompt-after {prompt_after}',
             f'bash scripts/codex-node.sh npm run benchmark:next-question:judge -- --result-dir {result_dir}',
             f'python3 benchmark/next-question/targeted_ab_report.py summarize --result-dir {result_dir}',
@@ -312,6 +321,14 @@ def mean(values):
 
 def rounded(value):
     return round(value, 2) if value is not None else None
+
+
+def percentile(values, percent):
+    ordered = sorted(float(value) for value in values)
+    if not ordered:
+        return None
+    rank = max(1, math.ceil(percent / 100 * len(ordered)))
+    return round(ordered[rank - 1], 2)
 
 
 def score_latest(result_dir):
@@ -386,16 +403,42 @@ def summarize(result_dir):
     mismatches = [row for row in manifest.get('input_equivalence', []) if row.get('status') != 'PASS']
     coach_fail_open = sum(row.get('coach_status') == 'failed_open' for row in b_samples)
     coach_intervened = sum(isinstance(row.get('gate'), dict) and row['gate'].get('action') != 'none' for row in b_samples)
+    input_equivalent_pairs = sum(row.get('status') == 'PASS' for row in manifest.get('input_equivalence', []))
+    gate_review_path = result_dir / 'gate-semantic-review.json'
+    gate_review = load_json(gate_review_path) if gate_review_path.exists() else {'passed': False, 'cases': {}}
+    schema_probe_path = result_dir / 'judge-schema-probe.json'
+    schema_probe = load_json(schema_probe_path) if schema_probe_path.exists() else {}
+    gate_timeouts = sum(row.get('code') in {'TimeoutError', 'COACH_GATE_TIMEOUT'} for row in gate_rows)
+    gate_latencies = [row['latency_ms'] for row in gate_rows if isinstance(row.get('latency_ms'), (int, float))]
+    b_gate_timeouts = sum(any(
+        error.get('stage') == 'gate' and error.get('code') in {'TimeoutError', 'COACH_GATE_TIMEOUT'}
+        for error in row.get('errors', []) if isinstance(error, dict)
+    ) for row in b_samples)
+    b_gate_latencies = [row['gate_latency_ms'] for row in b_samples if isinstance(row.get('gate_latency_ms'), (int, float))]
+    probe_dir = result_dir / 'step5-probe'
+    probe_attempts, probe_latest = score_latest(probe_dir)
+    probe_map = load_json(probe_dir / 'probe-map.json')
+    probe_ok = len(probe_map) == 3 and all(valid_score(probe_latest.get(row['candidate_id'])) for row in probe_map)
+    probe_first_valid = sum(valid_score(row) for row in probe_attempts if int(row.get('judge_attempt', 1)) == 1)
+    probe_ready = probe_ok and probe_first_valid >= 2
+    gate_ready = all(gate_counts.get(case, 0) >= 2 for case in CASE_IDS) and sum(gate_counts.values()) >= 8
+    case_deltas = [value['mean_delta'] for value in by_case.values() if value['mean_delta'] is not None]
+    case_targets_pass = (
+        by_case['C03']['mean_delta'] is not None and by_case['C03']['mean_delta'] > 0
+        and by_case['C05']['mean_delta'] is not None and by_case['C05']['mean_delta'] >= 0
+        and by_case['C06']['mean_delta'] is not None and by_case['C06']['mean_delta'] >= 0
+        and by_case['C10']['mean_delta'] is not None and by_case['C10']['mean_delta'] > 0
+        and sum(value > 0 for value in case_deltas) >= 3
+        and bool(deltas) and mean(deltas) > 0 and statistics.median(deltas) > 0
+    )
+    judge_final_valid = sum(valid_score(latest.get(candidate_id)) for candidate_id in mapping)
+    data_complete = input_equivalent_pairs == 12 and len(pairs) == 12 and judge_final_valid == 24
+    readiness = (
+        gate_ready and gate_review.get('passed') is True and probe_ready
+        and data_complete and case_targets_pass
+    )
+    conclusion = 'READY_FOR_FULL_BENCHMARK' if readiness else 'INCONCLUSIVE'
     no_gain = [row for row in pairs if isinstance(row['sample_B'].get('gate'), dict) and row['sample_B']['gate'].get('action') != 'none' and row['delta'] <= 0]
-    conclusion = 'INCONCLUSIVE'
-    if len(pairs) == 12 and mean(deltas) is not None:
-        case_deltas = [value['mean_delta'] for value in by_case.values() if value['mean_delta'] is not None]
-        positive_cases = sum(value > 0 for value in case_deltas)
-        negative_cases = sum(value < 0 for value in case_deltas)
-        if mean(deltas) > 0 and statistics.median(deltas) > 0 and positive_cases >= 3:
-            conclusion = 'SUPPORTED'
-        elif mean(deltas) < 0 and statistics.median(deltas) < 0 and negative_cases >= 3:
-            conclusion = 'NOT SUPPORTED'
 
     quality = {
         'valid_pairs': len(pairs), 'excluded_pairs': 12 - len(pairs),
@@ -405,8 +448,8 @@ def summarize(result_dir):
         'dimensions': dimensions,
         'by_case': by_case,
         'coach_targeted_improvement': conclusion,
+        'case_targets_pass': case_targets_pass,
     }
-    probe_first_valid = sum(valid_score(row) for row in probe_attempts if int(row.get('judge_attempt', 1)) == 1)
     summary = {
         'benchmark_type': 'targeted_ab_regression',
         'branch': 'benchmark/next-question',
@@ -422,27 +465,46 @@ def summarize(result_dir):
             'schema_valid': sum(row.get('schema_valid') is True for row in gate_rows),
             'evaluations': len(gate_rows), 'interventions_by_case': gate_counts,
             'total_interventions': sum(gate_counts.values()),
-            'readiness': 'PASS' if all(gate_counts.get(case, 0) >= 2 for case in CASE_IDS) and sum(gate_counts.values()) >= 8 else 'FAIL',
+            'readiness': 'PASS' if gate_ready else 'FAIL',
+            'semantic_review': gate_review,
+            'timeout_count': gate_timeouts,
+            'latency_p50_ms': percentile(gate_latencies, 50),
+            'latency_p95_ms': percentile(gate_latencies, 95),
         },
         'realtime': {
             'new_b_samples_completed': sum(row.get('status') == 'completed' for row in b_samples),
             'new_b_samples_attempted': len(b_samples),
-            'input_equivalent_pairs': sum(row.get('status') == 'PASS' for row in manifest.get('input_equivalence', [])),
+            'input_equivalent_pairs': input_equivalent_pairs,
             'excluded_pairs': mismatches,
             'runtime_parity': manifest.get('frozen_a_parity'),
             'b_gate_interventions': coach_intervened,
             'b_coach_fail_open': coach_fail_open,
+            'b_coach_fail_open_rate_percent': rounded(coach_fail_open * 100 / len(b_samples)) if b_samples else None,
+            'b_gate_timeout_count': b_gate_timeouts,
+            'b_gate_latency_p50_ms': percentile(b_gate_latencies, 50),
+            'b_gate_latency_p95_ms': percentile(b_gate_latencies, 95),
         },
         'judge': {
             'model': 'step-5-preview',
             'endpoint': 'https://api.stepfun.com/step_plan/v1/chat/completions',
+            'response_format': 'json_schema',
+            'schema_strict': True,
+            'schema_probe': schema_probe,
             'temperature': 0,
             'concurrency': 2,
-            'probe': {'passed': probe_ok, 'final_valid': sum(valid_score(probe_latest.get(row['candidate_id'])) for row in probe_map), 'n': len(probe_map), 'first_attempt_valid': probe_first_valid, 'attempts': len(probe_attempts)},
-            'candidate_count': len(mapping), 'first_attempt_schema_valid': len(first_valid_ids), 'final_schema_valid': len(final_valid_ids),
+            'probe': {'passed': probe_ready, 'final_valid': sum(valid_score(probe_latest.get(row['candidate_id'])) for row in probe_map), 'n': len(probe_map), 'first_attempt_valid': probe_first_valid, 'first_attempt_required': 2, 'attempts': len(probe_attempts)},
+            'candidate_count': len(mapping), 'first_attempt_schema_valid': len(first_valid_ids), 'first_attempt_valid_rate_percent': rounded(len(first_valid_ids) * 100 / len(mapping)) if mapping else None, 'final_schema_valid': judge_final_valid,
             'schema_invalid_attempts': schema_invalid, 'output_token_limit_attempts': token_limit,
             'http_failures': http_failures, 'retry_attempts': retries, 'candidates_retried': candidates_retried,
             'attempts': len(attempts), 'judge_failures_final': sum(not valid_score(latest.get(candidate_id)) for candidate_id in mapping),
+        },
+        'readiness': {
+            'status': conclusion,
+            'gate_probe_pass': gate_ready,
+            'gate_semantic_review_pass': gate_review.get('passed') is True,
+            'judge_probe_pass': probe_ready,
+            'data_complete': data_complete,
+            'case_targets_pass': case_targets_pass,
         },
         'quality': quality,
         'case_details': {
@@ -476,11 +538,13 @@ def summarize(result_dir):
         f'- Run ID: `{summary["run_id"]}`; benchmark_type: `targeted_ab_regression`',
         f'- Branch/commit: `{summary["branch"]}` / `{summary["commit_sha"]}`',
         f'- Frozen A: `{FROZEN_RUN_ID}`; Judge source: `{FROZEN_JUDGE_ID}`',
-        f'- Gate Probe: {summary["gate_probe"]["schema_valid"]}/{summary["gate_probe"]["evaluations"]} schema-valid; interventions C03/C05/C06/C10 = {gate_counts.get("C03",0)}/3, {gate_counts.get("C05",0)}/3, {gate_counts.get("C06",0)}/3, {gate_counts.get("C10",0)}/3; readiness {summary["gate_probe"]["readiness"]}.',
+        f'- Gate Probe: {summary["gate_probe"]["schema_valid"]}/{summary["gate_probe"]["evaluations"]} schema-valid; interventions C03/C05/C06/C10 = {gate_counts.get("C03",0)}/3, {gate_counts.get("C05",0)}/3, {gate_counts.get("C06",0)}/3, {gate_counts.get("C10",0)}/3; timeouts {gate_timeouts}; latency P50/P95 {summary["gate_probe"]["latency_p50_ms"]}/{summary["gate_probe"]["latency_p95_ms"]} ms; readiness {summary["gate_probe"]["readiness"]}.',
+        f'- Gate semantic review: {str(gate_review.get("passed") is True).upper()}.',
         f'- Gate prompt: {summary["gate_prompt_chars_before"]} → {summary["gate_prompt_chars_after"]} characters; Resolve prompt now {run.get("resolve_prompt_chars_after", "not recorded")} characters.',
-        f'- Realtime: {summary["realtime"]["new_b_samples_completed"]}/{summary["realtime"]["new_b_samples_attempted"]} new B complete; input-equivalent pairs {summary["realtime"]["input_equivalent_pairs"]}/12; Frozen A runtime parity {summary["realtime"]["runtime_parity"]}.',
-        f'- Step 5 Probe: {summary["judge"]["probe"]["final_valid"]}/{summary["judge"]["probe"]["n"]} final valid ({summary["judge"]["probe"]["first_attempt_valid"]}/3 first-attempt valid; {summary["judge"]["probe"]["attempts"]} attempts); PASS={str(probe_ok).upper()}.',
-        f'- Judge: {summary["judge"]["first_attempt_schema_valid"]}/{summary["judge"]["candidate_count"]} first-attempt valid; {summary["judge"]["final_schema_valid"]}/{summary["judge"]["candidate_count"]} final valid; schema-invalid attempts {schema_invalid}; output-token-limit {token_limit}; HTTP failures {http_failures}; retry calls {retries} across {candidates_retried} candidates.',
+        f'- Realtime: {summary["realtime"]["new_b_samples_completed"]}/{summary["realtime"]["new_b_samples_attempted"]} new B complete; input-equivalent pairs {input_equivalent_pairs}/12; Frozen A runtime parity {summary["realtime"]["runtime_parity"]}; B Gate timeouts {b_gate_timeouts}; Coach fail-open {coach_fail_open}/{len(b_samples)} ({summary["realtime"]["b_coach_fail_open_rate_percent"]}%); Gate latency P50/P95 {summary["realtime"]["b_gate_latency_p50_ms"]}/{summary["realtime"]["b_gate_latency_p95_ms"]} ms.',
+        f'- Strict JSON Schema probe: selected `{summary["judge"]["response_format"]}`; result `{schema_probe.get("status", "NOT_RECORDED")}`.',
+        f'- Step 5 Probe: {summary["judge"]["probe"]["final_valid"]}/{summary["judge"]["probe"]["n"]} final valid ({summary["judge"]["probe"]["first_attempt_valid"]}/3 first-attempt valid; required >=2/3; {summary["judge"]["probe"]["attempts"]} attempts); PASS={str(probe_ready).upper()}.',
+        f'- Judge: `{summary["judge"]["response_format"]}` strict; {summary["judge"]["first_attempt_schema_valid"]}/{summary["judge"]["candidate_count"]} first-attempt valid; {summary["judge"]["final_schema_valid"]}/{summary["judge"]["candidate_count"]} final valid; schema-invalid attempts {schema_invalid}; output-token-limit {token_limit}; HTTP failures {http_failures}; retry calls {retries} across {candidates_retried} candidates.',
         '', '## Overall paired quality', '',
         '| Metric | Value |', '|---|---:|',
         f'| Valid input-equivalent judged pairs | {len(pairs)}/12 |',
@@ -513,8 +577,8 @@ def summarize(result_dir):
         lines.append('- None among input-equivalent, validly judged pairs.')
     lines += [
         '', '## Conclusion', '',
-        f'- Coach targeted improvement: **{conclusion}**. A conclusive label requires all 12 valid pairs and at least 3 of 4 case means to share the mean/median direction; this is a 4-case targeted regression, not a full benchmark.',
-        f'- B Gate intervention: {coach_intervened}/{len(b_samples)} samples; Coach fail-open: {coach_fail_open}/{len(b_samples)}.',
+        f'- READY_FOR_FULL_BENCHMARK: **{conclusion}**. Readiness requires the Gate semantic/probe gates, a 3/3 Judge probe with >=2 first-attempt valid, 12/12 equivalent pairs, 24/24 final scores, C03/C10 mean delta >0, C05/C06 >=0, at least 3/4 positive case means, and positive overall mean and median.',
+        f'- B Gate interventions: {coach_intervened}/{len(b_samples)}; Coach fail-open: {coach_fail_open}/{len(b_samples)} ({summary["realtime"]["b_coach_fail_open_rate_percent"]}%); this remains a targeted 4-case regression, not the full benchmark.',
         f'- Result directory: `{result_dir}`',
     ]
     path = result_dir / 'summary.md'

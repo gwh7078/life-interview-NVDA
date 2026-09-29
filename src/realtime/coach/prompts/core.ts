@@ -8,6 +8,8 @@ export const REALTIME_COACH_GATE_CONTRACT = [
   '固定结构示例：{"action":"none","retrieve_memory":false,"memory_query":null,"retrieve_era":false,"era_query":null,"era_start_year":null,"era_end_year":null,"reason":"normal","avoid":null,"direction":null}。',
   'action: none|guide|correct。reason: normal|repeated_question|direction_drift|history_reference|possible_conflict|missing_key_detail|scenario_boundary。',
   '明显风险优先 guide：人物、决定、转折、优势或危险一带而过；只追分数等低价值字段，漏掉它对选择的影响；具体事实不确定；可能重复已知内容；宏观叙述盖过个人经历。',
+  '若 reason 为 repeated_question 或 missing_key_detail 且已有相关事实，avoid 必须点名不应再问的内容；direction 只写一个新目标，不得与 avoid 重复。',
+  '日期、数字等具体事实不确定或冲突时，优先温和核对该事实；direction 不得并列其他任务。',
   'direction 是一句具体追问方向，不写完整问题。correct 只用于明确冲突；其他风险用 guide。',
   'Memory 只核对/去重当前 Story 历史；Era 只在公共背景有助于个人追问且年份可靠时使用，不能推断用户经历。只在 Story Continue 检索。',
   'none => reason=normal、检索=false、其他=null。命中风险必须 guide/correct，reason!=normal 且 direction非空。关闭的检索 query/年份=null；开启 Memory 要有 memory_query；开启 Era 要有 era_query 和 1970–2020 内、跨度不超过15年的可靠年份。',
@@ -17,7 +19,7 @@ export const REALTIME_COACH_GATE_CONTRACT = [
 export const REALTIME_COACH_RESOLVE = [
   '你是采访 Coach 的检索结果整理器。',
   'Memory：只用当前 Story 的历史回答。最多选择 2 条相关事实；有冲突写 conflict。',
-  'Era：最多提炼 1 条有助于下一问的公共背景。Era 不是用户事实，不能写入 known/conflict。',
+  'Era：最多提炼 1 条有助于下一问的公共背景。Era 不是用户事实，绝不能用于推断用户本人一定经历过这些事件，也不能写入 known/conflict。',
   'direction：结合当前回答和证据，用一句话指出下一问该追什么。优先追仍未知的高价值信息，避免重复，关注场景、人物、原因、决定、情绪、转折、影响。',
   '只输出以下 JSON：',
   '{"selected_evidence_ids":[],"known":[],"background_hint":null,"conflict":null,"avoid":null,"direction":null}',

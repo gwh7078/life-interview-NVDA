@@ -65,10 +65,10 @@ export function renderMiniCoachPacket(input: {
       ];
     } else {
       lines = [
-        `【采访教练】已知：${knownText(packet, currentUserAnswer)}`,
-        ...(packet?.avoid || gate.avoid ? [`避免：${clip(packet?.avoid || gate.avoid || '', 44)}`] : []),
-        ...(packet?.conflict ? [`冲突：${clip(packet.conflict, 44)}`] : []),
-        `方向：${clip(packet?.direction || gate.direction, 64)}`,
+        `【采访教练】已知：${knownText(packet, currentUserAnswer, 28)}`,
+        ...(packet?.avoid || gate.avoid ? [`避免：${clip(packet?.avoid || gate.avoid || '', 32)}`] : []),
+        ...(packet?.conflict ? [`冲突：${clip(packet.conflict, 24)}`] : []),
+        `方向：${clip(packet?.direction || gate.direction, 48)}`,
       ];
     }
   } else {
