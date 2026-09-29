@@ -1,6 +1,6 @@
 # Testing & Acceptance
 
-> 当前测试与验收入口，更新于 2026-09-27。
+> 当前测试与验收入口，更新于 2026-09-29。
 
 ## 1. 原则
 
@@ -100,7 +100,7 @@ npm run test:agent:nat:eval
 
 ## 6. 人工语音验收
 
-当前必须持续人工验收四种场景：
+比赛版本已完成 DGX Spark 全本地真人验收；后续回归仍覆盖四种场景：
 
 - Onboarding；
 - Story Create；
