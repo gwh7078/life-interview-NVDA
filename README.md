@@ -325,7 +325,7 @@ Story Generation
 
 同时通过 Technical Observer 展示 Coach、Retriever、Agent Task 与运行状态，让评委可以看到“为什么这一问发生了”。
 
-**B 站演示视频：待最终录制后补充 URL。**
+**B 站演示视频：待最终录制后补充 URL。**\n\n录制方案见 [5 分钟 Demo 视频脚本](docs/00-competition/DEMO_VIDEO_SCRIPT_v1.0.md)。
 
 ---
 
@@ -363,7 +363,7 @@ Story Generation
 | 技术栈说明 | 本 README 第 6 节 |
 | Skill Markdown 文件 | 本 README 第 3 节 |
 | B 站作品演示视频 URL | **待补充** |
-| 黑客松“一日谈”征文 URL | **待补充** |
+| 黑客松“一日谈”征文 URL | [征文初稿](docs/00-competition/ONE_DAY_STORY_DRAFT_v1.0.md)，发布后回填 URL |
 | 团队合影 | **待提交** |
 
 Benchmark 与 Spark 真机结果完成后，只补充实际证据，不更改上述事实边界。
@@ -382,7 +382,7 @@ Benchmark 与 Spark 真机结果完成后，只补充实际证据，不更改上
 6. [NVIDIA / DGX Spark](docs/NVIDIA.md)
 7. [测试与验收](docs/TESTING.md)
 8. [比赛评分映射](docs/00-competition/SCORING_ALIGNMENT_v1.0.md)
-9. [完整文档目录](docs/README.md)
+9. [5 分钟 Demo 视频脚本](docs/00-competition/DEMO_VIDEO_SCRIPT_v1.0.md)\n10. [黑客松“一日谈”征文初稿](docs/00-competition/ONE_DAY_STORY_DRAFT_v1.0.md)\n11. [最终提交清单](docs/00-competition/SUBMISSION_CHECKLIST_v1.0.md)\n12. [完整文档目录](docs/README.md)
 
 ### 文档真相优先级
 
