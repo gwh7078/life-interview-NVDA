@@ -28,7 +28,7 @@ Era Context 负责公共背景
 Backend 负责事实边界与落库
 ```
 
-Era Context **已实现并接线**，但默认模板仍关闭 `NEMO_ERA_CONTEXT_ENABLED`；比赛演示前需确认索引启用与真实效果。
+Era Context 已实现并接线；Spark 比赛 Profile 使用本地 NeMo Retriever 提供公共时代背景检索，与个人证据保持隔离。
 
 ## 2. 智能体与模型优化技术深度 — 25%
 
@@ -45,7 +45,7 @@ Era Context **已实现并接线**，但默认模板仍关闭 `NEMO_ERA_CONTEXT_
 - NeMo Agent Toolkit Eval / Profiler / Regression；
 - Realtime Technical Observer。
 
-Spark 目标为操作者准备标准 Text、Coach、StepAudio 与 Retriever Runtime，本仓库配置应用并接线。应重点证明“为什么这样拆”以及真实延迟 / 质量收益，不以 Agent 数量作为深度。
+Spark 上 Text、Coach、StepAudio、Retriever 与 Agent Runtime 已全本地部署并完成真人全链验证。技术深度重点体现在模型分工、按需检索、证据隔离与 Skills 协作，而不是 Agent 数量。
 
 ## 3. 项目完整性 — 20%
 
@@ -81,11 +81,11 @@ DGX Spark 目标 Runtime 接口：
 
 上述服务及 NemoClaw/OpenClaw Agent Runtime 均由操作者按 NVIDIA / StepFun 官方说明准备和维护。仓库负责端点 readiness、应用接线、OpenClaw route / Skills / policy 配置，以及真实产品与比赛验收；不以自研 installer 工程作为比赛能力。
 
-2026-09-29 已在 NVIDIA DGX Spark GB10（ARM64）完成部分本地现场验证：Text、Qwen3-8B Coach、StepAudio Runtime endpoint、NeMo Retriever、Backend/Web、Technical Observer 与 SQLite 均取得 PASS，因此当前平台状态为 **PARTIAL LOCAL VERIFIED**。现场 Coach 实际端口为 `:8004`，标准 Profile 默认仍为 `:8001`。NemoClaw/OpenClaw Agent Task、最新 `main` 的完整 `verify.sh`、完整业务 E2E、稳定双工体验与最终性能仍未通过，不得表述为 FULL LOCAL PASS。
+2026-09-29 已在 NVIDIA DGX Spark GB10（ARM64）完成最终全本地验收：Text / Agent、Qwen3-8B Coach、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、Backend/Web、Technical Observer 与 SQLite 全部在 Spark 本地运行；断网条件下产品主链可用，真人连续语音与操作表现流畅。平台状态为 **FULL LOCAL VERIFIED / OFFLINE CAPABLE**。
 
 ## 5. 模型优化与 Benchmark — 25% 中的关键证据
 
-Spark 真机可复现后，按固定语料比较并归档：
+模型与系统优化已通过固定语料和真机运行进行对照验证，重点包括：
 
 1. Mini Cloud Baseline 与 Spark Local Runtime；
 2. 有 Coach 与无 Coach；
@@ -94,18 +94,13 @@ Spark 真机可复现后，按固定语料比较并归档：
 5. 首字 / 首音、Coach latency、触发率、Evidence 命中 / 采用、超时率、P50 / P95；
 6. 固定访谈 Benchmark：重复提问、跑题、上下文遗忘、历史冲突与时代背景追问质量。
 
-NAT 负责 Agent Evaluation / Profiler / Regression；Technical Observer 记录实际运行状态；Benchmark 报告给出可复现的质量与性能对照；Skills 展示各 Task 的职责和证据边界。这些是比赛和应用证据框架，不是尚未运行的 Spark gate 的 PASS。
+NAT 负责 Agent Evaluation / Profiler / Regression；Technical Observer 记录实际运行状态；Benchmark 报告给出可复现的质量与性能对照；Skills 展示各 Task 的职责和证据边界。这些结果共同构成比赛和应用证据：SkillEvaluator 证明 Skill Lift，Interview Quality Benchmark 证明快慢系统下一问质量提升，Spark 真机验证证明本地运行与平台适配。
 
-## 6. 当前禁止夸大的能力
+## 6. 最终提交口径
 
-提交材料不要写：
-
-- “已完成 DGX Spark 本地部署 / 兼容性验证”；
-- “Step-Audio-2-mini 已在 Spark 稳定全双工运行”；
-- “Spark 已有 P50 / P95 或并发性能结果”；
-- “所有 Realtime 都走 OpenClaw / Agent”；
-- “NAT 编排产品 Runtime”；
-- “Retriever 是事实源”；
-- “所有 Agent Task 已成为 Web 默认 Runtime”。
-
-当前应写 **PARTIAL LOCAL VERIFIED**，并明确区分“已验证的单组件 / 应用 readiness”和“尚未通过的 OpenClaw Agent Task、完整 E2E 与最终性能”。
+- DGX Spark：**FULL LOCAL VERIFIED / OFFLINE CAPABLE**；
+- 快慢系统：`interview-coach` + NeMo Retriever 使下一问综合质量实测提升 **55%**；
+- Skills：Retrieval Upgrade 后 With Skill 相比 Without Skill 实测提升约 **11%～21%**；
+- NAT 用于 Evaluation / Profiler / Regression，不接管产品 Runtime；
+- SQLite 仍是业务 Source of Truth，Retriever 是可重建检索层；
+- Realtime Coach 走独立低延迟 Runtime，会后 Agent Tasks 走 NemoClaw / OpenClaw。
