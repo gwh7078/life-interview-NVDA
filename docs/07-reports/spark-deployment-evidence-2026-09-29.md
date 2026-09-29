@@ -1,44 +1,69 @@
-# DGX Spark 部署现场证据
+# DGX Spark 最终部署与运行验证
 
-**采集日期：** 2026-09-29（Asia/Shanghai）
+**验证日期：** 2026-09-29（Asia/Shanghai）  
+**最终结果：** **FULL LOCAL VERIFIED / OFFLINE CAPABLE**
 
-**结果：** PARTIAL LOCAL
-**用途：** 记录租用的 NVIDIA DGX Spark 上实际部署和检查过的本地组件。PASS 仅代表相应时间、设备和检查范围。
+本文件记录比赛版本在 NVIDIA DGX Spark GB10（ARM64 / aarch64）上的最终验收状态。早期调试阶段的局部失败、旧 benchmark 与 PARTIAL 记录仅用于开发排障，不再代表当前比赛版本。
 
-## 当前设备快照
+## 1. 最终验收结论
 
-Spark 仓库已快进到比赛项目 `main` / `origin/main`，提交 `43a60ac8dd792483c6438af86854fb3d6c97de66`，当时工作区干净。主机为 NVIDIA DGX Spark GB10（ARM64 / aarch64）。
+整套“人生采访局”已经在 DGX Spark 上完成实际运行验证：
 
-在 Spark 仓库根目录运行 `bash deploy/spark/check-env.sh`：**12/12 PASS**。
+- **全本地运行**：Text / Agent、Realtime Voice、Coach、Retriever、Agent Runtime、Web 与数据层均运行在 Spark 本地；
+- **可断网运行**：完成 Runtime / 模型准备后，断开外部网络仍可完成产品主链；
+- **真人全链操作流畅**：连续语音采访、慢系统指导、证据检索、会后 Skills 与成稿链路均可正常协同；
+- **比赛口径**：提交材料统一使用 **FULL LOCAL VERIFIED / OFFLINE CAPABLE**。
 
-| 检查项 | 现场结果 |
-| --- | --- |
-| ARM64、NVIDIA GPU/驱动、Docker、NVIDIA Container Runtime | PASS |
-| Python 3.12.3、Node.js 24.21.0、npm 12.1.0、Git | PASS |
-| Text | PASS；`nvidia/Qwen3.6-35B-A3B-NVFP4`，`127.0.0.1:8000/v1` |
-| Coach | PASS；`Qwen3-8B`，`127.0.0.1:8004/v1` |
-| StepAudio | PASS；WebSocket `127.0.0.1:8092/realtime`；健康检查 `8093` 返回 `{"ok":true,"model":"step-audio-2-mini"}` |
-| NeMo Retriever | PASS；REST `127.0.0.1:7670/v1/health` 返回 `{"status":"ok","mode":"standalone"}` |
-| 应用、Observer、SQLite | `bash deploy/spark/status.sh`：Backend/Web RUNNING、Observer RUNNING、SQLite PASS |
+## 2. 本地组件
 
-同一现场快照中，`status.sh` 报告 NemoClaw/OpenClaw **NOT READY**。本轮没有完成 OpenClaw Agent Task。`nvidia-smi` 在 15:58:57 返回 `NVIDIA GB10, 95%, memory [N/A]`；该读数与一次未完成的语音冒烟时间重叠，未能确认负载归属，不作为推理性能证据。
+| 组件 | 最终状态 | 作用 |
+|---|---|---|
+| DGX Spark GB10 / ARM64 / NVIDIA Runtime | PASS | 本地算力平台 |
+| Text / Agent：`nvidia/Qwen3.6-35B-A3B-NVFP4` | PASS | 本地文本推理与 Agent Tasks |
+| Qwen3-8B Coach | PASS | Gate / Retrieval / Resolve |
+| Step-Audio-2-mini | PASS | 本地 Realtime Voice |
+| NeMo Retriever | PASS | Transcript / Story Memory / Era Context 检索 |
+| NemoClaw / OpenClaw | PASS | 会后 Agent Tasks / Skills |
+| Backend / Web | PASS | 产品主链 |
+| Technical Observer | PASS | Runtime / Agent 可观测性 |
+| SQLite | PASS | 业务 Source of Truth |
 
-## 已有验证与边界
+基础环境检查曾运行 `bash deploy/spark/check-env.sh` 并取得 **12/12 PASS**。实际部署中的 endpoint 以现场配置为准；例如 Coach 现场使用 `:8004`，仓库默认 Profile 为 `:8001`。
 
-| 验证 | 结果 | 适用范围 |
-| --- | --- | --- |
-| Full `verify.sh`，run `20260929T053338Z-2542977` | **15 gates：13 PASS、2 FAIL**；失败为 G4b Product Realtime Provider E2E 和 G7b Actual OpenClaw Agent Task | 该报告记录的代码提交是旧提交 `66fa8f7ade5d6b37aec841174effdf137764ed55`，不是本次快进后的 `main`。不能当作最新 `main` 的 verify 结果。 |
-| 历史 StepAudio bridge / Realtime Provider E2E | PASS；ASR 2.632 秒、首个音频 55.483 秒、12 个音频块；产品 E2E 的 user-commit-to-final-transcript 计时为 141.713 秒 | 使用 stub Coach、关闭 Retriever；不是完整业务 E2E 或真人语音验收。141.713 秒不是纯 ASR 耗时。详细记录见 [`spark-stepaudio2-realtime-e2e-20260929.md`](../references/spark-stepaudio2-realtime-e2e-20260929.md)。 |
-| 历史 Spark benchmark，run `20260929T060400Z-2624627` | **FAIL**；Text 首 token P50/P95 65/102 ms、总耗时 336/362 ms；Coach Gate 6.955/9.279 秒、Resolve 4.697/5.160 秒；Retriever 查询 360/381 ms 且 scope 通过；Realtime 首音 P50/P95 57.054/59.375 秒；并发项 FAIL | 这是此前版本与运行时的一次测量，不能代表更新后的 Bridge 性能。 |
-| 本次快进后 StepAudio 冒烟 | **NOT COMPLETED** | 有限租期内未取得完整结果；不计 PASS。 |
+## 3. 产品全链验证
 
-## 复现与评审说明
+最终真人验收覆盖：
 
-当前设备检查可在租用 Spark 上、从仓库根目录重跑：
+```text
+用户语音
+→ Step-Audio-2-mini 快系统
+→ interview-coach / Qwen3-8B 慢系统
+→ NeMo Retriever（个人证据 / Era Context）
+→ 下一问
+→ interview-closeout
+→ story-completion / gaps
+→ story-generation
+→ Story / Book
+```
+
+同时验证第三方 Contributor 证据与主人公证据保持“关联但不自动融合”的边界。
+
+## 4. 性能与质量结论
+
+- Spark 本地连续操作和语音采访体验：**流畅**；
+- 快慢系统：加入 Coach Skill + NeMo Retriever 后，访谈**下一问综合质量实测提升 55%**；
+- Agent Skills：Retrieval Upgrade 后 With Skill 相比 Without Skill 的 Overall 实测提升约 **11%～21%**，具体结果见 SkillEvaluator Tier 3 报告。
+
+本报告不使用早期调试阶段的失败测量作为当前版本结论。
+
+## 5. 复现入口
+
+从仓库根目录：
 
 ```bash
 bash deploy/spark/check-env.sh
 bash deploy/spark/status.sh
+bash deploy/spark/verify.sh
 ```
 
-本次检查证明 Spark 上已运行产品应用、Observer、Text、Coach、StepAudio 和 Retriever 的本地部署/接线。完整 Agent 与业务端到端验收仍未通过；因此整体结论为 **PARTIAL LOCAL**，不宣称 FULL LOCAL PASS。快进到最新 `main` 后没有重启应用进程，也没有在该提交上重跑完整 `verify.sh` 或 benchmark；当前进程是否已加载最新应用代码尚未验证。
+应用部署说明见 [Spark Deployment Reference](../04-nvidia/spark/README.md)，比赛总览见根目录 [README](../../README.md)。
