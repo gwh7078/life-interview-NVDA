@@ -6,10 +6,10 @@
 - Judge: `step-5-preview`, temperature 0, one independent absolute score per candidate
 - Judge endpoint: `https://api.stepfun.com/step_plan/v1/chat/completions`; concurrency: 2
 - Judge code commit: `71847bbec6847dc730785646fd5aab449ac6f02e`
-- Explicit Judge retry rounds: schema_invalid_round_1: 45 attempted, 21 scored, 24 failed; remaining_failures_round_2: 24 attempted, 3 scored, 21 failed
+- Explicit Judge retry rounds: schema_invalid_round_1: 45 attempted, 21 scored, 24 failed; remaining_failures_round_2: 24 attempted, 3 scored, 21 failed; remaining_failures_round_3: 21 attempted, 13 scored, 8 failed; output_length_rule_retry: 8 attempted, 6 scored, 2 failed
 - Audio: 10 frozen canonical WAV files; see [audio manifest](../../audio/manifest.json)
-- Samples: 90/90 completed; 90 provider attempts; 69 judged; 41 primary-score eligible
-- ASR excluded: 36; Judge failures or missing results: 21 (JUDGE_RESPONSE_SCHEMA_INVALID=13, JUDGE_OUTPUT_TOKEN_LIMIT=8)
+- Samples: 90/90 completed; 90 provider attempts; 88 judged; 54 primary-score eligible
+- ASR excluded: 36; Judge failures or missing results: 2 (JUDGE_OUTPUT_TOKEN_LIMIT=2)
 - Runtime parity: 30/30 complete Case × run groups passed shared-input and profile checks; failures: 0
 - Standard deviation uses sample standard deviation (n−1). Score and latency are reported separately.
 - The scores below are a partial, non-representative subset because some Judge outputs failed; do not treat these contrasts as a completed benchmark result.
@@ -18,30 +18,30 @@
 
 | Variant | Valid N | Mean | Median | Std Dev |
 |---|---:|---:|---:|---:|
-| A | 16 | 47.25 | 50.5 | 27.62 |
-| B | 12 | 49.25 | 53.5 | 25.36 |
-| C | 13 | 42.15 | 32 | 25.16 |
+| A | 18 | 47 | 48 | 25.96 |
+| B | 18 | 47.56 | 51 | 23.11 |
+| C | 18 | 44.83 | 38 | 23.87 |
 
 ## Score dimensions
 
 | Dimension | A | B | C |
 |---|---:|---:|---:|
-| Information Gain | 13.31 | 14.58 | 12.46 |
-| Context Use / Non-Repetition | 12.44 | 12.75 | 10.23 |
-| Story Value | 9 | 9.17 | 7.54 |
-| Depth | 6 | 6.17 | 4.92 |
-| Non-Leading | 6.5 | 6.58 | 7 |
+| Information Gain | 13.22 | 13.94 | 13.5 |
+| Context Use / Non-Repetition | 12.28 | 12.44 | 10.89 |
+| Story Value | 8.83 | 8.83 | 8.28 |
+| Depth | 5.89 | 5.83 | 5.33 |
+| Non-Leading | 6.78 | 6.5 | 6.83 |
 
 ## Controlled contrasts
 
 | Contrast | Total score delta | Information Gain | Context Use | Story Value | Depth | Non-Leading |
 |---|---:|---:|---:|---:|---:|---:|
-| A → B (Coach) | +9.18 (n=11) | +3.82 (n=11) | +2.27 (n=11) | +1.45 (n=11) | +1.27 (n=11) | +0.36 (n=11) |
-| B → C (Memory + Era) | -12.27 (n=11) | -3.55 (n=11) | -3.82 (n=11) | -2.82 (n=11) | -2.09 (n=11) | 0 (n=11) |
-| A → C | -5.75 (n=12) | -1 (n=12) | -2.17 (n=12) | -1.75 (n=12) | -1.08 (n=12) | +0.25 (n=12) |
+| A → B (Coach) | +0.56 (n=18) | +0.72 (n=18) | +0.17 (n=18) | 0 (n=18) | -0.06 (n=18) | -0.28 (n=18) |
+| B → C (Memory + Era) | -2.72 (n=18) | -0.44 (n=18) | -1.56 (n=18) | -0.56 (n=18) | -0.5 (n=18) | +0.33 (n=18) |
+| A → C | -2.17 (n=18) | +0.28 (n=18) | -1.39 (n=18) | -0.56 (n=18) | -0.56 (n=18) | +0.06 (n=18) |
 
-**Q1 — Coach (partial only):** C01–C04 A→B paired mean total-score delta +50.67 (n=3); the available subset is too small for a benchmark conclusion.
-**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta -12.27 (n=11); Retrieval C05–C08 -9.75 (n=4), Era C09–C10 -20.75 (n=4). These sparse pairs are non-representative and do not support a completed conclusion. C made no Memory or Era requests, so this contrast does not measure either capability.
+**Q1 — Coach (partial only):** C01–C04 A→B paired mean total-score delta +20.67 (n=6); the available subset is too small for a benchmark conclusion.
+**Q2 — Memory Retrieval + Era:** B→C overall paired mean total-score delta -2.72 (n=18); Retrieval C05–C08 -5.5 (n=6), Era C09–C10 -7.67 (n=6). These sparse pairs are non-representative and do not support a completed conclusion. C made no Memory or Era requests, so this contrast does not measure either capability.
 **Q3 — Source of change:** no complete conclusion is available; dimension contrasts below are from the partial judged subset only.
 
 ## Case groups
@@ -49,29 +49,29 @@
 | Group | Variant | Valid N | Mean | Median | Std Dev |
 |---|---|---:|---:|---:|---:|
 | Coach Cases C01–C04 | A | 6 | 37.17 | 31.5 | 34.15 |
-| Coach Cases C01–C04 | B | 3 | 71.67 | 77 | 11.02 |
-| Coach Cases C01–C04 | C | 5 | 68 | 75 | 18.67 |
-| Retrieval Cases C05–C08 | A | 5 | 47 | 49 | 12.14 |
-| Retrieval Cases C05–C08 | B | 4 | 41.75 | 48 | 22.05 |
-| Retrieval Cases C05–C08 | C | 4 | 32 | 30.5 | 4.97 |
-| Era Cases C09–C10 | A | 5 | 59.6 | 73 | 30.2 |
-| Era Cases C09–C10 | B | 5 | 41.8 | 46 | 28.99 |
-| Era Cases C09–C10 | C | 4 | 20 | 20.5 | 11.69 |
+| Coach Cases C01–C04 | B | 6 | 57.83 | 56 | 17.42 |
+| Coach Cases C01–C04 | C | 6 | 62.83 | 62 | 20.95 |
+| Retrieval Cases C05–C08 | A | 6 | 47 | 48 | 10.86 |
+| Retrieval Cases C05–C08 | B | 6 | 40.17 | 48 | 24.28 |
+| Retrieval Cases C05–C08 | C | 6 | 34.67 | 32 | 7.58 |
+| Era Cases C09–C10 | A | 6 | 56.83 | 63 | 27.85 |
+| Era Cases C09–C10 | B | 6 | 44.67 | 52 | 26.86 |
+| Era Cases C09–C10 | C | 6 | 37 | 30 | 29.22 |
 
 ## Case-by-case
 
 | Case | A mean | B mean | C mean | Main capability |
 |---|---:|---:|---:|---|
 | C01 | n/a | n/a | n/a | Coach |
-| C02 | 36.33 | 78 | 81 | Coach |
-| C03 | 38 | 59 | 48.5 | Coach |
+| C02 | 36.33 | 64.67 | 81 | Coach |
+| C03 | 38 | 51 | 44.67 | Coach |
 | C04 | n/a | n/a | n/a | Coach |
-| C05 | 54 | 29.5 | 35.5 | Memory Retrieval |
-| C06 | 36.5 | 54 | 28.5 | Memory Retrieval |
+| C05 | 54 | 41 | 39.67 | Memory Retrieval |
+| C06 | 40 | 39.33 | 29.67 | Memory Retrieval |
 | C07 | n/a | n/a | n/a | Memory Retrieval |
 | C08 | n/a | n/a | n/a | Memory Retrieval |
-| C09 | 74.5 | 35 | 24 | Era |
-| C10 | 49.67 | 52 | 8 | Era |
+| C09 | 64 | 35 | 24 | Era |
+| C10 | 49.67 | 54.33 | 50 | Era |
 
 ## Technical behavior
 
@@ -101,7 +101,7 @@
 ## Exclusions and regressions
 
 - ASR mismatch sample IDs: C01-A-run1, C01-A-run2, C01-A-run3, C01-B-run1, C01-B-run2, C01-B-run3, C01-C-run1, C01-C-run2, C01-C-run3, C04-A-run1, C04-A-run2, C04-A-run3, C04-B-run1, C04-B-run2, C04-B-run3, C04-C-run1, C04-C-run2, C04-C-run3, C07-A-run1, C07-A-run2, C07-A-run3, C07-B-run1, C07-B-run2, C07-B-run3, C07-C-run1, C07-C-run2, C07-C-run3, C08-A-run1, C08-A-run2, C08-A-run3, C08-B-run1, C08-B-run2, C08-B-run3, C08-C-run1, C08-C-run2, C08-C-run3
-- Judge errors or missing results: JUDGE_RESPONSE_SCHEMA_INVALID=13, JUDGE_OUTPUT_TOKEN_LIMIT=8
-- Negative case-level paired deltas: C02 (A→B 66, B→C -1.5); C03 (A→B 20, B→C -10); C05 (A→B -27, B→C 6); C06 (A→B 17.5, B→C -25.5); C09 (A→B -36.5, B→C -11); C10 (A→B 20.5, B→C -50)
+- Judge errors or missing results: JUDGE_OUTPUT_TOKEN_LIMIT=2
+- Negative case-level paired deltas: C03 (A→B 13, B→C -6.33); C05 (A→B -13, B→C -1.33); C06 (A→B -0.67, B→C -9.67); C09 (A→B -29, B→C -11); C10 (A→B 4.67, B→C -4.33)
 - All completed candidates and technical traces remain in the result directory; the primary score excludes only ASR-mismatch samples and failed Judge records.
 - Completion blockers: JUDGE_COVERAGE_INCOMPLETE, C_MEMORY_EVIDENCE_MISSING

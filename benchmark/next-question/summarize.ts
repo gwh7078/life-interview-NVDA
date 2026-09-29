@@ -267,6 +267,8 @@ async function main(): Promise<void> {
   const explicitRetryRounds = {
     schema_invalid_round_1: explicitRetryRound('USER_REQUESTED_SCHEMA_RETRY'),
     remaining_failures_round_2: explicitRetryRound('USER_REQUESTED_FAILURE_RETRY_ROUND_2'),
+    remaining_failures_round_3: explicitRetryRound('USER_REQUESTED_FAILURE_RETRY_ROUND_3'),
+    output_length_rule_retry: explicitRetryRound('USER_REQUESTED_OUTPUT_LENGTH_CAP_RETRY'),
   };
   const records: Array<{ case_id: string; run: number; variant: string; candidate_id: string; score: Row }> = [];
   for (const [candidateId, map] of mapping) {

@@ -29,7 +29,7 @@ const JUDGE_SCHEMA = {
     fact_misuse: { type: 'boolean' },
     leading_question: { type: 'boolean' },
     missed_high_value_clue: { type: 'boolean' },
-    brief_reason: { type: 'string' },
+    brief_reason: { type: 'string', maxLength: 48 },
   },
   required: RESULT_KEYS,
 } as const;
@@ -86,6 +86,7 @@ function validateResult(value: unknown): string | null {
     .find((key) => typeof result[key] !== 'boolean');
   if (invalidBoolean) return `${invalidBoolean} must be boolean`;
   if (typeof result.brief_reason !== 'string' || !result.brief_reason.trim()) return 'brief_reason must be a non-empty string';
+  if (Array.from(result.brief_reason).length > 48) return 'brief_reason exceeds 48 characters';
   return null;
 }
 
@@ -97,7 +98,7 @@ function systemPrompt(): string {
     '评分必须是整数：information_gain 0-30；context_use 0-25；story_value 0-20；depth 0-15；non_leading 0-10。',
     '高分要求：能获得新信息、利用上下文且不重复、抓住高价值线索、追问具体场景/人物/因果/情绪/判断/转折/意义，并且不诱导或虚构。',
     '标签必须是布尔值：repeated_question 表示重问已知事实；fact_misuse 表示把推测/时代背景当个人事实；leading_question 表示问题诱导或预设答案；missed_high_value_clue 表示忽略当前最值得追问的线索。',
-    '只返回字段 information_gain、context_use、story_value、depth、non_leading、repeated_question、fact_misuse、leading_question、missed_high_value_clue、brief_reason。不要输出 total_score，系统会本地求和。brief_reason 用简短中文说明且非空；保存时超过160字符会截短。不要展示推理过程或输出 Markdown。',
+    '只返回字段 information_gain、context_use、story_value、depth、non_leading、repeated_question、fact_misuse、leading_question、missed_high_value_clue、brief_reason。不要输出 total_score，系统会本地求和。brief_reason 用一句不超过40个汉字的简短中文说明；只输出紧凑 JSON，不写分析、推理过程、Markdown或其他文字，总输出尽量控制在350 tokens以内。',
   ].join('\n');
 }
 
@@ -222,10 +223,16 @@ async function main(): Promise<void> {
   let nextIndex = 0;
   const retrySchemaInvalidOnce = process.argv.includes('--retry-schema-invalid-once');
   const retryLatestFailuresOnce = process.argv.includes('--retry-latest-failures-once');
-  if (retrySchemaInvalidOnce && retryLatestFailuresOnce) throw new Error('Choose only one explicit retry mode.');
+  const retryLatestFailuresRound3 = process.argv.includes('--retry-latest-failures-round-3');
+  const retryLatestFailuresOutputCap = process.argv.includes('--retry-latest-failures-output-cap');
+  if ([retrySchemaInvalidOnce, retryLatestFailuresOnce, retryLatestFailuresRound3, retryLatestFailuresOutputCap].filter(Boolean).length > 1) {
+    throw new Error('Choose only one explicit retry mode.');
+  }
   const oneShotRetryReason = retrySchemaInvalidOnce
     ? 'USER_REQUESTED_SCHEMA_RETRY'
-    : retryLatestFailuresOnce ? 'USER_REQUESTED_FAILURE_RETRY_ROUND_2' : undefined;
+    : retryLatestFailuresOnce ? 'USER_REQUESTED_FAILURE_RETRY_ROUND_2'
+      : retryLatestFailuresRound3 ? 'USER_REQUESTED_FAILURE_RETRY_ROUND_3'
+        : retryLatestFailuresOutputCap ? 'USER_REQUESTED_OUTPUT_LENGTH_CAP_RETRY' : undefined;
   const explicitRetryTargets = oneShotRetryReason ? candidates.filter((candidate) => {
     const history = attemptHistory.get(candidate.candidate_id) ?? [];
     const previous = history.at(-1);

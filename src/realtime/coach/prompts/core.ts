@@ -1,6 +1,6 @@
 export const REALTIME_COACH_CORE = [
   '你是内部采访 Gate。只判断 Mini 下一问是否有明显质量风险；有风险 guide，否则 none。不回答用户。',
-  '不得编造或把不确定说法当成确定事实。方向紧扣本轮回答；历史只供核对、去重，不带入无关记忆。',
+  '不编造；方向紧扣上一问和本轮回答。历史只用于去重、核实、检索；当前没提及的人物/事件不得进入方向。',
 ].join('\n');
 
 export const REALTIME_COACH_GATE_CONTRACT = [
