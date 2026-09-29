@@ -85,5 +85,69 @@
     "verifier_stage_timeout_seconds": 360,
     "harbor_whole_trial_hard_timeout": null,
     "invalid_infrastructure_trials_excluded_from_formal_aggregation": true
+  },
+  "forecast_after_retrieval_upgrade": {
+    "status": "unverified_projection",
+    "note": "以下为基于现有 Tier 3 分项丢分与 Evidence Retrieval Upgrade 设计推导的工程预期，不是新的实测结果；正式成绩仍以 results 字段及原始 result.json 为准。",
+    "coach_changed": false,
+    "rerun_required_for_validation": true,
+    "projected_scores": {
+      "story-generation": {
+        "measured_without_skill": 0.7868,
+        "measured_with_skill": 0.9563,
+        "projected_with_skill": 0.96,
+        "projected_skill_lift": 0.1732,
+        "projected_range": [
+          0.95,
+          0.97
+        ]
+      },
+      "interview-closeout": {
+        "measured_without_skill": 0.7891,
+        "measured_with_skill": 0.9262,
+        "projected_with_skill": 0.95,
+        "projected_skill_lift": 0.1609,
+        "projected_range": [
+          0.94,
+          0.96
+        ]
+      },
+      "story-completion": {
+        "measured_without_skill": 0.7426,
+        "measured_with_skill": 0.9255,
+        "projected_with_skill": 0.95,
+        "projected_skill_lift": 0.2074,
+        "projected_range": [
+          0.94,
+          0.96
+        ]
+      },
+      "interview-observer": {
+        "measured_without_skill": 0.8157,
+        "measured_with_skill": 0.8347,
+        "projected_with_skill": 0.94,
+        "projected_skill_lift": 0.1243,
+        "projected_range": [
+          0.92,
+          0.95
+        ],
+        "rationale": {
+          "measured_correctness_with_skill": 0.9667,
+          "measured_effectiveness_with_skill": 0.9445,
+          "measured_discoverability_with_skill": 0.5278,
+          "measured_efficiency_with_skill": 0.625
+        }
+      },
+      "onboarding-closeout": {
+        "measured_without_skill": 0.8163,
+        "measured_with_skill": 0.9057,
+        "projected_with_skill": 0.93,
+        "projected_skill_lift": 0.1137,
+        "projected_range": [
+          0.92,
+          0.94
+        ]
+      }
+    }
   }
 }
