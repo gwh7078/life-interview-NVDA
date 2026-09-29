@@ -29,7 +29,7 @@ const JUDGE_SCHEMA = {
     fact_misuse: { type: 'boolean' },
     leading_question: { type: 'boolean' },
     missed_high_value_clue: { type: 'boolean' },
-    brief_reason: { type: 'string', maxLength: 48 },
+    brief_reason: { type: 'string' },
   },
   required: RESULT_KEYS,
 } as const;
@@ -86,7 +86,6 @@ function validateResult(value: unknown): string | null {
     .find((key) => typeof result[key] !== 'boolean');
   if (invalidBoolean) return `${invalidBoolean} must be boolean`;
   if (typeof result.brief_reason !== 'string' || !result.brief_reason.trim()) return 'brief_reason must be a non-empty string';
-  if (Array.from(result.brief_reason).length > 48) return 'brief_reason exceeds 48 characters';
   return null;
 }
 

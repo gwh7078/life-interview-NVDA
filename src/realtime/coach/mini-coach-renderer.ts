@@ -56,16 +56,18 @@ export function renderMiniCoachPacket(input: {
   } else if (scenario === 'story_continue') {
     if (packet?.backgroundHint) {
       lines = [
-        `【采访教练】已知：${knownText(packet, currentUserAnswer, 28)}`,
-        `背景：${clip(packet.backgroundHint, 24)}`,
+        '【采访教练】遵循方向，避免项不再问。',
+        `已知：${knownText(packet, currentUserAnswer, 24)}`,
+        `背景：${clip(packet.backgroundHint, 18)}`,
         ...(packet.avoid || gate.avoid
-          ? [`避免：${clip(packet.avoid || gate.avoid || '', 24)}`]
-          : packet.conflict ? [`冲突：${clip(packet.conflict, 24)}`] : []),
-        `方向：${clip(packet.direction || gate.direction, 48)}`,
+          ? [`避免：${clip(packet.avoid || gate.avoid || '', 18)}`]
+          : packet.conflict ? [`冲突：${clip(packet.conflict, 18)}`] : []),
+        `方向：${clip(packet.direction || gate.direction, 44)}`,
       ];
     } else {
       lines = [
-        `【采访教练】已知：${knownText(packet, currentUserAnswer, 28)}`,
+        '【采访教练】遵循方向，避免项不再问。',
+        `已知：${knownText(packet, currentUserAnswer, 28)}`,
         ...(packet?.avoid || gate.avoid ? [`避免：${clip(packet?.avoid || gate.avoid || '', 32)}`] : []),
         ...(packet?.conflict ? [`冲突：${clip(packet.conflict, 24)}`] : []),
         `方向：${clip(packet?.direction || gate.direction, 48)}`,

@@ -338,16 +338,36 @@ function parsePacket(value: unknown, input: CoachResolveInput): import('./types.
 }
 
 export function buildCoachGatePrompt(input: CoachGateInput): { system: string; user: string } {
+  const state = row(input.scenarioState);
+  const lifeStage = row(state?.life_stage);
+  const currentStory = row(state?.current_story);
+  const scenarioState = input.scenario === 'story_continue'
+    ? {
+      life_stage: lifeStage ? {
+        title: lifeStage.title,
+        start_date: lifeStage.start_date,
+        end_date: lifeStage.end_date,
+      } : null,
+      current_story: currentStory ? {
+        title: currentStory.title,
+        status: currentStory.status,
+      } : null,
+    }
+    : input.scenarioState;
   const user = JSON.stringify({
     scenario: input.scenario,
-    scenarioState: input.scenarioState,
-    boundedRecentContext: input.boundedRecentContext,
-    lastAssistantQuestion: input.lastAssistantQuestion,
-    currentUserAnswer: input.currentUserAnswer,
+    referenceOnly: {
+      scenarioState,
+      boundedRecentContext: input.boundedRecentContext,
+    },
+    currentTurn: {
+      lastAssistantQuestion: input.lastAssistantQuestion,
+      currentUserAnswer: input.currentUserAnswer,
+    },
   });
   return {
     system: `${REALTIME_COACH_CORE}\n\n${REALTIME_COACH_GATE_CONTRACT}\n\n${SCENARIO_POLICIES[input.scenario]}`,
-    user: `${user}\n\n方向只取上一问和本轮回答的线索；历史仅用于去重或核实。阶段起止年不是事件日期，无具体日期证据时不要猜日期。`,
+    user: `${user}\n\ndirection 必须依据 currentTurn；referenceOnly 只供去重/核验，不得把其中仅出现的人名或事件引为新话题。`,
   };
 }
 

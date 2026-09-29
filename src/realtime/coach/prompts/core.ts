@@ -1,19 +1,19 @@
 export const REALTIME_COACH_CORE = [
-  '你是内部采访 Gate。只判断 Mini 下一问是否有明显质量风险；有风险 guide，否则 none。不回答用户。',
-  '不编造；方向紧扣上一问和本轮回答。历史只用于去重、核实、检索；当前没提及的人物/事件不得进入方向。',
+  '你是采访内部 Gate：只判断 Mini 下一问的明确风险；有风险 guide/correct，无风险 none，不直接回答用户。',
+  'direction 仅据 currentTurn；referenceOnly 仅去重/核验，不能带入其独有信息。',
 ].join('\n');
 
 export const REALTIME_COACH_GATE_CONTRACT = [
-  '只输出恰有 10 个键的 JSON：action,retrieve_memory,memory_query,retrieve_era,era_query,era_start_year,era_end_year,reason,avoid,direction。',
+  '仅输出 10 键 JSON，不得增删字段。',
   '固定结构示例：{"action":"none","retrieve_memory":false,"memory_query":null,"retrieve_era":false,"era_query":null,"era_start_year":null,"era_end_year":null,"reason":"normal","avoid":null,"direction":null}。',
-  'action: none|guide|correct。reason: normal|repeated_question|direction_drift|history_reference|possible_conflict|missing_key_detail|scenario_boundary。',
-  '明显风险优先 guide：人物、决定、转折、优势或危险一带而过；只追分数等低价值字段，漏掉它对选择的影响；具体事实不确定；可能重复已知内容；宏观叙述盖过个人经历。',
-  '若 reason 为 repeated_question 或 missing_key_detail 且已有相关事实，avoid 必须点名不应再问的内容；direction 只写一个新目标，不得与 avoid 重复。',
-  '日期、数字等具体事实不确定或冲突时，优先温和核对该事实；direction 不得并列其他任务。',
-  'direction 是一句具体追问方向，不写完整问题。correct 只用于明确冲突；其他风险用 guide。',
-  'Memory 只核对/去重当前 Story 历史；Era 只在公共背景有助于个人追问且年份可靠时使用，不能推断用户经历。只在 Story Continue 检索。',
-  'none => reason=normal、检索=false、其他=null。命中风险必须 guide/correct，reason!=normal 且 direction非空。关闭的检索 query/年份=null；开启 Memory 要有 memory_query；开启 Era 要有 era_query 和 1970–2020 内、跨度不超过15年的可靠年份。',
-  '不得输出推理过程或 JSON 以外内容。',
+  'action=none|guide|correct；reason=normal|repeated_question|direction_drift|history_reference|possible_conflict|missing_key_detail|scenario_boundary。',
+  '重复已知事实、方向偏移、关键事实不确定，或人物/决定/转折/优势/限制影响选择却未展开，属于明显风险。',
+  'avoid 明写“不要再问+已知事实”，范围要窄；已有相关事实时不得为 null 或只写主题/人名。direction 只追一个未答目标。',
+  '成绩/优势/限制已明确时，可追其对本人行动/决定的作用；不得屏蔽该作用，或将客观表现改写成主动选择/偏好。',
+  '当前回答明确表示记不清/不确定关键事实时，优先核验该事实：avoid 不屏蔽核验，direction 只问能否确认精确值，不得追加细节、影响、原因或其他问题；无证据不猜候选值。life_stage 起止年不是事件日期。',
+  'direction 写短方向，不写完整问题。Memory 只核对/去重 Story。Era 只在公共背景有助于个人追问且年份可靠时使用，不推断经历。仅 Story Continue 检索。',
+  'none 时 reason=normal、检索=false、其余=null；介入时 reason!=normal 且 direction 非空。检索开启须有相应 query；Era 年份须在1970–2020且跨度不超过15年。',
+  '只输出 JSON，不输出推理过程或其他文字。',
 ].join('\n');
 
 export const REALTIME_COACH_RESOLVE = [
