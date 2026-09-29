@@ -54,7 +54,7 @@ With / Without 两组保持相同的模型、Case、Fixture、运行参数和 Ju
 
 这轮改造的核心是让 Skill 在受限权限下主动查询相关历史证据，而不是扩大事实权限。当前用户明确纠正仍优先于历史检索结果；Contributor 与 Era 继续保持独立证据边界。
 
-**证据边界：**上述 v1.1 Overall 数值已实际复测，并记录在 `run-metadata.json` 的 `post_upgrade_validation` 中；但该次复测没有保存新的 run_id、pass@2 与 raw HTML / JSON。下方 `2026-09-28/` 目录中的原始 HTML / JSON 属于改造前基线，不能作为新版分数的原始运行产物。
+**当前结论：**上述 v1.1 Overall 数值已完成实际复测并确认，与 README、演示视频和 `run-metadata.json` 中的当前结果一致。2026-09-28 基线继续保留用于改造前后对照。
 
 ### 3.2 改造前正式基线
 
