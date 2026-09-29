@@ -17,6 +17,17 @@
 - NemoClaw / OpenClaw、NeMo Retriever、NeMo Agent Toolkit 已进入工程实现与本机验证；**DGX Spark 上的最终本地推理与性能 Benchmark 尚未完成**。
 - 当前仍处于真实语音人工测试与比赛收敛阶段，不把自动测试通过等同于完整真人体验验收。
 
+
+## Benchmark：B 相比 A 提升在哪里
+
+受控 Next-Question A/B 测试显示，**B（Mini + Coach）的优势主要集中在“把表层事实转成个人决定 / 影响”的高价值追问，而不是所有 Case 全面抬分。**
+
+- **最强直接 Coach 信号 C03：A 33.0 → B 85.5，+52.5 分**（2 组有效配对）。A 容易重复“老师让他再试一次”这类已知事实；B 能把方向转向“老师的建议如何影响用户自己的决定”。
+- **定向回归 6 组有效配对：A 55.5 → B 64.5，平均 +9.0 分**。五个评分维度全部为正：Information Gain **+2.83**、Context Use **+0.83**、Story Value **+2.17**、Depth **+1.50**、Non-Leading **+1.67**。
+- 完整冻结执行的 18 组有效 A/B 配对只提升 **+0.56**（47.00 → 47.56），说明 Coach 的收益是**针对 Mini 的特定失败模式**，不是普遍稳定抬分。
+
+这里的“明显提升”指**场景级效果**，不等同于统计学显著性。完整正负结果、排除项与 Gate 限制见 [`benchmark/next-question/CURRENT_BENCHMARK_RESULT.md`](benchmark/next-question/CURRENT_BENCHMARK_RESULT.md)。
+
 ## 当前架构
 
 ```text

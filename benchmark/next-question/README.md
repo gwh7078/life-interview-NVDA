@@ -10,6 +10,24 @@ The text transport result is retained as failure evidence:
 
 `text-transport-canary.ts` remains available to reproduce that transport check; it is not an input path for this benchmark.
 
+
+## Result highlight: where B clearly improves over A
+
+**B (Mini + Coach) does not lift every case uniformly. Its clearest gain is in turns where a surface fact should be converted into a higher-value personal decision/impact question.**
+
+> **Strongest direct Coach signal — C03:** A **33.0** → B **85.5**, **+52.5 points** across 2 valid paired samples.  
+> A tended to repeat what the teacher had already said or presume the teacher's intent; B redirected the interview toward how the teacher's advice affected the user's own decision.
+
+| Evidence | A | B | B−A | What improved |
+|---|---:|---:|---:|---|
+| **C03 targeted Coach regression** | 33.0 | **85.5** | **+52.5** | From repeating a known teacher fact to pursuing the user's own decision/impact |
+| **Targeted regression, 6 valid pairs** | 55.5 | **64.5** | **+9.0** | Higher information gain, context use, story value, depth, and non-leading scores |
+| Frozen run, 18 valid A/B pairs | 47.00 | **47.56** | +0.56 | Small overall lift; improvement is concentrated in specific failure modes |
+
+Targeted regression dimension deltas were all positive: **Information Gain +2.83, Context Use +0.83, Story Value +2.17, Depth +1.50, Non-Leading +1.67**.
+
+This is a **scenario-level clear improvement, not a claim of statistical significance or universal superiority**. Full details, negative cases, exclusions, and Gate limitations are preserved in [CURRENT_BENCHMARK_RESULT.md](CURRENT_BENCHMARK_RESULT.md).
+
 ## Story fixture and Retriever probe
 
 Create a private copy of the existing interview-quality benchmark database. This does not replace the app's Worktree database or the checked-in compressed source. The fixture combines its six completed source sessions under one new UUID owner, Life Stage, and Story. The Story context is shared with the Runner and its historical user answers remain source-derived.
