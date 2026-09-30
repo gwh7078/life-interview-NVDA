@@ -107,11 +107,11 @@ NemoClaw / OpenClaw 智能体
 | Skill | 运行时 / 执行循环 / 工具调用 | 实测结果 |
 |---|---|---:|
 | [**interview-coach**](agent/skills/interview-coach/SKILL.md) | 自定义低延迟运行时；**Gate → 条件 Personal Memory / Era Retrieval → Resolve**；不走通用 OpenClaw 工具循环 | 下一问综合质量 **+55%** |
-| [**onboarding-closeout**](agent/skills/onboarding-closeout/SKILL.md) | OpenClaw 智能体执行循环，最多 3 次尝试；按需调用 **`evidence-search`**；允许来源：`profile / life_stage / related_story` | 0.8163 → **0.9300**（+11.37 个百分点） |
-| [**interview-closeout**](agent/skills/interview-closeout/SKILL.md) | OpenClaw 智能体执行循环；按需调用 **`evidence-search`**；按 mode 限定来源：`related_story`，或 `owner_transcript / story_memory / story_summary / related_story`，或 `contributor_transcript` | 0.7891 → **0.9500**（+16.09 个百分点） |
-| [**story-completion**](agent/skills/story-completion/SKILL.md) | OpenClaw 智能体执行循环；按需调用 **`evidence-search`**；允许来源：`owner_transcript / story_memory / story_summary / related_story` | 0.7426 → **0.9500**（+20.74 个百分点） |
-| [**story-generation**](agent/skills/story-generation/SKILL.md) | OpenClaw 智能体执行循环；按需调用 **`evidence-search`**；允许来源：`owner_transcript / contributor_transcript / profile / life_stage / story_memory / story_summary / related_story / era` | 0.7868 → **0.9600**（+17.32 个百分点） |
-| [**interview-observer**](agent/skills/interview-observer/SKILL.md) | 单次本地推理，**1 次尝试 / 0 次工具调用**；Backend 按需预取 Evidence 后交给 Observer | 0.8157 → **0.9400**（+12.43 个百分点） |
+| [**onboarding-closeout**](agent/skills/onboarding-closeout/SKILL.md) | OpenClaw 智能体执行循环，最多 3 次尝试；按需调用 **`evidence-search`**；允许来源：`profile / life_stage / related_story` | 0.8163 → **0.9300**（+11.37%） |
+| [**interview-closeout**](agent/skills/interview-closeout/SKILL.md) | OpenClaw 智能体执行循环；按需调用 **`evidence-search`**；按 mode 限定来源：`related_story`，或 `owner_transcript / story_memory / story_summary / related_story`，或 `contributor_transcript` | 0.7891 → **0.9500**（+16.09%） |
+| [**story-completion**](agent/skills/story-completion/SKILL.md) | OpenClaw 智能体执行循环；按需调用 **`evidence-search`**；允许来源：`owner_transcript / story_memory / story_summary / related_story` | 0.7426 → **0.9500**（+20.74%） |
+| [**story-generation**](agent/skills/story-generation/SKILL.md) | OpenClaw 智能体执行循环；按需调用 **`evidence-search`**；允许来源：`owner_transcript / contributor_transcript / profile / life_stage / story_memory / story_summary / related_story / era` | 0.7868 → **0.9600**（+17.32%） |
+| [**interview-observer**](agent/skills/interview-observer/SKILL.md) | 单次本地推理，**1 次尝试 / 0 次工具调用**；Backend 按需预取 Evidence 后交给 Observer | 0.8157 → **0.9400**（+12.43%） |
 
 ### 5.3 基准评测
 
