@@ -197,7 +197,7 @@ DGX Spark 的目标方式是：**用户准备并运行标准运行时，本仓�
 
 NemoClaw/OpenClaw 是一项 由操作者管理的智能体运行时，默认 `my-assistant` 沙箱 内提供 OpenClaw Agent。操作者负责官方安装、初始化配置 与 readiness；仓库只检查 readiness 并配置应用 路由、Agent、Skills 和 策略。官方 onboard 可发现并复用已经运行的 `localhost:8000/v1/models`；这是 endpoint 配置能力，不构成 Spark 兼容性或 端到端 证明。正式会后 Agent Skills 在 OpenClaw 运行时 执行。Mini 的 `interview-coach` Skill 仍由产品低延迟 实时运行时 执行，不经过 OpenClaw。
 
-macOS 根 `.env.example` 默认 Step-Audio-2-mini / StepFun Cloud 保持不变；Spark 目标 profile 的 StepAudio 协议 不改变 Mac 默认 provider。
+比赛文档只描述 Spark 全本地主链；其他开发配置不作为比赛能力口径。
 
 ### DGX Spark 验证状态
 
