@@ -12,7 +12,7 @@
 | `modelbest` | Experimental | ModelBest MiniCPM-o Realtime | provider-specific |
 | `qwen` | 兼容 adapter | DashScope | provider-specific |
 
-Spark Deployment Profile 已通过 `STEPAUDIO2_EXECUTION=local` 将 Mini 路由到 Local Adapter/Bridge；Mac 默认仍为 StepFun Cloud。GB10 / ARM64 runtime compatibility 需要真机验证，产品层 Provider Contract 不变。
+Spark Deployment Profile 通过 `STEPAUDIO2_EXECUTION=local` 将 Mini 路由到 Local Adapter / Bridge。Step-Audio-2-mini 已在 DGX Spark GB10 / ARM64 完成本地真人全链验证，产品层 Provider Contract 保持不变。
 
 ## 2. Mini：Fast Voice + interview-coach Skill
 
