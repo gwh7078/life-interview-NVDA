@@ -2,7 +2,7 @@
 
 This repository is the Life Interview application profile for DGX Spark. The
 competition configuration has been validated on NVIDIA DGX Spark GB10 as
-**FULL LOCAL VERIFIED / OFFLINE CAPABLE**: Text / Agent, Coach, Step-Audio-2-mini,
+**全本地验证通过 / 支持断网运行**: Text / Agent, Coach, Step-Audio-2-mini,
 NeMo Retriever, NemoClaw / OpenClaw, Backend / Web, Technical Observer, and
 SQLite run locally and remain usable after external network access is removed.
 
@@ -18,7 +18,7 @@ Prepare the Spark host yourself:
 - NVIDIA Container Toolkit and Docker Engine, configured for GPU access.
 - Git, Python 3.9+, and Node.js 24.16+ (24.x), 26.1+, or newer. npm is
   required by the repository's Node wrapper.
-- Network access for initial installation/model preparation, plus enough disk for the application and chosen runtimes. After preparation, the validated competition profile can run offline.
+- Network access for initial installation/model preparation, plus enough disk for the application and chosen runtimes. After preparation, the validated competition profile 支持断网运行.
 - The four application endpoints below and an operator-prepared
   NemoClaw/OpenClaw Agent Runtime with its configured sandbox ready/running.
   Python is needed by application setup and checks; Python 3.12 and uv are
@@ -242,13 +242,13 @@ Any missing prerequisite causes the corresponding verification run to stop or
 report the specific failing gate; it does not change the recorded final
 competition result.
 
-**Final competition validation:** DGX Spark GB10 / ARM64 full local chain passed
+**最终比赛验收：** DGX Spark GB10 / ARM64 full local chain passed
 human end-to-end use, including Realtime Voice, Coach, NeMo Retriever,
 NemoClaw / OpenClaw Skills, application flow, and offline operation.
 
-## Benchmark
+## 基准评测
 
-Competition benchmarks remain separate from deployment mechanics. The verified
+比赛基准评测 remain separate from deployment mechanics. The verified
 competition results are summarized in the root README and formal reports; the
 following command reproduces the benchmark harness when needed:
 
@@ -259,7 +259,7 @@ bash scripts/codex-node.sh npm run spark:benchmark
 The benchmark records model, Coach, Retriever, realtime, and end-to-end evidence;
 it does not install or manage the external AI runtimes.
 
-## Mac and other profiles
+## 其他部署配置
 
 Spark is a deployment profile. The root `.env.example`, default
 `npm run dev`, StepFun Cloud voice path, and Direct Model Runtime remain the
