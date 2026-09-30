@@ -157,7 +157,7 @@ VectorDB      : Retriever 运行时内部依赖，不是应用接口
 
 操作者在仓库外安装并 onboard NemoClaw，准备好可用的 OpenClaw Agent 和指定 sandbox；这整体作为一个 由操作者管理的 NemoClaw/OpenClaw 智能体运行时。Life Interview setup 检查该 运行时已就绪并运行 后，复用已有 文本 vLLM 的 `/v1/models` 模型清单配置 推理路由，并配置正式会后 智能体 Skills。`interview-coach` Skill 继续由产品低延迟 实时运行时 执行 Qwen3-8B，不经 OpenClaw。Retriever 只通过 Service `:7670` 接入，应用不得直接访问 VectorDB。
 
-macOS 开发 Profile 仍可使用 Step-Audio-2-mini / 非比赛主链。比赛 Spark Profile 已完成 GB10 真机全本地验证：文本、采访教练、StepAudio、Retriever、NemoClaw / OpenClaw 与应用主链均在本地协同运行，支持断网使用，真人连续语音与操作流畅。
+比赛 Spark 配置已完成 GB10 真机全本地验证：文本、采访教练、StepAudio、Retriever、NemoClaw / OpenClaw 与应用主链均在本地协同运行，支持断网使用，真人连续语音与操作流畅。
 
 ## 9. 不再采用的架构
 
