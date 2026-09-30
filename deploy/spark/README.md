@@ -261,6 +261,4 @@ it does not install or manage the external AI runtimes.
 
 ## 其他部署配置
 
-Spark is a deployment profile. The root `.env.example`, default
-`npm run dev`, StepFun Cloud voice path, and Direct Model Runtime remain the
-normal Mac development defaults.
+Spark 是独立部署配置。比赛材料只描述 DGX Spark 全本地主链；其他开发配置不作为比赛能力口径。
