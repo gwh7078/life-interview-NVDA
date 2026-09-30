@@ -49,9 +49,13 @@
 
 **DGX Spark 全本地验证通过，支持断网运行**：文本 / 智能体、Qwen3-8B 采访教练、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、后端 / 网页端、SQLite 均已在 NVIDIA DGX Spark GB10 本地运行；断开外部网络后产品主链仍可使用，真人连续语音操作流畅。
 
+![Agent Skills 与 DGX Spark 技术总览](docs/images/readme/agent-skills-overview.webp)
+
 ---
 
 ## 4. 核心架构：快系统负责自然，慢系统负责专业
+
+![实时快慢双系统架构](docs/images/readme/fast-slow-architecture.webp)
 
 ```text
 用户语音
@@ -132,6 +136,8 @@ NemoClaw / OpenClaw 智能体
 | [**interview-observer**](agent/skills/interview-observer/SKILL.md) | 单次本地推理，**1 次尝试 / 0 次工具调用**；后端预取证据 | 0.8157 → **0.9400**（+12.43 个百分点） |
 
 ### 5.3 基准评测
+
+![Agent Skills 实测结果](docs/images/readme/agent-skills-benchmark.webp)
 
 **NVIDIA SkillEvaluator Tier 3 项目自测：**
 
@@ -241,6 +247,8 @@ bash deploy/spark/verify.sh
 → 故事生成 / 修订
 → 成书 / PDF
 ```
+
+![story-generation 证据约束成稿流程](docs/images/readme/story-generation.webp)
 
 同时具备：
 
