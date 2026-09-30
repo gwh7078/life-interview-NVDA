@@ -1,8 +1,8 @@
 # Skill / Script Mapping v1.0
 
-> 更新：2026-09-29。本文定义共享有界 Evidence Search 的 Task 与数据范围；不代表 Live Smoke 已通过。
+> 更新：2026-09-29。本文定义共享有界 Evidence Search 的 Task、Tool Call 与数据范围。
 
-本轮五个 Skill 的元数据版本为 `1.1.0`，Task Registry 版本为 `v1.1`。2026-09-28 NVIDIA SkillEvaluator Tier 3 报告是 Skill v1.0 基线；当前 Retrieval Upgrade 尚未重跑完整 Tier 3。
+五个 v1.1 Skill 已完成 Retrieval Upgrade 与实际复测；Task Registry 版本为 `v1.1`。当前 With Skill / Without Skill 结果见 NVIDIA SkillEvaluator Tier 3 正式报告。
 
 ## 1. 共享检索约定
 
@@ -56,4 +56,4 @@ Agent 不能指定或扩大 owner、Story、share scope、凭证或 endpoint。B
 - 各 Skill 的现有输入、输出、Proposal、来源引用和 Backend Validator Contract 保持不变。检索结果的 provenance 不得冒充输入中提供的用户消息 alias；只有现有规则允许的来源 ID 才能进入 Proposal。
 - 检索结果不能绕过 Schema、Evidence、Domain、版本或 stale 校验，也不能直接写业务数据库。
 - 自定义低延迟 Realtime Coach 仍是独立应用路径，直接使用现有 Coach、Retriever 与 Era Context 集成；本文不改变 StepAudio、Coach Gate、Deadline、fail-open 或语音行为。Realtime Context Hint 的 Observer 仍是单次无工具路径。
-- 当前 `TaskDefinition`、Backend route、Evidence Search service / gateway、四个一致的 Skill-local wrappers，以及 Observer 的 Backend prefetch 已接入共享路径。2026-09-28 Tier 3 结果保持为 Skill v1.0 基线，当前 v1.1 Retrieval Upgrade 的完整 Tier 3 尚未重跑。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；本文不代表 Live Smoke 已通过。
+- 当前 `TaskDefinition`、Backend route、Evidence Search service / gateway、四个一致的 Skill-local wrappers，以及 Observer 的 Backend prefetch 已接入共享路径；v1.1 结果已实际复测，NemoClaw / OpenClaw Skill activation、Tool Call 与 Spark 本地 Agent Task 链路已完成验收。
