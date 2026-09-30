@@ -237,9 +237,9 @@ test('application and competition evidence share the same sanitizer', () => {
   assert.doesNotMatch(verify, /re\.sub\([^\n]*(?:authorization|nvapi|api[_-]\?key)/i);
 });
 
-test('Spark documentation reflects final GB10 ARM64 verification and seed opt-in remains explicit', () => {
+test('Spark documentation reflects final GB10 ARM64 verification in Chinese and seed opt-in remains explicit', () => {
   const docs = `${read('README.md')}\n${readFileSync(resolve(repoRoot, 'README.md'), 'utf8')}`;
-  assert.match(docs, /FULL LOCAL VERIFIED\s*\/\s*OFFLINE CAPABLE/i);
+  assert.match(docs, /全本地验证通过[，\s/]*支持断网运行/);
   assert.doesNotMatch(docs, /NOT VERIFIED ON DGX SPARK\s*\/\s*ARM64/i);
   assert.match(docs, /SPARK_SEED_DEMO_DATA=true/);
   assert.doesNotMatch(docs, /NEMO_RETRIEVER_VECTORDB_URL/);
@@ -251,7 +251,7 @@ test('Spark documentation reflects final GB10 ARM64 verification and seed opt-in
     'docs/04-nvidia/spark/SPARK_DEPLOYMENT_AGENT_BRIEF_v1.0.md',
     'docs/04-nvidia/spark/OFFICIAL_REFERENCE_INDEX_v1.0.md',
   ].map((path) => readFileSync(resolve(repoRoot, path), 'utf8')).join('\n');
-  assert.match(currentDocs, /FULL LOCAL VERIFIED\s*\/\s*OFFLINE CAPABLE/i);
+  assert.match(currentDocs, /全本地验证通过[，\s/]*支持断网运行/);
   assert.doesNotMatch(currentDocs, /NOT (?:TESTED|VERIFIED) ON DGX SPARK(?:\s*\/\s*ARM64)?/i);
   assert.match(currentDocs, /NEMO_RETRIEVER_BASE_URL/);
 });
