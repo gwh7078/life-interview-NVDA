@@ -4,7 +4,7 @@
 > AI 回忆录记者用“听、问、辨、写”完成持续采访、证据核对、缺口发现和最终成稿。
 
 **DGX Spark：全本地验证通过，支持断网运行。**  
-文本 / 智能体、Qwen3-8B 采访教练、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、后端 / Web、SQLite 均已在 NVIDIA DGX Spark GB10 本地运行；断开外部网络后产品主链仍可使用，真人连续语音操作流畅。
+文本 / 智能体、Qwen3-8B 采访教练、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、后端 / 网页端、SQLite 均已在 NVIDIA DGX Spark GB10 本地运行；断开外部网络后产品主链仍可使用，真人连续语音操作流畅。
 
 ---
 
@@ -14,7 +14,7 @@
 |---|---|
 | **实用性 / 行业落地 / 技术创新 · 25%** | 用持续语音采访替代“让用户自己写”；快慢系统解决实时自然度与专业追问冲突；证据链避免长访谈事实漂移 |
 | **智能体与模型优化技术深度 · 25%** | 6 个正式 Agent Skills（智能体技能）；NemoClaw / OpenClaw 智能体执行循环；受限工具调用；NeMo Retriever；结构 / 证据 / 业务规则校验；校验修复 / 格式修复；快慢模型分工 |
-| **项目完整性 · 20%** | 首次建档 → 故事 → 连续采访 → 第三方旁证 → 采访收尾 → 完整度判断 / 缺口 → 故事成稿 → 成书 / PDF，全链 Web 产品可运行 |
+| **项目完整性 · 20%** | 首次建档 → 故事 → 连续采访 → 第三方旁证 → 采访收尾 → 完整度判断 / 缺口 → 故事成稿 → 成书 / PDF，全链网页产品可运行 |
 | **平台适配性 · 15%** | DGX Spark GB10 全本地、可断网；Qwen3.6 NVFP4 + Qwen3-8B + Step-Audio-2-mini + NeMo Retriever + NemoClaw / OpenClaw + NAT |
 
 ---
@@ -89,11 +89,11 @@ NemoClaw / OpenClaw 智能体
 | Skill | 运行时 / 执行循环 / 工具调用 | 实测结果 |
 |---|---|---:|
 | [**interview-coach**](agent/skills/interview-coach/SKILL.md) | 独立低延迟运行时；**判断 → 可选故事记忆 / 时代背景检索 → 生成指导**；不走通用 OpenClaw 执行循环 | 下一问综合质量 **+55%** |
-| [**onboarding-closeout**](agent/skills/onboarding-closeout/SKILL.md) | OpenClaw 智能体执行循环，最多 3 次尝试；可调用工具：`profile / life_stage / related_story` | 0.8163 → **0.9300**（+11.37pp） |
-| [**interview-closeout**](agent/skills/interview-closeout/SKILL.md) | OpenClaw 智能体执行循环；按故事 / 第三方模式限定证据检索 | 0.7891 → **0.9500**（+16.09pp） |
-| [**story-completion**](agent/skills/story-completion/SKILL.md) | OpenClaw 智能体执行循环；检索当前故事历史证据，验证关键缺口 | 0.7426 → **0.9500**（+20.74pp） |
-| [**story-generation**](agent/skills/story-generation/SKILL.md) | OpenClaw 智能体执行循环；可检索访谈原文 / 故事记忆 / 第三方证据 / 时代背景，再生成或修订 | 0.7868 → **0.9600**（+17.32pp） |
-| [**interview-observer**](agent/skills/interview-observer/SKILL.md) | 单次本地推理，**1 次尝试 / 0 次工具调用**；后端预取证据 | 0.8157 → **0.9400**（+12.43pp） |
+| [**onboarding-closeout**](agent/skills/onboarding-closeout/SKILL.md) | OpenClaw 智能体执行循环，最多 3 次尝试；可调用工具：`profile / life_stage / related_story` | 0.8163 → **0.9300**（+11.37 个百分点） |
+| [**interview-closeout**](agent/skills/interview-closeout/SKILL.md) | OpenClaw 智能体执行循环；按故事 / 第三方模式限定证据检索 | 0.7891 → **0.9500**（+16.09 个百分点） |
+| [**story-completion**](agent/skills/story-completion/SKILL.md) | OpenClaw 智能体执行循环；检索当前故事历史证据，验证关键缺口 | 0.7426 → **0.9500**（+20.74 个百分点） |
+| [**story-generation**](agent/skills/story-generation/SKILL.md) | OpenClaw 智能体执行循环；可检索访谈原文 / 故事记忆 / 第三方证据 / 时代背景，再生成或修订 | 0.7868 → **0.9600**（+17.32 个百分点） |
+| [**interview-observer**](agent/skills/interview-observer/SKILL.md) | 单次本地推理，**1 次尝试 / 0 次工具调用**；后端预取证据 | 0.8157 → **0.9400**（+12.43 个百分点） |
 
 ### 3.3 基准评测
 
@@ -184,7 +184,7 @@ bash deploy/spark/start.sh
 bash deploy/spark/verify.sh
 ```
 
-仓库负责后端 / Web、SQLite、智能体任务协议、Skills、Retriever 集合 / 时代背景索引、NemoClaw / OpenClaw 路由 / 策略、Technical Observer 与验收；已运行的本地文本模型直接被智能体运行时复用，不启动第二份模型。
+仓库负责后端 / 网页端、SQLite、智能体任务协议、Skills、Retriever 集合 / 时代背景索引、NemoClaw / OpenClaw 路由 / 策略、Technical Observer 与验收；已运行的本地文本模型直接被智能体运行时复用，不启动第二份模型。
 
 完整部署说明：[Spark 部署说明](docs/04-nvidia/spark/README.md)
 
