@@ -1,103 +1,103 @@
-# Realtime
+# 实时语音
 
-> 当前 Realtime / Coach / 检索 真相源，更新于 2026-09-27。
+> 当前实时语音 / 采访教练 / 检索真相源，更新于 2026-09-27。
 
 ## 1. Provider
 
 | 配置 | 当前定位 | 执行后端 | 触发方式 |
 |---|---|---|---|
-| `stepaudio2_mini` | **默认正式 Realtime** | StepFun Cloud | `supervisor_auto` |
-| `stepaudio3_quality` | 正式可选 | StepFun Cloud | `voice_tool` |
-| `stepfun` | Mini 兼容别名 | StepFun Cloud | `supervisor_auto` |
-| `modelbest` | Experimental | ModelBest MiniCPM-o Realtime | provider-specific |
-| `qwen` | 兼容 adapter | DashScope | provider-specific |
+| `stepaudio2_mini` | **比赛默认实时语音** | DGX Spark 本地 | `supervisor_auto` |
+| `stepaudio3_quality` | 兼容配置 | 非比赛主链 | `voice_tool` |
+| `stepfun` | Mini 兼容别名 | 非比赛主链 | `supervisor_auto` |
+| `modelbest` | 实验配置 | 非比赛主链 | Provider 专用 |
+| `qwen` | 兼容适配器 | 非比赛主链 | Provider 专用 |
 
 Spark 部署配置 通过 `STEPAUDIO2_EXECUTION=local` 将 Mini 路由到 本地适配器 / 桥接层。Step-Audio-2-mini 已在 DGX Spark GB10 / ARM64 完成本地真人全链验证，产品层 Provider 协议 保持不变。
 
 ## 2. Mini：Fast Voice + interview-coach Skill
 
-Mini 默认不再依赖旧 Independent Memory 路线。实时慢系统现正式定义为 `interview-coach` Skill；为了满足语音低延迟预算，它由产品自建的 实时运行时 执行，不经过通用 OpenClaw / NemoClaw Runtime。
+Mini 默认不再依赖旧的独立记忆路线。实时慢系统现正式定义为 `interview-coach` Skill；为了满足语音低延迟预算，它由产品自建的 实时运行时 执行，不经过通用 OpenClaw / NemoClaw Runtime。
 
-### Story Create / Story Continue / Contributor
+### 故事创建 / 故事续访 / 第三方采访
 
 ```text
-User final
+用户最终发言
    ↓
 采访教练判断 (Qwen3-8B)
-   ├─ action=none
+   ├─ 无需介入
    │    → Mini 正常回答
    │
-   └─ guide / correct / retrieval needed
+   └─ 需要指导 / 纠偏 / 检索
         ↓
-   Story Continue only:
-      ├─ Personal Memory 检索
+   仅故事续访：
+      ├─ 个人记忆检索
       └─ 时代背景检索
         ↓
-   Coach Resolve
+   生成采访指导
         ↓
-   bounded Coach Packet
+   受限采访指导包
         ↓
-   response.create instructions
+   下一轮回复指令
         ↓
    Mini 回答
 ```
 
-Story Create 与 Contributor 可以使用 Gate 纠偏，但不能请求 个人记忆 / 时代背景检索。
+故事创建与第三方采访 可以使用 判断模块纠偏，但不能请求 个人记忆 / 时代背景检索。
 
-### Onboarding
+### 首次建档
 
-Onboarding 优先保证连续对话：
+首次建档 优先保证连续对话：
 
 ```text
-User final
-  ├─> 立即 request Mini response
+用户最终发言
+  ├─> 立即 请求 Mini 回复
   └─> 异步无检索 Coach
         ↓
-      packet ready?
+      指导包是否就绪？
         ↓
       缓存 ≤30s
         ↓
       只给下一回合 Mini 使用一次
 ```
 
-如果用户已经开始下一次发言、Session 变化、context version 不匹配或过期，Packet 丢弃。
+如果用户已经开始下一次发言、会话 变化、上下文版本 不匹配或过期，指导包 丢弃。
 
 ## 3. 时限
 
 ```text
 判断阶段上限              2,000 ms
-Coach total max       6,000 ms
+采访教练总时限       6,000 ms
 旧慢系统时限  5,000 ms
-Era search internal   1,000 ms
+时代背景检索内部时限   1,000 ms
 ```
 
-Mini 的 6 秒总时限 从用户 final transcript 起算，覆盖 Gate、按需 检索 和 Resolve。
+Mini 的 6 秒总时限 从用户 最终访谈原文 起算，覆盖 判断模块、按需 检索 和 生成指导。
 
 原则：
 
 - Coach 失败不让 Voice 失败；
 - 超时不把迟到结果塞进以后回合；
-- 单路 检索 失败时，另一条有效 evidence 仍可继续；
+- 单路 检索 失败时，另一条有效 证据 仍可继续；
 - 请求了检索但所有请求路径都不可用/失败时 失败放行；
-- 无检索且 Gate 已有有效方向时不做无意义 Resolve。
+- 无检索且 判断模块 已有有效方向时不做无意义 生成指导。
 
-## 4. Personal Memory
+## 4. 个人记忆
 
 只允许 Story Continue 使用。
 
 证据范围：
 
-- owner；
-- current story；
-- subject；
+- 用户；
+- 当前故事；
+- 主人公；
 - 用户 Q+A；
-- bounded Top-K。
+- 受限 Top-K。
 
-Retriever Answer 才是个人事实候选；Question 只用于语境。Raw Retriever Result 不直接注入 Voice，也不直接写 Story Memory。
+Retriever 返回的回答 才是个人事实候选；问题文本 只用于语境。原始检索结果 不直接注入 Voice，也不直接写 故事记忆。
 
-## 5. Era Context
+## 5. 时代背景
 
-Era 与 Personal Memory 是两个独立维度。
+Era 与 个人记忆 是两个独立维度。
 
 触发要求：
 
@@ -108,48 +108,48 @@ Era 与 Personal Memory 是两个独立维度。
 
 示例：国企改革、下岗潮、恢复高考、住房商品化、大学扩招、SARS、加入 WTO、金融危机、互联网/移动互联网普及等，只有在能改善下一问时才检索。
 
-Era 输出只允许形成中性 `background_hint`，不能断言用户亲历了公共事件。
+Era 输出只允许形成中性 `背景提示`，不能断言用户亲历了公共事件。
 
 代码与数据链已完成；默认模板 `NEMO_ERA_CONTEXT_ENABLED=false`，启用状态由环境决定。
 
-## 6. StepAudio 3：Voice Tool 路线
+## 6. StepAudio 3：语音工具路线
 
 StepAudio 3 不加载 Mini Coach。
 
 ```text
-Voice decides tool need
+语音模型判断是否需要工具
 → 工具调用
-→ HOLD
+→ 等待
 → Current Story 检索
 → interview.context_hint
-→ Tool Result
-→ Resume
+→ 工具结果
+→ 恢复回复
 ```
 
 该路线仍使用 实时上下文智能体 / 工具结果 生命周期。不要把它与 Mini 的 Qwen3-8B 判断 / 生成指导 合并成同一架构描述。
 
 ## 7. Context 注入
 
-Mini Coach Packet：
+Mini Coach 指导包：
 
 - 短；
 - 一次性；
 - 不暴露内部字段；
-- 不复制大量 Transcript；
+- 不复制大量 访谈原文；
 - 不让 Coach 直接向用户作答。
 
-StepAudio 3 Tool Result 同样必须 bounded，并遵守 turn / context version / stale protection。
+StepAudio 3 工具结果 同样必须 bounded，并遵守 turn / 上下文版本 / stale protection。
 
 ## 8. 隐私边界
 
-- Contributor 不检索主人公私密历史；
-- Era Context 与 私有访谈原文 使用独立 collection；
-- 默认 diagnostics 不保存对话正文；
-- 技术观测只暴露 allowlisted 指标，不展示 raw session/story/call id 或用户内容。
+- 第三方贡献者 不检索主人公私密历史；
+- 时代背景 与 私有访谈原文 使用独立 集合；
+- 默认 诊断日志 不保存对话正文；
+- 技术观测只暴露 白名单内 指标，不展示 原始会话 / Story / 调用 ID 或用户内容。
 
 ## 9. 最终验收状态
 
-- Spark 配置 的 Step-Audio-2-mini Realtime 已完成 DGX Spark 本地真人验证；
+- Spark 配置的 Step-Audio-2-mini 实时语音 已完成 DGX Spark 本地真人验证；
 - 连续语音、追问与打断体验实际运行流畅；
-- Realtime + Coach + NeMo Retriever 可在断网条件下协同运行；
-- Era Context 仍按 Gate 判断和索引命中按需参与，不会每轮强制检索。
+- 实时语音 + 采访教练 + NeMo Retriever 可在断网条件下协同运行；
+- 时代背景 仍按 判断模块 判断和索引命中按需参与，不会每轮强制检索。
