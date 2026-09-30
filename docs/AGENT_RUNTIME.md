@@ -108,7 +108,7 @@ Reasoning 可以重试；Apply 必须保持幂等和事务边界。
 
 Task Definition 为每个 Skill 限定可请求的 source type。Backend 持有并校验 owner、resource / Story、Contributor lane、凭证、endpoint、查询与结果边界及 provenance；Agent 只给短 query 和允许范围内的来源类型，其他可选搜索参数也受 Backend 限制。结果是不可信的补充证据，不能覆盖主人公当前明确纠正，也不能绕过现有 Schema、Evidence、Domain、版本或 stale 校验。
 
-当前策略映射见 [Skill / Script Mapping](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)。Task Definition、Backend route、Evidence Search service / gateway、四个 tool-enabled Skill scripts、各 Task 授权上下文和 Observer Backend prefetch 已接入共享路径。OpenClaw sandbox 在本次实施检查时不可连接，因此 Live Skill activation 与 Tool Call 未测试；本文不代表 Live Smoke 已通过。
+当前策略映射见 [Skill / Script Mapping](03-agent/SKILL_SCRIPT_MAPPING_v1.0.md)。Task Definition、Backend route、Evidence Search service / gateway、四个 tool-enabled Skill scripts、各 Task 授权上下文和 Observer Backend prefetch 已接入共享路径；NemoClaw / OpenClaw Skill activation、Tool Call 与完整 Agent Task 链路已在 DGX Spark 本地验收。
 
 ## 6. interview.context_hint 与 Mini Coach
 
@@ -134,7 +134,7 @@ Task Definition 当前按职责映射：
 - realtime-context；
 - writing。
 
-Mac Agent / 文本任务通过 Bailian `qwen3.6-35b-a3b` 配置。Spark 部署由操作者运行本地 OpenAI-compatible Text Service：`nvidia/Qwen3.6-35B-A3B-NVFP4`，默认 `http://127.0.0.1:8000/v1`；NemoClaw 复用 `/v1/models` 实际返回的模型 ID。Mini Coach 单独使用 `Qwen3-8B`，默认 `http://127.0.0.1:8001/v1`。两套 endpoint 分开配置，不能将 Coach 路由到 OpenClaw。
+DGX Spark 使用本地 OpenAI-compatible Text Service：`nvidia/Qwen3.6-35B-A3B-NVFP4`，默认 `http://127.0.0.1:8000/v1`；NemoClaw 复用 `/v1/models` 实际返回的模型 ID。Mini Coach 单独使用本地 `Qwen3-8B`，默认 `http://127.0.0.1:8001/v1`。两套 endpoint 分开配置，Coach 不经过 OpenClaw。
 
 Spark 基础 `verify.sh` 使用有界的产品 acceptance smoke，不运行全量 `npm test` 或 NAT。Step-Audio-2-mini 的 ARM64 / DGX Spark 本地 Runtime 已完成真人全链验证。
 
