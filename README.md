@@ -49,9 +49,46 @@
 
 **DGX Spark 全本地验证通过，支持断网运行**：文本 / 智能体、Qwen3-8B 采访教练、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、后端 / 网页端、SQLite 均已在 NVIDIA DGX Spark GB10 本地运行；断开外部网络后产品主链仍可使用，真人连续语音操作流畅。
 
+
+<!-- visual-03: Agent Skills + DGX Spark -->
+~~~mermaid
+flowchart LR
+  subgraph Skills[5 个核心业务 Agent Skills]
+    C[interview-coach] --> OC[onboarding-closeout]
+    C --> IC[interview-closeout]
+    IC --> SC[story-completion]
+    SC --> SG[story-generation]
+  end
+  subgraph NVIDIA[NVIDIA / DGX Spark]
+    NC[NemoClaw / OpenClaw]
+    RT[NeMo Retriever]
+    NAT[NeMo Agent Toolkit]
+    SE[SkillEvaluator Tier 1 / 2 / 3]
+  end
+  Skills --> NC
+  Skills <--> RT
+  NC --> NAT
+  Skills --> SE
+~~~
+
 ---
 
 ## 4. 核心架构：快系统负责自然，慢系统负责专业
+
+<!-- visual-01: 快慢双系统 -->
+~~~mermaid
+flowchart LR
+  U[用户语音] <--> F[快系统<br/>Step-Audio-2-mini]
+  F --> G{需要指导?}
+  G -- 否 --> Q[直接自然追问]
+  G -- 是 / 不检索 --> CO[interview-coach<br/>Qwen3-8B]
+  G -- 是 / 检索 --> R[NeMo Retriever]
+  R --> M[故事记忆 / 时代背景]
+  M --> CO
+  CO --> N[下一轮问题指导]
+  N --> F
+~~~
+
 
 ```text
 用户语音
@@ -132,6 +169,17 @@ NemoClaw / OpenClaw 智能体
 | [**interview-observer**](agent/skills/interview-observer/SKILL.md) | 单次本地推理，**1 次尝试 / 0 次工具调用**；后端预取证据 | 0.8157 → **0.9400**（+12.43 个百分点） |
 
 ### 5.3 基准评测
+
+<!-- visual-02: Skill Benchmark -->
+~~~mermaid
+xychart-beta
+  title "SkillEvaluator: Without vs With Skill"
+  x-axis [completion, generation, closeout, onboarding, observer]
+  y-axis "Score" 0.70 --> 1.00
+  bar [0.7426, 0.7868, 0.7891, 0.8163, 0.8157]
+  bar [0.9500, 0.9600, 0.9500, 0.9300, 0.9400]
+~~~
+
 
 **NVIDIA SkillEvaluator Tier 3 项目自测：**
 
@@ -227,6 +275,20 @@ bash deploy/spark/verify.sh
 ---
 
 ## 9. 项目完整性
+
+<!-- visual-04: story-generation 成稿 -->
+~~~mermaid
+flowchart LR
+  T[访谈原文] --> M[故事记忆 / Summary]
+  M --> C[story-completion]
+  C --> G[0–3 个缺口]
+  G --> S[story-generation]
+  S --> D[故事正文 / Revision]
+  D --> B[整书编排 / PDF]
+  R[NeMo Retriever 证据] --> C
+  R --> S
+~~~
+
 
 已实现：
 
