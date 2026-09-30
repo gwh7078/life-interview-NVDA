@@ -41,7 +41,7 @@
 
 | 评分项 | 项目得分点 |
 |---|---|
-| **实用性 / 行业落地 / 技术创新 · 25%** | 真实痛点驱动（岳父写回忆录耗时1年花费2w）；用持续语音采访替代"让用户自己写"；快慢系统解决实时自然度与专业追问的根本冲突；证据链避免长访谈事实漂移 |
+| **实用性 / 行业落地 / 技术创新 · 25%** | 真实痛点驱动（创始人岳父一年两万元成书经历）；用持续语音采访替代"让用户自己写"；快慢系统解决实时自然度与专业追问的根本冲突；证据链避免长访谈事实漂移 |
 | **智能体与模型优化技术深度 · 25%** | 6 个正式 Agent Skills；NemoClaw / OpenClaw 智能体执行循环；受限工具调用；NeMo Retriever；结构 / 证据 / 业务规则三层校验；校验修复 / 格式修复；快慢模型分工；SkillEvaluator 实测 +11% ~ +21% |
 | **项目完整性 · 20%** | 首次建档 → 故事 → 连续采访 → 第三方旁证 → 采访收尾 → 完整度判断 / 缺口 → 故事成稿 → 成书 / PDF，全链网页产品真实可运行 |
 | **平台适配性 · 15%** | DGX Spark GB10 全本地、**断网可用**；Qwen3.6-35B-A3B-NVFP4 + Qwen3-8B + Step-Audio-2-mini + NeMo Retriever + NemoClaw / OpenClaw + NAT |
@@ -49,46 +49,9 @@
 
 **DGX Spark 全本地验证通过，支持断网运行**：文本 / 智能体、Qwen3-8B 采访教练、Step-Audio-2-mini、NeMo Retriever、NemoClaw / OpenClaw、后端 / 网页端、SQLite 均已在 NVIDIA DGX Spark GB10 本地运行；断开外部网络后产品主链仍可使用，真人连续语音操作流畅。
 
-
-<!-- visual-03: Agent Skills + DGX Spark -->
-~~~mermaid
-flowchart LR
-  subgraph Skills[5 个核心业务 Agent Skills]
-    C[interview-coach] --> OC[onboarding-closeout]
-    C --> IC[interview-closeout]
-    IC --> SC[story-completion]
-    SC --> SG[story-generation]
-  end
-  subgraph NVIDIA[NVIDIA / DGX Spark]
-    NC[NemoClaw / OpenClaw]
-    RT[NeMo Retriever]
-    NAT[NeMo Agent Toolkit]
-    SE[SkillEvaluator Tier 1 / 2 / 3]
-  end
-  Skills --> NC
-  Skills <--> RT
-  NC --> NAT
-  Skills --> SE
-~~~
-
 ---
 
 ## 4. 核心架构：快系统负责自然，慢系统负责专业
-
-<!-- visual-01: 快慢双系统 -->
-~~~mermaid
-flowchart LR
-  U[用户语音] <--> F[快系统<br/>Step-Audio-2-mini]
-  F --> G{需要指导?}
-  G -- 否 --> Q[直接自然追问]
-  G -- 是 / 不检索 --> CO[interview-coach<br/>Qwen3-8B]
-  G -- 是 / 检索 --> R[NeMo Retriever]
-  R --> M[故事记忆 / 时代背景]
-  M --> CO
-  CO --> N[下一轮问题指导]
-  N --> F
-~~~
-
 
 ```text
 用户语音
@@ -169,17 +132,6 @@ NemoClaw / OpenClaw 智能体
 | [**interview-observer**](agent/skills/interview-observer/SKILL.md) | 单次本地推理，**1 次尝试 / 0 次工具调用**；后端预取证据 | 0.8157 → **0.9400**（+12.43 个百分点） |
 
 ### 5.3 基准评测
-
-<!-- visual-02: Skill Benchmark -->
-~~~mermaid
-xychart-beta
-  title "SkillEvaluator: Without vs With Skill"
-  x-axis [completion, generation, closeout, onboarding, observer]
-  y-axis "Score" 0.70 --> 1.00
-  bar [0.7426, 0.7868, 0.7891, 0.8163, 0.8157]
-  bar [0.9500, 0.9600, 0.9500, 0.9300, 0.9400]
-~~~
-
 
 **NVIDIA SkillEvaluator Tier 3 项目自测：**
 
@@ -275,20 +227,6 @@ bash deploy/spark/verify.sh
 ---
 
 ## 9. 项目完整性
-
-<!-- visual-04: story-generation 成稿 -->
-~~~mermaid
-flowchart LR
-  T[访谈原文] --> M[故事记忆 / Summary]
-  M --> C[story-completion]
-  C --> G[0–3 个缺口]
-  G --> S[story-generation]
-  S --> D[故事正文 / Revision]
-  D --> B[整书编排 / PDF]
-  R[NeMo Retriever 证据] --> C
-  R --> S
-~~~
-
 
 已实现：
 
